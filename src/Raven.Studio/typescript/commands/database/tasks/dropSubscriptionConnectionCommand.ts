@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class dropSubscriptionConnectionCommand extends commandBase {
 
-    constructor(private db: database, private taskId: number, private taskName: string, private workerId: string = undefined) {
+    constructor(private db: database, private taskId: number, private taskName: string, private connectionId: number = undefined) {
         super();
     }
  
@@ -12,7 +12,7 @@ class dropSubscriptionConnectionCommand extends commandBase {
         return this.dropSubscription()
             .fail((response: JQueryXHR) => { this.reportError(`Failed to drop subscription: ${this.taskName}`, response.responseText, response.statusText); })
             .done(() => {
-                if (this.workerId) {
+                if (this.connectionId) {
                     this.reportSuccess(`Subscription connection was dropped successfully`);
                 } else {
                     this.reportSuccess(`Subscription ${this.taskName} was dropped successfully`);
@@ -23,7 +23,7 @@ class dropSubscriptionConnectionCommand extends commandBase {
     private dropSubscription(): JQueryPromise<void> {
         const args = { 
             id: this.taskId,
-            workerId: this.workerId
+            connectionId: this.connectionId
         };
         const url = endpoints.databases.subscriptions.subscriptionsDrop + this.urlEncodeArgs( args );
 

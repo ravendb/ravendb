@@ -74,8 +74,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
         private static readonly TimeSpan InitialConnectionTimeout = TimeSpan.FromMilliseconds(16);
-
-        private readonly ServerStore _server;
+        
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
@@ -112,8 +111,10 @@ namespace Raven.Server.Documents.TcpHandlers
         
         private SubscriptionWorkerOptions _options;
 
-        public string WorkerId => _options.WorkerId;
+        public long ConnectionId;
         public SubscriptionWorkerOptions Options => _options;
+
+        public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
 
         public SubscriptionException ConnectionException;
 
@@ -145,10 +146,8 @@ namespace Raven.Server.Documents.TcpHandlers
             RecentSubscriptionStatuses.Enqueue(message);
         }
 
-        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions connectionOptions, IDisposable subscriptionConnectionInProgress,
-            JsonOperationContext.MemoryBuffer bufferToCopy)
+        public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable subscriptionConnectionInProgress, JsonOperationContext.MemoryBuffer bufferToCopy)
         {
-            _server = serverStore;
             TcpConnection = connectionOptions;
             _subscriptionConnectionInProgress = subscriptionConnectionInProgress;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
@@ -209,34 +208,26 @@ namespace Raven.Server.Documents.TcpHandlers
 
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
-            AssertSupportedFeatures();
-
-        }
-
-        private async Task NotifyClientAboutSuccess()
-        {
-            _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
-
-            // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-            SubscriptionState =
-                await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName,
-                    CancellationTokenSource.Token);
-
-            Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
-
-            await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
-
-            await SendNoopAck();
-            await WriteJsonAsync(new DynamicJsonValue
+            if (_supportedFeatures.Subscription.Includes == false)
             {
-                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
-            });
-        }
+                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+            }
 
-        private async Task<IDisposable> Subscribe()
-        {
+            if (_supportedFeatures.Subscription.CounterIncludes == false)
+            {
+                if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
+            }
+
+            if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
+            {
+                if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
+                    throw new SubscriptionInvalidStateException($"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
+            }
+            
+            _subscriptionConnectionsState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
+            
             var timeout = InitialConnectionTimeout;
 
             var random = new Random();
@@ -247,13 +238,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                while(true)
+                bool shouldRetry;
+                do
                 {
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     try
                     {
-                        return _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                        DisposeOnDisconnect = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                        shouldRetry = false;
                     }
                     catch (TimeoutException)
                     {
@@ -269,36 +262,42 @@ namespace Raven.Server.Documents.TcpHandlers
                         await SendHeartBeat(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
                             $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
+                        shouldRetry = true;
                     }
-                }
+
+                } while (shouldRetry);
             }
             finally
             {
                 _subscriptionConnectionsState.PendingConnections.TryRemove(this);
             }
-        }
 
-        private void AssertSupportedFeatures()
-        {
-            if (_supportedFeatures.Subscription.Includes == false)
+            _pendingConnectionScope.Dispose();
+
+            try
             {
-                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+                _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
+
+                // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+
+                Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
+
+                await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                    SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
+
+                await SendNoopAck();
+                await WriteJsonAsync(new DynamicJsonValue
+                {
+                    [nameof(SubscriptionConnectionServerMessage.ConnectionId)] = ConnectionId,
+                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                    [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
+                });
             }
-
-            if (_supportedFeatures.Subscription.CounterIncludes == false)
+            catch
             {
-                if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
-            }
-
-            if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
-            {
-                if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
-                    throw new SubscriptionInvalidStateException(
-                        $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
+                DisposeOnDisconnect.Dispose();
+                throw;
             }
         }
 
@@ -325,7 +324,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public async Task Run(TcpConnectionOptions tcpConnectionOptions, IDisposable subscriptionConnectionInProgress)
+        public async Task Run(ServerStore server, TcpConnectionOptions tcpConnectionOptions, IDisposable subscriptionConnectionInProgress)
         {
             using (tcpConnectionOptions)
             using (subscriptionConnectionInProgress)
@@ -335,7 +334,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 _connectionScope = _lastConnectionStats.CreateScope();
 
                 _pendingConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionPending);
-                IDisposable disposeOnDisconnect = default;
 
                 try
                 {
@@ -347,36 +345,41 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     try
                     {
-                        using (_pendingConnectionScope)
-                        {
-                            await InitAsync();
-                            _subscriptionConnectionsState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-                            disposeOnDisconnect = await Subscribe();
-                        }
-
-                        await NotifyClientAboutSuccess();
+                        await InitAsync();
                         await ProcessSubscriptionAsync();
+                    }
+                    catch (SubscriptionInvalidStateException)
+                    {
+                        _pendingConnectionScope.Dispose();
+                        throw;
                     }
                     finally
                     {
                         TcpConnection.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
                     }
                 }
-                catch (SubscriptionChangeVectorUpdateConcurrencyException e)
-                {
-                    _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
-                    _subscriptionConnectionsState.DropSubscription(e);
-                    await ReportException(e);
-                }
-                catch (SubscriptionInUseException e)
-                {
-                    _connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.ToString());
-                    await ReportException(e);
-                }
                 catch (Exception e)
                 {
-                    _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
-                    await ReportException(e);
+                    if (e is SubscriptionInUseException)
+                        _connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.ToString());
+                    else
+                        _connectionScope.RecordException(SubscriptionError.Error, e.ToString());
+
+                    var errorMessage = $"Failed to process subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}";
+                    AddToStatusDescription($"{errorMessage}. Sending response to client");
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info(errorMessage, e);
+                    }
+
+                    try
+                    {
+                        await ReportExceptionToClient(server, this, ConnectionException ?? e);
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
                 }
                 finally
                 {
@@ -386,33 +389,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
                     }
-
-                    disposeOnDisconnect?.Dispose();
                 }
-            }
-        }
-
-        private async Task ReportException(Exception e)
-        {
-            var errorMessage = $"Failed to process subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}";
-            AddToStatusDescription($"{errorMessage}. Sending response to client");
-            if (_logger.IsInfoEnabled)
-            {
-                _logger.Info(errorMessage, e);
-            }
-
-            if (ConnectionException == null && e is SubscriptionException se)
-            {
-                ConnectionException = se;
-            }
-
-            try
-            {
-                await ReportExceptionToClient(_server, this, ConnectionException ?? e);
-            }
-            catch (Exception)
-            {
-                // ignored
             }
         }
 
@@ -424,11 +401,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                var connection = new SubscriptionConnection(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer);
+                var connection = new SubscriptionConnection(tcpConnectionOptions, subscriptionConnectionInProgress, buffer);
 
                 try
                 {
-                    connection.SubscriptionConnectionTask = connection.Run(tcpConnectionOptions, subscriptionConnectionInProgress);
+                    connection.SubscriptionConnectionTask = connection.Run(server, tcpConnectionOptions, subscriptionConnectionInProgress);
                 }
                 catch (Exception)
                 {
@@ -637,7 +614,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info($"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
 
-            using (_processor = SubscriptionProcessor.Create(this))
+            _processor = SubscriptionProcessor.Create(this);
+
+            using (DisposeOnDisconnect)
+            using (_processor)
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
 
@@ -701,6 +681,17 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
 
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
+                        }
+                        catch (SubscriptionChangeVectorUpdateConcurrencyException e)
+                        {
+                            ConnectionException = e;
+                            _subscriptionConnectionsState.DropSubscription(e);
+                            throw;
+                        }
+                        catch (SubscriptionException e)
+                        {
+                            ConnectionException = e;
+                            throw;
                         }
                         catch (Exception e)
                         {
@@ -1477,7 +1468,7 @@ namespace Raven.Server.Documents.TcpHandlers
     public class SubscriptionConnectionDetails
     {
         public string ClientUri { get; set; }
-        public string WorkerId { get; set; }
+        public long ConnectionId { get; set; }
         public SubscriptionOpeningStrategy? Strategy { get; set; }
         
         public DynamicJsonValue ToJson()
@@ -1485,7 +1476,7 @@ namespace Raven.Server.Documents.TcpHandlers
             return new DynamicJsonValue
             {
                 [nameof(ClientUri)] = ClientUri,
-                [nameof(WorkerId)] = WorkerId,
+                [nameof(ConnectionId)] = ConnectionId,
                 [nameof(Strategy)] = Strategy
             };
         }

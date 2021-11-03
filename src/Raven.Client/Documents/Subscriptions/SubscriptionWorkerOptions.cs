@@ -68,6 +68,7 @@ namespace Raven.Client.Documents.Subscriptions
             public Dictionary<string, string> Reasons;
         }
 
+        public long ConnectionId { get; set; }
         public MessageType Type { get; set; }
         public ConnectionStatus Status { get; set; }
         public BlittableJsonReaderObject Data { get; set; }
@@ -110,7 +111,6 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
 
             SubscriptionName = subscriptionName;
-            WorkerId = Guid.NewGuid().ToString();
         }
 
         /// <summary>
@@ -159,7 +159,5 @@ namespace Raven.Client.Documents.Subscriptions
         /// Receive buffer for the underlying connection. Default: 4096 bytes (4 kB)
         /// </summary>
         public int ReceiveBufferSizeInBytes { get; set; }
-
-        public string WorkerId { get; internal set; }
     }
 }

@@ -325,19 +325,19 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public bool DropSingleSubscriptionConnection(long subscriptionId, string workerId, SubscriptionException ex)
+        public bool DropSingleSubscriptionConnection(long subscriptionId, long? connectionId, SubscriptionException ex)
         {
             if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;
 
-            var connectionToDrop = subscriptionConnectionsState.GetConnections().FirstOrDefault(conn => conn.WorkerId == workerId);
+            var connectionToDrop = subscriptionConnectionsState.GetConnections().FirstOrDefault(conn => conn.ConnectionId == connectionId);
             if (connectionToDrop == null)
                 return false;
             
             subscriptionConnectionsState.DropSingleConnection(connectionToDrop, ex);
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"Connection with id {workerId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped.", ex);
+                    $"Connection with id {connectionId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped.", ex);
 
             return true;
         }

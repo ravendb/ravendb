@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetLongQueryString("id", required: false);
             var subscriptionName = GetStringQueryString("name", required: false);
-            var workerId = GetStringQueryString("workerId", required: false);
+            var connectionId = GetLongQueryString("connectionId", required: false);
             
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -436,10 +436,10 @@ namespace Raven.Server.Documents.Handlers
                 if (subscription != null)
                 {
                     bool result;
-                    if (string.IsNullOrEmpty(workerId) == false)
+                    if (connectionId.HasValue)
                     {
-                        result = Database.SubscriptionStorage.DropSingleSubscriptionConnection(subscription.SubscriptionId, workerId,
-                            new SubscriptionClosedException($"Connection with Id {workerId} dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
+                        result = Database.SubscriptionStorage.DropSingleSubscriptionConnection(subscription.SubscriptionId, connectionId,
+                            new SubscriptionClosedException($"Connection with Id {connectionId} dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
                     }
                     else 
                     {

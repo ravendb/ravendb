@@ -10,7 +10,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type PerConnectionStats = {
     clientUri: string;
-    workerId: string;
+    connectionId: number;
     strategy?: Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy;
 }
 
@@ -84,7 +84,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                         this.clients(result.Results.map(x => ({
                             clientUri: x.ClientUri,
                             strategy: x.Strategy,
-                            workerId: x.WorkerId
+                            connectionId: x.ConnectionId
                         })));
 
                         if (!result.Results.length) { 
@@ -105,8 +105,8 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
             });
     }
 
-    disconnectClientFromSubscription(workerId: string) {
-        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), workerId)
+    disconnectClientFromSubscription(connectionId: number) {
+        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), connectionId)
             .execute()
             .done(() => { this.refreshSubscriptionInfo(); });
     }
