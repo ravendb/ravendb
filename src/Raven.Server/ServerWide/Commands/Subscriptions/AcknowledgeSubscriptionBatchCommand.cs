@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
     {
         public string ChangeVector;
-        public string LastKnownSubscriptionChangeVector; // Now this used only for backward compatibility
+        public string LastKnownSubscriptionChangeVector;
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
@@ -115,7 +115,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new RachisApplyException($"'{nameof(DatabaseName)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
             }
 
-            if (BatchId == null)
+            if (BatchId == default)
             {
                 throw new RachisApplyException($"'{nameof(BatchId)}' is missing in '{nameof(AcknowledgeSubscriptionBatchCommand)}'.");
             }
@@ -143,14 +143,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                     tvb.Add(keySlice);
                     tvb.Add(changeVectorSlice);
-                    tvb.Add(SwappedNonExistentBatch); // batch id
+                    tvb.Add(Bits.SwapBytes(index)); // batch id
 
                     subscriptionStateTable.Set(tvb);
                 }
             }
         }
-
-        private static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnection.NonExistentBatch);
 
         public static Func<string> GetLastResponsibleNode(
             bool hasHighlyAvailableTasks,

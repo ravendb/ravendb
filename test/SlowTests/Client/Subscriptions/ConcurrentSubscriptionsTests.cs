@@ -14,7 +14,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server;
@@ -439,7 +438,7 @@ namespace SlowTests.Client.Subscriptions
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                var leftovers = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments(SubscriptionType.Document);
+                var leftovers = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments();
                 Assert.Equal(0L, leftovers);
             }
         }

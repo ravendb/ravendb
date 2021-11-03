@@ -121,8 +121,10 @@ namespace Raven.Server.Documents.Subscriptions
             return etag;
         }
         
-        public async Task LegacyAcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, string previousChangeVector)
+        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, string previousChangeVector, long batchId, List<DocumentRecord> docsToResend)
         {
+            long? batch = ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000 ? batchId : null;
+
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
             {
                 ChangeVector = changeVector,
@@ -132,24 +134,7 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
                 LastKnownSubscriptionChangeVector = previousChangeVector,
-                DatabaseName = _db.Name,
-            };
-
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-        }
-
-        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
-        {
-            var command = new AcknowledgeSubscriptionBatchCommand(_db.Name, RaftIdGenerator.NewId())
-            {
-                ChangeVector = changeVector,
-                NodeTag = _serverStore.NodeTag,
-                HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
-                SubscriptionId = subscriptionId,
-                SubscriptionName = name,
-                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                BatchId = batchId,
+                BatchId = batch,
                 DatabaseName = _db.Name,
                 DocumentsToResend = docsToResend
             };
