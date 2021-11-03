@@ -460,30 +460,13 @@
                                             </div>
                                             <!-- /ko -->
                                             <!-- ko if: !clientDetailsIssue() -->
-                                            <hr />
-                                            <div data-bind="foreach: clients">
-                                                <div class="property-item">
-                                                    <div class="property-name">Client URI:</div>
-                                                    <div class="property-value text-details">
-                                                        <div class="flex-horizontal">
-                                                            <div data-bind="text: clientUri"></div>
-                                                            <button class="btn btn-xs margin-left margin-left-sm" 
-                                                                    data-bind="click: _.partial($parent.disconnectClientFromSubscription, connectionId)" 
-                                                                    title="Disconnect client from this subscription (unsubscribe client)">
-                                                                <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="property-item">
-                                                    <div class="property-name">Connection Strategy:</div>
-                                                    <div class="property-value text-details">
-                                                        <div class="flex-horizontal">
-                                                            <div data-bind="text: strategy"></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <hr />
+                                            <div class="property-item">
+                                                <div class="property-name">Client IP:</div>
+                                                <div class="property-value text-details" data-bind="text: clientIP"></div>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Connection Strategy:</div>
+                                                <div class="property-value text-details" data-bind="text: connectionStrategy"></div>
                                             </div>
                                             <!-- /ko -->
                                             <div class="property-item">
@@ -498,7 +481,12 @@
                                             <div class="property-item">
                                                 <div class="property-name">Last Client Connection Time:</div>
                                                 <div class="property-value"><span class="text-details" data-bind="text: lastClientConnectionTime"></span></div>
-                                            </div>
+                                                    <!-- ko if: clientIP() -->
+                                                        <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                            <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                        </button>
+                                                    <!-- /ko -->
+                                                </div>
                                         </div>
                                     </div>
                                     <div class="flex-noshrink flex-grow flex-start text-right">

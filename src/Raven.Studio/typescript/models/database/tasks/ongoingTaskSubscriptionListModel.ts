@@ -7,13 +7,6 @@ import subscriptionConnectionDetailsCommand = require("commands/database/tasks/g
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-
-type PerConnectionStats = {
-    clientUri: string;
-    connectionId: number;
-    strategy?: Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy;
-}
-
 class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     
     activeDatabase = activeDatabaseTracker.default.database;
@@ -24,7 +17,8 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
 
     // Live connection stats
-    clients = ko.observableArray<PerConnectionStats>([]);
+    clientIP = ko.observable<string>();
+    connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();
     clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details..
     textClass = ko.observable<string>("text-details");
 
@@ -35,8 +29,6 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
         this.update(dto);
         this.initializeObservables(); 
-        
-        _.bindAll(this, "disconnectClientFromSubscription");
     }
 
     initializeObservables() {
@@ -76,15 +68,12 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 this.clientDetailsIssue(null);
                 new subscriptionConnectionDetailsCommand(this.activeDatabase(), this.taskId, this.taskName(), this.responsibleNode().NodeUrl)
                     .execute()
-                    .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
+                    .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails) => {
 
-                        this.clients(result.Results.map(x => ({
-                            clientUri: x.ClientUri,
-                            strategy: x.Strategy,
-                            connectionId: x.ConnectionId
-                        })));
+                        this.clientIP(result.ClientUri);
+                        this.connectionStrategy(result.Strategy);
 
-                        if (!result.Results.length) { 
+                        if (!this.clientIP()) { 
                             this.clientDetailsIssue("No client is connected");
                             this.textClass("text-warning");
                         }
@@ -102,8 +91,8 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
             });
     }
 
-    disconnectClientFromSubscription(connectionId: number) {
-        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), connectionId)
+    disconnectClientFromSubscription() {
+        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName())
             .execute()
             .done(() => { this.refreshSubscriptionInfo(); });
     }
