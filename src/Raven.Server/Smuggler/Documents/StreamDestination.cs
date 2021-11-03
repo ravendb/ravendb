@@ -64,11 +64,13 @@ namespace Raven.Server.Smuggler.Documents
             _options = options;
 
             SetupMetadataFilterMethod(_context);
+            if (options.SkipBuildVersion == false)
+            {
+                _writer.WriteStartObject();
 
-            _writer.WriteStartObject();
-
-            _writer.WritePropertyName("BuildVersion");
-            _writer.WriteInteger(buildVersion);
+                _writer.WritePropertyName("BuildVersion");
+                _writer.WriteInteger(buildVersion);
+            }
 
             return new AsyncDisposableAction(async () =>
             {

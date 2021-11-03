@@ -1,10 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Nito.AsyncEx;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Json;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -13,6 +18,8 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.ShardedHandlers;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -36,7 +43,12 @@ namespace Raven.Server.Smuggler.Documents
         private readonly List<IAsyncDisposable> _actionsList;
         private readonly List<IAsyncDisposable> _desList;
         private long _buildVersion;
-        public ShardedSmugglerHandler.ImportBatch ImportBatch;
+        private readonly ShardedContext _shardedContext;
+        private readonly ShardedSmugglerHandler _handler;
+        private readonly List<JsonOperationContext> _contextList;
+        private readonly BlittableJsonReaderObject _optionsAsBlittable;
+        private readonly List<Stream> _streamList;
+        private readonly TaskCompletionSource<object> _tcs;
 
         public ShardedDatabaseSmuggler( ISmugglerSource source, 
             List<ISmugglerDestination> destination, 
@@ -44,7 +56,14 @@ namespace Raven.Server.Smuggler.Documents
             TransactionOperationContext transactionOperationContext,
             DatabaseRecord databaseRecord,
             ServerStore server,
-            SystemTime time, DatabaseSmugglerOptionsServerSide options = null,
+            SystemTime time,
+            ShardedContext shardedContext,
+            ShardedSmugglerHandler handler,
+            List<JsonOperationContext> contextList,
+            BlittableJsonReaderObject optionsAsBlittable,
+            List<Stream> streamList,
+            TaskCompletionSource<object> tcs,
+            DatabaseSmugglerOptionsServerSide options = null,
             SmugglerResult result = null, 
             Action<IOperationProgress> onProgress = null, 
             CancellationToken token = default) : 
@@ -57,9 +76,14 @@ namespace Raven.Server.Smuggler.Documents
             _server = server;
             _actionsList = new List<IAsyncDisposable>();
             _desList = new List<IAsyncDisposable>();
+            _shardedContext = shardedContext;
+            _handler = handler;
+            _contextList = contextList;
+            _optionsAsBlittable = optionsAsBlittable;
+            _streamList = streamList;
+            _tcs = tcs;
         }
 
-        //TODO - handle result
         public override async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
@@ -96,6 +120,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     await des.DisposeAsync();
                 }
+                await SendImportBatch();
             }
         }
         
@@ -162,6 +187,9 @@ namespace Raven.Server.Smuggler.Documents
                         case "TimeSeries":
                             _actionsList.Add(des.TimeSeries());
                             break;
+                        case nameof(DatabaseItemType.CompareExchange):
+                            _actionsList.Add(des.CompareExchange(_context));
+                            break;
                     }
                 }
             }
@@ -175,10 +203,39 @@ namespace Raven.Server.Smuggler.Documents
                 await des.DisposeAsync();
             }
 
-            var task = ImportBatch.SendImportBatch();
+            var task = SendImportBatch();
             task.Wait();
             _itemsInBatch = 0;
             _desList.Clear();
+        }
+
+        public async Task SendImportBatch()
+        {
+            var tasks = new List<Task>();
+            for (int i = 0; i < _shardedContext.ShardCount; i++)
+            {
+                _streamList[i].Position = 0;
+
+                var multi = new MultipartFormDataContent
+                {
+                    {
+                        new BlittableJsonContent(async stream2 => await _context.WriteAsync(stream2, _optionsAsBlittable).ConfigureAwait(false)),
+                        Constants.Smuggler.ImportOptions
+                    },
+                    {new Client.Documents.Smuggler.DatabaseSmuggler.StreamContentWithConfirmation(_streamList[i], _tcs), "file", "name"}
+                };
+                var cmd = new ShardedImportCommand(_handler, Headers.None, multi);
+
+                var task = _shardedContext.RequestExecutors[i].ExecuteAsync(cmd, _contextList[i]);
+
+                tasks.Add(task);
+            }
+
+            await tasks.WhenAll();
+            for (int i = 0; i < _shardedContext.ShardCount; i++)
+            {
+                _streamList[i].Position = 0;
+            }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessDocumentsAsync(SmugglerResult result, BuildVersionType buildType)
@@ -190,6 +247,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.Documents(throwOnCollectionMismatchError));
                 }
+
                 await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections))
                 {
                     HandleImportBatch("Docs");
@@ -198,6 +256,7 @@ namespace Raven.Server.Smuggler.Documents
                     DisposeSourceInfo();
                     _itemsInBatch++;
                 }
+
             }
             finally
             {
@@ -216,7 +275,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.RevisionDocuments());
                 }
-            
                 await foreach (var item in _source.GetRevisionDocumentsAsync(_options.Collections))
                 {
                     HandleImportBatch("Revisions");
@@ -244,7 +302,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.Tombstones());
                 }
-
                 await foreach (var tombstone in _source.GetTombstonesAsync(_options.Collections))
                 {
                     HandleImportBatch("Tombstones");
@@ -277,7 +334,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.Conflicts());
                 }
-
                 await foreach (var conflict in _source.GetConflictsAsync(_options.Collections))
                 {
                     HandleImportBatch("Conflicts");
@@ -485,7 +541,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.Documents());
                 }
-
                 await foreach (DocumentItem item in _source.GetLegacyAttachmentsAsync(null))
                 {
                     HandleImportBatch("LegacyAttachments");
@@ -495,7 +550,7 @@ namespace Raven.Server.Smuggler.Documents
                         ThrowInvalidData();
 
                     item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
-                    
+
                     await ((IDocumentActions)_actionsList[index]).WriteDocumentAsync(item, result.Documents);
                     DisposeSourceInfo();
                     _itemsInBatch++;
@@ -518,7 +573,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.LegacyDocumentDeletions());
                 }
-
                 await foreach (var id in _source.GetLegacyDocumentDeletionsAsync())
                 {
                     HandleImportBatch("LegacyDocumentDeletions");
@@ -544,7 +598,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _actionsList.Add(des.LegacyAttachmentDeletions());
                 }
-
                 await foreach (var id in _source.GetLegacyAttachmentDeletionsAsync())
                 {
                     HandleImportBatch("LegacyAttachmentDeletions");
@@ -564,33 +617,57 @@ namespace Raven.Server.Smuggler.Documents
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
         {
             result.CompareExchange.Start();
-            
+
+            foreach (var des in _destinations)
+            {
+                _actionsList.Add(des.CompareExchange(_context));
+            }
+
             await using (var actions = new DatabaseCompareExchangeActions(_server, _databaseRecord, _context, new CancellationToken()))
             {
-                await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
+                try
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.CompareExchange.ReadCount++;
-                    if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
+                    await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
+                    {
+                        _token.ThrowIfCancellationRequested();
+                        result.CompareExchange.ReadCount++;
+                        if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
 
-                    if (kvp.Equals(default))
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        continue;
-                    }
+                        if (kvp.Equals(default))
+                        {
+                            result.CompareExchange.ErroredCount++;
+                            continue;
+                        }
 
-                    try
-                    {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
-                        result.CompareExchange.LastEtag = kvp.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+                        try
+                        {
+                            if (ClusterTransactionCommand.IsAtomicGuardKey(kvp.Key.Key, out var docId))
+                            {
+                                HandleImportBatch(nameof(DatabaseItemType.CompareExchange));
+                                var index = ShardHelper.GetShardIndexforDocument(_transactionOperationContext, _shardAllocation, docId);
+                                await ((ICompareExchangeActions)_actionsList[index]).WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                                _itemsInBatch++;
+                            }
+                            else
+                            {
+                                await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                            }
+
+                            result.CompareExchange.LastEtag = kvp.Index;
+                        }
+                        catch (Exception e)
+                        {
+                            result.CompareExchange.ErroredCount++;
+                            result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+                        }
                     }
                 }
+                finally
+                {
+                    await CleanActionList();
+                }
+
             }
             return result.CompareExchange;
         }
@@ -656,7 +733,6 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     actionsList.Add(des.CompareExchangeTombstones(_transactionOperationContext));
                 }
-
                 await foreach (var kvp in _source.GetCompareExchangeTombstonesAsync())
                 {
                     var index = ShardHelper.GetShardIndexforDocument(_transactionOperationContext, _shardAllocation, kvp.Key.Key);
@@ -763,4 +839,5 @@ namespace Raven.Server.Smuggler.Documents
             _actionsList.Clear();
         }
     }
+
 }

@@ -625,10 +625,6 @@ namespace Raven.Server.Smuggler.Documents
         private readonly CancellationToken _token;
         private readonly List<RemoveCompareExchangeCommand> _compareExchangeRemoveCommands = new List<RemoveCompareExchangeCommand>();
         private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeAddOrUpdateCommands = new List<AddOrUpdateCompareExchangeCommand>();
-        private DisposableReturnedArray<BatchRequestParser.CommandData> _clusterTransactionCommands = new DisposableReturnedArray<BatchRequestParser.CommandData>(1024);
-        private ClusterTransactionWaiter _clusterTransactionWaiter;
-        private char _IdentityPartsSeparator;
-        //private readonly DocumentContextHolder _documentContextHolder; TODO
 
         public DatabaseCompareExchangeActions(ServerStore serverStore, DatabaseRecord databaseRecord, JsonOperationContext context, CancellationToken token)
         {
@@ -636,36 +632,15 @@ namespace Raven.Server.Smuggler.Documents
             _name = databaseRecord.DatabaseName;
             _context = context;
             _token = token;
-            _IdentityPartsSeparator = databaseRecord.Client?.IdentityPartsSeparator ??  '/'; //TODO
-            ///_clusterTransactionWaiter = new ClusterTransactionWaiter(_serverStore);
-            //_documentContextHolder = new DocumentContextHolder(database); TODO
         }
 
         public async ValueTask WriteKeyValueAsync(string key, BlittableJsonReaderObject value)
         {
-            //TODO
-            // if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
-            // {
-            //     var ctx = _documentContextHolder.GetContextForRead();
-            //
-            //     
-            //     var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector);
-            //     if (doc == null)
-            //         return;
-            //
-            //     _clusterTransactionCommands.Push(new BatchRequestParser.CommandData { Id = docId, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector) });
-            // }
-            // else
-            // {
-                _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_name, key, value, 0, _context, RaftIdGenerator.DontCareId,
-                    fromBackup: true));
-            //}
+            _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_name, key, value, 0, _context, RaftIdGenerator.DontCareId,
+                fromBackup: true));
 
             if (_compareExchangeAddOrUpdateCommands.Count >= BatchSize)
                 await SendAddOrUpdateCommandsAsync(_context);
-
-            if (_clusterTransactionCommands.Length >= BatchSize)
-                await SendClusterTransactionsAsync(_context);
         }
 
         public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -681,48 +656,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public async ValueTask DisposeAsync()
         {
-            //using (_documentContextHolder) TODO
-            using (_clusterTransactionCommands)
-            {
-                await SendClusterTransactionsAsync(_context);
-                await SendAddOrUpdateCommandsAsync(_context);
-                await SendRemoveCommandsAsync(_context);
-            }
-        }
-
-        private async ValueTask SendClusterTransactionsAsync(JsonOperationContext context)
-        {
-            if (_clusterTransactionCommands.Length == 0)
-                return;
-
-
-            using (_clusterTransactionWaiter.CreateTask(out var taskId))
-            {
-                var parsedCommands = _clusterTransactionCommands.GetArraySegment();
-
-                var raftRequestId = RaftIdGenerator.NewId();
-                var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-                var topology = _serverStore.LoadDatabaseTopology(_name);
-
-
-                var clusterTransactionCommand = new ClusterTransactionCommand(_name, _IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
-                clusterTransactionCommand.FromBackup = true;
-                var clusterTransactionResult = await _serverStore.SendToLeaderAsync(clusterTransactionCommand);
-                for (int i = 0; i < _clusterTransactionCommands.Length; i++)
-                {
-                    _clusterTransactionCommands[i].Document.Dispose();
-                    _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
-                }
-
-                _clusterTransactionCommands.Clear();
-                //_documentContextHolder.Reset(); TODO
-
-                if (clusterTransactionResult.Result is List<string> errors)
-                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
-
-                await _serverStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
-                //await _clusterTransactionWaiter.WaitForResults(taskId, _token); //TODO
-            }
+            await SendAddOrUpdateCommandsAsync(_context);
+            await SendRemoveCommandsAsync(_context);
         }
 
         private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)

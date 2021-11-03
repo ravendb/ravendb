@@ -100,7 +100,6 @@ namespace SlowTests.Sharding
                     session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
                     await session.SaveChangesAsync();
                 }
-                
             }
             
             //tombstone + revision
@@ -114,7 +113,6 @@ namespace SlowTests.Sharding
 
             //subscription
             await store1.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>());
-
 
             //Identity
             var result1 = store1.Maintenance.Send(new SeedIdentityForOperation("users", 1990));
@@ -132,28 +130,28 @@ namespace SlowTests.Sharding
             var operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
              operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
             var result = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
+            //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
             //Cluster transaction
-            using var session2 = store1.OpenAsyncSession(new SessionOptions
-            {
-                TransactionMode = TransactionMode.ClusterWide
-            });
-
-            var user4 = new User { Name = "Ayende" };
-            await session2.StoreAsync(user4);
-            await session2.StoreAsync(new { ReservedFor = user4.Id }, "usernames/" + user4.Name);
-
-            await session2.SaveChangesAsync();
+            // using var session2 = store1.OpenAsyncSession(new SessionOptions
+            // {
+            //     TransactionMode = TransactionMode.ClusterWide
+            // });
+            //
+            // var user4 = new User { Name = "Ayende" };
+            // await session2.StoreAsync(user4);
+            // await session2.StoreAsync(new { ReservedFor = user4.Id }, "usernames/" + user4.Name);
+            //
+            // await session2.SaveChangesAsync();
 
             //Index
             await new Index().ExecuteAsync(store1);
-
         }
 
         private static async Task CheckData(IDocumentStore store2, string[] names)
         {
             var detailedStats = store2.Maintenance.Send(new GetDetailedStatisticsOperation());
             //doc
-            Assert.Equal(6, detailedStats.CountOfDocuments);
+            Assert.Equal(3, detailedStats.CountOfDocuments);
             //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - Not working for 4.2
             //tombstone
             Assert.Equal(1, detailedStats.CountOfTombstones);
@@ -228,11 +226,12 @@ namespace SlowTests.Sharding
                 var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli"));
                 Assert.NotNull(user1);
 
-                user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/ayende"));
-                Assert.NotNull(user1);
-
-                user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/users/1-a"));
-                Assert.NotNull(user1);
+                //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
+                // user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/ayende"));
+                // Assert.NotNull(user1);
+                //
+                // user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/users/1-a"));
+                // Assert.NotNull(user1);
             }
 
         }
@@ -337,7 +336,7 @@ namespace SlowTests.Sharding
                                        
 
                     }, file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
                     
                     using (var store2 = GetShardedDocumentStore())
                     {
@@ -361,9 +360,9 @@ namespace SlowTests.Sharding
                             
 
                         }, file);
+                        WaitForUserToContinueTheTest(store1);
                         //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
                         await Task.Delay(TimeSpan.FromSeconds(20));
-                        
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents
@@ -381,9 +380,9 @@ namespace SlowTests.Sharding
                                              | DatabaseItemType.LegacyAttachments
                                              | DatabaseItemType.LegacyAttachmentDeletions
                                              | DatabaseItemType.LegacyDocumentDeletions
-                            
-                         }, file2);
-                         await Task.Delay(TimeSpan.FromSeconds(20));
+                        }, file2);
+
+                        await Task.Delay(TimeSpan.FromSeconds(20));
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -407,7 +406,7 @@ namespace SlowTests.Sharding
                                 
 
                             }, file2);
-                            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                            await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
                             WaitForUserToContinueTheTest(store3);
                             await CheckData(store3, names);
                         }

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             };
             foreach ((string key, string value) in Headers)
             {
-                if (value == null) //TODO sharding: make sure it is okay to skip null
+                if (value == null)
                     continue;
 
                 message.Headers.TryAddWithoutValidation(key, value);

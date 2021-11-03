@@ -20,6 +20,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Iteration;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Enumerators;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -129,7 +130,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(context, _database.NameWithoutShardingPostfix))
+            using (var rawRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(context, ShardHelper.ToDatabaseName(_database.Name)))
             {
                 return Task.FromResult(rawRecord.MaterializedRecord);
             }
@@ -435,21 +436,20 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, _database.NameWithoutShardingPostfix, _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
+            return _database.ServerStore.Cluster.GetIdentitiesFromPrefix(_serverContext, ShardHelper.ToDatabaseName(_database.Name), _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
         }
 
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
             Debug.Assert(_serverContext != null);
-            ;
-            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, _database.NameWithoutShardingPostfix, _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
+            return _database.ServerStore.Cluster.GetCompareExchangeFromPrefix(_serverContext, ShardHelper.ToDatabaseName(_database.Name), _startRaftIndex, long.MaxValue).ToAsyncEnumerable();
         }
 
         public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
         {
             Debug.Assert(_serverContext != null);
 
-            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, _database.NameWithoutShardingPostfix).ToAsyncEnumerable();
+            return _database.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(_serverContext, ShardHelper.ToDatabaseName(_database.Name)).ToAsyncEnumerable();
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -504,7 +504,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
-            return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, _database.NameWithoutShardingPostfix).ToAsyncEnumerable();
+            return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, ShardHelper.ToDatabaseName(_database.Name)).ToAsyncEnumerable();
         }
 
         public IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync()

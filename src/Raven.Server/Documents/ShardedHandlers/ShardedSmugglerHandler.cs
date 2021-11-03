@@ -1,20 +1,19 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Pipelines;
 using System.Net;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Json;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
@@ -38,12 +37,12 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task PostExport()
         {
             Logger logger = LoggingSource.Instance.GetLogger("PostExport", typeof(ShardedSmugglerHandler).FullName);
+            var result = new SmugglerResult();
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 BlittableJsonReaderObject blittableJson = null;
                 DatabaseSmugglerOptionsServerSide options;
 
-                //TODO - startEtag and startRaftIndex 
                 var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
                 using (context.GetMemoryBuffer(out var buffer))
@@ -81,11 +80,17 @@ namespace Raven.Server.Documents.ShardedHandlers
                             null,
                             "Export database: " + ShardedContext.DatabaseName,
                             Operations.Operations.OperationType.DatabaseExport,
-                            onProgress => ExportShardedDatabaseInternalAsync(options, fileName, onProgress, blittableJson, context, logger, token),
+                            onProgress => ExportShardedDatabaseInternalAsync(options, fileName, blittableJson, context, logger, token),
                             operationId, token: token);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
+                        if (logger.IsOperationsEnabled)
+                            logger.Operations("Export failed .", e);
+
+                        result.AddError($"Error occurred during export. Exception: {e.Message}");
+                        await WriteResultAsync(context, result, ResponseBodyStream());
+
                         HttpContext.Abort();
                     }
                 }
@@ -95,7 +100,6 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
             string fileName,
-            Action<IOperationProgress> onProgress,
             BlittableJsonReaderObject blittableJson,
             JsonOperationContext context,
             Logger logger,
@@ -103,105 +107,85 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            var first = true;
+            var oldOperateOnType = options.OperateOnTypes;
+
+            var operateOnTypes = options.OperateOnTypes &= ~(DatabaseItemType.DatabaseRecord |
+                                                             DatabaseItemType.Subscriptions |
+                                                             DatabaseItemType.Identities |
+                                                             DatabaseItemType.Indexes |
+                                                             DatabaseItemType.ReplicationHubCertificates);
+
+            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, context, "OperateOnTypes", operateOnTypes);
+
             using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
-            using (var fileStream = new GZipStream(outputStream, CompressionMode.Compress))
+            using (var exportOutputStream = new GZipStream(outputStream, CompressionMode.Compress))
             {
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
                     var cmd = new ShardedStreamCommand(this, async stream =>
                     {
-                        try
+                        using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
-                            //Todo - Handler build version and change to pipreader
-                            var tempStream = new byte[8193];
-                            using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
+                            var reader = PipeReader.Create(gzipStream);
+                            var firstLoop = true;
+                            while (true)
                             {
-                                if (first == false)
+                                var result = await reader.ReadAsync();
+                                var buffer = result.Buffer;
+                                reader.AdvanceTo(buffer.Start, buffer.End);
+
+                                if (result.IsCompleted)
+                                    break;
+
+                                await exportOutputStream.WriteAsync(new ReadOnlyMemory<byte>(result.Buffer.ToArray(), 0, (int)result.Buffer.Length - 1));
+
+                                if (firstLoop)
                                 {
-                                    var t = new byte[18];
-                                    await gzipStream.ReadAsync(t, new CancellationToken());
+                                    reader.AdvanceTo(buffer.GetPosition(result.Buffer.First.Length - 1), buffer.End);
+                                    firstLoop = false;
+                                    continue;
                                 }
 
-                                var result = await FillBuffer(gzipStream, tempStream, isFirst: true, 0);
-
-                                while (result.HasMore)
-                                {
-                                    await fileStream.WriteAsync(new ReadOnlyMemory<byte>(tempStream, 0, result.Read - 1), new CancellationToken());
-                                    result = await FillBuffer(gzipStream, tempStream, isFirst: false, result.Read - 1);
-                                }
-                                await fileStream.WriteAsync(tempStream, 0, result.Read - 1);
+                                reader.AdvanceTo(buffer.GetPosition(result.Buffer.Length - 1), buffer.End);
                             }
                         }
-                        catch (Exception e)
-                        {
-                            if (logger.IsOperationsEnabled)
-                                logger.Operations("Could not save export file.", e);
 
-                            tcs.TrySetException(e);
-
-                            if (e is UnauthorizedAccessException || e is DirectoryNotFoundException || e is IOException)
-                                throw new InvalidOperationException($"Cannot export to selected path {fileName}, please ensure you selected proper filename.", e);
-
-                            throw new InvalidOperationException($"Could not save export file {fileName}.", e);
-                        }
                     }, tcs, blittableJson);
 
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, context);
                     if (i == ShardedContext.ShardCount - 1)
                     {
-                        await fileStream.WriteAsync(Encoding.UTF8.GetBytes("}"));
+                        await exportOutputStream.WriteAsync(Encoding.UTF8.GetBytes("}"));
                     }
                     else
                     {
-                        if (first)
+                        if (i == 0) //Only first shard write build version
                         {
-                            //DatabaseRecord,  Subscriptions, Identities ... need to export only from one shard
-                            var operateOnTypes = options.OperateOnTypes &= ~(DatabaseItemType.DatabaseRecord |
-                                                                             DatabaseItemType.Subscriptions |
-                                                                             DatabaseItemType.Identities |
-                                                                             DatabaseItemType.Indexes |
-                                                                             DatabaseItemType.ReplicationHubCertificates);
+                            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, context, "SkipBuildVersion", true);
+                        }
 
-                            blittableJson.Modifications = new DynamicJsonValue(blittableJson)
-                            {
-                                ["OperateOnTypes"] = operateOnTypes
-                            };
-                            using (var old = blittableJson)
-                            {
-                                blittableJson = context.ReadObject(blittableJson, "convert/entityToBlittable");
-                            }
+                        if (i == ShardedContext.ShardCount - 2) // Last shard need to bring all server wide information
+                        {
+                            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, context, "OperateOnTypes", oldOperateOnType);
 
-                            first = false;
                         }
                     }
                 }
             }
+
             return null;
         }
 
-        private static async Task<(bool HasMore, int Read)> FillBuffer(GZipStream gzipStream, byte[] tempStream, bool isFirst, int end)
+        private static BlittableJsonReaderObject CreateNewOptionBlittableJsonReaderObject(BlittableJsonReaderObject blittableJson, JsonOperationContext context,
+            string key, object value)
         {
-            var hasMore = false;
-            var start = isFirst ? 0 : 1;
-            var add = 0;
-            if (isFirst == false)
+            blittableJson.Modifications = new DynamicJsonValue(blittableJson) {[key] = value};
+            using (var old = blittableJson)
             {
-                tempStream[0] = tempStream[end];
-                add++;
+                blittableJson = context.ReadObject(blittableJson, "convert/entityToBlittable");
             }
 
-            var num = await gzipStream.ReadAsync(new Memory<byte>(tempStream, start, 8192 - start), new CancellationToken());
-            num += add;
-            if (await gzipStream.ReadAsync(new Memory<byte>(tempStream, num, 1), new CancellationToken()) == 1)
-            {
-                num++;
-                hasMore = true;
-            }
-            
-            
-
-            return (hasMore, num);
+            return blittableJson;
         }
 
         private Stream GetOutputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
@@ -232,7 +216,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad request
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Error"] = "This endpoint requires form content type" });
+                        context.Write(writer, new DynamicJsonValue {["Type"] = "Error", ["Error"] = "This endpoint requires form content type"});
                         return;
                     }
                 }
@@ -298,7 +282,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             }
                             catch (Exception e)
                             {
-                                result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                result.AddError($"Error occurred during import. Exception: {e}");
                                 onProgress.Invoke(result.Progress);
                                 throw;
                             }
@@ -307,11 +291,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                         });
                     }, operationId, token: token).ConfigureAwait(false);
 
-                await WriteImportResultAsync(context, result, ResponseBodyStream());
+                await WriteResultAsync(context, result, ResponseBodyStream());
             }
         }
 
-        private async Task DoImportInternalAsync(JsonOperationContext context, Stream stream, BlittableJsonReaderObject optionsAsBlittable,DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress,
+        private async Task DoImportInternalAsync(JsonOperationContext context, Stream stream, BlittableJsonReaderObject optionsAsBlittable,
+            DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress,
             OperationCancelToken token)
         {
             var contextList = new List<JsonOperationContext>();
@@ -334,25 +319,23 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext tContext))
                 using (var source = new StreamSource(stream, context, ShardedContext.DatabaseName, options))
-                using (tContext.OpenReadTransaction())
                 {
-                    var record = Server.ServerStore.Cluster.ReadDatabase(tContext, ShardedContext.DatabaseName);
+                    DatabaseRecord record;
+                    using (tContext.OpenReadTransaction())
+                    {
+                        record = Server.ServerStore.Cluster.ReadDatabase(tContext, ShardedContext.DatabaseName);
+                    }
 
                     for (int i = 0; i < ShardedContext.ShardCount; i++)
                     {
                         destinationList.Add(new StreamDestination(streamList[i], contextList[i], source));
                     }
 
-                    var smuggler = new ShardedDatabaseSmuggler(source, destinationList, context, tContext, record, 
-                        Server.ServerStore, Server.Time, options, result,
+                    var smuggler = new ShardedDatabaseSmuggler(source, destinationList, context, tContext, record,
+                        Server.ServerStore, Server.Time, ShardedContext, this, contextList, optionsAsBlittable, streamList, tcs, options, result,
                         onProgress, token: token.Token);
 
-
-                    smuggler.ImportBatch = new ImportBatch(context, optionsAsBlittable, streamList, tcs, contextList, this, ShardedContext);
                     await smuggler.ExecuteAsync();
-                    var task =  smuggler.ImportBatch.SendImportBatch();
-                    task.Wait();
-
                 }
 
             }
@@ -365,67 +348,14 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private static async ValueTask WriteImportResultAsync(JsonOperationContext context, SmugglerResult result, Stream stream)
+
+
+        private static async ValueTask WriteResultAsync(JsonOperationContext context, SmugglerResult result, Stream stream)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
                 var json = result.ToJson();
                 context.Write(writer, json);
-            }
-        }
-
-        public class ImportBatch
-        {
-            private readonly JsonOperationContext _context;
-            private readonly BlittableJsonReaderObject _optionsAsBlittable;
-            private readonly List<Stream> _streamList;
-            private readonly TaskCompletionSource<object> _tcs;
-            private readonly List<JsonOperationContext> _contextList;
-            private readonly ShardedSmugglerHandler _handler;
-            private readonly ShardedContext _shardedContext;
-
-            public ImportBatch(JsonOperationContext context,
-                BlittableJsonReaderObject optionsAsBlittable,
-                List<Stream> streamList,
-                TaskCompletionSource<object> tcs,
-                List<JsonOperationContext> contextList,
-                ShardedSmugglerHandler handler,
-                ShardedContext shardedContext)
-            {
-                _context = context;
-                _optionsAsBlittable = optionsAsBlittable;
-                _streamList = streamList;
-                _tcs = tcs;
-                _contextList = contextList;
-                _handler = handler;
-                _shardedContext = shardedContext;
-            }
-
-            public async Task SendImportBatch()
-            {
-                var tasks = new List<Task>();
-                for (int i = 0; i < _shardedContext.ShardCount; i++)
-                {
-                    _streamList[i].Position = 0;
-
-                    var multi = new MultipartFormDataContent
-                    {
-                        {
-                            new BlittableJsonContent(async stream2 => await _context.WriteAsync(stream2, _optionsAsBlittable).ConfigureAwait(false)), Constants.Smuggler.ImportOptions
-                        },
-                        {new Client.Documents.Smuggler.DatabaseSmuggler.StreamContentWithConfirmation(_streamList[i], _tcs), "file", "name"}
-                    };
-                    var cmd = new ShardedImportCommand(_handler, Headers.None, multi);
-
-                    var task = _shardedContext.RequestExecutors[i].ExecuteAsync(cmd, _contextList[i]);
-
-                    tasks.Add(task);
-                }
-                await tasks.WhenAll();
-                for (int i = 0; i < _shardedContext.ShardCount; i++)
-                {
-                    _streamList[i].Position = 0;
-                }
             }
         }
     }

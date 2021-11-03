@@ -101,7 +101,6 @@ namespace Raven.Server.Documents
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
-            NameWithoutShardingPostfix = Name.Split('$')[0];
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
@@ -210,8 +209,6 @@ namespace Raven.Server.Documents
         public SubscriptionStorage SubscriptionStorage { get; }
 
         public string Name { get; }
-
-        public string NameWithoutShardingPostfix { get;  }
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
