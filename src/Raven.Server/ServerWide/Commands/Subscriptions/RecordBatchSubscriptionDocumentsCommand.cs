@@ -81,7 +81,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 var existingValue = new BlittableJsonReaderObject(ptr, size, context);
 
                 if (existingValue == null)
-                    throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist in database '{DatabaseName}'");
+                    throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
 

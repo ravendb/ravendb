@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())
             {
-                subscriptionConnectionsState.DropSingleConnection(subscriptionConnection, ex);
+                subscriptionConnectionsState.CancelSingleConnection(subscriptionConnection, ex);
             }
 
             if (_logger.IsInfoEnabled)
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (connectionToDrop == null)
                 return false;
             
-            subscriptionConnectionsState.DropSingleConnection(connectionToDrop, ex);
+            subscriptionConnectionsState.DropSingleConnection(connectionToDrop);
             if (_logger.IsInfoEnabled)
                 _logger.Info(
                     $"Connection with id {connectionId} in subscription with id '{subscriptionId}' and name '{subscriptionConnectionsState.SubscriptionName}' was dropped.", ex);
@@ -454,7 +454,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (_subscriptions.TryGetValue(subscription.SubscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return null;
 
-            if (subscriptionConnectionsState.IsSubscriptionActive() == false)
+            if (subscriptionConnectionsState?.IsSubscriptionActive() == false)
                 return null;
 
             GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionsState);
