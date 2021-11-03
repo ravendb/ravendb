@@ -210,6 +210,7 @@ namespace Raven.Server.Documents.TcpHandlers
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             AssertSupportedFeatures();
+
         }
 
         private async Task NotifyClientAboutSuccess()
@@ -298,11 +299,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
                     throw new SubscriptionInvalidStateException(
                         $"A connection to Subscription Task with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
-            }
-
-            if (_options.Strategy == SubscriptionOpeningStrategy.Concurrent)
-            {
-                _server.LicenseManager.AssertCanAddConcurrentDataSubscriptions();
             }
         }
 
