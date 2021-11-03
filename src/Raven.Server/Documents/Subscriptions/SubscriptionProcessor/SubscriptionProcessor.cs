@@ -113,8 +113,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             Options = Connection.Options;
             SubscriptionState = Connection.SubscriptionState;
             RemoteEndpoint = Connection.TcpConnection.TcpClient.Client.RemoteEndPoint;
-
-            Active = SubscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
         }
 
         public abstract IEnumerable<(Document Doc, Exception Exception)> GetBatch();
@@ -160,6 +158,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             IncludesCmd = includesCmd;
 
             InitializeProcessor();
+
+            Active = SubscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
         }
 
         private protected class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier
