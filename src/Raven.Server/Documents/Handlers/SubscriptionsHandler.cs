@@ -240,20 +240,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
 
-                SubscriptionConnectionsDetails details;
-
-                if (subscriptionConnections == null)
-                {
-                    details = new SubscriptionConnectionsDetails()
-                    {
-                        Results = new List<SubscriptionConnectionDetails>(),
-                        SubscriptionMode = "None"
-                    };
-                }
-                else
-                {
-                    details = subscriptionConnections.GetSubscriptionConnectionsDetails();
-                }
+                var details = subscriptionConnections.GetSubscriptionConnectionsDetails();
 
                 context.Write(writer, details.ToJson());
             }
@@ -399,30 +386,18 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetLongQueryString("id", required: false);
             var subscriptionName = GetStringQueryString("name", required: false);
-            var connectionId = GetLongQueryString("connectionId", required: false);
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = Database
                     .SubscriptionStorage
                     .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
-                
+
                 if (subscription != null)
                 {
-                    bool result;
-                    if (connectionId.HasValue)
-                    {
-                        result = Database.SubscriptionStorage.DropSingleSubscriptionConnection(subscription.SubscriptionId, connectionId,
-                        new SubscriptionClosedException($"Connection with Id {connectionId} dropped by API request"));
-                    }
-                    else 
-                    {
-                       result = Database.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
-                           new SubscriptionClosedException("Dropped by API request"));
-                    }
-
-                    if (result == false)
+                    if (Database.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
+                            new SubscriptionClosedException("Dropped by API request")) == false)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return Task.CompletedTask;

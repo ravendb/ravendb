@@ -110,7 +110,6 @@ namespace Raven.Server.Documents.TcpHandlers
         
         private SubscriptionWorkerOptions _options;
 
-        public long ConnectionId;
         public SubscriptionWorkerOptions Options => _options;
 
         public DisposeOnce<SingleAttempt> DisposeOnDisconnect;
@@ -1498,14 +1497,14 @@ namespace Raven.Server.Documents.TcpHandlers
     public class SubscriptionConnectionDetails
     {
         public string ClientUri { get; set; }
-        public long ConnectionId { get; set; }
-        
+        public SubscriptionOpeningStrategy? Strategy { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ClientUri)] = ClientUri,
-                [nameof(ConnectionId)] = ConnectionId
+                [nameof(Strategy)] = Strategy
             };
         }
     }

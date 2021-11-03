@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -30,7 +32,6 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly DocumentsStorage _documentsStorage;
         private readonly SubscriptionState _subscriptionState;
         private ConcurrentSet<SubscriptionConnection> _connections;
-        private long _lastConnectionId;
         public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
 
         private int _maxConcurrentConnections;
@@ -92,7 +93,6 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionState = connection.SubscriptionState;
             _documentsStorage = connection.TcpConnection.DocumentDatabase.DocumentsStorage;
             Query = connection.SubscriptionState.Query;
-            _lastConnectionId = 0;
             _connections = new ConcurrentSet<SubscriptionConnection>();
             IsConcurrent = connection.Strategy == SubscriptionOpeningStrategy.Concurrent;
             
@@ -263,8 +263,6 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         throw new InvalidOperationException("Could not add a connection to a concurrent subscription. Likely a bug");
                     }
-
-                    incomingConnection.ConnectionId = GetNewConnectionId();
                 }
                 else
                 {
@@ -336,8 +334,6 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     throw new InvalidOperationException("Could not add a connection to a subscription. Likely a bug");
                 }
-
-                incomingConnection.ConnectionId = GetNewConnectionId();
             }
         }
 
@@ -396,7 +392,7 @@ namespace Raven.Server.Documents.Subscriptions
                     new SubscriptionConnectionDetails
                     {
                         ClientUri = connection.ClientUri,
-                        ConnectionId = connection.ConnectionId
+                        Strategy = connection.Strategy
                     });
             }
 
@@ -479,11 +475,6 @@ namespace Raven.Server.Documents.Subscriptions
         public List<SubscriptionConnection> GetConnections()
         {
             return _connections.ToList();
-        }
-
-        public long GetNewConnectionId()
-        {
-            return Interlocked.Increment(ref _lastConnectionId);
         }
 
         public override string ToString()
