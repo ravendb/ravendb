@@ -11,11 +11,7 @@ namespace Raven.Client.Documents.Commands
         private readonly string _name;
         private readonly long? _connectionId;
 
-        public DropSubscriptionConnectionCommand(string name)
-        {
-            _name = name;
-        }
-        public DropSubscriptionConnectionCommand(string name, long connectionId)
+        public DropSubscriptionConnectionCommand(string name, long? connectionId = null)
         {
             _name = name;
             _connectionId = connectionId;

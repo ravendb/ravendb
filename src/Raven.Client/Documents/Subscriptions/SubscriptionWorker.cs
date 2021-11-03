@@ -45,7 +45,6 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public delegate Task AfterAcknowledgmentAction(SubscriptionBatch<T> batch);
 
-        private long _connectionId;
         private readonly Logger _logger;
         private readonly DocumentStore _store;
         private readonly string _dbName;
@@ -58,14 +57,11 @@ namespace Raven.Client.Documents.Subscriptions
         private Stream _stream;
         private int _forcedTopologyUpdateAttempts = 0;
 
-        public long ConnectionId => _connectionId;
         /// <summary>
         /// Allows the user to define stuff that happens after the confirm was received from the server
         /// (this way we know we won't get those documents again)
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
-
-        internal event Action<long> OnEstablishedSubscriptionConnection;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
 
@@ -119,7 +115,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (await _subscriptionTask.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false) == false)
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Subscription worker for '{SubscriptionName}' wasn't done after 60 seconds, cannot hold subscription disposal any longer.");
+                                _logger.Info($"Subscription worker for '{SubscriptionName}' wasn't done after 60 seconds", new TimeoutException());
                         }
                     }
                     catch (Exception)
@@ -479,13 +475,10 @@ namespace Raven.Client.Documents.Subscriptions
                         if (connectionStatus.Type != SubscriptionConnectionServerMessage.MessageType.ConnectionStatus ||
                             connectionStatus.Status != SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                             AssertConnectionState(connectionStatus);
-                        _connectionId = connectionStatus.ConnectionId;
                     }
                     _lastConnectionFailure = null;
                     if (_processingCts.IsCancellationRequested)
                         return;
-
-                    OnEstablishedSubscriptionConnection?.Invoke(_connectionId);
 
                     Task notifiedSubscriber = Task.CompletedTask;
 

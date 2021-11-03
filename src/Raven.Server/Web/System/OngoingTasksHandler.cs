@@ -222,7 +222,7 @@ namespace Raven.Server.Web.System
                 {
                     connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
                 }
-                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var _))
+                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnection(subscriptionState.SubscriptionId, out var _))
                 {
                     connectionStatus = OngoingTaskConnectionStatus.Active;
                 }

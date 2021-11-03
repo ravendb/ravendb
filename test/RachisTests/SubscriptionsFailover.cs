@@ -153,6 +153,7 @@ namespace RachisTests
 
                 var sp = Stopwatch.StartNew();
                 var fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
+                Console.WriteLine($"\nNode {fallenNode} is down\n");
 
                 await GenerateDocuments(store);
 
@@ -166,7 +167,8 @@ namespace RachisTests
                 reachedMaxDocCountInBatchMre.Reset();
 
                 fallenNode = await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
-                
+                Console.WriteLine($"\nNode {fallenNode} is down\n");
+
                 await GenerateDocuments(store);
 
                 Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
@@ -604,7 +606,8 @@ namespace RachisTests
                             usersCountInAck.Add(x);
                             proggress.MaxId = curId;
                         }
-                        
+
+                        Console.WriteLine("\nusersCountInAck: " + usersCountInAck.Count + "\n");
                         if (usersCountInAck.Count == 10)
                         {
                             reachedMaxDocCountInAckMre.Set();

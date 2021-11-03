@@ -507,9 +507,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
-        public void DropConnection(string name, string database = null)
+        public void DropAllConnections(string name, string database = null)
         {
-            AsyncHelpers.RunSync(() => DropConnectionAsync(name, database));
+            AsyncHelpers.RunSync(() => DropAllConnectionsAsync(name, database));
         }
 
         /// <summary>
@@ -517,7 +517,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
-        public async Task DropConnectionAsync(string name, string database = null, CancellationToken token = default)
+        public async Task DropAllConnectionsAsync(string name, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);
 

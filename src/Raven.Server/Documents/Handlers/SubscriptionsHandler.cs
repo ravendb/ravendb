@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var subscription = Database
                     .SubscriptionStorage
-                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
+                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false); //TODO stav: should consider subscription running if no connections exist at the time?
                 
                 if (subscription != null)
                 {

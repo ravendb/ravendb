@@ -286,7 +286,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 await SendNoopAck();
                 await WriteJsonAsync(new DynamicJsonValue
                 {
-                    [nameof(SubscriptionConnectionServerMessage.ConnectionId)] = ConnectionId,
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                     [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                 });
@@ -355,7 +354,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     finally
                     {
-                        TcpConnection.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                       TcpConnection.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
                     }
                 }
                 catch (Exception e)
@@ -852,13 +851,11 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
                                 includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
 
-                            CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
                             _processor.InitializeForNewBatch(clusterOperationContext, docsContext, includeDocumentsCommand);
 
                             foreach (var result in _processor.GetBatch())
                             {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested(); //TODO stav: can remove this or might be necessary
+                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                                 lastChangeVectorSentInThisBatch = ChangeVectorUtils.MergeVectors(
                                     lastChangeVectorSentInThisBatch,
@@ -876,7 +873,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     continue;
                                 }
                                 anyDocumentsSentInCurrentIteration = true;
-                                
+
                                 writer.WriteStartObject();
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
@@ -69,6 +68,7 @@ namespace Raven.Server.Documents.Subscriptions
             DocsContext = docsContext;
             Active = active;
             StartEtag = SubscriptionConnectionsState.GetLastEtagSent();
+
             DocSent = false;
         }
         

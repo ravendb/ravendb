@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
+            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection); //TODO stav: dispose of this
 
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
             LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Subscriptions
                     {
                         throw new InvalidOperationException("Could not add a connection to a concurrent subscription. Likely a bug");
                     }
-                    
+
                     incomingConnection.ConnectionId = GetNewConnectionId();
                 }
                 else
@@ -440,7 +440,6 @@ namespace Raven.Server.Documents.Subscriptions
         {
             if (_connections.TryRemove(connection))
             {
-                CancelSingleConnection(connection, new SubscriptionClosedException($"Connection {connection.ClientUri} has closed", canReconnect:false));//TODO stav: will this exception will be thrown?
                 NotifyHasMoreDocs(); //upon connection fail, all recorded docs should be resent
             }
         }
