@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool DropSingleSubscriptionConnection(long subscriptionId, long? connectionId, SubscriptionException ex)
         {
-            if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;
 
             var connectionToDrop = subscriptionConnectionsState.GetConnections().FirstOrDefault(conn => conn.ConnectionId == connectionId);
