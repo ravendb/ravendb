@@ -6,7 +6,7 @@ using Corax.Pipeline;
 
 namespace Corax
 {
-    public unsafe class Analyzer
+    public unsafe class Analyzer : IDisposable
     {
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
@@ -17,12 +17,13 @@ namespace Corax
         private readonly ITransformer[] _transformers;
         private readonly float _sourceBufferMultiplier;
         private readonly float _tokenBufferMultiplier;
+        private bool _disposedValue;
 
-        private Analyzer(delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> function,
+        protected Analyzer(delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> function,
             in ITokenizer tokenizer, ITransformer[] transformers) : this(null, function, tokenizer, transformers)
         {}
 
-        private Analyzer(Analyzer inner,
+        protected Analyzer(Analyzer inner,
             delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> function,
             in ITokenizer tokenizer, ITransformer[] transformers)
         {
@@ -106,7 +107,7 @@ namespace Corax
             return result;
         }
 
-        internal struct NullTransformer : ITransformer
+        public struct NullTransformer : ITransformer
         {
             public int Transform(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
             {
@@ -114,7 +115,7 @@ namespace Corax
             }
         }
 
-        internal struct NullTokenizer : ITokenizer
+        public struct NullTokenizer : ITokenizer
         {
             public void Dispose()
             {
@@ -249,6 +250,32 @@ namespace Corax
             Debug.Assert(output.Length >= (int)(_tokenBufferMultiplier * source.Length));
 
             _func(this, source, ref output, ref tokens);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+
+                }
+
+                _disposedValue = true;
+            }
+        }
+
+        ~Analyzer()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: false);
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

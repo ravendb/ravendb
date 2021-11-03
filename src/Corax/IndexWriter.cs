@@ -146,6 +146,7 @@ namespace Corax
             return Transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
         }
 
+        [SkipLocalsInit]
         private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
         {
             _analyzer.GetOutputBuffersSize(512, out int bufferSize, out int tokenSize);
@@ -237,23 +238,6 @@ namespace Corax
                     AddMaybeAvoidDuplicate(term, entryId);
                 }
             }
-            //else if (fieldType.HasFlag(IndexEntryFieldType.List))
-            //{
-            //    var iterator = entryReader.ReadMany(tokenField);
-            //    while (iterator.ReadNext())
-            //    {
-            //        var value = iterator.Sequence;
-
-            //        using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-            //        if (field.TryGetValue(slice, out var term) == false)
-            //        {
-            //            var fieldName = slice.Clone(context);
-            //            field[fieldName] = term = new List<long>();
-            //        }
-
-            //        AddMaybeAvoidDuplicate(term, entryId);
-            //    }
-            //}
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
                 entryReader.Read(tokenField, out var value);
@@ -267,30 +251,27 @@ namespace Corax
 
                 AddMaybeAvoidDuplicate(term, entryId);
             }
-            //else if (fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
-            //{
-            //    entryReader.Read(tokenField, out var value);
-
-            //    using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
-            //    if (field.TryGetValue(slice, out var term) == false)
-            //    {
-            //        var fieldName = slice.Clone(context);
-            //        field[fieldName] = term = new List<long>();
-            //    }
-
-            //    AddMaybeAvoidDuplicate(term, entryId);
-            //}
         }
 
-        private void DeleteCommit(Dictionary<Slice, int> knownFields, Span<byte> tmpBuf, Tree fieldsTree)
+        private unsafe void DeleteCommit(Dictionary<Slice, int> knownFields, Span<byte> tmpBuf, Tree fieldsTree)
         {
             if (_entriesToDelete.Count == 0)
                 return;
             
             Page page = default;
             var llt = Transaction.LowLevelTransaction;
-            List<long> ids = null;
+            List<long> ids = null;            
+
+            int bufferSize = 0;
+            int tokenSize = 0;
             
+            var analyzer = _analyzer;
+            if ( analyzer != null)
+                _analyzer.GetOutputBuffersSize(512, out bufferSize, out tokenSize);
+    
+            byte* tempWordsSpace = stackalloc byte[bufferSize];
+            Token* tempTokenSpace = stackalloc Token[tokenSize];
+
             foreach (var id in _entriesToDelete)
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
@@ -301,15 +282,51 @@ namespace Corax
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
                         var it = entryReader.ReadMany(fieldId);
+                        
                         while (it.ReadNext())
                         {
-                            DeleteField(id, fieldName, tmpBuf, it.Sequence);
+                            if (analyzer == null)
+                            {
+                                DeleteField(id, fieldName, tmpBuf, it.Sequence);
+                            }
+                            else
+                            {
+                                // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
+                                var value = it.Sequence;
+
+                                var words = new Span<byte>(tempWordsSpace, bufferSize);
+                                var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                                analyzer.Execute(value, ref words, ref tokens);
+
+                                for (int i = 0; i < tokens.Length; i++)
+                                {
+                                    ref var token = ref tokens[i];
+
+                                    DeleteField(id, fieldName, tmpBuf, words.Slice(token.Offset, (int)token.Length));
+                                }
+                            }
                         }
                     }
                     else
                     {
                         entryReader.Read(fieldId, out Span<byte> termValue);
-                        DeleteField(id, fieldName, tmpBuf, termValue);
+                        if (analyzer == null)
+                        {
+                            DeleteField(id, fieldName, tmpBuf, termValue);
+                        }
+                        else
+                        {
+                            var words = new Span<byte>(tempWordsSpace, bufferSize);
+                            var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                            analyzer.Execute(termValue, ref words, ref tokens);
+
+                            for (int i = 0; i < tokens.Length; i++)
+                            {
+                                ref var token = ref tokens[i];
+
+                                DeleteField(id, fieldName, tmpBuf, words.Slice(token.Offset, (int)token.Length));
+                            }
+                        }                        
                     }
                 }
 
@@ -323,7 +340,7 @@ namespace Corax
             void DeleteField(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-             //todo maciej: got some issue here after refactoring
+                //todo maciej: got some issue here after refactoring
                 if (fieldTree.TryGetValue(termValue, out var containerId) == false)
                     return;
 
