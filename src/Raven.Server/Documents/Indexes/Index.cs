@@ -2055,18 +2055,26 @@ namespace Raven.Server.Documents.Indexes
 
         private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals)
         {
-            // force flush and sync
-            var sp = Stopwatch.StartNew();
-            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-            if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+            try
             {
-                storageEnvironment.ForceSyncDataFile();
-            }
+                // force flush and sync
+                var sp = Stopwatch.StartNew();
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+                {
+                    storageEnvironment.ForceSyncDataFile();
+                }
 
-            var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
-            // wait for sync
-            if (timeLeft > 0)
-                Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
+                // wait for sync
+                if (timeLeft > 0)
+                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+            }
+            catch (OperationCanceledException)
+            {
+                // index was deleted or database was shutdown
+                return;
+            }
 
             storageEnvironment.Cleanup(tryCleanupRecycledJournals);
         }

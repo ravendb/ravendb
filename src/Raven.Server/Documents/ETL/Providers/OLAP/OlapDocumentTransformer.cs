@@ -65,10 +65,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             DocumentScript.ScriptEngine.SetValue("partitionBy", new ClrFunctionInstance(DocumentScript.ScriptEngine, "partitionBy", PartitionBy));
             DocumentScript.ScriptEngine.SetValue("noPartition", new ClrFunctionInstance(DocumentScript.ScriptEngine, "noPartition", NoPartition));
 
-            if (_config.CustomPartitionValue != null)
-            {
-                DocumentScript.ScriptEngine.SetValue(CustomPartition, new JsString(_config.CustomPartitionValue));
-            }
+            var customPartitionValue = _config.CustomPartitionValue != null
+                ? new JsString(_config.CustomPartitionValue)
+                : JsValue.Undefined;
+
+            DocumentScript.ScriptEngine.SetValue(CustomPartition, customPartitionValue);
         }
 
         protected override string[] LoadToDestinations { get; }
