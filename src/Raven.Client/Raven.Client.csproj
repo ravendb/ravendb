@@ -77,6 +77,45 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <None Include="RavenDB.Client.targets" Link="RavenDB.Client.targets">
+      <PackagePath>build/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+	  <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+	  </None>
+    <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">
+      <PackagePath>native/</PackagePath>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>true</Pack>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
