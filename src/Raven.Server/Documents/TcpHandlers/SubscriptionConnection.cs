@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Esprima;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
@@ -22,10 +23,12 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.TimeSeries;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Json;
@@ -38,6 +41,8 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
@@ -392,8 +397,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        public Task SubscriptionConnectionTask;
-
         public static void SendSubscriptionDocuments(ServerStore server, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
             var subscriptionConnectionInProgress = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
@@ -404,7 +407,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 try
                 {
-                    connection.SubscriptionConnectionTask = connection.Run(server, tcpConnectionOptions, subscriptionConnectionInProgress);
+                    _ = connection.Run(server, tcpConnectionOptions, subscriptionConnectionInProgress);
                 }
                 catch (Exception)
                 {
@@ -772,7 +775,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         foreach (var (id, record) in _currentBatchDocumentIdToChangeVector)
                         {
                             var document = TcpConnection.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(docContext, id, throwOnConflict:false);
-                            if (_documentsFetcher.ShouldAddToResendTable(document, record.ChangeVector))
+                            if (_documentsFetcher.HasDocBeenUpdatedBeyondGivenChangeVector(document, record.ChangeVector) == false)
                             {
                                 addDocumentsToResend ??= new List<DocumentRecord>();
                                 addDocumentsToResend.Add(new DocumentRecord
@@ -859,6 +862,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
                                 includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
 
+                            var active = SubscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
                             var batch = _subscriptionConnectionsState.GetNextBatch(clusterOperationContext, _documentsFetcher, docsContext, includeDocumentsCommand);
 
                             _currentBatchDocumentIdToChangeVector.Clear();
@@ -886,6 +890,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 if (result.Doc is SubscriptionDocumentsFetcher.SubscriptionRevision subscriptionRevision)
                                 {
+                                    if (SubscriptionConnectionsState.IsRevisionInActiveBatch(clusterOperationContext, subscriptionRevision.ChangeVector, active))
+                                        continue;
+
                                     _currentBatchRevisions ??= new List<RevisionRecord>();
                                     _currentBatchRevisions.Add(new RevisionRecord
                                     {
@@ -895,6 +902,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 }
                                 else
                                 {
+                                    if (SubscriptionConnectionsState.IsDocumentInActiveBatch(clusterOperationContext, result.Doc.Id, active))
+                                        continue;
+
                                     _currentBatchDocumentIdToChangeVector.Add(result.Doc.Id, new DocumentRecord 
                                     {
                                         DocumentId = result.Doc.Id,

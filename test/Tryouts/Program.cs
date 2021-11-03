@@ -31,10 +31,10 @@ namespace Tryouts
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
                     //using (var test = new RollingIndexesClusterTests(testOutputHelper))
-                    using (var test = new RavenDB_3491(testOutputHelper))
+                    using (var test = new SubscriptionsFailover(testOutputHelper))
                     {
                         //await test.RemoveNodeFromDatabaseGroupWhileRollingDeployment();
-                        await test.SubscribtionWithEtag_MultipleOpens();
+                        await test.DistributedRevisionsSubscription(5);
                     }
                 }
                 catch (Exception e)

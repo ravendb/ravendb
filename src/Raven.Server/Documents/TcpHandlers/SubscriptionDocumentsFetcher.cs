@@ -67,25 +67,21 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             if (string.IsNullOrEmpty(_collection))
                 throw new ArgumentException("The collection name must be specified");
-
-            _active = _subscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
-            _clusterOperationContext = clusterOperationContext;
-
+            
             if (_revisions)
             {
                 if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
                     _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Disabled)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
-                return GetRevisionsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetRevisionsFromResend(clusterOperationContext, _active), startEtag);
+                return GetRevisionsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetRevisionsFromResend(clusterOperationContext), startEtag);
             }
 
-            return GetDocumentsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetDocumentsFromResend(clusterOperationContext, _active), startEtag);
+            return GetDocumentsToSend(docsContext, includesCmd, _subscriptionConnectionsState.GetDocumentsFromResend(clusterOperationContext), startEtag);
         }
         
-        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(
-            DocumentsOperationContext docsContext,
-            IncludeDocumentsCommand includesCmd, IEnumerable<DocumentRecord> resendDocuments,
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext,
+             IncludeDocumentsCommand includesCmd, IEnumerable<DocumentRecord> resendDocuments,
             long startEtag)
         {
             int numberOfDocs = 0;
@@ -184,16 +180,15 @@ namespace Raven.Server.Documents.TcpHandlers
             foreach (var record in documents)
             {
                 var current = _db.DocumentsStorage.GetDocumentOrTombstone(docsContext, record.DocumentId, throwOnConflict: false);
-                if (ShouldFetchFromResend(current, record.ChangeVector))
+                if (HasDocBeenUpdatedBeyondGivenChangeVector(current, record.ChangeVector))
                 {
                     Debug.Assert(current.Document != null, "Document does not exist");
                     yield return current.Document;
                 }
-                // TODO stav: consider what happened to the heartbeat if we skip here a lot
             }
         }
 
-        internal bool ShouldFetchFromResend(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
+        internal bool HasDocBeenUpdatedBeyondGivenChangeVector(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
         {
             if (item.Document != null)
             {
@@ -214,32 +209,11 @@ namespace Raven.Server.Documents.TcpHandlers
                         throw new InvalidEnumArgumentException();
                 }
             }
-            // TODO stav: we probably need to delete it from the resend table
+            // TODO: we probably need to delete it from the resend table
             // we don't send tombstones
             return false;
         }
 
-        internal bool ShouldAddToResendTable(DocumentsStorage.DocumentOrTombstone item, string currentChangeVector)
-        {
-            if (item.Document != null)
-            {
-                switch (_db.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, currentChangeVector))
-                {
-                    case ConflictStatus.Update:
-                        return true;
-
-                    case ConflictStatus.AlreadyMerged:
-                    case ConflictStatus.Conflict:
-                        return false;
-
-                    default:
-                        throw new InvalidEnumArgumentException();
-                }
-            }
-            // TODO stav: we probably need to delete it from the resend table
-            // we don't send tombstones
-            return false;
-        }
 
         private IEnumerable<(Document Previous, Document Current)> GetRevisionsEnumerator(IEnumerable<(Document previous, Document current)> enumerable) {
             foreach (var item in enumerable)
@@ -359,8 +333,6 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         private bool _fetchingFromResend;
-        private HashSet<long> _active;
-        private ClusterOperationContext _clusterOperationContext;
 
         private IEnumerable<T> MergeEnumerators<T>(IEnumerable<T> resendItems, IEnumerable<T> items)
         {
@@ -388,6 +360,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             foreach (var r in resend)
             {
+                Console.WriteLine($"from resend {r.Previous} - {r.Current}");
                 yield return (_db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Previous), _db.DocumentsStorage.RevisionsStorage.GetRevision(context, r.Current));
             }
         }
@@ -411,11 +384,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     return false;
-
-                if (_subscriptionConnectionsState.IsDocumentInActiveBatch(_clusterOperationContext, doc.Id, _active))
-                    return false;
             }
-
+            
             if (patch == null)
                 return true;
 
@@ -455,9 +425,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
-                    return false;
-
-                if (_subscriptionConnectionsState.IsRevisionInActiveBatch(_clusterOperationContext, item.ChangeVector, _active))
                     return false;
             }
 
