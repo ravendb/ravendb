@@ -2,12 +2,10 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
@@ -44,6 +42,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return default;
 
             await RunRqlQuery();
+
             return GenerateSchema();
         }
 
@@ -69,7 +68,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             // query.Skip(..)
         }
 
-        private ICollection<PgColumn> GenerateSchema()
+        protected virtual ICollection<PgColumn> GenerateSchema()
         {
             if (_result == null || _result?.Count == 0)
                 return Array.Empty<PgColumn>();
@@ -208,19 +207,23 @@ namespace Raven.Server.Integrations.PostgreSQL
                         jsonResult.Modifications.Remove(Constants.Documents.Metadata.Key);
                     }
 
-                    foreach (var (key, pgColumn) in Columns)
+                    foreach (var (columnName, pgColumn) in Columns)
                     {
-                        var index = jsonResult.GetPropertyIndex(key);
+                        var index = jsonResult.GetPropertyIndex(columnName);
                         if (index == -1)
                             continue;
 
                         jsonResult.GetPropertyByIndex(index, ref prop);
 
-                        var value = GetValueByType(prop, pgColumn);
+                        var value = GetValueByType(prop, prop.Value, pgColumn);
 
                         row[pgColumn.ColumnIndex] = value;
-                        jsonResult.Modifications.Remove(key);
+
+                        HandleSpecialColumnsIfNeeded(columnName, prop, prop.Value, ref row);
+                        
+                        jsonResult.Modifications.Remove(columnName);
                     }
+
 
                     if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
                     {
@@ -243,7 +246,11 @@ namespace Raven.Server.Integrations.PostgreSQL
             await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
         }
 
-        private ReadOnlyMemory<byte>? GetValueByType(BlittableJsonReaderObject.PropertyDetails propertyDetails, PgColumn pgColumn)
+        protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
+        {
+        }
+
+        protected ReadOnlyMemory<byte>? GetValueByType(BlittableJsonReaderObject.PropertyDetails propertyDetails, object value, PgColumn pgColumn)
         {
             switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask, pgColumn.PgType.Oid)
             {
@@ -254,17 +261,17 @@ namespace Raven.Server.Integrations.PostgreSQL
                 case (BlittableJsonToken.String, PgTypeOIDs.Text):
                 case (BlittableJsonToken.StartArray, PgTypeOIDs.Json):
                 case (BlittableJsonToken.StartObject, PgTypeOIDs.Json):
-                    return pgColumn.PgType.ToBytes(propertyDetails.Value, pgColumn.FormatCode);
+                    return pgColumn.PgType.ToBytes(value, pgColumn.FormatCode);
 
                 case (BlittableJsonToken.LazyNumber, PgTypeOIDs.Float8):
-                    return pgColumn.PgType.ToBytes((double)(LazyNumberValue)propertyDetails.Value, pgColumn.FormatCode);
+                    return pgColumn.PgType.ToBytes((double)(LazyNumberValue)value, pgColumn.FormatCode);
 
                 case (BlittableJsonToken.CompressedString, PgTypeOIDs.Timestamp):
                 case (BlittableJsonToken.CompressedString, PgTypeOIDs.TimestampTz):
                 case (BlittableJsonToken.CompressedString, PgTypeOIDs.Interval):
                     {
-                        if (((string)propertyDetails.Value).Length != 0 
-                            && TypeConverter.TryConvertStringValue((string)propertyDetails.Value, out var obj))
+                        if (((string)value).Length != 0 
+                            && TypeConverter.TryConvertStringValue((string)value, out var obj))
                             return pgColumn.PgType.ToBytes(obj, pgColumn.FormatCode);
                         break;
                     }
@@ -273,8 +280,8 @@ namespace Raven.Server.Integrations.PostgreSQL
                 case (BlittableJsonToken.String, PgTypeOIDs.TimestampTz):
                 case (BlittableJsonToken.String, PgTypeOIDs.Interval):
                     {
-                        if (((LazyStringValue)propertyDetails.Value).Length != 0 
-                            && TypeConverter.TryConvertStringValue((LazyStringValue)propertyDetails.Value, out object obj))
+                        if (((LazyStringValue)value).Length != 0 
+                            && TypeConverter.TryConvertStringValue((LazyStringValue)value, out object obj))
                         {
                             // Check for mismatch between column type and our data type
                             if (obj is DateTime dt)
@@ -302,7 +309,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     }
 
                 case (BlittableJsonToken.String, PgTypeOIDs.Float8):
-                    return pgColumn.PgType.ToBytes(double.Parse((LazyStringValue)propertyDetails.Value), pgColumn.FormatCode);
+                    return pgColumn.PgType.ToBytes(double.Parse((LazyStringValue)value), pgColumn.FormatCode);
 
                 case (BlittableJsonToken.Null, PgTypeOIDs.Json):
                     return Array.Empty<byte>();

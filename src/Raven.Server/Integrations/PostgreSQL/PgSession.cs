@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Sparrow.Logging;
@@ -209,6 +210,23 @@ namespace Raven.Server.Integrations.PostgreSQL
             catch (PgTerminateReceivedException)
             {
                 // Terminate silently
+            }
+            catch (QueryParser.ParseException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Invalid RQL query", e);
+
+                try
+                {
+                    await writer.WriteAsync(messageBuilder.ErrorResponse(
+                        PgSeverity.Error,
+                        PgErrorCodes.InvalidSqlStatementName,
+                        e.ToString()), _token);
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             }
             catch (Exception e)
             {
