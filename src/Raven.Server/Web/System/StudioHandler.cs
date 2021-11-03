@@ -697,7 +697,7 @@ namespace Raven.Server.Web.System
         public Task RavenRoot()
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
 
             return Task.CompletedTask;
         }

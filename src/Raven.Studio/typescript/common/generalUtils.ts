@@ -644,10 +644,14 @@ class genUtils {
         });
         return uuid;
     }
-    
+
+    static isRavenDBCode(line: string): boolean {
+        return line.startsWith("Raven") || line.startsWith("Voron") || line.startsWith("Sparrow");
+    }
+
     static inMemoryRender(templateName: string, data: any) {
         const div = $("<div>");
-        
+
         try {
             ko.applyBindingsToNode(div[0], { template: { name: templateName, data } });
         } catch (e) {
