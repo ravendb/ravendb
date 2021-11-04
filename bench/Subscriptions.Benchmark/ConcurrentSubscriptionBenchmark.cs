@@ -4,25 +4,33 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 using Raven.Client.Documents;
+using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 
 namespace Subscriptions.Benchmark
 {
     public class ConcurrentSubscriptionBenchmark : IDisposable
     {
-        private int _batchSize;
+        private readonly int _batchSize;
         private string _subscriptionName;
         private readonly string _collectionName;
-        private DocumentStore _store;
+        private readonly DocumentStore _store;
+        private bool _revisionsEnabled;
+        private readonly int _docsAmountToTest;
 
-        public ConcurrentSubscriptionBenchmark(int batchSize,  string url,
+        public ConcurrentSubscriptionBenchmark(int batchSize,  string url, int docsAmountToTest,
             string databaseName = "freeDB", string collectionName = "Disks")
         {
             _batchSize = batchSize;
-
             _collectionName = collectionName;
+            _revisionsEnabled = false;
+            _docsAmountToTest = docsAmountToTest;
             _store = new DocumentStore()
             {
                 Database = databaseName,
@@ -44,34 +52,47 @@ namespace Subscriptions.Benchmark
             Console.WriteLine("Docs Processed: "+ runResult.DocsProccessed + " ,Docs Requested: " + runResult.DocsRequested + " Elapsed time: " + runResult.ElapsedMs);
         }
 
+        public void GenerateDocumentsAndRevisions(int amount)
+        {
+            EnableRevisions();
+
+            Console.WriteLine($"Generating {amount} documents..");
+            //generate documents
+            using (BulkInsertOperation bulkInsert = _store.BulkInsert())
+            {
+                for (int i = 0; i <= amount; i++)
+                {
+                    bulkInsert.Store(new Order { Amount = 1 });
+                }
+            }
+        }
+
         private async Task<RunResult> SingleTestRun(int workers, int fakeProcessingTimePerBatch, bool script, bool revision = false)
         {
             try
             {
-                if (string.IsNullOrEmpty(_subscriptionName))
+                if (script == false && revision)
                 {
-                    if (script == false && revision)
-                    {
-                        throw new InvalidOperationException("Can't have a revision without script");
-                    }
-
-                    SubscriptionCreationOptions subscriptionCreationParams;
-                    string revisions = revision ? " (Revisions = true)" : "";
-                    if (script)
-                    {
-                        subscriptionCreationParams = new SubscriptionCreationOptions
-                        {
-                            Query = "from " + _collectionName + revisions
-                        };
-                        _subscriptionName = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
-                        Console.WriteLine($"Created Subscription with query: '{subscriptionCreationParams.Query}'");
-                    }
-                    else
-                    {
-                        _subscriptionName =  await _store.Subscriptions.CreateAsync<Order>();
-                        Console.WriteLine($"Created Subscription without query");
-                    }
+                    throw new InvalidOperationException("Can't have a revision without script");
                 }
+
+                string revisions = revision ? " (Revisions = true)" : "";
+                if (script)
+                {
+                    SubscriptionCreationOptions subscriptionCreationParams = new SubscriptionCreationOptions
+                    {
+                        Query = "from " + _collectionName + revisions
+                    };
+                    _subscriptionName = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
+                    Console.WriteLine($"Created Subscription with query: '{subscriptionCreationParams.Query}'");
+                }
+                else
+                {
+                    _subscriptionName =  await _store.Subscriptions.CreateAsync<Order>();
+                    Console.WriteLine($"Created Subscription without query");
+                }
+
+                EnableRevisions();
 
                 var workersList = new List<SubscriptionWorker<dynamic>>();
                 var taskList = new List<Task>();
@@ -93,12 +114,11 @@ namespace Subscriptions.Benchmark
 
                 var tcs = new TaskCompletionSource<object>();
                 var sentCount = 0;
-                for (int i=0; i < workersList.Count; i++)
+                foreach (var worker in workersList)
                 {
-                    taskList.Add(workersList[i].Run((async o =>
+                    taskList.Add(worker.Run((async o =>
                     {
-                        Console.WriteLine(sentCount);
-                        if (Interlocked.Add(ref sentCount, o.Items.Count) >= 1_000_000)
+                        if (Interlocked.Add(ref sentCount, o.Items.Count) >= _docsAmountToTest)
                             tcs.TrySetResult(null);
                         await Task.Delay(fakeProcessingTimePerBatch);
                     })));
@@ -127,9 +147,40 @@ namespace Subscriptions.Benchmark
             }
         }
 
+        private void EnableRevisions()
+        {
+            if (_revisionsEnabled == false)
+            {
+                //enable revisions
+                _store.Maintenance.Send(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true,
+                        MinimumRevisionsToKeep = 1,
+                        MinimumRevisionAgeToKeep = TimeSpan.FromDays(14),
+                    }
+                }));
+                _revisionsEnabled = true;
+            }
+        }
+
+        public void DeleteDocuments()
+        {
+            var operation = _store
+                .Operations
+                .Send(new DeleteByQueryOperation(new IndexQuery
+                {
+                    Query = "from " + _collectionName
+                }));
+
+            operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+        }
+
         public class Order
         {
-            private int Amount;
+            public int Amount;
         }
 
         public void Dispose()

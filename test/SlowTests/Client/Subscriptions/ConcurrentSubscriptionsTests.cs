@@ -92,8 +92,7 @@ namespace SlowTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-
-                var workersList = new List<SubscriptionWorker<User>>();
+                
                 var workerToDocsAmount = new Dictionary<SubscriptionWorker<User>, HashSet<string>>();
 
                 for (int i = 0; i < workersAmount; i++)
