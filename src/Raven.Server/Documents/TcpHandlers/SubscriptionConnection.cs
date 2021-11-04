@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.TcpHandlers
         
         private SubscriptionWorkerOptions _options;
 
-        public string WorkerId => _options.WorkerId;
+        public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
         public SubscriptionWorkerOptions Options => _options;
 
         public SubscriptionException ConnectionException;
