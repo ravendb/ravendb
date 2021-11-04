@@ -4,7 +4,9 @@ using System.Text.RegularExpressions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
+using Sparrow.Extensions;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 {
@@ -15,12 +17,6 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
         /// may also have a nested RQL query.
         /// </summary>
         private static readonly Regex FetchSqlRegex = new(@"(?is)^\s*(?:select\s+(?:\*|(?:(?:(?:""(\$Table|_)""\.)?""(?<src_columns>[^""]+)""(?:\s+as\s+""(?<all_columns>(?<dest_columns>[^""]+))"")?(?<replace>)|(?<replace>replace)\(""_"".""(?<src_columns>[^""]+)"",\s+'(?<replace_inputs>[^']*)',\s+'(?<replace_texts>[^']*)'\)\s+as\s+""(?<all_columns>(?<dest_columns>[^""]+))"")(?:\s|,)*)+)\s+from\s+(?:(?:\((?:\s|,)*)(?<inner_query>.*)\s*\)|""public"".""(?<table_name>.+)""))\s+""(?:\$Table|_)""(\s+where\s+(?<where>.*?))?(?:\s+limit\s+(?<limit>[0-9]+))?\s*$",
-            RegexOptions.Compiled);
-
-        /// <summary>
-        /// Match the RQL found in the original SQL query. Used to modify the RQL query using information from the outer SQL.
-        /// </summary>
-        private static readonly Regex RqlRegex = new(@"^(?is)\s*(?<rql>(?:/\*rql\*/\s*)?from\s+(?<index>(?:index))*\s*(?<collection>[^\s\(\)]+)(?:\s+as\s+(?<alias>\S+))?.*?(?<select>\s+select\s+((?<js_select>({\s*(?<js_fields>(?<js_keys>.+?)(\s*:\s*((?<js_vals>.+?))|(?<js_vals>))\s*,\s*)*(?<js_fields>(?<js_keys>.+?)((\s*:\s*(?<js_vals>.+?))|(?<js_vals>))\s*)}))|(?<simple_select>((?<simple_keys>.+?)\s*,\s*)*(((?<simple_keys>\S+)|(?<simple_keys>"".* ""))(\s*as\s*(\S+|"".* "")\s*)?))))?(?:\s+include\s+(?<include>.*))?\s*)$",
             RegexOptions.Compiled);
 
         /// <summary>
@@ -44,6 +40,8 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             { "is not", "!=" },
         };
 
+        private static readonly Regex TimestampConditionRegex = new(@"timestamp\ \'(?<date>.*?)\'", RegexOptions.Compiled);
+
         public static bool TryParse(string queryText, int[] parametersDataTypes, DocumentDatabase documentDatabase, out PgQuery pgQuery)
         {
             // Match queries sent by PowerBI, either RQL queries wrapped in an SQL statement OR generic SQL queries
@@ -53,7 +51,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                 return false;
             }
 
-            Dictionary<string, ReplaceColumnValue> replaceValues = GetReplaceValues(matches);
+            Dictionary<string, ReplaceColumnValue> powerBiReplaceValues = GetReplaceValues(matches);
 
             string newRql = null;
 
@@ -61,7 +59,24 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             {
                 // RQL query coming  from 'SQL statement (optional, requires database)' text box in Power BI
 
-                newRql = rql.QueryText;
+                var powerBiFiltering = GetSqlWhereConditions(matches);
+
+                if (powerBiFiltering != null)
+                {
+                    if (rql.Where == null)
+                        rql.Where = powerBiFiltering;
+                    else
+                    {
+                        rql.Where = new BinaryExpression(rql.Where, powerBiFiltering, OperatorType.And);
+                    }
+
+                    newRql = rql.ToString();
+                }
+                else
+                {
+                    newRql = rql.QueryText;
+
+                }
             }
             else if (matches[0].Groups["table_name"].Success)
             {
@@ -86,7 +101,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
             var limit = matches[0].Groups["limit"];
 
-            pgQuery = new PowerBIRqlQuery(newRql, parametersDataTypes, documentDatabase, replaceValues, limit.Success ? int.Parse(limit.Value) : null);
+            pgQuery = new PowerBIRqlQuery(newRql, parametersDataTypes, documentDatabase, powerBiReplaceValues, limit.Success ? int.Parse(limit.Value) : null);
 
             return true;
         }
@@ -118,6 +133,76 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             }
 
             return replaceValues;
+        }
+
+        private static QueryExpression GetSqlWhereConditions(List<Match> matches)
+        {
+            List<QueryExpression> whereExpressions = null;
+
+            foreach (var matchToCheck in matches)
+            {
+                var whereGroup = matchToCheck.Groups["where"];
+
+                if (whereGroup.Success)
+                {
+                    if (string.IsNullOrEmpty(whereGroup.Value) == false)
+                    {
+                        var whereFilteringCondition = whereGroup.Value;
+
+                        whereFilteringCondition = WhereColumnRegex.Replace(whereFilteringCondition, "${column}");
+                        whereFilteringCondition = WhereOperatorRegex.Replace(whereFilteringCondition, (m) =>
+                        {
+                            if (OperatorMap.TryGetValue(m.Value, out var val))
+                                return val;
+
+                            return m.Value;
+                        });
+
+                        var timestampMatch = TimestampConditionRegex.Match(whereFilteringCondition);
+
+                        if (timestampMatch.Success)
+                        {
+                            var dateGroup = timestampMatch.Groups["date"];
+
+                            if (dateGroup.Success && DateTime.TryParse(dateGroup.Value, out var date))
+                            {
+                                whereFilteringCondition = TimestampConditionRegex.Replace(whereFilteringCondition, $"'{date.GetDefaultRavenFormat()}'");
+                            }
+                        }
+                        
+                        var parser = new QueryParser();
+
+                        parser.Init(whereFilteringCondition);
+
+                        if (parser.Expression(out var parsedConditions) == false)
+                        {
+                            throw new NotSupportedException("Unable to parse WHERE clause: " + whereFilteringCondition);
+                        }
+
+                        whereExpressions ??= new List<QueryExpression>();
+
+                        whereExpressions.Add(parsedConditions);
+                    }
+                }
+            }
+
+            if (whereExpressions == null)
+                return null;
+
+            if (whereExpressions.Count == 1)
+                return whereExpressions[0];
+
+            BinaryExpression result = null;
+
+            for (int i = 1; i < whereExpressions.Count; i++)
+            {
+                if (result == null)
+                    result = new BinaryExpression(whereExpressions[0], whereExpressions[1], OperatorType.And);
+                else
+                    result = new BinaryExpression(whereExpressions[i], result, OperatorType.And);
+            }
+
+            return result;
         }
 
         private static bool TryGetMatches(string queryText, out List<Match> outMatches, out Query rql)
