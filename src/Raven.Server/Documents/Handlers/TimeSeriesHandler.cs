@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
                     writer.WriteString(entries[i].Tag);
                     writer.WriteComma();
-                    writer.WriteArray(nameof(TimeSeriesEntry.Values), entries[i].Values);
+                    writer.WriteArray(nameof(TimeSeriesEntry.Values), new Memory<double>(entries[i].Values));
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesEntry.IsRollup));
                     writer.WriteBool(entries[i].IsRollup);
@@ -769,7 +769,7 @@ namespace Raven.Server.Documents.Handlers
             int i = nodeValues.Count;
             foreach (var value in nodeValues)
             {
-                writer.WriteArray(value.Key, value.Value);
+                writer.WriteArray(value.Key, new Memory<double>(value.Value));
 
                 if (--i > 0)
                     writer.WriteComma();

@@ -492,6 +492,22 @@ namespace Raven.Server.Documents.Subscriptions
             return _connections.ToList();
         }
 
+        public HashSet<long> GetActiveBatches()
+        {
+            var set = new HashSet<long>();
+            
+            foreach (var connection in _connections)
+            {
+                var batch = connection.CurrentBatchId;
+                if (batch == SubscriptionConnection.NonExistentBatch)
+                    continue;
+
+                set.Add(batch);
+            }
+
+            return set;
+        }
+
         public string GetConnectionsAsString()
         {
             StringBuilder sb = null;
