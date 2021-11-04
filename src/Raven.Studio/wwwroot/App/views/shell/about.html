@@ -77,15 +77,26 @@
                                 <strong data-bind="text: licenseTypeText"></strong>
                             </div>
                         </div>
-                        <div class="big-label" data-bind="visible: formattedExpiration">
+                            <div class="big-label margin-right margin-right-sm" data-bind="visible: formattedExpiration">
                             <div class="content">
                                 <small data-bind="text: expiresText"></small>
                                 <strong data-bind="html: formattedExpiration"></strong>
                                 <small data-bind="text: automaticRenewText"></small>
                             </div>
                         </div>
+                            <div class="big-label">
+                                <div class="content">
+                                    <small>License Server
+                                        <i class="check-connection icon-refresh" title="Click to check connection"
+                                           data-bind="click: checkConnectionToLicenseServer, css: { 'btn-spinner margin-left margin-left-sm': spinners.checkConnectionToLicenseServer() }">
+                                        </i>
+                                    </small>
+                                    <span class="connected" data-bind="visible: connectedToLicenseServer"><i class="icon-check connection-status"></i></span>
+                                    <span class="not-connected" data-bind="visible: !connectedToLicenseServer()"><i class="icon-cancel connection-status"></i></span>
                     </div>
                 </div>
+                        </div>
+                    </div>
                 <div class="license-id-container padding" data-bind="visible: licenseId">
                     <div class="big-label">
                         <div class="content text-center">
@@ -255,11 +266,11 @@
                 </div>
                 <div class="community">
                         <div class="dropup">
-                            <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <button class="btn btn-info btn-block dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="icon-newtab"></i> <span>ACCESS</span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="dropdownMenu2">
+                            <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                                 <li><a href="https://github.com/ravendb/ravendb/discussions" target="_blank">Github Discussions </a></li>
                                 <li><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank">Google Groups (Archive) </a></li>
                             </ul>

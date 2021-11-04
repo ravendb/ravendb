@@ -30,6 +30,19 @@
             font-size: 34px;
             margin-right: @grid-gutter-width/2;
             margin-top: 2px;
+            
+            &.check-connection {
+                font-size: 16px;
+                cursor: pointer;
+            }
+            
+            &.check-connection:hover {
+                color: @brand-success;
+            }
+            
+            &.connection-status {
+                font-size: 18px;
+            }
         }
 
         .content {
@@ -319,5 +332,13 @@
         .commercial i {
             color: @brand-success-light;
         }
+    }
+
+    .connected {
+        color:  @brand-success;
+    }
+
+    .not-connected {
+        color: @brand-danger;
     }
 }
