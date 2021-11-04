@@ -106,6 +106,7 @@ import { TsSelectContext } from "./BaseRqlParser";
 import { TsSelectScaleProjectionContext } from "./BaseRqlParser";
 import { TsSelectVariableContext } from "./BaseRqlParser";
 import { TsIdentifiersContext } from "./BaseRqlParser";
+import { UpdateBodyContext } from "./BaseRqlParser";
 
 
 /**
@@ -859,5 +860,12 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitTsIdentifiers?: (ctx: TsIdentifiersContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.updateBody`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitUpdateBody?: (ctx: UpdateBodyContext) => Result;
 }
 
