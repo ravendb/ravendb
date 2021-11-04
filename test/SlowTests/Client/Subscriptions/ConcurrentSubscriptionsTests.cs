@@ -138,6 +138,9 @@ namespace SlowTests.Client.Subscriptions
                     
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con2Docs.Count == 2), true, 6000, 100), $"connection 2 has {con2Docs.Count} docs");
                     Assert.True(await WaitForValueAsync(() => Task.FromResult(con1Docs.Count == 4), true, 6000, 100), $"connection 1 has {con1Docs.Count} docs");
+
+                    WaitForUserToContinueTheTest(store);
+
                     tcs.SetException(new InvalidOperationException());
                     await Subscription2.DisposeAsync(waitForSubscriptionTask: true);
 
@@ -700,7 +703,7 @@ namespace SlowTests.Client.Subscriptions
                     await mre1.WaitAsync();
                     await mre2.WaitAsync();
 
-                    store.Subscriptions.DropWorker(worker2);
+                    store.Subscriptions.DropSubscriptionWorker(worker2);
                     var db = await GetDocumentDatabaseInstanceFor(store);
                     db.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(long.Parse(id), out var subscriptionConnectionsState);
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);

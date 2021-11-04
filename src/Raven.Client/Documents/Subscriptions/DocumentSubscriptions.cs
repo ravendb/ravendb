@@ -481,9 +481,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="worker"></param>
         /// <param name="database"></param>
-        public void DropWorker<T>(SubscriptionWorker<T> worker, string database = null) where T : class
+        public void DropSubscriptionWorker<T>(SubscriptionWorker<T> worker, string database = null) where T : class
         {
-            AsyncHelpers.RunSync(() => DropWorkerAsync(worker, database));
+            AsyncHelpers.RunSync(() => DropSubscriptionWorkerAsync(worker, database));
         }
 
         /// <summary>
@@ -491,7 +491,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="worker"></param>
         /// <param name="database"></param>
-        public async Task DropWorkerAsync<T>(SubscriptionWorker<T> worker, string database = null, CancellationToken token = default)  where T : class
+        public async Task DropSubscriptionWorkerAsync<T>(SubscriptionWorker<T> worker, string database = null, CancellationToken token = default)  where T : class
         {
             database = _store.GetDatabase(database);
 
