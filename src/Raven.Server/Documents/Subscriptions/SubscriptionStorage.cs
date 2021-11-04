@@ -520,7 +520,7 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public SubscriptionConnectionsState GetSubscriptionConnectionsState(TransactionOperationContext context, string subscriptionName)
+        public SubscriptionConnectionsState GetSubscriptionConnectionsState<T>(TransactionOperationContext<T> context, string subscriptionName) where T : RavenTransaction
         {
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
             if (subscriptionBlittable == null)

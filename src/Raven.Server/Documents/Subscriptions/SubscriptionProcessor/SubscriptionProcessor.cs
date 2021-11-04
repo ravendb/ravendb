@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             SubscriptionState = Connection.SubscriptionState;
             RemoteEndpoint = Connection.TcpConnection.TcpClient.Client.RemoteEndPoint;
 
-            Active = SubscriptionConnectionsState.GetConnections().Select(conn => conn.CurrentBatchId).ToHashSet();
+            Active = SubscriptionConnectionsState.GetActiveBatches();
         }
 
         public abstract IEnumerable<(Document Doc, Exception Exception)> GetBatch();

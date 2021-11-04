@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions/resend", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/debug/subscriptions/resend", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSubscriptionResend()
         {
             var subscriptionName = GetStringQueryString("name");
@@ -242,9 +242,14 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
                 var items = SubscriptionStorage.GetResendItems(context, Database.Name, subscriptionState.SubscriptionId);
 
-                writer.WriteArray("Items", items.Select(i => i.ToJson()), context);
+                writer.WriteStartObject();
+                writer.WriteArray("Active", subscriptionConnections.GetActiveBatches());
+                writer.WriteComma();
+                writer.WriteArray("Results", items.Select(i => i.ToJson()), context);
+                writer.WriteEndObject();
             }
         }
 
