@@ -10,8 +10,7 @@ namespace Subscriptions.Benchmark
     {
         public static async Task Main(string[] args)
         {
-            await CompareSingleConcurrent();
-            //TestSingleConnectionSubscription(args);
+            await ConcurrentBenchmark();
         }
 
         public static async Task TestSingleConnectionSubscription(string[] args)
@@ -158,18 +157,23 @@ namespace Subscriptions.Benchmark
             }
         }
 
-        public static async Task CompareSingleConcurrent()
+        public static async Task ConcurrentBenchmark()
         {
             var collection = "Orders";
+            var docsAmount = 10000;
             
-            var concurrentBenchRevision = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
-            await concurrentBenchRevision.PerformBenchmark(10, 1, true, true); // revision subscription with script
+            var concurrentBenchMark = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8080/", docsAmount, "subscriptionDB", collection);
 
-            var concurrentBenchDocsWithScript = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
-            await concurrentBenchDocsWithScript.PerformBenchmark(10, 1, true, false); //docs subscription with script
+            concurrentBenchMark.GenerateDocumentsAndRevisions(docsAmount);
 
-            var concurrentBenchDocsNoScript = new ConcurrentSubscriptionBenchmark(4096, "http://127.0.0.1:8081/", "freeDB", collection);
-            await concurrentBenchDocsNoScript.PerformBenchmark(10, 1, false, false); //docs subscription without script
+            await concurrentBenchMark.PerformBenchmark(10, 1, true, true); //revision subscription with script
+            
+            await concurrentBenchMark.PerformBenchmark(10, 1, true, false); //docs subscription with script
+            
+            await concurrentBenchMark.PerformBenchmark(10, 1, false, false); //docs subscription without script
+
+            concurrentBenchMark.DeleteDocuments();
+            concurrentBenchMark.Dispose();
         }
     }
 }
