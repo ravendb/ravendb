@@ -165,15 +165,19 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             internal EagerInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
                 _docs = new FastBitArray(reader.MaxDoc);
-
+                bool hasValue = false;
                 _currentDocId = NO_MORE_DOCS;
                 foreach (string match in parent.Matches)
                 {
                     using var termDocs = reader.TermDocs(new Term(parent.Field, match), state);
                     while (termDocs.Next(state))
                     {
-                        if (_currentDocId != NO_MORE_DOCS)
-                            _currentDocId = termDocs.Doc; // we may be called on the first value
+                        if (hasValue == false)
+                        {
+                            _currentDocId = termDocs.Doc;
+                            hasValue = true;
+                        }
+
                         _docs.Set(termDocs.Doc);
                     }
                 }
