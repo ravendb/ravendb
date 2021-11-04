@@ -1,12 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Interop;
+using Microsoft.Diagnostics.Symbols;
+using Microsoft.Diagnostics.Tracing;
+using Microsoft.Diagnostics.Tracing.Etlx;
+using Microsoft.Diagnostics.Tracing.Stacks;
 using Newtonsoft.Json;
 
 namespace Raven.Debug.StackTrace
@@ -18,9 +25,11 @@ namespace Raven.Debug.StackTrace
             if (processId == -1)
                 throw new InvalidOperationException("Uninitialized process id parameter");
 
+            var stackTracesByThread = GetStackTracesByThreadId(processId);
+
             List<ThreadInfo> threadInfos;
             using (var dataTarget = DataTarget.CreateSnapshotAndAttach(processId))
-                threadInfos = CreateThreadInfos(dataTarget);
+                threadInfos = CreateThreadInfos(dataTarget, stackTracesByThread);
 
             var mergedStackTraces = MergeStackTraces(threadInfos);
 
@@ -35,12 +44,11 @@ namespace Raven.Debug.StackTrace
             HashSet<uint> threadIds = null,
             bool includeStackObjects = false)
         {
-            if (processId == -1)
-                throw new InvalidOperationException("Uninitialized process id parameter");
-
             List<ThreadInfo> threadInfos;
+            var stackTracesByThread = GetStackTracesByThreadId(processId);
+
             using (var dataTarget = DataTarget.AttachToProcess(processId, attachTimeout, AttachFlag.Passive))
-                threadInfos = CreateThreadInfos(dataTarget, threadIds, includeStackObjects);
+                threadInfos = CreateThreadInfos(dataTarget, stackTracesByThread, threadIds, includeStackObjects);
 
             if (threadIds != null || includeStackObjects)
             {
@@ -68,7 +76,7 @@ namespace Raven.Debug.StackTrace
             }
         }
 
-        private static List<ThreadInfo> CreateThreadInfos(DataTarget dataTarget, HashSet<uint> threadIds = null, bool includeStackObjects = false)
+        private static List<ThreadInfo> CreateThreadInfos(DataTarget dataTarget, Dictionary<uint, List<string>> stackTracesByThreadId, HashSet<uint> threadIds = null, bool includeStackObjects = false)
         {
             var threadInfoList = new List<ThreadInfo>();
 
@@ -97,7 +105,8 @@ namespace Raven.Debug.StackTrace
 
                 try
                 {
-                    var threadInfo = GetThreadInfo(thread, dataTarget, runtime, sb, includeStackObjects);
+                    stackTracesByThreadId.TryGetValue(thread.OSThreadId, out var stackTraces);
+                    var threadInfo = GetThreadInfo(stackTraces, thread, dataTarget, runtime, sb, includeStackObjects);
                     threadInfoList.Add(threadInfo);
                 }
                 catch (InvalidOperationException)
@@ -176,9 +185,9 @@ namespace Raven.Debug.StackTrace
             outputWriter.Flush();
         }
 
-        private static ThreadInfo GetThreadInfo(ClrThread thread, DataTarget dataTarget, ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
+        private static ThreadInfo GetThreadInfo(List<string> stackTraces, ClrThread thread, DataTarget dataTarget, ClrRuntime runtime, StringBuilder sb, bool includeStackObjects)
         {
-            var hasStackTrace = thread.StackTrace.Count > 0;
+            var hasStackTrace = stackTraces?.Count > 0 || thread.StackTrace.Count > 0;
 
             var threadInfo = new ThreadInfo
             {
@@ -190,7 +199,11 @@ namespace Raven.Debug.StackTrace
                     hasStackTrace == false ? ThreadType.Native : ThreadType.Other
             };
 
-            if (hasStackTrace)
+            if (stackTraces?.Count > 0)
+            {
+                threadInfo.StackTrace = stackTraces;
+            }
+            else if (thread.StackTrace.Count > 0)
             {
                 foreach (var frame in thread.StackTrace)
                 {
@@ -274,6 +287,121 @@ namespace Raven.Debug.StackTrace
             }
 
             return stackObjects;
+        }
+
+        private static Dictionary<uint, List<string>> GetStackTracesByThreadId(int processId, HashSet<uint> threadIds = null)
+        {
+            var stackTracesByThreadId = new Dictionary<uint, List<string>>();
+
+            string tempNetTraceFilename = Path.GetRandomFileName() + ".nettrace";
+            string tempEtlxFilename = "";
+
+            try
+            {
+                var client = new DiagnosticsClient(processId);
+                var providers = new List<EventPipeProvider>
+                {
+                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
+                };
+
+                // collect a *short* trace with stack samples
+                // the hidden '--duration' flag can increase the time of this trace in case 10ms
+                // is too short in a given environment, e.g., resource constrained systems
+                // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
+                //        the symbol data in rundown.
+                using (EventPipeSession session = client.StartEventPipeSession(providers))
+                using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
+                {
+                    Task copyTask = session.EventStream.CopyToAsync(fs);
+                    session.Stop();
+
+                    // check if rundown is taking more than 5 seconds and add comment to report
+                    Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                    Task completedTask = Task.WhenAny(copyTask, timeoutTask).Result;
+                    if (completedTask == timeoutTask)
+                    {
+                        Console.WriteLine($"# Sufficiently large applications can cause this command to take non-trivial amounts of time");
+                    }
+
+                    copyTask.Wait();
+                }
+
+                // using the generated trace file, symbolocate and compute stacks.
+                tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
+                using (var symbolReader = new SymbolReader(TextWriter.Null)
+                {
+                    SymbolPath = SymbolPath.MicrosoftSymbolServerPath
+                })
+                using (var eventLog = new TraceLog(tempEtlxFilename))
+                {
+                    var stackSource = new MutableTraceEventStackSource(eventLog)
+                    {
+                        OnlyManagedCodeStacks = true
+                    };
+
+                    var computer = new SampleProfilerThreadTimeComputer(eventLog, symbolReader);
+                    computer.GenerateThreadTimeStacks(stackSource);
+
+                    var samplesForThread = new Dictionary<uint, List<StackSourceSample>>();
+
+                    stackSource.ForEach(sample =>
+                    {
+                        var stackIndex = sample.StackIndex;
+                        while (stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread (") == false)
+                            stackIndex = stackSource.GetCallerIndex(stackIndex);
+
+                        // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
+                        // Thread id is in the frame name as "Thread (<ID>)"
+                        const string template = "Thread (";
+                        string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
+                        var threadId = uint.Parse(threadFrame.Substring(template.Length, threadFrame.Length - (template.Length + 1)));
+
+                        if (threadIds != null && threadIds.Contains(threadId) == false)
+                            return;
+
+                        if (samplesForThread.TryGetValue(threadId, out var samples))
+                        {
+                            samples.Add(sample);
+                        }
+                        else
+                        {
+                            samplesForThread[threadId] = new List<StackSourceSample> { sample };
+                        }
+                    });
+
+                    foreach (var (threadId, samples) in samplesForThread)
+                    {
+                        var stack = GetStack(samples[0], stackSource);
+                        stackTracesByThreadId[threadId] = stack;
+                    }
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempNetTraceFilename))
+                    File.Delete(tempNetTraceFilename);
+                if (File.Exists(tempEtlxFilename))
+                    File.Delete(tempEtlxFilename);
+            }
+
+            return stackTracesByThreadId;
+        }
+
+        private static List<string> GetStack(StackSourceSample stackSourceSample, StackSource stackSource)
+        {
+            var stackTrace = new List<string>();
+            var stackIndex = stackSourceSample.StackIndex;
+
+            while (stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread (") == false)
+            {
+                var frame = $"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
+                    .Replace("UNMANAGED_CODE_TIME", "[Native Frames]");
+
+                stackTrace.Add(frame);
+                stackIndex = stackSource.GetCallerIndex(stackIndex);
+            }
+
+            return stackTrace;
         }
     }
 }
