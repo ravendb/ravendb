@@ -83,7 +83,7 @@ namespace SlowTests.Client.Subscriptions
             {
                 var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
                 {
-                    Filter = user => user.Count > 0 
+                    Filter = user => user.Count > 0
                 });
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<User>(
@@ -97,12 +97,12 @@ namespace SlowTests.Client.Subscriptions
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        session.Store(new User{ Count = 1});
+                        session.Store(new User { Count = 1 });
                     }
                     session.SaveChanges();
                 }
 
-                subscription.Run(async x =>
+                _ = subscription.Run(async x =>
                 {
                     using var session = x.OpenAsyncSession();
 
@@ -120,7 +120,7 @@ namespace SlowTests.Client.Subscriptions
                     {
                         return await session.Query<User>().Where(u => u.Count > 0).ToListAsync();
                     }
-                },0);
+                }, 0);
             }
         }
 

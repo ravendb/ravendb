@@ -130,21 +130,21 @@ namespace Raven.Server.Integrations.PostgreSQL
             }
         }
 
-        public override async Task<ICollection<PgColumn>> Init(bool allowMultipleStatements = false)
+        public override Task<ICollection<PgColumn>> Init(bool allowMultipleStatements = false)
         {
             if (IsEmptyQuery)
             {
-                return default;
+                return Task.FromResult<ICollection<PgColumn>>(null);
             }
 
             Parse(allowMultipleStatements);
 
             if (_result != null)
             {
-                return _result.Columns;
+                return Task.FromResult<ICollection<PgColumn>>(_result.Columns);
             }
 
-            return Array.Empty<PgColumn>();
+            return Task.FromResult<ICollection<PgColumn>>(Array.Empty<PgColumn>());
         }
 
         public override async Task Execute(MessageBuilder builder, PipeWriter writer, CancellationToken token)

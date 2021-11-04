@@ -122,7 +122,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<T> items)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<long> items)
         {
             writer.WritePropertyName(name);
 
@@ -134,7 +134,7 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                writer.WriteString(item.ToString());
+                writer.WriteInteger(item);
             }
             writer.WriteEndArray();
         }
