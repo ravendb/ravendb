@@ -119,5 +119,10 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Databases.PulseReadTransactionLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PulseReadTransactionLimit { get; set; }
+
+        [Description("Whether to disable TCP data compression")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Databases.DisableTcpCompression", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DisableTcpCompression { get; set; }
     }
 }
