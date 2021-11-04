@@ -153,6 +153,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 }
 
                 Debug.Assert(current.Document != null, "Document does not exist");
+                result.Id = current.Document.Id; // use proper casing
                 result.Data = current.Document.Data;
                 result.Etag = current.Document.Etag;
                 result.ChangeVector = current.Document.ChangeVector;
@@ -168,6 +169,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                 if (match == false)
                 {
+                    if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
+                        ItemsToRemoveFromResend.Add(item.Id);
+
                     result.Data = null;
                     reason = $"{item.Id} filtered out by criteria";
                     return false;
