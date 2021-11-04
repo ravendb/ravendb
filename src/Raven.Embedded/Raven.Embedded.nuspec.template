@@ -25,6 +25,7 @@
         </dependencies>
         <contentFiles>
             <files include="**/RavenDBServer/**/*.*" buildAction="None" copyToOutput="true" />
+            <files include="**/libzstd*.*" buildAction="None" copyToOutput="true" />
         </contentFiles>
     </metadata>
 </package>
