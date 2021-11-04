@@ -8,12 +8,17 @@ import accessManager = require("common/shell/accessManager");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import getLicenseConfigurationSettingsCommand = require("commands/licensing/getLicenseConfigurationSettingsCommand");
+import getConnectivityToLicenseServerCommand = require("commands/licensing/getConnectivityToLicenseServerCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
+import popoverUtils = require("common/popoverUtils");
 
 class about extends viewModelBase {
 
     accessManager = accessManager.default.aboutView;
+    
+    connectedToLicenseServer = ko.observable<boolean>();
+    connectionException = ko.observable<string>();
     
     clusterViewUrl = appUrl.forCluster();
     passiveNode = ko.pureComputed(() => clusterTopologyManager.default.topology().isPassive());
@@ -87,7 +92,8 @@ class about extends viewModelBase {
     spinners = {
         forceLicenseUpdate: ko.observable<boolean>(false),
         renewLicense: ko.observable<boolean>(false),
-        latestVersionUpdates: ko.observable<boolean>(false)
+        latestVersionUpdates: ko.observable<boolean>(false),
+        checkConnectionToLicenseServer: ko.observable<boolean>(false)
     };
 
     expiresText = ko.pureComputed(() => {
@@ -299,10 +305,36 @@ class about extends viewModelBase {
         shell.openFeedbackForm();
     }
 
+    checkConnectionToLicenseServer() {
+        this.spinners.checkConnectionToLicenseServer(true);
+        return new getConnectivityToLicenseServerCommand()
+            .execute()
+            .done((connectionResult: Raven.Server.Web.Studio.LicenseHandler.ConnectivityToLicenseServer) => {
+                this.connectedToLicenseServer(connectionResult.StatusCode === "OK");
+                this.connectionException(connectionResult.Exception || "");
+            })
+            .always(() => this.spinners.checkConnectionToLicenseServer(false));
+    }
+
     activate(args: any) {
         super.activate(args, { shell: true });
-        return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo(), license.fetchLicenseStatus());
+        return $.when<any>(this.getLicenseConfigurationSettings(),
+                           this.pullLatestVersionInfo(),
+                           license.fetchLicenseStatus(),
+                           this.checkConnectionToLicenseServer());
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        popoverUtils.longWithHover($(".not-connected"),
+            {
+                content:
+                    `<small><small>Unable to reach the RavenDB License Server at <code>api.ravendb.net</code><br>
+                     ${this.connectionException()}</small></small>`,
+                placement: "bottom"
+            });
+}
 }
 
 export = about;

@@ -82,7 +82,14 @@ namespace SlowTests.Issues
                     leader.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
                 }
 
-                var nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index + 1));
+
+                List<string> nodelist = new List<string>();
+                var res = await WaitForValueAsync(async () =>
+                {
+                    nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index + 1));
+                    return nodelist.Count;
+                }, 3);
+                Assert.Equal(3, res);
 
                 long index2 = 0;
                 foreach (var server in Servers)
