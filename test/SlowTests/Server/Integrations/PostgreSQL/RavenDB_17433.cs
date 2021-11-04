@@ -1,8 +1,6 @@
 ﻿using System.Data;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +13,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         }
 
         [Fact]
-        public async Task QueryWithReplaceShouldWork()
+        public async Task QueryWithSingleReplaceShouldWork()
         {
             const string queryWithSingleReplace = @"select ""_"".""id()"" as ""id()"",
     ""_"".""LastName"" as ""LastName"",
@@ -37,6 +35,31 @@ from
 ) ""_""
 limit 1000";
 
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                var result = await Act(store, queryWithSingleReplace, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(2, rows.Count);
+
+                var updatedTitles = result
+                    .AsEnumerable()
+                    .Select(x => x.Field<string>("t0_0"))
+                    .ToList();
+
+                Assert.Equal("Marketing Representative", updatedTitles[0]);
+                Assert.Equal("Marketing Representative", updatedTitles[1]);
+            }
+        }
+
+        [Fact]
+        public async Task QueryWithMultipleNestedReplacesShouldWork()
+        {
             const string queryWithMultipleNestedReplaces = @"select ""_"".""id()"" as ""id()"",
     ""_"".""LastName"" as ""LastName"",
     ""_"".""FirstName"" as ""FirstName"",
@@ -84,25 +107,6 @@ limit 1000";
             {
                 CreateNorthwindDatabase(store);
 
-                // queryWithSingleReplace
-
-                var result = await Act(store, queryWithSingleReplace, Server);
-
-                DataRowCollection rows = result.Rows;
-
-                Assert.Equal(2, rows.Count);
-
-                var updatedTitles = result
-                    .AsEnumerable()
-                    .Select(x => x.Field<string>("t0_0"))
-                    .ToList();
-
-                Assert.Equal("Marketing Representative", updatedTitles[0]);
-                Assert.Equal("Marketing Representative", updatedTitles[1]);
-
-
-                // queryWithMultipleNestedReplaces
-
                 var result2 = await Act(store, queryWithMultipleNestedReplaces, Server);
 
                 DataRowCollection rows2 = result2.Rows;
@@ -125,6 +129,221 @@ limit 1000";
 
                 Assert.Contains("ccc", updatedFirstNames);
                 Assert.Contains("ddd", updatedFirstNames);
+            }
+        }
+
+        [Fact]
+        public async Task QueryWithSingleWhereFilteringShouldWork()
+        {
+            const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
+    ""_"".""LastName"",
+    ""_"".""FirstName"",
+    ""_"".""Title"",
+    ""_"".""Address"",
+    ""_"".""HiredAt"",
+    ""_"".""Birthday"",
+    ""_"".""HomePhone"",
+    ""_"".""Extension"",
+    ""_"".""ReportsTo"",
+    ""_"".""Notes"",
+    ""_"".""Territories"",
+    ""_"".""json()""
+from
+(
+    from Employees where startsWith(LastName, 'D')
+) ""_""
+where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, queryWithSingleWhereCondition, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(1, rows.Count);
+            }
+        }
+
+        [Fact]
+        public async Task QueryWithMultipleWhereFilteringShouldWork()
+        {
+            const string query = @"select ""_"".""id()"",
+    ""_"".""LastName"",
+    ""_"".""FirstName"",
+    ""_"".""Title"",
+    ""_"".""Address"",
+    ""_"".""HiredAt"",
+    ""_"".""Birthday"",
+    ""_"".""HomePhone"",
+    ""_"".""Extension"",
+    ""_"".""ReportsTo"",
+    ""_"".""Notes"",
+    ""_"".""Territories"",
+    ""_"".""json()""
+from
+(
+    from Employees
+) ""_""
+where ((""_"".""FirstName"" <> 'Anne' or ""_"".""FirstName"" is null) and (""_"".""FirstName"" <> 'Janet' or ""_"".""FirstName"" is null)) and (""_"".""Title"" = 'Inside Sales Coordinator' and ""_"".""Title"" is not null or ""_"".""Title"" = 'Vice President, Sales' and ""_"".""Title"" is not null)
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, query, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(2, rows.Count);
+            }
+        }
+
+        [Fact]
+        public async Task QueryWithDateTimeConditionFilteringShouldWork()
+        {
+            const string query = @"select ""_"".""id()"",
+    ""_"".""LastName"",
+    ""_"".""FirstName"",
+    ""_"".""Title"",
+    ""_"".""Address"",
+    ""_"".""HiredAt"",
+    ""_"".""Birthday"",
+    ""_"".""HomePhone"",
+    ""_"".""Extension"",
+    ""_"".""ReportsTo"",
+    ""_"".""Notes"",
+    ""_"".""Territories"",
+    ""_"".""json()""
+from
+(
+    from Employees where startsWith(LastName, 'D')
+) ""_""
+where ""_"".""HiredAt"" = timestamp '1994-11-15 00:00:00' and ""_"".""HiredAt"" is not null
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, query, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(1, rows.Count);
+            }
+        }
+
+        [Fact]
+        public async Task ComplexQueryWithReplaceAndMultipleNestedFilteringShouldWork()
+        {
+            const string query = @"select ""_"".""id()"" as ""id()"",
+    ""_"".""LastName"" as ""LastName"",
+    ""_"".""FirstName"" as ""FirstName"",
+    ""_"".""Title"" as ""Title"",
+    ""_"".""Address"" as ""Address"",
+    ""_"".""HiredAt"" as ""HiredAt"",
+    ""_"".""Birthday"" as ""Birthday"",
+    ""_"".""HomePhone"" as ""HomePhone"",
+    ""_"".""Extension"" as ""Extension"",
+    ""_"".""ReportsTo"" as ""ReportsTo"",
+    ""_"".""Notes"" as ""Notes"",
+    ""_"".""Territories"" as ""Territories"",
+    ""_"".""json()"" as ""json()"",
+    replace(""_"".""Address"", '{""Line1"":""7 Houndstooth Rd."",""Line2"":null,""City"":""London"",""Region"":null,""PostalCode"":""WG2 7LT"",""Country"":""UK"",""Location"":null}', '{}') as ""t0_0""
+from
+(
+    select ""_"".""id()"",
+        ""_"".""LastName"",
+        ""_"".""FirstName"",
+        ""_"".""Title"",
+        ""_"".""Address"",
+        ""_"".""HiredAt"",
+        ""_"".""Birthday"",
+        ""_"".""HomePhone"",
+        ""_"".""Extension"",
+        ""_"".""ReportsTo"",
+        ""_"".""Notes"",
+        ""_"".""Territories"",
+        ""_"".""json()""
+    from
+    (
+        select ""_"".""id()"",
+            ""_"".""LastName"",
+            ""_"".""FirstName"",
+            ""_"".""Title"",
+            ""_"".""Address"",
+            ""_"".""HiredAt"",
+            ""_"".""Birthday"",
+            ""_"".""HomePhone"",
+            ""_"".""Extension"",
+            ""_"".""ReportsTo"",
+            ""_"".""Notes"",
+            ""_"".""Territories"",
+            ""_"".""json()""
+        from
+        (
+            select ""_"".""id()"",
+                ""_"".""LastName"",
+                ""_"".""FirstName"",
+                ""_"".""Title"",
+                ""_"".""Address"",
+                ""_"".""HiredAt"",
+                ""_"".""Birthday"",
+                ""_"".""HomePhone"",
+                ""_"".""Extension"",
+                ""_"".""ReportsTo"",
+                ""_"".""Notes"",
+                ""_"".""Territories"",
+                ""_"".""json()""
+            from
+            (
+                from Employees where startsWith(LastName, 'D')
+            ) ""_""
+            where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
+        ) ""_""
+        where (""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null) and (""_"".""LastName"" = 'Dodsworth' and ""_"".""LastName"" is not null)
+    ) ""_""
+    where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
+) ""_""
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, query, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(1, rows.Count);
+
+                var updatedAddress = result
+                    .AsEnumerable()
+                    .Select(x => x.Field<string>("t0_0"))
+                    .First();
+                
+                Assert.Equal("{}", updatedAddress);
+
             }
         }
     }
