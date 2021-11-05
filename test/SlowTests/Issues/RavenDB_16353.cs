@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -18,14 +19,30 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Can_Use_No_Tracking_For_Referenced_Items()
         {
+            var productsBySupplierNoTracking = new Products_BySupplier_NoTracking();
+            var productsBySupplier = new Products_BySupplier();
+
+            var map = productsBySupplierNoTracking.CreateIndexDefinition().Maps.First();
+            RavenTestHelper.AssertEqualRespectingNewLines(
+                "docs.Products.Select(product => new {\r\n    product = product,\r\n    supplier = this.NoTracking.LoadDocument(product.Supplier, \"Suppliers\")\r\n}).Select(this0 => new {\r\n    Name = this0.supplier.Name\r\n})",
+                map);
+
+            await Can_Use_No_Tracking_For_Referenced_Items_Internal(productsBySupplierNoTracking, productsBySupplier);
+        }
+
+        [Fact]
+        public async Task Can_Use_No_Tracking_For_Referenced_Items_JavaScript()
+        {
+            var productsBySupplierNoTracking = new Products_BySupplier_NoTracking_JavaScript();
+            var productsBySupplier = new Products_BySupplier_JavaScript();
+
+            await Can_Use_No_Tracking_For_Referenced_Items_Internal(productsBySupplierNoTracking, productsBySupplier);
+        }
+
+        private async Task Can_Use_No_Tracking_For_Referenced_Items_Internal(AbstractIndexCreationTask productsBySupplierNoTracking, AbstractIndexCreationTask productsBySupplier)
+        {
             using (var store = GetDocumentStore())
             {
-                var productsBySupplierNoTracking = new Products_BySupplier_NoTracking();
-                var productsBySupplier = new Products_BySupplier();
-
-                var map = productsBySupplierNoTracking.CreateIndexDefinition().Maps.First();
-                RavenTestHelper.AssertEqualRespectingNewLines("docs.Products.Select(product => new {\r\n    product = product,\r\n    supplier = this.NoTracking.LoadDocument(product.Supplier, \"Suppliers\")\r\n}).Select(this0 => new {\r\n    Name = this0.supplier.Name\r\n})", map);
-
                 await productsBySupplierNoTracking.ExecuteAsync(store);
                 await productsBySupplier.ExecuteAsync(store);
 
@@ -42,11 +59,7 @@ namespace SlowTests.Issues
 
                     await session.StoreAsync(supplier, "suppliers/1");
 
-                    var product = new Product
-                    {
-                        Name = "Cheese",
-                        Supplier = supplier.Id
-                    };
+                    var product = new Product { Name = "Cheese", Supplier = supplier.Id };
 
                     await session.StoreAsync(product, "products/1");
 
@@ -106,6 +119,28 @@ namespace SlowTests.Issues
                                   {
                                       Name = supplier.Name
                                   };
+            }
+        }
+
+        private class Products_BySupplier_NoTracking_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public Products_BySupplier_NoTracking_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Products', function (p) { return { Name: noTracking.load(p.Supplier, 'Suppliers').Name };})"
+                };
+            }
+        }
+
+        private class Products_BySupplier_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public Products_BySupplier_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Products', function (p) { return { Name: load(p.Supplier, 'Suppliers').Name };})"
+                };
             }
         }
     }
