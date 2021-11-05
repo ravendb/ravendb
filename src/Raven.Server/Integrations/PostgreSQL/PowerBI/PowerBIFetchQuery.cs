@@ -67,16 +67,13 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                     if (rql.Where == null)
                         rql.Where = powerBiFiltering;
                     else
-                    {
                         rql.Where = new BinaryExpression(rql.Where, powerBiFiltering, OperatorType.And);
-                    }
 
                     newRql = rql.ToString();
                 }
                 else
                 {
                     newRql = rql.QueryText;
-
                 }
             }
             else if (matches[0].Groups["table_name"].Success)

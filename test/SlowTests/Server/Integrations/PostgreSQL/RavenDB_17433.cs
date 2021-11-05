@@ -175,6 +175,48 @@ limit 1000";
         }
 
         [Fact]
+        public async Task QueryWithSingleWhereFilteringAndSelectShouldWork()
+        {
+            const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
+    ""_"".""LastName"",
+    ""_"".""FirstName"",
+    ""_"".""Title"",
+    ""_"".""Address"",
+    ""_"".""HiredAt"",
+    ""_"".""Birthday"",
+    ""_"".""HomePhone"",
+    ""_"".""Extension"",
+    ""_"".""ReportsTo"",
+    ""_"".""Notes"",
+    ""_"".""Territories"",
+    ""_"".""json()""
+from
+(
+    from Employees as o select { 
+    LastModified: o[""@metadata""][""@last-modified""], 
+    Name: o.FirstName + "" "" + o.LastName
+}
+) ""_""
+where ""_"".""FirstName"" = 'Anne' and ""_"".""FirstName"" is not null
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, queryWithSingleWhereCondition, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(1, rows.Count);
+            }
+        }
+
+        [Fact]
         public async Task QueryWithSingleWhereFilteringAndAliasShouldWork()
         {
             const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
