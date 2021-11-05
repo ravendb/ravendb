@@ -42,7 +42,6 @@ function PushImages($imageTags) {
 }
 function GetImageTags($repo, $version) {
         return @(
-            "$($repo):windows-latest",
             "$($repo):windows-latest-lts",
             "$($repo):5.2-windows-latest",
             "$($repo):$($version)-windows"
