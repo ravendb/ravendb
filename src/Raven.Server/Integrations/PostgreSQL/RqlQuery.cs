@@ -41,17 +41,17 @@ namespace Raven.Server.Integrations.PostgreSQL
             if (IsEmptyQuery)
                 return default;
 
-            await RunRqlQuery();
+            _result = await RunRqlQuery();
 
-            return GenerateSchema();
+            return await GenerateSchema();
         }
 
-        public async Task RunRqlQuery()
+        public async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
         {
             var parameters = DynamicJsonValue.Convert(Parameters);
             var queryParameters = _queryOperationContext.Documents.ReadObject(parameters, "query/parameters");
 
-            var indexQuery = new IndexQueryServerSide(QueryString, queryParameters);
+            var indexQuery = new IndexQueryServerSide(forcedQueryToRun ?? QueryString, queryParameters);
 
             // If limit is 0, fetch one document for the schema generation
             if (_limit != null)
@@ -62,16 +62,34 @@ namespace Raven.Server.Integrations.PostgreSQL
             var documentQueryResult =
                 await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
 
-            _result = documentQueryResult.Results;
+            return documentQueryResult.Results;
         }
 
-        protected virtual ICollection<PgColumn> GenerateSchema()
+        protected virtual async Task<ICollection<PgColumn>> GenerateSchema()
         {
+            Document sample;
+
             if (_result == null || _result?.Count == 0)
-                return Array.Empty<PgColumn>();
+            {
+                var query = QueryMetadata.ParseQuery(QueryString, QueryType.Select);
+
+                query.Where = null;
+
+                var queryWithoutFiltering = query.ToString();
+
+                var results = await RunRqlQuery(queryWithoutFiltering);
+
+                if (results == null || results.Count == 0)
+                    return Array.Empty<PgColumn>();
+
+                sample = results[0];
+            }
+            else
+            {
+                sample = _result[0];
+            }
 
             var resultsFormat = GetDefaultResultsFormat();
-            var sample = _result[0];
 
             if (sample.Id != null)
                 Columns[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = new PgColumn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, (short)Columns.Count, PgText.Default, resultsFormat);

@@ -463,5 +463,61 @@ limit 1000";
 
             }
         }
+
+        [Fact]
+        public async Task WillGenerateSchemaAndReturnEmptyResponseEvenIfQueryReturnsNoResults()
+        {
+            const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
+    ""_"".""LastName"",
+    ""_"".""FirstName"",
+    ""_"".""Title"",
+    ""_"".""Address"",
+    ""_"".""HiredAt"",
+    ""_"".""Birthday"",
+    ""_"".""HomePhone"",
+    ""_"".""Extension"",
+    ""_"".""ReportsTo"",
+    ""_"".""Notes"",
+    ""_"".""Territories"",
+    ""_"".""json()""
+from 
+(
+    select ""_"".""id()"",
+        ""_"".""LastName"",
+        ""_"".""FirstName"",
+        ""_"".""Title"",
+        ""_"".""Address"",
+        ""_"".""HiredAt"",
+        ""_"".""Birthday"",
+        ""_"".""HomePhone"",
+        ""_"".""Extension"",
+        ""_"".""ReportsTo"",
+        ""_"".""Notes"",
+        ""_"".""Territories"",
+        ""_"".""json()""
+    from 
+    (
+        from Employees where startsWith(LastName, 'D')
+    ) ""_""
+    where (""_"".""FirstName"" <> 'Anne' or ""_"".""FirstName"" is null) and (""_"".""FirstName"" <> 'Nancy' or ""_"".""FirstName"" is null)
+) ""_""
+where (""_"".""FirstName"" <> 'Anne' or ""_"".""FirstName"" is null) and (""_"".""FirstName"" <> 'Nancy' or ""_"".""FirstName"" is null)
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, queryWithSingleWhereCondition, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(0, rows.Count);
+            }
+        }
     }
 }
