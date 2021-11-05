@@ -26,17 +26,28 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public static bool TryRemoveNoTracking(string expression, out string result)
         {
-            var toStrip = $"{nameof(AbstractCommonApiForIndexes.NoTracking)}.";
-            var index = expression.IndexOf(toStrip, StringComparison.InvariantCulture);
-
-            if (index is 0 or 5) // 5 - this.NoTracking
-            {
-                result = expression.Remove(index, toStrip.Length);
+            var toStrip = $"this.{nameof(AbstractCommonApiForIndexes.NoTracking)}.";
+            if (TryStrip(expression, toStrip, out result))
                 return true;
-            }
+
+            toStrip = $"{nameof(AbstractCommonApiForIndexes.NoTracking)}.";
+            if (TryStrip(expression, toStrip, out result))
+                return true;
 
             result = null;
             return false;
+
+            static bool TryStrip(string expression, string toStrip, out string result)
+            {
+                if (expression.StartsWith(toStrip))
+                {
+                    result = expression.Substring(toStrip.Length);
+                    return true;
+                }
+
+                result = null;
+                return false;
+            }
         }
     }
 }
