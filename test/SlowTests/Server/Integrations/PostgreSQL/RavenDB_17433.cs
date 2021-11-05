@@ -172,6 +172,36 @@ limit 1000";
         }
 
         [Fact]
+        public async Task QueryWithSingleWhereFilteringAndAliasShouldWork()
+        {
+            const string queryWithSingleWhereCondition = @"select ""_"".""id()"",
+    ""_"".""FirstName"",
+    ""_"".""LastName"",
+    ""_"".""json()""
+from
+(
+    FROM Employees as e WHERE startsWith(e.LastName, 'D') select e.FirstName, e.LastName
+) ""_""
+where ""_"".""LastName"" = 'Dodsworth' and ""_"".""LastName"" is not null
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                // queryWithSingleReplace
+
+                var result = await Act(store, queryWithSingleWhereCondition, Server);
+
+                DataRowCollection rows = result.Rows;
+
+                Assert.Equal(1, rows.Count);
+            }
+        }
+
+        [Fact]
         public async Task QueryWithMultipleWhereFilteringShouldWork()
         {
             const string query = @"select ""_"".""id()"",

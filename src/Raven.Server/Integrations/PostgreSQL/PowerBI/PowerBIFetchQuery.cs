@@ -6,6 +6,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
+using Sparrow;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Integrations.PostgreSQL.PowerBI
@@ -59,7 +60,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             {
                 // RQL query coming  from 'SQL statement (optional, requires database)' text box in Power BI
 
-                var powerBiFiltering = GetSqlWhereConditions(matches);
+                var powerBiFiltering = GetSqlWhereConditions(matches, rql.From.Alias);
 
                 if (powerBiFiltering != null)
                 {
@@ -135,7 +136,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             return replaceValues;
         }
 
-        private static QueryExpression GetSqlWhereConditions(List<Match> matches)
+        private static QueryExpression GetSqlWhereConditions(List<Match> matches, StringSegment? alias)
         {
             List<QueryExpression> whereExpressions = null;
 
@@ -149,7 +150,13 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                     {
                         var whereFilteringCondition = whereGroup.Value;
 
-                        whereFilteringCondition = WhereColumnRegex.Replace(whereFilteringCondition, "${column}");
+                        var replaceValue = "${column}";
+
+                        if (alias != null)
+                            replaceValue = $"{alias}." + replaceValue;
+
+                        whereFilteringCondition = WhereColumnRegex.Replace(whereFilteringCondition, replaceValue);
+
                         whereFilteringCondition = WhereOperatorRegex.Replace(whereFilteringCondition, (m) =>
                         {
                             if (OperatorMap.TryGetValue(m.Value, out var val))

@@ -349,6 +349,13 @@ namespace Raven.Server.Documents.Queries.AST
                 
                 _sb.Append(")");
             }
+
+            if (alias != null)
+            {
+                EnsureSpace();
+
+                _sb.Append("AS ").Append(alias);
+            }
         }
 
         public override void VisitWithClauses(Dictionary<StringSegment, (bool isImplicitAlias, Query withQuery)> expression)
