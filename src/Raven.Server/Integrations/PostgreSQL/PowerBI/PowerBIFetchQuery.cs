@@ -165,18 +165,21 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                             return m.Value;
                         });
 
-                        var timestampMatch = TimestampConditionRegex.Match(whereFilteringCondition);
-
-                        if (timestampMatch.Success)
+                        whereFilteringCondition = TimestampConditionRegex.Replace(whereFilteringCondition, timestampMatch =>
                         {
-                            var dateGroup = timestampMatch.Groups["date"];
-
-                            if (dateGroup.Success && DateTime.TryParse(dateGroup.Value, out var date))
+                            if (timestampMatch.Success)
                             {
-                                whereFilteringCondition = TimestampConditionRegex.Replace(whereFilteringCondition, $"'{date.GetDefaultRavenFormat()}'");
+                                var dateGroup = timestampMatch.Groups["date"];
+
+                                if (dateGroup.Success && DateTime.TryParse(dateGroup.Value, out var date))
+                                {
+                                    return $"'{date.GetDefaultRavenFormat()}'";
+                                }
                             }
-                        }
-                        
+
+                            return timestampMatch.Value;
+                        });
+
                         var parser = new QueryParser();
 
                         parser.Init(whereFilteringCondition);

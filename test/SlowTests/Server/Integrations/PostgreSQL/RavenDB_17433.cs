@@ -1,6 +1,9 @@
-﻿using System.Data;
+﻿using System;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Orders;
+using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -276,6 +279,48 @@ limit 1000";
                 DataRowCollection rows = result.Rows;
 
                 Assert.Equal(1, rows.Count);
+            }
+        }
+
+        [Fact]
+        public async Task QueryWithTwoDateTimeConditionsFilteringShouldWork()
+        {
+            const string query = @"select ""_"".""id()"",
+    ""_"".""Company"",
+    ""_"".""Employee"",
+    ""_"".""Freight"",
+    ""_"".""Lines"",
+    ""_"".""OrderedAt"",
+    ""_"".""RequireAt"",
+    ""_"".""ShipTo"",
+    ""_"".""ShipVia"",
+    ""_"".""ShippedAt"",
+    ""_"".""json()""
+from
+(
+    from Orders
+) ""_""
+where ""_"".""OrderedAt"" >= timestamp '1995-10-10 00:00:00' and ""_"".""OrderedAt"" < timestamp '1997-10-10 00:00:00'
+limit 1000";
+
+            DoNotReuseServer(EnablePostgresSqlSettings);
+
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var orders = await session
+                        .Query<Order>().Where(x => x.OrderedAt > new DateTime(1995, 10, 10) && x.OrderedAt < new DateTime(1997, 10, 10))
+                        .ToListAsync();
+
+                    var result = await Act(store, query, Server);
+
+                    DataRowCollection rows = result.Rows;
+
+                    Assert.Equal(orders.Count, rows.Count);
+                }
             }
         }
 
