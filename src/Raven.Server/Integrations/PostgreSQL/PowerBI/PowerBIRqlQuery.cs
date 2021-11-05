@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Sparrow.Json;
@@ -15,9 +16,9 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             _replaces = replaces;
         }
 
-        protected override ICollection<PgColumn> GenerateSchema()
+        protected override async Task<ICollection<PgColumn>> GenerateSchema()
         {
-            base.GenerateSchema();
+            await base.GenerateSchema();
 
             if (_replaces != null)
             {
