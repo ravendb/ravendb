@@ -63,9 +63,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                 await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
 
             _result = documentQueryResult.Results;
-
-            // TODO: Support skipping (check how/if PowerBI sends it, probably using the incremental refresh feature)
-            // query.Skip(..)
         }
 
         protected virtual ICollection<PgColumn> GenerateSchema()
