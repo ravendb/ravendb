@@ -80,16 +80,6 @@ namespace SlowTests.Issues
                 terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplier.IndexName, "Name", fromValue: null));
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("john", terms[0]);
-
-                WaitForIndexing(store);
-
-                terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplierNoTracking.IndexName, "Name", fromValue: null));
-                Assert.Equal(1, terms.Length);
-                Assert.Equal("bob", terms[0]);
-
-                terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplier.IndexName, "Name", fromValue: null));
-                Assert.Equal(1, terms.Length);
-                Assert.Equal("john", terms[0]);
             }
         }
 
