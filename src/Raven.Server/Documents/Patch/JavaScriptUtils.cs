@@ -269,6 +269,7 @@ namespace Raven.Server.Documents.Patch
 				// we are passing a streaming value to the JS engine, so we need
 				// to materalize all the results
                 
+                
                 var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
