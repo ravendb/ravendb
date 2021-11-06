@@ -266,7 +266,9 @@ namespace Raven.Server.Documents.Patch
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
             {
 				// we are passing a streaming value to the JS engine, so we need
-				// to materalize all the results                var results = new DynamicJsonArray(tsrr.Stream);
+				// to materalize all the results
+                
+                var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
                     ["Count"] = results.Count,
