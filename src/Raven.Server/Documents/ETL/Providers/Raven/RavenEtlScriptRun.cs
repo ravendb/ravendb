@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var operation in timeSeriesOperations)
                 {
-                    commands.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes)
+                    commands.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes, operation.Increments)
                     {
                         FromEtl = true
                     });    
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
             {
-                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, null, null);
+                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, appends: null, deletes: null, increments: null);
                 timeSeriesOperations.Add(timeSeriesName, timeSeriesOperation);
             }
 
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     {
                         foreach (var (_, operation) in timeSeriesOperations)
                         {
-                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes){FromEtl = true});
+                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes, operation.Increments){FromEtl = true});
                         }
                     }
                 }

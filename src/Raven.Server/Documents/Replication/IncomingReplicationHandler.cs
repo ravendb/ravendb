@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -1306,8 +1307,15 @@ namespace Raven.Server.Documents.Replication
                                                 }
                                             }
 
+                                            try
+                                            {
                                             database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
                                                 rcvdChangeVector, null, flags, nonPersistentFlags);
+                                        }
+                                            catch (DocumentCollectionMismatchException)
+                                            {
+                                                goto case ConflictStatus.Conflict;
+                                            }
                                         }
                                         else
                                         {

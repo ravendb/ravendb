@@ -55,6 +55,8 @@ namespace Raven.Client
             public const string ContentEncoding = "Content-Encoding";
 
             public const string ContentLength = "Content-Length";
+
+            public const string IncrementalTimeSeriesPrefix = "INC:";
         }
 
         public class Platform
@@ -230,6 +232,8 @@ namespace Raven.Client
             public class Collections
             {
                 public const string AllDocumentsCollection = "@all_docs";
+
+                public const string EmptyCollection = "@empty";
             }
 
             public class Indexing
@@ -329,6 +333,11 @@ namespace Raven.Client
                     }
 
                     public const string AllResults = "@AllResults";
+                }
+
+                internal class Fields
+                {
+                    internal const string PowerBIJsonFieldName = "json()";
                 }
             }
 

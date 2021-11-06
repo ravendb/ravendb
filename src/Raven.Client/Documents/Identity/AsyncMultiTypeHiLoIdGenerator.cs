@@ -100,6 +100,31 @@ namespace Raven.Client.Documents.Identity
             }
         }
 
+        public async Task<long> GenerateNextIdForAsync(string collectionName)
+        {
+            if (_idGeneratorsByTag.TryGetValue(collectionName, out var value))
+            {
+                return await value.NextIdAsync().ConfigureAwait(false);
+            }
+
+            await _generatorLock.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                if (_idGeneratorsByTag.TryGetValue(collectionName, out value))
+                    return await value.NextIdAsync().ConfigureAwait(false);
+
+                value = CreateGeneratorFor(collectionName);
+                _idGeneratorsByTag.TryAdd(collectionName, value);
+            }
+            finally
+            {
+                _generatorLock.Release();
+            }
+
+            return await value.NextIdAsync().ConfigureAwait(false);
+        }
+
         protected virtual AsyncHiLoIdGenerator CreateGeneratorFor(string tag)
         {
             return new AsyncHiLoIdGenerator(tag, Store, DbName, _identityPartsSeparator);
@@ -110,7 +135,7 @@ namespace Raven.Client.Documents.Identity
             await ReturnUnusedRange(_idGeneratorsByTag.Values).ConfigureAwait(false);
         }
 
-        private async static Task ReturnUnusedRange(IEnumerable<AsyncHiLoIdGenerator> generators)
+        private static async Task ReturnUnusedRange(IEnumerable<AsyncHiLoIdGenerator> generators)
         {
             foreach (var generator in generators)
                 await generator.ReturnUnusedRangeAsync().ConfigureAwait(false);

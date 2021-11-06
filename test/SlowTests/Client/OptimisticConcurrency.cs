@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
@@ -6,6 +7,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -295,5 +297,62 @@ namespace SlowTests.Client
             await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await store.Operations.SendAsync(operation));
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
+
+        [Theory]
+        [InlineData(TransactionMode.ClusterWide)]
+        [InlineData(TransactionMode.SingleNode)]
+        public async Task TrxMerger_WhenMergeTrxOfSuccessPutFollowingByAnyFailingCommand_ShouldReturnTheRightChangeVectorForPut(TransactionMode transactionMode)
+        {
+            const string concurrencyFailedId = "TestObj/concurrencyFailed";
+            const string checkedId = "TestObj/checked";
+
+            using var store = GetDocumentStore();
+
+            for (int i = 0; i < 10; i++)
+            {
+                var barrier = new Barrier(2);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new TestObj(), concurrencyFailedId);
+                    await session.SaveChangesAsync();
+                }
+
+                var storeTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession();
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    await session.StoreAsync(new TestObj(), "wrongChangedVector", concurrencyFailedId);
+                    barrier.SignalAndWait();
+                    await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
+                });
+
+                var deleteTask = Task.Run(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = transactionMode });
+                    var checkedEntity = new TestObj();
+                    await session.StoreAsync(checkedEntity, checkedId);
+                    barrier.SignalAndWait();
+                    await session.SaveChangesAsync();
+
+
+                    using (var session2 = store.OpenAsyncSession(new SessionOptions { TransactionMode = transactionMode }))
+                    {
+                        var loadedCheck = await session2.LoadAsync<TestObj>(checkedId);
+                        Assert.Equal(session2.Advanced.GetChangeVectorFor(loadedCheck), session.Advanced.GetChangeVectorFor(checkedEntity));
+                    }
+                });
+
+                await Task.WhenAll(storeTask, deleteTask);
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = transactionMode }))
+                {
+                    session.Delete(concurrencyFailedId);
+                    session.Delete(checkedId);
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
     }
 }

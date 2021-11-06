@@ -20,6 +20,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
@@ -567,6 +568,25 @@ namespace Raven.Server.Smuggler.Documents
                         databaseRecord.ElasticSearchConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
                             _log.Info("Wasn't able to import the Elastic Search connection strings from smuggler file. Skipping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Integrations), out BlittableJsonReaderObject integrations) &&
+                    integrations != null)
+                {
+
+                    if (integrations.TryGet(nameof(databaseRecord.Integrations.PostgreSql), out BlittableJsonReaderObject postgreSqlConfig))
+                    {
+                        databaseRecord.Integrations ??= new IntegrationConfigurations();
+                    }
+                    try
+                    {
+                        databaseRecord.Integrations.PostgreSql = JsonDeserializationCluster.PostgreSqlConfiguration(postgreSqlConfig);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the PostgreSQL configuration from smuggler file. Skipping.", e);
                     }
                 }
 

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -246,10 +247,18 @@ namespace SlowTests.Client.Subscriptions
                                 docs.Add((x.Result));
                             }
                         }));
-
                         var db = await GetDatabase(store.Database);
-                        var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                        subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionState.SubscriptionId);
+
+                        var subscriptionState = await AssertWaitForNotNullAsync(() =>
+                        {
+                            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName));
+                            }
+                        });
+
+                        subscriptionReleasedAwaiter = subscriptionState.GetSubscriptionInUseAwaiter;
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));

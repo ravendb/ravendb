@@ -22,11 +22,6 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             ConcurrentEsEtlTests.Wait();
         }
 
-        protected void EnsureNonStaleElasticResults(ElasticClient client)
-        {
-            client.Indices.Refresh(new RefreshRequest(Indices.All));
-        }
-
         protected IDisposable GetElasticClient(out ElasticClient client)
         {
             var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });

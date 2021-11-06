@@ -2,9 +2,25 @@
 
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 
 class savedQueriesStorage {
 
+    static saveAndNavigate(db: database, query: storedQueryDto, opts: { extraParameters?: string; newWindow?: boolean } = {}) {
+        const recentQueries = savedQueriesStorage.getSavedQueries(db);
+        savedQueriesStorage.appendQuery(query, ko.observableArray(recentQueries));
+        savedQueriesStorage.storeSavedQueries(db, recentQueries);
+
+        const queryUrl = appUrl.forQuery(db, query.hash, opts.extraParameters);
+        const newWindow = opts ? opts.newWindow : false;
+        if (newWindow) {
+            window.open(queryUrl, "_blank");
+        } else {
+            router.navigate(queryUrl);
+        }
+    }
+    
     static getSavedQueries(db: database): storedQueryDto[] {
         const localStorageName = savedQueriesStorage.getLocalStorageKey(db.name);
         let savedQueriesFromLocalStorage: storedQueryDto[] = this.getSavedQueriesFromLocalStorage(localStorageName);

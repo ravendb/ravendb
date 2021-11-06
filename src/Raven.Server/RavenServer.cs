@@ -40,6 +40,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
+using Raven.Server.Integrations.PostgreSQL;
 using Raven.Server.Json;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.NotificationCenter.Notifications;
@@ -286,7 +287,7 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
 
-                _tcpListenerStatus = StartTcpListener();
+                _tcpListenerStatus = StartTcpListener(ListenToNewTcpConnection);
 
                 try
                 {
@@ -302,6 +303,7 @@ namespace Raven.Server
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
+                StartPostgresServer();
 
                 if (Configuration.Server.CpuCreditsBase != null ||
                     Configuration.Server.CpuCreditsMax != null ||
@@ -1721,7 +1723,13 @@ namespace Raven.Server
             SnmpWatcher.Execute();
         }
 
-        public TcpListenerStatus StartTcpListener()
+        private void StartPostgresServer()
+        {
+            PostgresServer = new PgServer(this);
+            PostgresServer.Execute();
+        }
+
+        public TcpListenerStatus StartTcpListener(Action<TcpListener> listenToNewTcpConnection, int? customPort = null)
         {
             var port = 0;
             var status = new TcpListenerStatus();
@@ -1736,7 +1744,7 @@ namespace Raven.Server
                 {
                     var host = new Uri(serverUrl).DnsSafeHost;
 
-                    StartListeners(host, port, status);
+                    StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
             else if (tcpServerUrl.Length == 1 && ushort.TryParse(tcpServerUrl[0], out ushort shortPort))
@@ -1745,7 +1753,7 @@ namespace Raven.Server
                 {
                     var host = new Uri(serverUrl).DnsSafeHost;
 
-                    StartListeners(host, shortPort, status);
+                    StartListeners(host, customPort ?? shortPort, status, listenToNewTcpConnection);
                 }
             }
             else
@@ -1757,14 +1765,14 @@ namespace Raven.Server
                     if (uri.IsDefaultPort == false)
                         port = uri.Port;
 
-                    StartListeners(host, port, status);
+                    StartListeners(host, customPort ?? port, status, listenToNewTcpConnection);
                 }
             }
 
             return status;
         }
 
-        private void StartListeners(string host, int port, TcpListenerStatus status)
+        private void StartListeners(string host, int port, TcpListenerStatus status, Action<TcpListener> listenToNewTcpConnection)
         {
             try
             {
@@ -1811,7 +1819,7 @@ namespace Raven.Server
                     port = listenerLocalEndpoint.Port;
                     for (int i = 0; i < 4; i++)
                     {
-                        ListenToNewTcpConnection(listener);
+                        listenToNewTcpConnection(listener);
                     }
                 }
 
@@ -1930,16 +1938,10 @@ namespace Raven.Server
 
                             header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
 
-                            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
-
-                            if (supportedFeatures.DataCompression)
+                            if (ShouldUseDataCompression(header))
                             {
-                                if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication ||
-                                    (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription && header.CompressionSupport))
-                                {
-                                    stream = new ReadWriteCompressedStream(stream, buffer);
-                                    tcp.Stream = stream;
-                                }
+                                stream = new ReadWriteCompressedStream(stream, buffer);
+                                tcp.Stream = stream;
                             }
 
                             await DispatchTcpConnection(header, tcp, buffer, cert);
@@ -2104,10 +2106,13 @@ namespace Raven.Server
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
-                
+
+                if (header.LicensedFeatures != null)
+                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression;
+
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported);
+                    supported, licensedFeatures : header.LicensedFeatures);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2216,12 +2221,13 @@ namespace Raven.Server
             }
         }
 
-        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
+        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version, LicensedFeatures licensedFeatures = null)
         {
             var message = new DynamicJsonValue
             {
                 [nameof(TcpConnectionHeaderResponse.Status)] = status.ToString(),
-                [nameof(TcpConnectionHeaderResponse.Version)] = version
+                [nameof(TcpConnectionHeaderResponse.Version)] = version,
+                [nameof(TcpConnectionHeaderResponse.LicensedFeatures)] = licensedFeatures?.ToJson()
             };
 
             if (error != null)
@@ -2269,6 +2275,7 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         public SnmpWatcher SnmpWatcher;
+        public PgServer PostgresServer;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionMiddleware _httpsConnectionMiddleware;
         private PoolOfThreads.LongRunningWork _cpuCreditsMonitoring;
@@ -2390,7 +2397,7 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
+        internal async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
             if (Certificate.Certificate != null)
             {
@@ -2579,6 +2586,16 @@ namespace Raven.Server
                 _authAuditLog.Info(
                     $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
+        }
+
+        private static bool ShouldUseDataCompression(TcpConnectionHeaderMessage header)
+        {
+            var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(header.Operation, header.OperationVersion);
+
+            return supportedFeatures.DataCompression && 
+                   header.LicensedFeatures?.DataCompression == true && 
+                   (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication || 
+                    header.Operation == TcpConnectionHeaderMessage.OperationTypes.Subscription);
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)

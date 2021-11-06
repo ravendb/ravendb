@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        private static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
+        internal static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
         {
             var qp = new QueryParser();
             qp.Init(q, database?.DocumentsStorage);

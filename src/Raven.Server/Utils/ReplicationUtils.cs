@@ -49,7 +49,7 @@ namespace Raven.Server.Utils
                 metadata.TryGet(Constants.Documents.Metadata.Collection, out string actualCollection) == false ||
                 actualCollection != collection)
             {
-                if (collection == CollectionName.EmptyCollection)
+                if (collection == Constants.Documents.Collections.EmptyCollection)
                     return;
 
                 ThrowInvalidCollectionAfterResolve(collection, null);

@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         public double[] Values { get; set; }
         public string Tag { get; set; }
         public bool IsRollup { get; set; }
+        public Dictionary<string, double[]> NodeValues { get; set; }
 
         [JsonDeserializationIgnore]
         public double Value
@@ -165,7 +166,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
                     value = values[index];
                 }
-                
+
                 var member = memberInfo.Value;
                 member.SetValue(ref obj, value);
             }

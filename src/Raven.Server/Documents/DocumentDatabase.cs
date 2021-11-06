@@ -450,48 +450,51 @@ namespace Raven.Server.Documents
 
                 _hasClusterTransaction.Reset();
 
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
+                try
                 {
-                    try
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: 256));
-
-                        if (batch.Count == 0)
-                        {
-                            continue;
-                        }
-
-                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
-                        try
-                        {
-                            //If we get a database shutdown while we process a cluster tx command this
-                            //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
-                            await TxMerger.Enqueue(mergedCommands);
-                        }
-                        catch (Exception e)
-                        {
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
-                            }
-                            await ExecuteClusterTransactionOneByOne(batch);
-                            continue;
-                        }
-                        foreach (var command in batch)
-                        {
-                            OnClusterTransactionCompletion(command, mergedCommands);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
-                        }
+                        await ExecuteClusterTransaction(context);
                     }
                 }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
+                    }
+                }
+            }
+        }
+
+        public async Task ExecuteClusterTransaction(TransactionOperationContext context)
+        {
+            var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
+                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: 256));
+
+            if (batch.Count == 0)
+                return;
+
+            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+            try
+            {
+                //If we get a database shutdown while we process a cluster tx command this
+                //will cause us to stop running and disposing the context while its memory is still been used by the merger execution
+                await TxMerger.Enqueue(mergedCommands);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                }
+                await ExecuteClusterTransactionOneByOne(batch);
+                return;
+            }
+            foreach (var command in batch)
+            {
+                OnClusterTransactionCompletion(command, mergedCommands);
             }
         }
 
@@ -657,7 +660,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.DisposeLog?.Invoke(Name, $"Drained all requests. Took: {sp.Elapsed}");
             }
-            
+
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Acquiring cluster lock");
@@ -1326,7 +1329,7 @@ namespace Raven.Server.Documents
                                     _logger.Operations(msg);
 
 #if !RELEASE
-                                    Console.WriteLine(msg);   
+                                    Console.WriteLine(msg);
 #endif
                                 }
                             }

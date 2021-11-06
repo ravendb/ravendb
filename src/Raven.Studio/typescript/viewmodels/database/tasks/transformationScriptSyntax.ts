@@ -133,7 +133,7 @@ loadToOrders(orderData);`;
 
     static readonly elasticSearchEtlSampleText = // todo...
         `var orderData = {
-    Id: id(this),
+    Id: id(this), // property with RavenDB document ID
     OrderLinesCount: this.Lines.length,
     TotalCost: 0
 };
@@ -143,14 +143,14 @@ for (var i = 0; i < this.Lines.length; i++) {
     var cost = (line.Quantity * line.PricePerUnit) * ( 1 - line.Discount);
     orderData.TotalCost += line.Cost * line.Quantity;
     loadToOrderLines({
-        OrderId: id(this),
+        OrderId: id(this), // property with RavenDB document ID
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.Cost
     });
 }
 
-loadToOrders(orderData);`;
+loadToOrders(orderData); // load to Elasticsearch Index 'orders'`;
 
     elasticSearchEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.elasticSearchEtlSampleText);
     

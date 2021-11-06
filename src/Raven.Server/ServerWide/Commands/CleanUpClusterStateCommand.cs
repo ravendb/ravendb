@@ -3,6 +3,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -18,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public unsafe Dictionary<string, long> Clean(ClusterOperationContext context, long index)
+        public Dictionary<string, long> Clean(ClusterOperationContext context, long index)
         {
             var affectedDatabases = new Dictionary<string, long>();
             foreach (var tuple in ClusterTransactionsCleanup)
@@ -26,20 +27,9 @@ namespace Raven.Server.ServerWide.Commands
                 var database = tuple.Key;
                 var upToCommandCount = tuple.Value - 1;
 
-                var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-                using (ClusterTransactionCommand.GetPrefix(context, database, out var prefixSlice))
+                if (ClusterTransactionCommand.DeleteCommands(context, database, upToCommandCount))
                 {
-                    var deleted = items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
-                    {
-                        var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
-                        var prevCommandsCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
-                        return prevCommandsCount > upToCommandCount;
-                    });
-                   
-                    if (deleted)
-                    {
-                        affectedDatabases.Add(database, tuple.Value);
-                    }
+                    affectedDatabases.Add(database, tuple.Value);
                 }
             }
             return affectedDatabases;

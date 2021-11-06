@@ -25,6 +25,7 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import testElasticSearchEtlCommand = require("commands/database/tasks/testElasticSearchEtlCommand");
+import ongoingTaskElasticSearchTransformationModel = require("models/database/tasks/ongoingTaskElasticSearchEtlTransformationModel");
 
 class elasticSearchTaskTestMode {
 
@@ -165,10 +166,10 @@ class elasticSearchTaskTestMode {
 class editElasticSearchEtlTask extends viewModelBase {
 
     static readonly scriptNamePrefix = "Script_";
-
+    static isApplyToAll = ongoingTaskElasticSearchTransformationModel.isApplyToAll;
+    
     enableTestArea = ko.observable<boolean>(false);
-
-    test: elasticSearchTaskTestMode; // todo...
+    test: elasticSearchTaskTestMode;    
 
     editedElasticSearchEtl = ko.observable<ongoingTaskElasticSearchEtlEditModel>();
     isAddingNewElasticSearchEtlTask = ko.observable<boolean>(true);
@@ -188,6 +189,8 @@ class editElasticSearchEtlTask extends viewModelBase {
         test: ko.observable<boolean>(false),
         save: ko.observable<boolean>(false)
     };
+
+    collections = collectionsTracker.default.collections;
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
@@ -203,7 +206,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
-            "useCollection",
             "removeTransformationScript",
             "cancelEditedTransformation",
             "cancelEditedElasticSearchIndex",
@@ -531,10 +533,6 @@ class editElasticSearchEtlTask extends viewModelBase {
     /*** Transformation Script Actions Region ***/
     /********************************************/
 
-    useCollection(collectionToUse: string) {
-        this.editedTransformationScriptSandbox().collection(collectionToUse);
-    }
-
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
         this.editedTransformationScriptSandbox(ongoingTaskElasticSearchEtlTransformationModel.empty(this.findNameForNewTransformation()));
@@ -610,17 +608,28 @@ class editElasticSearchEtlTask extends viewModelBase {
         }
     }
 
-    createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
+            let result;
             const key = collectionText();
 
-            const options = this.collectionNames();
+            const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
+
+            const usedOptions = usedCollections().filter(k => k !== key);
+
+            const filteredOptions = _.difference(options, usedOptions);
 
             if (key) {
-                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
             } else {
-                return options;
+                result = filteredOptions;
             }
+
+            if (!_.includes(this.editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskElasticSearchTransformationModel.applyToAllCollectionsText);
+            }
+
+            return result;
         });
     }
 

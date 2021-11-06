@@ -5,6 +5,7 @@
         public TcpConnectionStatus Status { get; set; }
         public string Message { get; set; }
         public int Version { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
     }
 
     public enum TcpConnectionStatus

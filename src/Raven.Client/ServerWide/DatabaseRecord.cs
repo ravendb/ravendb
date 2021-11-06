@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -87,6 +88,8 @@ namespace Raven.Client.ServerWide
         public ExpirationConfiguration Expiration;
 
         public RefreshConfiguration Refresh;
+
+        public IntegrationConfigurations Integrations;
 
         public List<PeriodicBackupConfiguration> PeriodicBackups = new List<PeriodicBackupConfiguration>();
 
