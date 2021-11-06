@@ -1,24 +1,25 @@
 <div class="form-group" data-bind="validationElement: connectionStringName">
     <label class="control-label">Name</label>
     <div class="flex-grow">
-        <input class="form-control" data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" 
-               placeholder="Enter a name for the connection string">           
+        <input class="form-control" placeholder="Enter a name for the connection string"
+               data-bind="textInput: connectionStringName, enable: isNew, attr: { 'title': isNew() ? 'Enter any name of your choice for this connection string' : '' }" >
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: factoryName">
     <label class="control-label">Factory</label>
     <div class="flex-grow">
         <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
-            <span data-bind="text: labelFor(factoryName()) || 'Select factory name'"></span> <span class="caret"></span>
+            <span data-bind="text: fullNameFor(factoryName()) || 'Select factory name'"></span> <span class="caret"></span>
         </button>
         <ul class="dropdown-menu" data-bind="foreach: $data.constructor.sqlProviders">
-            <li><a href="#" data-bind="text: label, click: _.partial($parent.factoryName, value)"></a></li>
+            <li><a href="#" data-bind="text: $parent.fullNameFor(value), click: _.partial($parent.factoryName, value)"></a></li>
         </ul>
     </div>
 </div>
 <div class="form-group" data-bind="validationElement: connectionString">
     <label class="control-label">Connection string</label>
     <div class="flex-grow">
-        <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connection string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
+        <textarea class="form-control" rows="3" data-bind="textInput: connectionString, attr: { placeholder: factoryPlaceHolder(factoryName) }">
+        </textarea>
     </div>
 </div>

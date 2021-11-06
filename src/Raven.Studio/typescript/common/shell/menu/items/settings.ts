@@ -138,6 +138,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-dbgroup',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
+        new leafMenuItem({
+            route: 'databases/settings/integrations',
+            moduleId: 'viewmodels/database/settings/integrations',
+            title: 'Integrations',
+            nav: true,
+            css: 'icon-integrations',
+            dynamicHash: appUrls.integrations
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Advanced'),
         new leafMenuItem({

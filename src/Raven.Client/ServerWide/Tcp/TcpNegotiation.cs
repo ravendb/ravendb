@@ -32,13 +32,17 @@ namespace Raven.Client.ServerWide.Tcp
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
                 var current = parameters.Version;
+                bool dataCompression;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
                         throw new OperationCanceledException($"Stopped TCP negotiation for {parameters.Operation} because of cancellation request");
 
                     await SendTcpVersionInfoAsync(context, writer, parameters, current).ConfigureAwait(false);
-                    var version = await parameters.ReadResponseAndGetVersionCallbackAsync(context, writer, stream, parameters.DestinationUrl).ConfigureAwait(false);
+                    var response = await parameters.ReadResponseAndGetVersionCallbackAsync(context, writer, stream, parameters.DestinationUrl).ConfigureAwait(false);
+                    var version = response.Version;
+                    dataCompression = response.LicensedFeatures?.DataCompression ?? false;
+
                     if (Log.IsInfoEnabled)
                     {
                         Log.Info($"Read response from {parameters.SourceNodeTag ?? parameters.DestinationUrl} for '{parameters.Operation}', received version is '{version}'");
@@ -67,7 +71,13 @@ namespace Raven.Client.ServerWide.Tcp
                 {
                     Log.Info($"{parameters.DestinationNodeTag ?? parameters.DestinationUrl} agreed on version '{current}' for {parameters.Operation}.");
                 }
-                return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                return new TcpConnectionHeaderMessage.SupportedFeatures(supportedFeatures)
+                {
+                    DataCompression = dataCompression
+                };
             }
         }
 
@@ -86,7 +96,7 @@ namespace Raven.Client.ServerWide.Tcp
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
                 [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
                 [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId,
-                [nameof(TcpConnectionHeaderMessage.CompressionSupport)] = parameters.CompressionSupport.ToString()
+                [nameof(TcpConnectionHeaderMessage.LicensedFeatures)] = parameters.LicensedFeatures?.ToJson()
             });
 
             await writer.FlushAsync().ConfigureAwait(false);
@@ -107,7 +117,7 @@ namespace Raven.Client.ServerWide.Tcp
         /// If the respond is 'None' the function should throw.
         /// If the respond is 'TcpMismatch' the function should return the read version.
         /// </summary>
-        public Func<JsonOperationContext, AsyncBlittableJsonTextWriter, Stream, string, ValueTask<int>> ReadResponseAndGetVersionCallbackAsync { get; set; }
+        public Func<JsonOperationContext, AsyncBlittableJsonTextWriter, Stream, string, ValueTask<TcpConnectionHeaderMessage.NegotiationResponse>> ReadResponseAndGetVersionCallbackAsync { get; set; }
     }
 
     public abstract class AbstractTcpNegotiateParameters
@@ -121,6 +131,6 @@ namespace Raven.Client.ServerWide.Tcp
         public string DestinationUrl { get; set; }
         public string DestinationServerId { get; set; }
         public CancellationToken CancellationToken { get; set; }
-        public bool CompressionSupport { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
     }
 }

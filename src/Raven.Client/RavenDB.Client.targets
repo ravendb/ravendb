@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Zstd Include="$(MSBuildThisFileDirectory)..\contentFiles\any\any\**\*" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PrepareForRunDependsOn>
+      $(PrepareForRunDependsOn);
+      CopyZstd
+    </PrepareForRunDependsOn>
+  </PropertyGroup>
+  <Target Name="CopyZstd" DependsOnTargets="CopyFilesToOutputDirectory">
+    <Copy SourceFiles="@(Zstd)" DestinationFiles="@(Zstd->'$(OutDir)\%(TargetPath)\%(RecursiveDir)\%(Filename)%(Extension)')">
+      <Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
+</Project>

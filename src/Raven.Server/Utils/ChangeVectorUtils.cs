@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
@@ -225,6 +226,11 @@ namespace Raven.Server.Utils
             return _mergeVectorBuffer.SerializeVector();
         }
 
+        public static string MergeVectors(params string[] changeVectors)
+        {
+            return MergeVectors(changeVectors.ToList());
+        }
+
         public static string MergeVectors(List<string> changeVectors)
         {
             if (_mergeVectorBuffer == null)
@@ -289,6 +295,8 @@ namespace Raven.Server.Utils
                 return null;
 
             var start = changeVector.LastIndexOf(", ", endOfNodeTag - 1, StringComparison.OrdinalIgnoreCase) + 1;
+            if (start > 1)
+                start++;
 
             return changeVector.Substring(start, endOfNodeTag - start);
         }

@@ -8,7 +8,7 @@ class deleteConnectionStringCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<void> {                       
+    execute(): JQueryPromise<void> {
         const args = { type: this.type, connectionString: this.connectionStringName };
         const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 

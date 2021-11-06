@@ -14,6 +14,7 @@ namespace Raven.Server.Config.Categories
         Etl,
         Http,
         Indexing,
+        Integrations,
         License,
         Logs,
         Memory,

@@ -140,9 +140,13 @@ namespace Sparrow.Json.Parsing
             Items = new List<object>();
         }
 
-        public DynamicJsonArray(IEnumerable<object> collection)
+        public DynamicJsonArray(IEnumerable collection)
         {
-            Items = new List<object>(collection);
+            Items = new List<object>();
+            foreach (object o in collection)
+            {
+                Items.Add(o);
+            }
         }
 
         public void RemoveAt(int index)

@@ -65,6 +65,7 @@ interface computedAppUrls {
     editCustomSorter: KnockoutComputed<string>;
     customAnalyzers: KnockoutComputed<string>;
     editCustomAnalyzer: KnockoutComputed<string>;
+    integrations: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
 

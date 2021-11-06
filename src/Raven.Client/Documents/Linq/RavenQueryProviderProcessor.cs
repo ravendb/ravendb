@@ -2879,7 +2879,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     var name = GetSelectPath(newExpression.Members[index]);
 
-                    AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
+                    if (newExpression.Arguments[index] is MemberInitExpression or NewExpression)
+                    {
+                        if (index > 0)
+                            sb.Append(", ");
+                        
+                        _jsProjectionNames.Add(name);
+                        sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(newExpression.Arguments[index]));
+                    }
+                    else
+                    {
+                        AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
+                    }
                 }
             }
 
@@ -2892,7 +2903,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         continue;
 
                     var name = GetSelectPath(field.Member);
+                    if (field.Expression is MemberInitExpression)
+                    {
+                        if (index > 0)
+                            sb.Append(", ");
+                        
+                        _jsProjectionNames.Add(name);
+                        sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(field.Expression));
+                        continue;
+                    }
+                   
                     AddJsProjection(name, field.Expression, sb, index != 0);
+                    
                 }
             }
 

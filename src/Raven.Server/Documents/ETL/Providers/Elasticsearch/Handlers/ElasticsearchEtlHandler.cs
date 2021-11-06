@@ -19,12 +19,13 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Handlers
                 var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestElasticSearchEtlScript");
                 var testScript = JsonDeserializationServer.TestElasticSearchEtlScript(dbDoc);
 
-                var result = (ElasticSearchEtlTestScriptResult)ElasticSearchEtl.TestScript(testScript, Database, ServerStore, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (ElasticSearchEtl.TestScript(testScript, Database, ServerStore, context, out var result))
                 {
-                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "etl/elasticsearch/test"));
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
+                        writer.WriteObject(context.ReadObject(djv, "etl/elasticsearch/test"));
+                    }
                 }
             }
         }

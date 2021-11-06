@@ -10,11 +10,17 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class TimeSeriesBatchCommandData : ICommandData
     {
-        public TimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.DeleteOperation> deletes)
+        public TimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.AppendOperation> appends, 
+            List<TimeSeriesOperation.DeleteOperation> deletes) : this(documentId, name, appends, deletes, null)
+        {
+        }
+
+        public TimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.AppendOperation> appends,
+            List<TimeSeriesOperation.DeleteOperation> deletes, IList<TimeSeriesOperation.IncrementOperation> increments)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
-            
+
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentNullException(nameof(name));
 
@@ -23,7 +29,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
             TimeSeries = new TimeSeriesOperation
             {
-                Name = name,
+                Name = name
             };
 
             if (appends != null)
@@ -39,6 +45,14 @@ namespace Raven.Client.Documents.Commands.Batches
                 foreach (var deleteOperation in deletes)
                 {
                     TimeSeries.Delete(deleteOperation);
+                }
+            }
+
+            if (increments != null)
+            {
+                foreach (var incrementOperation in increments)
+                {
+                    TimeSeries.Increment(incrementOperation);
                 }
             }
         }

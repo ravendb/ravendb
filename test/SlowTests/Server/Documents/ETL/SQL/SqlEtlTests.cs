@@ -200,6 +200,62 @@ DROP DATABASE [SqlReplication-{dbName}]";
             }
         }
 
+
+
+        [Fact]
+        public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+                {
+                    CreateRdbmsSchema(connectionString);
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new Order
+                        {
+                            OrderLines = new List<OrderLine>
+                            {
+                                new OrderLine {Cost = 3, Product = "Milk", Quantity = 3}, new OrderLine {Cost = 4, Product = "Bear", Quantity = 2},
+                            }
+                        });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                    string script = @"
+var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
+};
+
+loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the configuration
+";
+
+                    SetupSqlEtl(store, connectionString, script);
+
+                    WaitForUserToContinueTheTest(store);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
+                        {
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
+                        }
+                    }
+                }
+            }
+        }
+
         [Fact]
         public async Task CanLoadToTableWithSchemaName()
         {
@@ -648,7 +704,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                        using(SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -671,23 +727,25 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         }
                                     }
                                 }
-                            }, database, database.ServerStore, context);
+                            }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (SqlEtlTestScriptResult)testResult;
+                            Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.LoadErrors.Count);
+                            Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
-                        Assert.Equal(0, result.LoadErrors.Count);
-                        Assert.Equal(0, result.SlowSqlWarnings.Count);
+                            Assert.Equal(2, result.Summary.Count);
 
-                        Assert.Equal(2, result.Summary.Count);
+                            var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
 
-                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                            Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
 
-                        Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+                            var orders = result.Summary.First(x => x.TableName == "Orders");
 
-                        var orders = result.Summary.First(x => x.TableName == "Orders");
+                            Assert.Equal(2, orders.Commands.Length); // delete and insert
 
-                        Assert.Equal(2, orders.Commands.Length); // delete and insert
-
-                        Assert.Equal("test output", result.DebugOutput[0]);
+                            Assert.Equal("test output", result.DebugOutput[0]);
+                        }
                     }
                 }
             }
@@ -728,7 +786,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(
+                        using(SqlEtl.TestScript(
                             new TestSqlEtlScript
                             {
                                 PerformRolledBackTransaction = performRolledBackTransaction,
@@ -744,20 +802,23 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                         new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
                                         new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
                                     },
-                                    Transforms = { new Transformation() { Collections = { "Orders" }, Name = "OrdersAndLines", Script = defaultScript } }
+                                    Transforms = {new Transformation() {Collections = {"Orders"}, Name = "OrdersAndLines", Script = defaultScript}}
                                 }
-                            }, database, database.ServerStore, context);
+                            }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (SqlEtlTestScriptResult)testResult;
+                            
+                            Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.LoadErrors.Count);
+                            Assert.Equal(0, result.SlowSqlWarnings.Count);
+                            Assert.Equal(2, result.Summary.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
-                        Assert.Equal(0, result.LoadErrors.Count);
-                        Assert.Equal(0, result.SlowSqlWarnings.Count);
-                        Assert.Equal(2, result.Summary.Count);
+                            var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                            Assert.Equal(1, orderLines.Commands.Length); // delete
 
-                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
-                        Assert.Equal(1, orderLines.Commands.Length); // delete
-
-                        var orders = result.Summary.First(x => x.TableName == "Orders");
-                        Assert.Equal(1, orders.Commands.Length); // delete
+                            var orders = result.Summary.First(x => x.TableName == "Orders");
+                            Assert.Equal(1, orders.Commands.Length); // delete
+                        }
                     }
 
                     using (var session = store.OpenAsyncSession())

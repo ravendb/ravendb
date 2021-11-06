@@ -2,11 +2,20 @@
 
 class timeSeriesValue {
     value = ko.observable<number>();
+    delta = ko.observable<number>();
+    
+    newValue = ko.observable<boolean>(false);
+    
     validationGroup: KnockoutValidationGroup;
     
-    constructor(value: number = 0) {
-        this.value(value);
-        
+    constructor(value?: number) {
+        this.value(value || 0);
+        this.delta(0);
+
+        if (value === undefined) {
+            this.newValue(true);
+        }
+
         this.initValidation();
     }
     
@@ -16,8 +25,13 @@ class timeSeriesValue {
             number: true
         });
         
+        this.delta.extend({
+           number: true
+        });
+
         this.validationGroup = ko.validatedObservable({
-            value: this.value
+            value: this.value,
+            delta: this.delta
         });
     }
 }

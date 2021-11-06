@@ -65,7 +65,7 @@ namespace Tests.Infrastructure.ConnectionString
             {
                 try
                 {
-                    var client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = nodes });
+                    var client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = nodes }, requestTimeout: TimeSpan.FromSeconds(1), pingTimeout: TimeSpan.FromSeconds(1));
 
                     response = client.Ping();
 

@@ -21,20 +21,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
 
                 var testScript = JsonDeserializationServer.TestRavenEtlScript(testConfig);
 
-                var result = (RavenEtlTestScriptResult) RavenEtl.TestScript(testScript, Database, ServerStore, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (RavenEtl.TestScript(testScript, Database, ServerStore, context, out var testResult))
                 {
-                    var defaultConventions = new DocumentConventions();
-
-                    var djv = new DynamicJsonValue()
+                    var result = (RavenEtlTestScriptResult)testResult;
+                    
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        [nameof(result.Commands)] = new DynamicJsonArray(result.Commands.Select(x => x.ToJson(defaultConventions, context))),
-                        [nameof(result.TransformationErrors)] = new DynamicJsonArray(result.TransformationErrors.Select(x => x.ToJson())),
-                        [nameof(result.DebugOutput)] = new DynamicJsonArray(result.DebugOutput)
-                    };
+                        var defaultConventions = new DocumentConventions();
 
-                    writer.WriteObject(context.ReadObject(djv, "et/raven/test"));
+                        var djv = new DynamicJsonValue()
+                        {
+                            [nameof(result.Commands)] = new DynamicJsonArray(result.Commands.Select(x => x.ToJson(defaultConventions, context))),
+                            [nameof(result.TransformationErrors)] = new DynamicJsonArray(result.TransformationErrors.Select(x => x.ToJson())),
+                            [nameof(result.DebugOutput)] = new DynamicJsonArray(result.DebugOutput)
+                        };
+
+                        writer.WriteObject(context.ReadObject(djv, "et/raven/test"));
+                    }
                 }
             }
         }

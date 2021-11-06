@@ -16,54 +16,35 @@ class queryUtil {
     static readonly AllDocs = "AllDocs";
 
     static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
         
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
     }
 
     static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
 
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select avg())`;
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
-        const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
+        const escapedFieldName = queryUtil.wrapWithSingleQuotes(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
         return `from index ${escapedIndexName} where ${escapedFieldName} = '${value}' `;
     }
     
-    private static wrapWithSingleQuotes(input: string) {
+    static wrapWithSingleQuotes(input: string) {
         if (input.includes("'")) {
-            input = input.replace("'", "''");
+            input = input.replace(/'/g, "''");
         }
         return "'" + input + "'";
     }
 
     static escapeName(name: string) {
-        return queryUtil.wrapWithSingleQuotes(name);
-    }
-    
-    static escapeCollectionOrFieldName(name: string) : string {
-        // wrap collection name in 'collection name' if it has spaces.
-        // @ is allowed (ex. @all_docs) - but only in front
-        if (/^@?[0-9a-zA-Z_]+$/.test(name)) {
-            return name;
-        }
-
-        return queryUtil.wrapWithSingleQuotes(name);
-    }
-    
-    static escapeTimeSeriesName(name: string): string {
-        // wrap collection name in 'collection name' if it has spaces.
-        if (/^[0-9a-zA-Z_]+$/.test(name)) {
-            return name;
-        }
-
         return queryUtil.wrapWithSingleQuotes(name);
     }
 

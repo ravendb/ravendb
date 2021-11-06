@@ -5,9 +5,15 @@
     "removeComments": false,
     "declaration": false,
     "sourceMap": true,
-    "target": "es5", 
+    "target": "es6", 
     "skipLibCheck": true,
     "module": "amd",
+    "lib": [
+      "webworker",
+      "DOM",
+      "es6",
+      "scripthost"  
+    ],
     "typeRoots": [
         "./typings/**/*"
     ]

@@ -11,6 +11,7 @@ using FastTests;
 using FastTests.Client.Subscriptions;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
@@ -72,6 +73,54 @@ namespace SlowTests.Client.Subscriptions
                 subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionsBatchSizeShouldIgnoreSkippedItems()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
+                {
+                    Filter = user => user.Count > 0
+                });
+
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(
+                    new SubscriptionWorkerOptions(sub)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                        MaxDocsPerBatch = 2
+                    });
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        session.Store(new User { Count = 1 });
+                    }
+                    session.SaveChanges();
+                }
+
+                _ = subscription.Run(async x =>
+                {
+                    using var session = x.OpenAsyncSession();
+
+                    foreach (var item in x.Items)
+                    {
+                        item.Result.Count--;
+                    }
+
+                    await session.SaveChangesAsync();
+                });
+
+                await AssertWaitForCountAsync(async () =>
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        return await session.Query<User>().Where(u => u.Count > 0).ToListAsync();
+                    }
+                }, 0);
             }
         }
 
@@ -460,8 +509,8 @@ namespace SlowTests.Client.Subscriptions
                     {
                         var query = WaitForValue(() =>
                         {
-                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
-                            return connectionState?.Connection?.SubscriptionState.Query;
+                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
+                            return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                         }, newQuery);
 
                         Assert.Equal(newQuery, query);
@@ -544,9 +593,9 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
 
-                        return connectionState?.Connection?.SubscriptionState.Query;
+                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                     }, newQuery);
 
                     Assert.Equal(newQuery, query);
@@ -635,9 +684,9 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var query = WaitForValue(() =>
                     {
-                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, state.SubscriptionName);
 
-                        return connectionState?.Connection?.SubscriptionState.Query;
+                        return connectionState?.GetConnections().FirstOrDefault()?.SubscriptionState.Query;
                     }, newQuery);
 
                     Assert.Equal(newQuery, query);
@@ -690,7 +739,7 @@ namespace SlowTests.Client.Subscriptions
                 finally
                 {
                     Assert.NotNull(ex);
-                    Assert.True(ex is DatabaseDoesNotExistException || ex is SubscriptionDoesNotExistException);
+                    Assert.True(ex is DatabaseDoesNotExistException || ex is SubscriptionDoesNotExistException, ex.ToString());
                     Assert.Contains(
                         ex is SubscriptionDoesNotExistException
                             ? $"Stopping subscription '{subscription.SubscriptionName}' on node A, because database '{store.Database}' is being deleted."

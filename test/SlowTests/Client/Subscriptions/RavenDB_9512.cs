@@ -39,7 +39,8 @@ namespace SlowTests.Client.Subscriptions
                 
                 var st = worker.Run(x => { });
                 
-                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(()=>st).WaitAsync(_reasonableWaitTime));}
+                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(()=>st).WaitAsync(_reasonableWaitTime));
+            }
         }
         
     }

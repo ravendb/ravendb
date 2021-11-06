@@ -97,6 +97,8 @@ src/Raven.Studio/typings/modules
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
+# web woker is bundled using webpack
+/src/Raven.Studio/wwwroot/rql_worker.js 
 
 test/FastTests/Databases/
 /test/Tryouts/Logs
@@ -123,6 +125,11 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Pal/*.nativecodeanalysis.xml
 /src/Raven.Pal/src/posix/*.o
 
-test/Tryouts/enron_mail_20150507.tar*
 
+# ANTLR generated files (via Rider plugin)
+gen/*.java
+gen/*.tokens
+gen/*.interp
+
+test/Tryouts/enron_mail_20150507.tar*
 test/Tryouts/69M_reddit_accounts.csv*

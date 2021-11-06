@@ -2494,6 +2494,27 @@ more responsive application.
 
             return result;
         }
+
+        internal static void ValidateTimeSeriesName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new InvalidDataException("Time Series name must contain at least one character");
+
+            if (name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) && name.Contains('@') == false)
+                throw new InvalidDataException($"Time Series name cannot start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix");
+        }
+
+        internal static void ValidateIncrementalTimeSeriesName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                throw new InvalidDataException("Incremental Time Series name must contain at least one character");
+
+            if (name.StartsWith(Constants.Headers.IncrementalTimeSeriesPrefix, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidDataException($"Incremental Time Series name must start with {Constants.Headers.IncrementalTimeSeriesPrefix} prefix");
+
+            if (name.Contains('@'))
+                throw new InvalidDataException("Time Series from type Rollup cannot be Incremental");
+        }
     }
 
     internal struct AsyncTaskHolder : IDisposable
