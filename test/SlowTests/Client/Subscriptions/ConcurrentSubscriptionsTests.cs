@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Commercial;
+using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -713,6 +716,31 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6 || con1Docs.Count + con2Docs.Count == 8), 6000);
                     await AssertNoLeftovers(store, id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ThrowOnInvalidLicense()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                Server.ServerStore.LicenseManager.LicenseStatus.Attributes["concurrentSubscriptions"] = false;
+
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                }))
+                {
+                    var t = subscription.Run(x =>
+                    {
+                       
+                    });
+
+                    var ex = await Assert.ThrowsAsync<SubscriptionInvalidStateException>(() => t.WaitAndThrowOnTimeout(TimeSpan.FromSeconds(15)));
+                    Assert.Contains("Your current license doesn't include the Concurrent Subscriptions feature", ex.ToString());
                 }
             }
         }

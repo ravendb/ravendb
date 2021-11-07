@@ -18,6 +18,7 @@ using Esprima;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
@@ -454,131 +455,140 @@ namespace Raven.Server.Documents.TcpHandlers
                 return;
             try
             {
-                if (ex is SubscriptionDoesNotExistException || ex is DatabaseDoesNotExistException)
+                switch (ex)
                 {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.NotFound),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionClosedException sce)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                    case SubscriptionDoesNotExistException:
+                    case DatabaseDoesNotExistException:
+                        await connection.WriteJsonAsync(new DynamicJsonValue
                         {
-                            [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
-                        }
-                    });
-                }
-                else if (ex is SubscriptionInvalidStateException)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Invalid),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionInUseException)
-                {
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
-                {
-                    if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
-                    {
-                        try
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.NotFound),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    case SubscriptionClosedException sce:
+                        await connection.WriteJsonAsync(new DynamicJsonValue
                         {
-                            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (ctx.OpenReadTransaction())
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
+                            [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                             {
-                                // check that the subscription exists on AppropriateNode
-                                var clusterTopology = server.GetClusterTopology(ctx);
-                                using (var requester = ClusterRequestExecutor.CreateForSingleNode(
-                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
+                                [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
+                            }
+                        });
+                        break;
+                    case SubscriptionInvalidStateException:
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Invalid),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    case SubscriptionInUseException:
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.InUse),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    case SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException:
+                        if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
+                        {
+                            try
+                            {
+                                using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
                                 {
-                                    await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
+                                    // check that the subscription exists on AppropriateNode
+                                    var clusterTopology = server.GetClusterTopology(ctx);
+                                    using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                        clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
+                                    {
+                                        await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
+                                    }
                                 }
                             }
+                            catch
+                            {
+                                // we let the client try to connect to AppropriateNode
+                            }
                         }
-                        catch
-                        {
-                            // we let the client try to connect to AppropriateNode
-                        }
-                    }
 
-                    connection.AddToStatusDescription("Redirecting subscription client to different server");
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription does not belong to current node", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                        connection.AddToStatusDescription("Redirecting subscription client to different server");
+                        if (connection._logger.IsInfoEnabled)
                         {
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
-                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
-                                new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
-                                {
-                                    [item.Key] = item.Value
-                                }))
+                            connection._logger.Info("Subscription does not belong to current node", ex);
                         }
-                    });
-                }
-                else if (ex is SubscriptionChangeVectorUpdateConcurrencyException subscriptionConcurrency)
-                {
-                    connection.AddToStatusDescription("Subscription change vector update concurrency error");
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription change vector update concurrency error", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
-                }
-                else if (ex is RachisApplyException commandExecution && commandExecution.InnerException is SubscriptionException)
-                {
-                    await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
-                }
-                else
-                {
-                    connection.AddToStatusDescription("Subscription error");
 
-                    if (connection._logger.IsInfoEnabled)
-                    {
-                        connection._logger.Info("Subscription error", ex);
-                    }
-                    await connection.WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
-                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.None),
-                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                    });
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
+                            [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                            {
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] =
+                                    connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
+                                    new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
+                                    {
+                                        [item.Key] = item.Value
+                                    }))
+                            }
+                        });
+                        break;
+                    case SubscriptionChangeVectorUpdateConcurrencyException subscriptionConcurrency:
+                        connection.AddToStatusDescription("Subscription change vector update concurrency error");
+                        if (connection._logger.IsInfoEnabled)
+                        {
+                            connection._logger.Info("Subscription change vector update concurrency error", ex);
+                        }
+
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    case LicenseLimitException licenseLimitException:
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Invalid),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    case RachisApplyException {InnerException: SubscriptionException} commandExecution:
+                        await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
+                        break;
+                    default:
+                        connection.AddToStatusDescription("Subscription error");
+
+                        if (connection._logger.IsInfoEnabled)
+                        {
+                            connection._logger.Info("Subscription error", ex);
+                        }
+
+                        await connection.WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.None),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
                 }
             }
             catch
