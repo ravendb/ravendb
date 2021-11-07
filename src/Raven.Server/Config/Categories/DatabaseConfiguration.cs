@@ -122,7 +122,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Whether to disable TCP data compression")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Databases.DisableTcpCompression", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Databases.DisableTcpCompression", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableTcpCompression { get; set; }
     }
 }

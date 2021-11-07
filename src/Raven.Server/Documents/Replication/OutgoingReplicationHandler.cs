@@ -726,8 +726,8 @@ namespace Raven.Server.Documents.Replication
                     LicensedFeatures = new LicensedFeatures
                     {
                         DataCompression = _parent._server.LicenseManager.LicenseStatus.HasTcpDataCompression &&
-                                          _parent._server.Configuration.Databases.DisableTcpCompression == false && 
-                                          _database.Configuration.Databases.DisableTcpCompression == false
+                                          _parent._server.Configuration.Databases.DisableTcpCompression == false
+
                     }
                 };
 
