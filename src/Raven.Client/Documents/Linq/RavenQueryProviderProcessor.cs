@@ -2328,7 +2328,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            alias = mceArgs[mceArgs.Length - 1];
+            if (path == "counter")
+            {
+                alias = mceArgs[mceArgs.Length - 1];
+            }
 
             path = $"{path}({args})";
         }

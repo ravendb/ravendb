@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, list.Count);
 
                     var lastModifiedFromProjection = list[0].Metadata.GetString(Constants.Documents.Metadata.LastModified);
-                    Assert.Equal(DateTimeKind.Utc,list[0].LastModified.Kind);
+                    Assert.Equal(DateTimeKind.Utc, list[0].LastModified.Kind);
                     DateTime dateTime = DateTime.ParseExact(lastModifiedFromProjection, "o", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
                     Assert.Equal(list[0].LastModified, dateTime.ToUniversalTime());
                 }

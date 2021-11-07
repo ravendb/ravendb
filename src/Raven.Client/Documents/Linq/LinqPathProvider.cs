@@ -98,6 +98,17 @@ namespace Raven.Client.Documents.Linq
                     return CreateCounterResult(callExpression);
                 }
 
+                if (IsMetadataCall(callExpression))
+                {
+                    return new Result
+                    {
+                        MemberType = callExpression.Method.ReturnType,
+                        IsNestedPath = false,
+                        Path = "getMetadata",
+                        Args = new[] { callExpression.Arguments[0].ToString() }
+                    };
+                }
+
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
             }
 
@@ -518,8 +529,13 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsCounterCall(MethodCallExpression mce)
         {
-            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Counter"
-                   || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == "Get";
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Counter)
+                   || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == nameof(ISessionDocumentCounters.Get);
+        }
+
+        public static bool IsMetadataCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Metadata);
         }
 
     }
