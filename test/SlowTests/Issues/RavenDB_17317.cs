@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -256,8 +258,59 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task RavenDB_16914_ShouldWork()
+        {
+            DateTime _baseline = DateTime.Today;
+            var cluster = await CreateRaftCluster(2);
+            var database = GetDatabaseName();
+            await CreateDatabaseInCluster(database, 2, cluster.Leader.WebUrl);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = cluster.Leader,
+                ModifyDatabaseName = _ => database
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "EGR" }, "user/322");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("user/322", "raven");
+                    tsf.Append(_baseline, new[] { (double)0 }, "watches/apple");
+                    tsf.Append(_baseline.AddMinutes(1), new[] { (double)1 }, "watches/apple");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("user/322");
+                    var tsf = session.TimeSeriesFor(user, "raven");
+
+                    tsf.Delete(_baseline.AddMinutes(0));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var markerId = $"marker/{Guid.NewGuid()}";
+                    session.Store(new User { Name = "Karmel" }, markerId);
+                    session.SaveChanges();
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
+                }
+
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
+            }
+        }
+
         private class User
         {
+            public string Id;
             public string Name;
         }
     }

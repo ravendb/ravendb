@@ -398,9 +398,11 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
+                        ConflictStatus conflictStatus = ConflictStatus.AlreadyMerged;
                         if (remoteChangeVector != null)
                         {
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
+                            conflictStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector);
+                            if (conflictStatus == ConflictStatus.AlreadyMerged)
                             {
                                 // the deleted range is older than this segment, so we don't touch this segment
                                 return false;
@@ -461,7 +463,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            var count = holder.AppendExistingSegment(newSegment);
+                            var count = holder.AppendExistingSegment(newSegment, fromUpdateStatus: conflictStatus == ConflictStatus.Update, changeVectorFromReplication: remoteChangeVector);
                             if (count == 0 && updateMetadata)
                             {
                                 // this ts was completely deleted
