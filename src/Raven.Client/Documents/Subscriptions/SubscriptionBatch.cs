@@ -61,9 +61,13 @@ namespace Raven.Client.Documents.Subscriptions
         internal List<BlittableJsonReaderObject> _includes;
         internal List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
         internal List<BlittableJsonReaderObject> _timeSeriesIncludes;
+        internal AbstractSubscriptionWorker<dynamic> _shardWorker;
 
         public IDocumentSession OpenSession()
         {
+            if (_store == null)
+                throw new InvalidOperationException($"{nameof(OpenSessionInternal)} is not available when batch store is null.");
+
             return OpenSessionInternal(new SessionOptions
             {
                 Database = _dbName,
@@ -73,6 +77,9 @@ namespace Raven.Client.Documents.Subscriptions
 
         public IDocumentSession OpenSession(SessionOptions options)
         {
+            if (_store == null)
+                throw new InvalidOperationException($"{nameof(OpenSessionInternal)} is not available when batch store is null.");
+
             ValidateSessionOptions(options);
 
             options.Database = _dbName;
@@ -180,6 +187,17 @@ namespace Raven.Client.Documents.Subscriptions
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
         }
 
+        internal SubscriptionBatch(RequestExecutor requestExecutor, AbstractSubscriptionWorker<dynamic> shardWorker, string dbName, Logger logger)
+        {
+            _requestExecutor = requestExecutor;
+            _shardWorker = shardWorker;
+            _store = null;
+            _dbName = dbName;
+            _logger = logger;
+
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
+        }
+        
         internal string Initialize(BatchFromServer batch)
         {
             _includes = batch.Includes;
