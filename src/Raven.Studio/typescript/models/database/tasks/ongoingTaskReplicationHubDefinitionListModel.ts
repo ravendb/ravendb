@@ -81,6 +81,10 @@ class ongoingTaskReplicationHubDefinitionListModel {
     toggleDetails() {
         this.showDetails.toggle();
     }
+    
+    postStateToggle(): void {
+        // empty by design
+    }
 }
 
 export = ongoingTaskReplicationHubDefinitionListModel;
