@@ -7,9 +7,11 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -221,10 +223,19 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                var res= await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
                 {
                     TaskId = saveResult.TaskId
                 }));
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    await hub.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(res.RaftCommandIndex), context);
+                }
+                var hubResult = await hub.Maintenance.SendAsync(new GetPullReplicationTasksInfoOperation(saveResult.TaskId));
+                Assert.Equal(hubResult.Definition.Name, definitionName);
+                Assert.Equal(hubResult.Definition.DelayReplicationFor, new TimeSpan());
+                Assert.Equal(hubResult.Definition.Disabled, false);
+
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
             }
         }
