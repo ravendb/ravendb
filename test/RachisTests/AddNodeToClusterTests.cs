@@ -21,6 +21,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -751,6 +752,59 @@ namespace RachisTests
                 {
                     Assert.True(server2.ServerStore.Cluster.HasCompareExchangeTombstones(ctx, store.Database));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanSnapshotSubscriptionState()
+        {
+            var (_, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            using (var store = GetDocumentStore(options: new Options
+            {
+                Server = leader
+            }))
+            {
+                var sub = await store.Subscriptions.CreateAsync<User>();
+
+                var worker = store.Subscriptions.GetSubscriptionWorker<User>(sub);
+
+                var waitForBatch = new ManualResetEvent(false);
+                var t = worker.Run((batch) => { waitForBatch.WaitOne(TimeSpan.FromSeconds(15)); });
+              
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                database.SubscriptionStorage.GetSubscriptionFromServerStore(sub);
+
+
+                var server2 = GetNewServer();
+                var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+                Servers.Add(server2);
+
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url, watcher: true), ctx);
+
+                    var addDatabaseNode = new AddDatabaseNodeOperation(store.Database);
+                    await store.Maintenance.Server.SendAsync(addDatabaseNode);
+                }
+
+                database = await server2.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var state = database.SubscriptionStorage.GetSubscriptionFromServerStore(sub);
+
+                using (server2.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    Assert.Single(SubscriptionStorage.GetResendItems(context, store.Database, state.SubscriptionId));
+                }
+
+                waitForBatch.Set();
             }
         }
 
