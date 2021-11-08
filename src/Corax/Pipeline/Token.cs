@@ -10,8 +10,8 @@ using Sparrow.Collections;
 
 namespace Corax.Pipeline
 {
-    // A TokenSequence is a representation of data that is contiguous in memory and therefore can be accessed directly and efficiently. 
-    // Tokenizers may change positions, lengths, types and buffers; but need to return a new TokenSequence in the process.
+    // A Token is a representation of a token data that is contiguous in memory and therefore can be accessed directly and efficiently. 
+    // Transformers may change positions, lengths, types and buffers; but need to return a new Token in the process.
     // If the tokenizer, analyzer or filter would not change any of those, they could be reused. 
     public struct Token
     {

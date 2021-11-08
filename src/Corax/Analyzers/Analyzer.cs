@@ -246,8 +246,8 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Execute(ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
         {
-            Debug.Assert(tokens.Length >= (int)(_sourceBufferMultiplier * source.Length));
-            Debug.Assert(output.Length >= (int)(_tokenBufferMultiplier * source.Length));
+            Debug.Assert(output.Length >= (int)(_sourceBufferMultiplier * source.Length));
+            Debug.Assert(tokens.Length >= (int)(_tokenBufferMultiplier * source.Length));
 
             _func(this, source, ref output, ref tokens);
         }
