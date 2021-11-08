@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Subscriptions
                             {
                                 if (_isSharded)
                                 {
-                                   await _shardedContext.DropSubscriptionConnection(_currentConnection.SubscriptionId, new SubscriptionInUseException("Closed by TakeOver"));
+                                   await _shardedContext.DropSubscriptionConnectionAndPropagateToShards(_currentConnection.SubscriptionId, new SubscriptionInUseException("Closed by TakeOver"));
                                 }
                                 else
                                 {

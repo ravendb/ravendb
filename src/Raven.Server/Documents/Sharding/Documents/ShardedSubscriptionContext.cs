@@ -7,6 +7,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -16,20 +17,20 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding.Documents
 {
-    public class ShardedSubscriptionContext : SubscriptionStorageBase, IDisposable /*, ILowMemoryHandler*/
+    public class ShardedSubscriptionContext : SubscriptionStorageBase
     {
         private readonly ShardedContext _shardedContext;
-        private readonly Logger _logger;
         private readonly ServerStore _serverStore;
 
-        public ShardedSubscriptionContext(ShardedContext shardedContext, ServerStore serverStore) : base(serverStore)
+        public ShardedSubscriptionContext(ShardedContext shardedContext, ServerStore serverStore) : base(serverStore, LoggingSource.Instance.GetLogger<ShardedSubscriptionContext>(shardedContext.DatabaseName))
         {
             _shardedContext = shardedContext;
             _serverStore = serverStore;
-            _logger = LoggingSource.Instance.GetLogger<ShardedSubscriptionContext>(_shardedContext.DatabaseName);
         }
 
-        public SubscriptionConnectionState OpenSubscription(SubscriptionConnectionBase connection)
+        public override string DatabaseName => _shardedContext.DatabaseName;
+
+        public override SubscriptionConnectionState OpenSubscription(SubscriptionConnectionBase connection)
         {
             var subscriptionState = _subscriptionConnectionStates.GetOrAdd(connection.SubscriptionId,
                 subscriptionId => new SubscriptionConnectionState(subscriptionId, connection.Options.SubscriptionName, this));
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Sharding.Documents
             return subscriptionState;
         }
 
-        public async Task<bool> DropSubscriptionConnection(long subscriptionId, SubscriptionException ex)
+        public async Task<bool> DropSubscriptionConnectionAndPropagateToShards(long subscriptionId, SubscriptionException ex)
         {
             if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
@@ -152,22 +153,6 @@ namespace Raven.Server.Documents.Sharding.Documents
             return subscriptionJsonValue;
         }
 
-        public SubscriptionConnectionState GetSubscriptionConnection(TransactionOperationContext context, string subscriptionName)
-        {
-            using var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_shardedContext.DatabaseName, subscriptionName));
-            if (subscriptionBlittable == null)
-                return null;
-
-            var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-
-            if (_subscriptionConnectionStates.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionState subscriptionConnection) == false)
-            {
-                return null;
-            }
-
-            return subscriptionConnection;
-        }
-
         private static void ThrowNotFoundException(string name)
         {
             throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
@@ -190,12 +175,9 @@ namespace Raven.Server.Documents.Sharding.Documents
             return nodes;
         }
 
-        public void Dispose()
+        protected override void HandleWhoseTaskIsIt(DatabaseTopology topology, SubscriptionState subscriptionState, long subscriptionId)
         {
-            foreach (var kvp in _subscriptionConnectionStates)
-            {
-                kvp.Value.Dispose();
-            }
+            // no action
         }
     }
 }

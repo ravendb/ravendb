@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 if (subscription == null)
                     return;
 
-                if (await ShardedContext.ShardedSubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
+                if (await ShardedContext.ShardedSubscriptionStorage.DropSubscriptionConnectionAndPropagateToShards(subscription.SubscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
             }
         }
