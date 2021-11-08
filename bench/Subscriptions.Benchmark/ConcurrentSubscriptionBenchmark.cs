@@ -101,7 +101,7 @@ namespace Subscriptions.Benchmark
                 {
                     var worker = _store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(_subscriptionName)
                     {
-                        Strategy = workers == 1 ? SubscriptionOpeningStrategy.OpenIfFree : SubscriptionOpeningStrategy.Concurrent,
+                        Strategy = SubscriptionOpeningStrategy.Concurrent,
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
                         MaxDocsPerBatch = _batchSize
                     });
@@ -112,19 +112,24 @@ namespace Subscriptions.Benchmark
                     };
                 }
 
-                var tcs = new TaskCompletionSource<object>();
+                var tcs = new TaskCompletionSource<RunResult>();
                 var sentCount = 0;
                 foreach (var worker in workersList)
                 {
                     taskList.Add(worker.Run((async o =>
                     {
                         if (Interlocked.Add(ref sentCount, o.Items.Count) >= _docsAmountToTest)
-                            tcs.TrySetResult(null);
+                            tcs.TrySetResult(new RunResult
+                            {
+                                DocsProccessed = sentCount,
+                                DocsRequested = _batchSize,
+                                ElapsedMs = sp.ElapsedMilliseconds
+                            });
                         await Task.Delay(fakeProcessingTimePerBatch);
                     })));
                 }
 
-                await tcs.Task.ConfigureAwait(false);
+                var result = await tcs.Task.ConfigureAwait(false);
 
                 foreach (var worker in workersList)
                 {
@@ -132,13 +137,7 @@ namespace Subscriptions.Benchmark
                 }
                 
                 await Task.WhenAll(taskList);
-                
-                return new RunResult
-                {
-                    DocsProccessed = sentCount,
-                    DocsRequested = _batchSize,
-                    ElapsedMs = sp.ElapsedMilliseconds
-                };
+                return result;
             }
             catch (Exception ex)
             {
