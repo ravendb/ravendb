@@ -5,6 +5,7 @@
 // ----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -56,39 +57,37 @@ namespace Raven.Server.Documents.TcpHandlers
         private long _startEtag;
         private SubscriptionPatchDocument _filterAndProjectionScript;
         private SubscriptionDocumentsFetcher _documentsFetcher;
-        private bool _isDisposed;
         
         public ParsedSubscription Subscription;
 
-        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable,
-            JsonOperationContext.MemoryBuffer bufferToCopy) : base(connectionOptions, serverStore, bufferToCopy, tcpConnectionDisposable)
+        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy) 
+            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, 
+                tcpConnection.ShardedContext == null ? tcpConnection.DocumentDatabase.Name : tcpConnection.ShardedContext.DatabaseName, 
+                CancellationTokenSource.CreateLinkedTokenSource(tcpConnection.DocumentDatabase.DatabaseShutdown))
         {
-            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
+            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
+        }
+
+        public override SubscriptionConnectionState OpenSubscription()
+        {
+            return TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
         }
 
         private async Task InitAsync()
         {
             if (TcpConnection.ShardedContext == null)
             {
-                Database = TcpConnection.DocumentDatabase.Name;
                 Shard = null;
             }
             else
             {
-                Database = TcpConnection.ShardedContext.DatabaseName;
                 Shard = new ShardData { ShardName = TcpConnection.DocumentDatabase.Name, DatabaseId = TcpConnection.DocumentDatabase.DbBase64Id };
             }
 
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                (SubscriptionWorkerOptions subscriptionWorkerOptions, long? id) = await ParseSubscriptionOptionsAsync(context, _serverStore, TcpConnection, _copiedBuffer.Buffer, Database, CancellationTokenSource.Token);
-                _options = subscriptionWorkerOptions;
-                if (id.HasValue)
-                    SubscriptionId = id.Value;
-            }
-
-            var message = $"A connection for subscription ID {SubscriptionId} was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
+            await ParseSubscriptionOptionsAsync();
+            var dbNameStr = Shard == null ? $"for database '{Database}'" : $"for shard '{Shard.ShardName}' of database '{Database}'";
+            var message = $"A connection for subscription ID {SubscriptionId}, {dbNameStr} was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {
@@ -118,7 +117,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             await TryConnectSubscription();
-            _pendingConnectionScope.Dispose();
 
             try
             {
@@ -129,7 +127,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
+                await SendNoopAck();
                 await WriteJsonAsync(new DynamicJsonValue
                 {
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
@@ -145,7 +143,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw;
             }
         }
-
 
         public static void SendSubscriptionDocuments(ServerStore server, TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
@@ -163,10 +160,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         using (tcpConnectionDisposable)
                         using (connection)
                         {
-                            connection._lastConnectionStats = new SubscriptionConnectionStatsAggregator(_connectionStatsId, null);
-                            connection._connectionScope = connection._lastConnectionStats.CreateScope();
-
-                            connection._pendingConnectionScope = connection._connectionScope.For(SubscriptionOperationScope.ConnectionPending);
+                            connection.CreateStatsScope();
 
                             try
                             {
@@ -197,34 +191,16 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             catch (Exception e)
                             {
-                                if (e is SubscriptionInUseException)
-                                    connection._connectionScope.RecordException(SubscriptionError.ConnectionRejected, e.Message);
-                                else
-                                    connection._connectionScope.RecordException(SubscriptionError.Error, e.Message);
-
-                                var errorMessage = $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}";
-                                connection.AddToStatusDescription($"{errorMessage}. Sending response to client");
-                                if (connection._logger.IsInfoEnabled)
-                                {
-                                    connection._logger.Info(errorMessage, e);
-                                }
-
-                                try
-                                {
-                                    await ReportExceptionToClient(server, tcpConnectionOptions, connection, connection.ConnectionException ?? e, connection._logger);
-                                }
-                                catch (Exception)
-                                {
-                                    // ignored
-                                }
+                                await connection.RecordExceptionAndReportToClient(connection.ConnectionException ?? e, sharded: false);
                             }
                             finally
                             {
-                                connection.AddToStatusDescription("Finished processing subscription");
+                                var dbNameStr = connection.Shard == null ? $"for database '{connection.Database}'" : $"for shard '{connection.Shard.ShardName}' of database '{connection.Database}'";
+                                var msg = $"Finished processing subscription '{connection.SubscriptionId}', {dbNameStr}  / from client '{remoteEndPoint}'.";
+                                connection.AddToStatusDescription(msg);
                                 if (connection._logger.IsInfoEnabled)
                                 {
-                                    connection._logger.Info(
-                                        $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
+                                    connection._logger.Info(msg);
                                 }
                             }
                         }
@@ -290,7 +266,7 @@ namespace Raven.Server.Documents.TcpHandlers
             using (DisposeOnDisconnect)
             using (RegisterForNotificationOnNewDocuments())
             {
-                var replyFromClientTask = GetReplyFromClientAsync(TcpConnection, _copiedBuffer.Buffer, _isDisposed);
+                var replyFromClientTask = GetReplyFromClientAsync();
 
                 string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
                 _startEtag = GetStartEtagForSubscription(SubscriptionState);
@@ -358,9 +334,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
                             {
                                 (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) =
-                                    await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
+                                    await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch, sharded: false);
                             }
-                            //TODO: egor _lastBatchStats = null here sometimes
+
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
                         }
                         catch (Exception e)
@@ -389,65 +365,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new SubscriptionClosedException($"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
             }
         }
-
-        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)>
-            WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask, string subscriptionChangeVectorBeforeCurrentBatch)
-        {
-            SubscriptionConnectionClientMessage clientReply;
-            while (true)
-            {
-                var result = await Task.WhenAny(replyFromClientTask,
-                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
-                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                if (result == replyFromClientTask)
-                {
-                    clientReply = await replyFromClientTask;
-                    if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
-                    {
-                        CancellationTokenSource.Cancel();
-                        break;
-                    }
-
-                    replyFromClientTask = GetReplyFromClientAsync(TcpConnection, _copiedBuffer.Buffer, _isDisposed);
-                    break;
-                }
-                
-                await SendHeartBeat("Waiting for client ACK");
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
-            }
-
-            CancellationTokenSource.Token.ThrowIfCancellationRequested();
-            switch (clientReply.Type)
-            {
-                case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                    await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Database, Shard,
-                        SubscriptionId,
-                        Options.SubscriptionName,
-                        _lastChangeVector,
-                        subscriptionChangeVectorBeforeCurrentBatch);
-                    subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
-                    Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-                    Stats.AckRate?.Mark();
-                    await WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                    }, TcpConnection);
-
-                    break;
-
-                //precaution, should not reach this case...
-                case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
-                    CancellationTokenSource.Cancel();
-                    break;
-
-                default:
-                    throw new ArgumentException("Unknown message type from client " +
-                                                clientReply.Type);
-            }
-
-            return (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
-        }
-
+    
         /// <summary>
         /// Iterates on a batch in document collection, process it and send documents if found any match
         /// </summary>
@@ -706,7 +624,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (buffer.Length < Constants.Size.Megabyte && sendingCurrentBatchStopwatch.ElapsedMilliseconds < 1000) 
                 return false;
 
-            await FlushDocsToClient(subscriptionId, writer, buffer, tcpConnection, stats, logger, docsToFlush, token: token);
+            await FlushDocsToClient(subscriptionId, writer, buffer, tcpConnection, stats, logger, docsToFlush, endOfBatch: false, token: token);
             return true;
         }
 
@@ -759,24 +677,10 @@ namespace Raven.Server.Documents.TcpHandlers
                     return true;
                 }
 
-                await TryFlushEmptyBatchToClient(docsContext);
-                if (Shard == null)
-                    await SendHeartBeat("Waiting for changed documents");
-
-                await SendNoopAck(TcpConnection, SubscriptionId, Options.SubscriptionName, Database, Shard);
+                await SendHeartBeat("Waiting for changed documents");
+                await SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
-        }
-
-        internal static async Task SendNoopAck(TcpConnectionOptions tcpConnection, long subscriptionId, string subscriptionName, string database, ShardData shardData)
-        {
-            await tcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                database,
-                shardData,
-                subscriptionId,
-                subscriptionName,
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange));
         }
 
         private SubscriptionPatchDocument SetupFilterAndProjectionScript()
@@ -788,6 +692,22 @@ namespace Raven.Server.Documents.TcpHandlers
                 patch = new SubscriptionPatchDocument(Subscription.Script, Subscription.Functions);
             }
             return patch;
+        }
+
+        internal override async Task<string> OnClientAck(string subscriptionChangeVectorBeforeCurrentBatch)
+        {
+            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Database, Shard,
+                SubscriptionId,
+                Options.SubscriptionName,
+                _lastChangeVector,
+                subscriptionChangeVectorBeforeCurrentBatch);
+            subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
+            Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+            Stats.AckRate?.Mark();
+
+            await WriteJsonAsync(new DynamicJsonValue { [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm) }, TcpConnection);
+
+            return subscriptionChangeVectorBeforeCurrentBatch;
         }
 
         public new void Dispose()

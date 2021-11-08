@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
                 BlittableJsonReaderObject json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 SubscriptionTryout tryout = JsonDeserializationServer.SubscriptionTryout(json);
 
-                SubscriptionConnectionBase.ParsedSubscription sub = SubscriptionConnectionBase.ParseSubscriptionQuery(tryout.Query);
+                ParsedSubscription sub = SubscriptionConnectionBase.ParseSubscriptionQuery(tryout.Query);
                 SubscriptionPatchDocument patch = null;
                 if (string.IsNullOrEmpty(sub.Script) == false)
                 {

@@ -225,7 +225,7 @@ namespace TypingsGenerator
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
             scripter.AddType(typeof(SubscriptionWorkerOptions));
-            scripter.AddType(typeof(SubscriptionConnectionBase.SubscriptionError));
+            scripter.AddType(typeof(SubscriptionError));
             scripter.AddType(typeof(SubscriptionTryout));
 
             // changes
