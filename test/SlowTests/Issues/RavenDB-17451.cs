@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Core.AdminConsole;
 using Xunit;
@@ -43,9 +45,6 @@ namespace SlowTests.Issues
                 Server = dstServer
             }))
             {
-                srcServer.ServerStore.LicenseManager.LicenseStatus.Attributes["tcpDataCompression"] = true;
-                dstServer.ServerStore.LicenseManager.LicenseStatus.Attributes["tcpDataCompression"] = true;
-
                 const string docId = "users/1";
                 using (var session = srcStore.OpenSession())
                 {
@@ -70,11 +69,11 @@ namespace SlowTests.Issues
 
                 var serverToDisableOn = disableOnSrc ? srcServer : dstServer;
                 var configuration = serverToDisableOn.Configuration;
-                Assert.False(configuration.Databases.DisableTcpCompression);
+                Assert.False(configuration.Server.DisableTcpCompression);
 
                 // modify configuration
-                AdminJsConsoleTests.ExecuteScript(serverToDisableOn, database: null, "server.Configuration.Databases.DisableTcpCompression = true;");
-                Assert.True(configuration.Databases.DisableTcpCompression);
+                AdminJsConsoleTests.ExecuteScript(serverToDisableOn, database: null, "server.Configuration.Server.DisableTcpCompression = true;");
+                Assert.True(configuration.Server.DisableTcpCompression);
 
                 await SetupReplicationAsync(srcStore, dstStore2);
 
@@ -95,20 +94,20 @@ namespace SlowTests.Issues
         {
             var server = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false
+                RunInMemory = false,
+                CustomSettings = new Dictionary<string, string>()
+                {
+                    [RavenConfiguration.GetKey(x => x.Server.DisableTcpCompression)] = "true"
+                }
             });
 
-            using (var store = GetDocumentStore(new Options {Server = server}))
+            Assert.True(server.Configuration.Server.DisableTcpCompression);
+
+            using (var store = GetDocumentStore(new Options
             {
-                server.ServerStore.LicenseManager.LicenseStatus.Attributes["tcpDataCompression"] = true;
-
-                var configuration = server.Configuration;
-                Assert.False(configuration.Databases.DisableTcpCompression);
-
-                // modify configuration
-                AdminJsConsoleTests.ExecuteScript(server, database: null, "server.Configuration.Databases.DisableTcpCompression = true;");
-                Assert.True(configuration.Databases.DisableTcpCompression);
-
+                Server = server
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 10; i++)
@@ -119,7 +118,10 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var subscriptionCreationParams = new SubscriptionCreationOptions() {Query = "from Users"};
+                var subscriptionCreationParams = new SubscriptionCreationOptions
+                {
+                    Query = "from Users"
+                };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
                 {
@@ -173,12 +175,9 @@ namespace SlowTests.Issues
                 ModifyDocumentStore = s => s.Conventions.DisableTcpCompression = true
             }))
             {
-                server.ServerStore.LicenseManager.LicenseStatus.Attributes["tcpDataCompression"] = true;
+                Assert.False(server.Configuration.Server.DisableTcpCompression);
 
-                var configuration = server.Configuration;
-                Assert.False(configuration.Databases.DisableTcpCompression);
-
-                foreach (var store in new [] {store1, store2})
+                foreach (var store in new [] { store1, store2 })
                 {
                     var compressionDisabled = store == store2;
 

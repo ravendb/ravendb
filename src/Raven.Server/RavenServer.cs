@@ -2110,7 +2110,7 @@ namespace Raven.Server
                 if (header.LicensedFeatures != null)
                 {
                     header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression && 
-                                                               Configuration.Databases.DisableTcpCompression == false;
+                                                               Configuration.Server.DisableTcpCompression == false;
                 }
 
                 await RespondToTcpConnection(stream, context, err,
