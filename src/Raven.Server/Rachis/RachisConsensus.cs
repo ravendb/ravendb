@@ -534,6 +534,7 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
+                    ClusterCommandsVersionManager.SetClusterVersion(ClusterCommandsVersionManager.MyCommandsVersion);
                     leader.Start();
                 }
             };

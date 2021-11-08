@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Remote;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -80,6 +81,7 @@ namespace Raven.Server.Rachis
         {
             Term = term;
             _engine = engine;
+            PeersVersion[engine.Tag] = ClusterCommandsVersionManager.MyCommandsVersion;
         }
 
         private MultipleUseFlag _running = new MultipleUseFlag();
