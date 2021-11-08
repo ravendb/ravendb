@@ -165,7 +165,7 @@ namespace SlowTests.Client.Subscriptions
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
                     MaxDocsPerBatch = 2
                 }))
-                await using (var Subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                await using (var subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -188,7 +188,7 @@ namespace SlowTests.Client.Subscriptions
                     var waitBeforeConn1FinishesSecondBatch = new AsyncManualResetEvent();
                     var batchesProcessedByConn1 = 0;
 
-                    var _ = Subscription2.Run(async x =>
+                    var _ = subscription2.Run(async x =>
                     {
                         foreach (var item in x.Items)
                         {
@@ -220,7 +220,7 @@ namespace SlowTests.Client.Subscriptions
                         }
 
                         batchesProcessedByConn1++;
-                        if (batchesProcessedByConn1 == 2)
+                        if (batchesProcessedByConn1 == 1)
                         {
                             waitUntilConn1FinishesBatch.Set();
                             await waitBeforeConn1FinishesSecondBatch.WaitAsync();
