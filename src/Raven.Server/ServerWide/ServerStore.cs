@@ -2413,6 +2413,8 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
+                // TODO: egor add cleanup for sharded context
+
                 try
                 {
                     _server.Statistics.MaybePersist(ContextPool, Logger);

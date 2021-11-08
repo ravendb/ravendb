@@ -19,6 +19,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -121,8 +122,11 @@ namespace Raven.Server.Documents
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
                             }
-                     
-                            OnShardedDatabaseDelete?.Invoke(rawRecord.DatabaseName);
+
+                            await HandleSpecificClusterChangedForShardedDatabase(rawRecord.DatabaseName, index, type, changeType, context, rawRecord);
+
+                            var dbName = rawRecord.DatabaseName;
+                            OnShardedDatabaseDelete?.Invoke(dbName, context);
                             OnShardedDatabaseDelete = null;
                         }
                         else
@@ -244,6 +248,46 @@ namespace Raven.Server.Documents
             }
         }
 
+        private async Task HandleSpecificClusterChangedForShardedDatabase(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
+            TransactionOperationContext context,
+            RawDatabaseRecord rawRecord)
+        {
+            switch (changeType)
+            {
+                case ClusterDatabaseChangeType.ValueChanged:
+                    switch (type)
+                    {
+                        case nameof(PutSubscriptionCommand):
+                            if (_shardedDatabases.TryGetValue(databaseName, out var task) == false)
+                            {
+                                var result = TryGetOrCreateDatabase(databaseName);
+                                if (result.DatabaseStatus != DatabaseSearchResult.Status.Sharded)
+                                    throw new InvalidOperationException($"Expected sharded database '{databaseName}', but got '{result.DatabaseStatus}'");
+                                task = Task.FromResult(result.ShardedContext);
+                            }
+
+                            if (task.IsCanceled || task.IsFaulted)
+                                return;
+
+                            var sharded = await task;
+                            sharded.NotifyFeaturesAboutValueChange(rawRecord, index);
+                            break;
+
+                        default:
+                            break;
+                    }
+                    break;
+
+                case ClusterDatabaseChangeType.RecordChanged:
+                case ClusterDatabaseChangeType.PendingClusterTransactions:
+                case ClusterDatabaseChangeType.ClusterTransactionCompleted:
+                    break;
+                default:
+                    ThrowUnknownClusterDatabaseChangeType(changeType);
+                    break;
+            }
+        }
+
         private bool PreventWakeUpIdleDatabase(string databaseName, string type)
         {
             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
@@ -353,22 +397,76 @@ namespace Raven.Server.Documents
 
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
-            context.CloseTransaction();
+
+            if (sharded == false)
+            {
+                context.CloseTransaction();
+            }
 
             DeleteDatabase(dbName, deletionInProgress, record);
 
             if (sharded)
             {
+                // we need to remove the sharded context from resource cache, after we remove all the shards
                 if (OnShardedDatabaseDelete == null)
                     OnShardedDatabaseDelete += DatabasesLandlord_OnShardedDatabaseDelete;
+
+                // need to remove the database from _shardedDatabases resource cache
+                RemoveShardedDatabase(dbName);
             }
             
             return true;
         }
 
-        private void DatabasesLandlord_OnShardedDatabaseDelete(string obj)
+        private void DatabasesLandlord_OnShardedDatabaseDelete(string name, TransactionOperationContext context)
         {
-            _shardedDatabases.TryRemove(obj, out var _);
+            context.CloseTransaction();
+
+            RemoveShardedDatabase(name);
+        }
+
+        private void RemoveShardedDatabase(string name)
+        {
+            IDisposable removeLockAndReturn = null;
+            try
+            {
+                removeLockAndReturn = _shardedDatabases.RemoveLockAndReturn(name, shardedCtx =>
+                {
+                    if (shardedCtx == null)
+                        return;
+
+                    try
+                    {
+                        _shardedDatabases.TryRemove(shardedCtx.DatabaseName, out _);
+                        shardedCtx.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Could not dispose sharded context: " + shardedCtx.DatabaseName, e);
+                    }
+                }, out _);
+            }
+            catch (AggregateException ae) when (nameof(RemoveShardedDatabase).Equals(ae.InnerException?.Data["Source"]))
+            {
+                // this is already in the process of being deleted, we can just exit and let another thread handle it
+                return;
+            }
+            catch (DatabaseConcurrentLoadTimeoutException e)
+            {
+                if (e.Data.Contains(nameof(RemoveShardedDatabase)))
+                {
+                    // This case is when a deletion request was issued during the loading of the database.
+                    // The DB will be deleted after actually finishing the loading process
+                    return;
+                }
+
+                throw;
+            }
+            finally
+            {
+                removeLockAndReturn?.Dispose();
+            }
         }
 
         public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
@@ -577,7 +675,7 @@ namespace Raven.Server.Documents
         }
 
         public event Action<string> OnDatabaseLoaded = delegate { };
-        public event Action<string> OnShardedDatabaseDelete;
+        public event Action<string, TransactionOperationContext> OnShardedDatabaseDelete;
 
         public bool IsDatabaseLoaded(StringSegment databaseName)
         {
@@ -1196,6 +1294,8 @@ namespace Raven.Server.Documents
 
             try
             {
+                _shardedDatabases.TryRemove(database.Name, out _);
+
                 database.Dispose();
             }
             catch (Exception e)

@@ -989,7 +989,7 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = utcNow.Ticks;
                 IndexStore?.RunIdleOperations(mode);
                 Operations?.CleanupOperations();
-                SubscriptionStorage?.CleanupSubscriptions();
+                SubscriptionStorage?.CleanupSubscriptions(Is32Bits);
 
                 Scripts?.RunIdleOperations();
                 DocumentsStorage.Environment.Cleanup();

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -13,24 +14,28 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public class ShardedContext
+    public class ShardedContext : IDisposable
     {
         public const int NumberOfShards = 1024 * 1024;
         public ShardedSubscriptionContext ShardedSubscriptionStorage { get; }
+        private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
+        public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
 
         private readonly DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
-
+        private readonly Logger _logger;
         public ShardedContext(ServerStore server, DatabaseRecord record)
         {
             //TODO: reduce the record to the needed fields
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
             ShardedSubscriptionStorage = new ShardedSubscriptionContext(this, server);
+            _logger = LoggingSource.Instance.GetLogger<ShardedContext>(DatabaseName);
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
@@ -175,6 +180,65 @@ namespace Raven.Server.Documents.Sharding
             }
 
             return ChangeVectorUtils.MergeVectors(cvs);
+        }
+
+        private long _lastValueChangeIndex;
+
+        public long LastValueChangeIndex
+        {
+            get => Volatile.Read(ref _lastValueChangeIndex);
+            private set => _lastValueChangeIndex = value; // we write this always under lock
+        }
+
+        private bool CanSkipValueChange(string database, long index)
+        {
+            if (LastValueChangeIndex > index)
+            {
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
+                return true;
+            }
+
+            return false;
+        }
+
+        public void NotifyFeaturesAboutValueChange(RawDatabaseRecord record, long index)
+        {
+            if (CanSkipValueChange(record.DatabaseName, index))
+                return;
+
+            ShardedSubscriptionStorage?.HandleDatabaseRecordChange(record);
+        }
+
+        public void Dispose()
+        {
+            _databaseShutdown.Cancel();
+
+            try
+            {
+                ShardedSubscriptionStorage.Dispose();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            foreach (var re in RequestExecutors)
+            {
+                try
+                {
+                    re.Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+
+            //TODO: egor check if need to dispose tcp connection of subscription
+
+            _databaseShutdown.Dispose();
         }
     }
 }
