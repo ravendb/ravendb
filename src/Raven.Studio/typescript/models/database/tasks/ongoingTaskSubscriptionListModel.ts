@@ -110,6 +110,10 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
             .execute()
             .done(() => { this.refreshSubscriptionInfo(); });
     }
+    
+    postStateToggle() {
+        this.refreshSubscriptionInfo();
+    }
 }
 
 export = ongoingTaskSubscriptionListModel;
