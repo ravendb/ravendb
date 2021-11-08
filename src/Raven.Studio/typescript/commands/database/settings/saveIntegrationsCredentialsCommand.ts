@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveIntegrationsCredentialsCommand extends commandBase {
 
-    constructor(private db: database, private credentials: Raven.Server.Integrations.PostgreSQL.Handlers.User) {
+    constructor(private db: database, private credentials: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsername) {
         super();
     }
  
