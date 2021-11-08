@@ -124,11 +124,20 @@ namespace Raven.Server.ServerWide
 
         static ClusterCommandsVersionManager()
         {
-            MyCommandsVersion = _currentClusterMinimalVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+            MyCommandsVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+        }
+
+        public static void ThrowInvalidClusterVersion(int version)
+        {
+            throw new InvalidOperationException($"Can't set cluster version '{version}' that is higher then my version '{MyCommandsVersion}', " +
+                                                $"this is an indication that your are running in a mixed cluster and this node is not with the latest version.");
         }
 
         public static void SetClusterVersion(int version)
         {
+            if (MyCommandsVersion < version)
+                ThrowInvalidClusterVersion(version);
+
             int currentVersion;
             while (true)
             {
