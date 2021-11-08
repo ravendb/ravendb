@@ -13,3 +13,4 @@
 [assembly: InternalsVisibleTo("Raven.TestDriver")]
 [assembly: InternalsVisibleTo("Tryouts")]
 [assembly: InternalsVisibleTo("LicenseTests")]
+[assembly: InternalsVisibleTo("Subscriptions.Benchmark")]
