@@ -146,9 +146,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return;
             }
 
+            string username = null;
+
             try
             {
-                var username = _clientOptions["user"];
+                username = _clientOptions["user"];
+
                 using var transaction = new PgTransaction(database, new MessageReader(), username);
 
                 if (_serverCertificate != null)
@@ -187,7 +190,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             catch (PgFatalException e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"{e.Message} (fatal pg error code {e.ErrorCode})", e);
+                    Logger.Info($"{e.Message} (fatal pg error code {e.ErrorCode}). {GetSourceConnectionDetails(username)}", e);
 
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
                     PgSeverity.Fatal,
@@ -198,7 +201,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             catch (PgErrorException e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"{e.Message} (pg error code {e.ErrorCode})", e);
+                    Logger.Info($"{e.Message} (pg error code {e.ErrorCode}). {GetSourceConnectionDetails(username)}", e);
 
                 // Shouldn't get to this point, PgErrorExceptions shouldn't be fatal
                 await writer.WriteAsync(messageBuilder.ErrorResponse(
@@ -231,7 +234,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info("Unexpected internal pg error", e);
+                    Logger.Info($"Unexpected internal pg error. {GetSourceConnectionDetails(username)}", e);
 
                 try
                 {
@@ -245,6 +248,16 @@ namespace Raven.Server.Integrations.PostgreSQL
                     // ignored
                 }
             }
+        }
+
+        private string GetSourceConnectionDetails(string userName)
+        {
+            var details = $" Source connection details - IP: {_client.Client.LocalEndPoint}";
+
+            if (string.IsNullOrEmpty(userName) == false)
+                details += $" - Username: {userName}";
+
+            return details;
         }
     }
 }
