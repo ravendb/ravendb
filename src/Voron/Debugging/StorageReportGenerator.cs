@@ -296,7 +296,7 @@ namespace Voron.Debugging
             }
             else if (tree.State.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
             {
-                streams = CreateStreamsReport(tree);
+                streams = CreateStreamsReport(tree, includeDetails);
             }
 
             var density = pageDensities?.Average() ?? -1;
@@ -322,8 +322,34 @@ namespace Voron.Debugging
             return treeReport;
         }
 
-        private static StreamsReport CreateStreamsReport(Tree tree)
+        private static StreamsReport CreateStreamsReport(Tree tree, bool includeDetails = false)
         {
+            if (includeDetails == false)
+            {
+                // there are cases we don't need/want to pull the entire data for the report
+                // so we create a report that includes the metadata info
+                // without loading the actual data 
+
+                return new StreamsReport
+                {
+                    AllocatedSpaceInBytes = -1,
+                    NumberOfStreams = tree.State.NumberOfEntries,
+                    Streams = new List<StreamDetails>
+                    {
+                        new StreamDetails
+                        {
+                            Name = "Stream details summary info",
+                            AllocatedSpaceInBytes = 1024,
+                            ChunksTree = new TreeReport(),
+                            Length = 1024,
+                            NumberOfAllocatedPages = 1024,
+                            Version = 1
+                        }
+                    },
+                    TotalNumberOfAllocatedPages = -1
+                };
+            }
+
             var streams = new List<StreamDetails>();
 
             using (var it = tree.Iterate(false))
