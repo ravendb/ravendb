@@ -31,9 +31,9 @@ namespace SlowTests.Sharding.Subscriptions
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(30);
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
         {
             using var store = GetShardedDocumentStore();
@@ -74,7 +74,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
         {
             using (var store = GetShardedDocumentStore())
@@ -168,7 +168,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
             using (var store = GetShardedDocumentStore())
@@ -203,17 +203,19 @@ namespace SlowTests.Sharding.Subscriptions
                     docs.Signal(x.NumberOfItemsInBatch);
                 });
 
-                for (int i = 0; i < count / 2; i++)
+                using (var session = store.OpenSession())
                 {
-                    using (var session = store.OpenSession())
+                    for (int i = 0; i < count / 2; i++)
                     {
+
                         session.Store(new User
                         {
                             Name = $"EGR_{i}",
                             Age = 18
                         }, Guid.NewGuid().ToString());
-                        session.SaveChanges();
                     }
+
+                    session.SaveChanges();
                 }
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
@@ -265,7 +267,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task CanUpdateSubscriptionToStartFromDoNotChange()
         {
             using (var store = GetShardedDocumentStore())
@@ -361,7 +363,7 @@ namespace SlowTests.Sharding.Subscriptions
         }
 
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = GetShardedDocumentStore())
@@ -489,7 +491,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Theory(Skip = "TODO")]
+        [Theory(Skip = "TODO add include")]
         [InlineData(true)]
         [InlineData(false)]
         public void CanCreateSubscriptionWithIncludeTimeSeries_All_LastRange(bool byTime)

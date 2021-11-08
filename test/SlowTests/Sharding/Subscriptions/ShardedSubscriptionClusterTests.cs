@@ -11,7 +11,6 @@ using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -28,7 +27,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task CanRunShardedSubscriptionInCluster()
         {
             var db = GetDatabaseName();
@@ -75,7 +74,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task SubscriptionShouldTryConnectWithTimeoutIfShardUnavailable()
         {
             int rf = 1;
@@ -227,7 +226,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact(Skip = "TODO")]
+        [Fact]
         public async Task SubscriptionShouldFailoverIfNodeIsDownButShardIsAvailable()
         {
             int rf = 2;
