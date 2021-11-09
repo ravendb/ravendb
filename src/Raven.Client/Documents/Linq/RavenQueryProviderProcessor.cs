@@ -2328,7 +2328,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            if (path == "counter")
+            if (path == LinqPathProvider.CounterMethodName)
             {
                 alias = mceArgs[mceArgs.Length - 1];
             }

@@ -33,6 +33,8 @@ namespace Raven.Client.Documents.Linq
 
         private readonly DocumentConventions _conventions;
 
+        internal const string CounterMethodName = "counter";
+
         public LinqPathProvider(DocumentConventions conventions)
         {
             _conventions = conventions;
@@ -196,7 +198,7 @@ namespace Raven.Client.Documents.Linq
             {
                 MemberType = typeof(long?),
                 IsNestedPath = false,
-                Path = "counter",
+                Path = CounterMethodName,
                 Args = args
             };
         }
