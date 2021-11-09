@@ -40,24 +40,27 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
         _.bindAll(this, "disconnectClientFromSubscription");
     }
 
-    initializeObservables() {
+    initializeObservables(): void {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
 
-        this.taskState.subscribe(() => this.refreshSubscriptionInfo());
+        this.taskState.subscribe(() => this.refreshIfNeeded());
     }
 
-    toggleDetails() {
+    toggleDetails(): void {
         this.showDetails.toggle();
-
+        this.refreshIfNeeded()
+    }
+    
+    private refreshIfNeeded(): void {
         if (this.showDetails()) {
             this.refreshSubscriptionInfo();
         }
     }
 
-    refreshSubscriptionInfo() {
+    private refreshSubscriptionInfo() {
         // 1. Get general info
         ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), this.taskId, this.taskName())
             .execute()
@@ -110,7 +113,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     disconnectClientFromSubscription(workerId: string) {
         new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), workerId)
             .execute()
-            .done(() => { this.refreshSubscriptionInfo(); });
+            .done(() => this.refreshSubscriptionInfo());
     }
 }
 
