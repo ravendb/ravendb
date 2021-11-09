@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     {
                         if (hasValue == false)
                         {
-                            _currentDocId = termDocs.Doc;
+                            _currentDocId = -1;
                             hasValue = true;
                         }
 
