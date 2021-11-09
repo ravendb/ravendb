@@ -11,6 +11,7 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
@@ -266,14 +267,14 @@ namespace Raven.Server.Documents.Patch
             if (o is TimeSeriesRetriever.TimeSeriesStreamingRetrieverResult tsrr)
             {
 				// we are passing a streaming value to the JS engine, so we need
-				// to materalize all the results
+				// to materialize all the results
                 
                 
                 var results = new DynamicJsonArray(tsrr.Stream);
                 var djv = new DynamicJsonValue
                 {
-                    ["Count"] = results.Count,
-                    ["Results"] = results
+                    [nameof(TimeSeriesAggregationResult.Count)] = results.Count,
+                    [nameof(TimeSeriesAggregationResult.Results)] = results
                 };
                 return new BlittableObjectInstance(engine, null, context.ReadObject(djv, "MaterializedStreamResults"), null, null, null);
             }
