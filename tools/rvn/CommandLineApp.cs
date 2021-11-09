@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
+using Raven.Server.ServerWide;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace rvn
@@ -63,8 +64,6 @@ namespace rvn
         {
             _app.Command("create-setup-package", cmd =>
             {
-                Regex re = new Regex("[A-Za-z]{1,4}");
-
                 cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
                 cmd.HelpOption(HelpOptionString);
                 var setupParameters = ConfigureSetupParameters(cmd);
@@ -80,53 +79,8 @@ namespace rvn
                     using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
                     {
                         JsonSerializer serializer = new();
-                        var root = (CreateSetupDto.Root)serializer.Deserialize(file, typeof(CreateSetupDto.Root));
-                        Debug.Assert(root != null, nameof(root) + " != null");
-                        foreach (var node in root.Setup.Cluster.Nodes)
-                        {
-                            if (re.IsMatch(node.Tag) == false)
-                                return ExitWithError("Please enter no more than 4 characters.", cmd);
-                        }
-
-                        var nodeSetupInfo = new Dictionary<string, SetupInfo.NodeInfo>();
-
-                        foreach (var node in root.Setup.Cluster.Nodes)
-                        {
-                            nodeSetupInfo.Add(node.Tag,
-                                new SetupInfo.NodeInfo
-                                {
-                                    PublicServerUrl = null,
-                                    PublicTcpServerUrl = null,
-                                    Port = node.HttpPort,
-                                    TcpPort = node.TcpPort,
-                                    ExternalIpAddress = node.ExternalIp,
-                                    ExternalPort = 0,
-                                    ExternalTcpPort = 0,
-                                    Addresses = new List<string>
-                                    {
-                                        node.Ip
-                                    }
-                                });
-                        }
-
-                        var setupInfo = new SetupInfo
-                        {
-                            EnableExperimentalFeatures = false,
-                            RegisterClientCert = false,
-                            ClientCertNotAfter = null,
-                            License = root.Setup.License,
-                            Email = root.Setup.Email,
-                            Domain = root.Setup.Domain,
-                            RootDomain = root.Setup.RootDomain,
-                            ModifyLocalServer = false,
-                            LocalNodeTag = root.Setup.Cluster.Nodes[0].Tag,
-                            Certificate = null,
-                            Password = root.Setup.Password,
-                            NodeSetupInfos = nodeSetupInfo
-                        };
-                        var tokenSource = new CancellationTokenSource();
-                        var token = tokenSource.Token;
-                        var setupLetsEncryptTask =  LetsEncryptUtils.SetupLetsEncryptTask(setupInfo, token);
+                        var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                        var setupLetsEncryptTask =  LetsEncryptUtils.SetupLetsEncryptTask(setupInfo, CancellationToken.None);
                     }
 
 

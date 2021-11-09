@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NetTopologySuite.Utilities;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.X509;
@@ -21,6 +22,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -37,7 +39,11 @@ namespace Raven.Server.Commercial
             try
             {
                 var acmeClient = new LetsEncryptClient("https://acme-v02.api.letsencrypt.org/directory");
-                await acmeClient.Init(setupInfo.Email, token);
+                if (string.IsNullOrWhiteSpace(setupInfo.Email) == false)
+                {
+                    await acmeClient.Init(setupInfo.Email, token);
+                }
+
                 var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
                 await UpdateDnsRecordsTask((_) => { }, null, challengeResult.Challenge, setupInfo, token);
                 await CompleteAuthorizationAndGetCertificate(() => { }, setupInfo, acmeClient, challengeResult, token);
@@ -158,8 +164,9 @@ namespace Raven.Server.Commercial
                         {
                             var base64 = setupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            serverCert.Certificate = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                            
+                            serverCert.Certificate = new X509Certificate2(serverCertBytes, setupInfo.Password,
+                                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
                             var localNodeTag = setupInfo.LocalNodeTag;
                             publicServerUrl = GetServerUrlFromCertificate(serverCert.Certificate, setupInfo, localNodeTag, setupInfo.NodeSetupInfos[localNodeTag].Port,
                                 setupInfo.NodeSetupInfos[localNodeTag].TcpPort, out _, out domainFromCert);
@@ -169,7 +176,8 @@ namespace Raven.Server.Commercial
                                 if (node.Key == setupInfo.LocalNodeTag)
                                     continue;
 
-                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = GetServerUrlFromCertificate(serverCert.Certificate, setupInfo, node.Key, node.Value.Port,
+                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = GetServerUrlFromCertificate(serverCert.Certificate, setupInfo, node.Key,
+                                    node.Value.Port,
                                     node.Value.TcpPort, out _, out _);
                             }
                         }
@@ -189,7 +197,8 @@ namespace Raven.Server.Commercial
                         {
                             // requires server certificate to be loaded
                             var clientCertificateName = $"{name}.client.certificate";
-                           (byte[] bytes, CertificateDefinition certificateDefinition, string item3) = await GenerateCertificateTask(clientCertificateName, serverCert, setupInfo);
+                            (byte[] bytes, CertificateDefinition certificateDefinition, string item3) =
+                                await GenerateCertificateTask(clientCertificateName, serverCert, setupInfo);
                             clientCert = new X509Certificate2(bytes, (string)null,
                                 X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
                             certBytes = bytes;
@@ -271,11 +280,10 @@ namespace Raven.Server.Commercial
                                 await certFile.FlushAsync(token);
                             } // we'll be flushing the directory when we'll write the settings.json
                         }
-//x.Security.CertificatePath
-// x.Security.CertificatePassword
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x =>"" )] = certPath;
+
+                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
                         if (string.IsNullOrEmpty(setupInfo.Password) == false)
-                            settingsJson.Modifications[RavenConfiguration.GetKey(x =>"")] = setupInfo.Password;
+                            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = setupInfo.Password;
 
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
@@ -699,7 +707,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
             //System.Security.Cryptography.X509Certificates
             // this creates a client certificate which is signed by the current server certificate
-            
+
             var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, certificate, out var certBytes,
                 setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
