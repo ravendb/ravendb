@@ -33,8 +33,61 @@ namespace SlowTests.Issues
         [Fact]
         public void CanStreamTimeSeriesProjection()
         {
+            RunTest(@"
+                declare timeseries welliba(o)
+                {
+                    from o.Welliba between $start and $end
+                    group by '1 days'
+                    select avg()
+                }
+
+                declare function strip(ts)
+                {
+                    var n  = {};
+                    var len = ts.Results.length;
+                    for(var i = 0 ; i < len; i++){
+                        n[ts.Results[i].From] = ts.Results[i].Average[0];
+                    }
+                    ts.Results = n;
+                    return ts;
+                }
+                from Subjects as s
+                where s.Labels[].LabelId all in ($l1, $l2)
+                select strip(welliba(s))
+            ");
+        }
+
+        [Fact]
+        public void CanStreamTimeSeriesProjectionAndUseCountPropertyInProjection()
+        {
+            RunTest(@"
+                declare timeseries welliba(o)
+                {
+                    from o.Welliba between $start and $end
+                    group by '1 days'
+                    select avg()
+                }
+
+                declare function strip(ts)
+                {
+                    var n  = {};
+                    var len = ts.Results.Count;
+                    for(var i = 0 ; i < len; i++){
+                        n[ts.Results[i].From] = ts.Results[i].Average[0];
+                    }
+                    ts.Results = n;
+                    return ts;
+                }
+                from Subjects as s
+                where s.Labels[].LabelId all in ($l1, $l2)
+                select strip(welliba(s))"
+            );
+        }
+
+        private void RunTest(string rawQuery)
+        {
             using var store = GetDocumentStore();
-            var startDate =  DateTime.Today;
+            var startDate = DateTime.Today;
 
             using (var s = store.OpenSession())
             {
@@ -57,31 +110,10 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenSession())
             {
-                
+
                 var endDate = startDate.AddMonths(1);
 
-                var query = session.Advanced.RawQuery<MyTimeSeriesResult>(@"
-                declare timeseries welliba(o)
-                {
-                    from o.Welliba between $start and $end
-                    group by '1 days'
-                    select avg()
-                }
-
-                declare function strip(ts)
-                {
-                    var n  = {};
-                    var len = ts.Results.length;
-                    for(var i = 0 ; i < len; i++){
-                        n[ts.Results[i].From] = ts.Results[i].Average[0];
-                    }
-                    ts.Results = n;
-                    return ts;
-                }
-                from Subjects as s
-                where s.Labels[].LabelId all in ($l1, $l2)
-                select strip(welliba(s))
-            ")
+                var query = session.Advanced.RawQuery<MyTimeSeriesResult>(rawQuery)
                     .AddParameter("start", startDate)
                     .AddParameter("end", endDate)
                     .AddParameter("l1", "labels/1")
@@ -90,9 +122,9 @@ namespace SlowTests.Issues
                 List<MyTimeSeriesResult> timeSeriesResults = query.ToList();
                 Assert.NotEmpty(timeSeriesResults);
                 MyTimeSeriesResult firstResult = timeSeriesResults[0];
-                
+
                 WaitForUserToContinueTheTest(store);
-            
+
                 // this not
                 bool hasResults = false;
                 using (var docStream = session.Advanced.Stream(query))
