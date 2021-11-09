@@ -15,10 +15,6 @@ abstract class ongoingTaskListModel extends ongoingTaskModel {
     editTask() {
         router.navigate(this.editUrl());
     }
-    
-    postStateToggle(): void {
-        // empty by design
-    }
 }
 
 export = ongoingTaskListModel;

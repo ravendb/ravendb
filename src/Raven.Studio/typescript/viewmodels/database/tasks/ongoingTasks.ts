@@ -482,10 +482,7 @@ class ongoingTasks extends viewModelBase {
             if (result.can) {
                 new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
                     .execute()
-                    .done(() => {
-                        model.taskState("Enabled");
-                        model.postStateToggle();
-                    })
+                    .done(() => model.taskState("Enabled"))
                     .always(() => this.fetchOngoingTasks());
             }
         });
@@ -503,10 +500,7 @@ class ongoingTasks extends viewModelBase {
            if (result.can) {
                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
                    .execute()
-                   .done(() => {
-                       model.taskState("Disabled");
-                       model.postStateToggle();
-                   })
+                   .done(() => model.taskState("Disabled"))
                    .always(() => this.fetchOngoingTasks());
            }
        });

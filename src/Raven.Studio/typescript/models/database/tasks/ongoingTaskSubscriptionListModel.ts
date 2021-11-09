@@ -45,6 +45,8 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
+
+        this.taskState.subscribe(() => this.refreshSubscriptionInfo());
     }
 
     toggleDetails() {
@@ -109,10 +111,6 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
         new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), workerId)
             .execute()
             .done(() => { this.refreshSubscriptionInfo(); });
-    }
-    
-    postStateToggle() {
-        this.refreshSubscriptionInfo();
     }
 }
 
