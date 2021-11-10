@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -717,6 +716,80 @@ namespace SlowTests.Client.Subscriptions
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6 || con1Docs.Count + con2Docs.Count == 8), 6000);
                     await AssertNoLeftovers(store, id);
                 }
+            }
+        }
+
+        [Theory]
+        [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
+        [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
+        public async Task CannotConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy1,
+                });
+                using var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy2,
+                });
+
+                var mre1 = new ManualResetEventSlim();
+
+                subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
+
+                var t = subscription1.Run(x =>
+                {
+
+                });
+
+                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                mre1.Reset();
+
+                await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscription2.Run((_) => { }));
+                await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
+            }
+        }
+
+        [Theory]
+        [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
+        [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
+        public async Task CanDropAndConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy1,
+                });
+                using var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy2,
+                });
+
+                var mre1 = new ManualResetEventSlim();
+                var mre2 = new ManualResetEventSlim();
+
+                subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
+                subscription2.OnEstablishedSubscriptionConnection += mre2.Set;
+
+                var t = subscription1.Run(x =>
+                {
+
+                });
+
+                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                mre1.Reset();
+                
+                await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
+
+                t = subscription2.Run((_) => { });
+                Assert.True(mre2.Wait(TimeSpan.FromSeconds(15)));
             }
         }
 

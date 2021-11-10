@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Subscriptions
         private readonly SubscriptionStorage _subscriptionStorage;
         private readonly DocumentsStorage _documentsStorage;
         private readonly SubscriptionState _subscriptionState;
-        private readonly ConcurrentSet<SubscriptionConnection> _connections;
+        private ConcurrentSet<SubscriptionConnection> _connections;
         public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
 
         private int _maxConcurrentConnections;
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Subscriptions
         public long SubscriptionId => _subscriptionId;
         public SubscriptionState SubscriptionState => _subscriptionState;
 
-        public readonly bool IsConcurrent;
+        public bool IsConcurrent => _connections.FirstOrDefault()?.Strategy == SubscriptionOpeningStrategy.Concurrent;
 
         private readonly ConcurrentSet<SubscriptionConnection> _pendingConnections = new ();
         private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ();
@@ -70,7 +70,6 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionId = -0x42;
             _documentsStorage = storage;
             Query = state.Query;
-            IsConcurrent = false;
             
             _subscriptionStorage = storage.DocumentDatabase.SubscriptionStorage;
 
@@ -93,7 +92,6 @@ namespace Raven.Server.Documents.Subscriptions
             _documentsStorage = connection.TcpConnection.DocumentDatabase.DocumentsStorage;
             Query = connection.SubscriptionState.Query;
             _connections = new ConcurrentSet<SubscriptionConnection>();
-            IsConcurrent = connection.Strategy == SubscriptionOpeningStrategy.Concurrent;
             
             _subscriptionStorage = storage;
 
@@ -240,6 +238,9 @@ namespace Raven.Server.Documents.Subscriptions
         {
             try
             {
+                if (TryRegisterFirstConnection(incomingConnection)) 
+                    return GetDisposingAction();
+
                 if (IsConcurrent)
                 {
                     if (incomingConnection.Strategy != SubscriptionOpeningStrategy.Concurrent)
@@ -257,7 +258,7 @@ namespace Raven.Server.Documents.Subscriptions
                 {
                     if (incomingConnection.Strategy == SubscriptionOpeningStrategy.Concurrent)
                     {
-                        throw new SubscriptionClosedException(
+                        throw new SubscriptionInUseException(
                             $"Subscription {incomingConnection.Options.SubscriptionName} is not concurrent and cannot admit connections with a '{nameof(SubscriptionOpeningStrategy.Concurrent)}' {nameof(SubscriptionOpeningStrategy)}. Connection not opened.");
                     }
 
@@ -284,6 +285,18 @@ namespace Raven.Server.Documents.Subscriptions
                     DropSingleConnection(incomingConnection);
                 });
             }
+        }
+
+        private bool TryRegisterFirstConnection(SubscriptionConnection incomingConnection)
+        {
+            var current = _connections;
+            if (current.Count == 0)
+            {
+                var firstConnection = new ConcurrentSet<SubscriptionConnection> {incomingConnection};
+                return Interlocked.CompareExchange(ref _connections, firstConnection, current) == current;
+            }
+
+            return false;
         }
 
 
@@ -366,11 +379,6 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             return true;
-        }
-
-        public bool TryRemoveConnection(SubscriptionConnection connection)
-        {
-            return _connections.TryRemove(connection);
         }
 
         public void DropSubscription(SubscriptionException e)
@@ -537,6 +545,14 @@ namespace Raven.Server.Documents.Subscriptions
             try
             {
                 CancellationTokenSource.Cancel();
+            }
+            catch
+            {
+                // ignored: If we've failed to raise the cancellation token, it means that it's already raised
+            }
+
+            try
+            {
                 EndConnections();
             }
             catch
