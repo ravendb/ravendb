@@ -28,14 +28,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
-            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null)
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
             AddEtl(store,
                 new ElasticSearchEtlConfiguration
                 {
-                    Name = connectionStringName,
+                    Name = configurationName ?? connectionStringName,
                     ConnectionStringName = connectionStringName,
                     ElasticIndexes =
                     {
@@ -47,7 +47,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     {
                         new Transformation
                         {
-                            Name = $"ETL : {connectionStringName}",
+                            Name = transformationName ?? $"ETL : {connectionStringName}",
                             Collections = new List<string>(collections),
                             Script = script,
                             ApplyToAllDocuments = applyToAllDocuments
