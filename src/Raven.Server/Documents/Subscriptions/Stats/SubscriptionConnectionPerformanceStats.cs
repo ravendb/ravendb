@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Subscriptions.Stats
     public class SubscriptionConnectionPerformanceStats
     {        
         public long ConnectionId { get; set; }
+        public string WorkerId { get; set; }
+        
         public string ClientUri { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }
 

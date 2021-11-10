@@ -25,12 +25,13 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             return new SubscriptionConnectionStatsScope(stats, start);
         }
 
-        public void RecordConnectionInfo(SubscriptionState subscriptionState, string clientUri, SubscriptionOpeningStrategy strategy)
+        public void RecordConnectionInfo(SubscriptionState subscriptionState, string clientUri, SubscriptionOpeningStrategy strategy, string workerId)
         {
             _stats.TaskId = subscriptionState.SubscriptionId;
             _stats.TaskName = subscriptionState.SubscriptionName;
             _stats.ClientUri = clientUri;
             _stats.Strategy = strategy;
+            _stats.WorkerId = workerId;
         }
         
         public void RecordException(SubscriptionError errorType, string exception)
