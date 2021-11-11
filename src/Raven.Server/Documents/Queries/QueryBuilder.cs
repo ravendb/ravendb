@@ -196,14 +196,12 @@ namespace Raven.Server.Documents.Queries
 
                                 exact |= valueType == ValueTokenType.Parameter;
 
-                                    if (TryUseTime(index, fieldName, value, exact, out var ticks))
-                                    {
-                                        luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
-                                        value = ticks;
-                                        goto case LuceneFieldType.Long;
-                                    }
+                                if (TryUseTime(index, fieldName, value, exact, out var ticks))
+                                {
+                                    return TranslateDateRangeQuery(index, where, fieldName, ticks);
+                                }
 
-                                    var valueAsString = GetValueAsString(value);
+                                var valueAsString = GetValueAsString(value);
 
                                 switch (where.Operator)
                                 {
@@ -212,51 +210,36 @@ namespace Raven.Server.Documents.Queries
                                     case OperatorType.NotEqual:
                                         return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.LessThan:
-                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.LessThan(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.GreaterThan:
-                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.GreaterThan(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.LessThanEqual:
-                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.GreaterThanEqual:
-                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                        return LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, termType, valueAsString, exact);
                                 }
                                 break;
+                            
                             case LuceneFieldType.Long:
-                                var valueAsLong = (long)value;
-
-                                switch (where.Operator)
-                                {
-                                    case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsLong);
-                                    case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsLong);
-                                    case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsLong);
-                                    case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsLong);
-                                    case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsLong);
-                                    case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsLong);
-                                }
-                                break;
+                                return TranslateOperationOnLong(index, luceneFieldName, (long)value, @where.Operator);
+                            
                             case LuceneFieldType.Double:
                                 var valueAsDouble = (double)value;
 
                                 switch (where.Operator)
                                 {
                                     case OperatorType.Equal:
-                                            return LuceneQueryHelper.Equal(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.Equal(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.NotEqual:
-                                            return LuceneQueryHelper.NotEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.NotEqual(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.LessThan:
-                                            return LuceneQueryHelper.LessThan(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.LessThan(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.GreaterThan:
-                                            return LuceneQueryHelper.GreaterThan(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThan(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.LessThanEqual:
-                                            return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, valueAsDouble);
                                     case OperatorType.GreaterThanEqual:
-                                            return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, valueAsDouble);
+                                            return LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, valueAsDouble);
                                 }
                                 break;
                             default:
@@ -466,6 +449,57 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
+        private static Lucene.Net.Search.Query TranslateOperationOnLong(Index index, string luceneFieldName, long valueAsLong, OperatorType whereOperator)
+        {
+            return whereOperator switch
+            {
+                OperatorType.Equal => LuceneQueryHelper.Equal(index, luceneFieldName, valueAsLong),
+                OperatorType.NotEqual => LuceneQueryHelper.NotEqual(index, luceneFieldName, valueAsLong),
+                OperatorType.LessThan => LuceneQueryHelper.LessThan(index, luceneFieldName, valueAsLong),
+                OperatorType.GreaterThan => LuceneQueryHelper.GreaterThan(index, luceneFieldName, valueAsLong),
+                OperatorType.LessThanEqual => LuceneQueryHelper.LessThanOrEqual(index, luceneFieldName, valueAsLong),
+                OperatorType.GreaterThanEqual => LuceneQueryHelper.GreaterThanOrEqual(index, luceneFieldName, valueAsLong),
+                _ => throw new ArgumentOutOfRangeException(whereOperator.ToString())
+            };
+        }
+
+        private static Lucene.Net.Search.Query TranslateDateRangeQuery(Index index, BinaryExpression @where, QueryFieldName fieldName, long ticks)
+        {
+            string luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+            
+            switch (@where.Operator)
+            {
+                case OperatorType.Equal:
+                case OperatorType.NotEqual:
+                    return TranslateOperationOnLong(index, luceneFieldName, ticks, @where.Operator);
+            }
+
+            var ticksAligned = ticks - (ticks % TimeSpan.TicksPerDay);
+            if (ticksAligned == ticks ||                      // aligned already on a day boundary
+                index.Configuration.QueryClauseCacheDisabled) // if query clause cache disabled, no point in segmenting query
+                return TranslateOperationOnLong(index, luceneFieldName, ticks, @where.Operator);
+            var bq = new BooleanQuery();
+
+            switch(@where.Operator){
+                case OperatorType.LessThan:
+                case OperatorType.LessThanEqual:
+                    bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksAligned, true, ticks, @where.Operator == OperatorType.LessThanEqual), Occur.SHOULD);
+                    bq.Add(TranslateOperationOnLong(index, luceneFieldName, ticksAligned, OperatorType.LessThanEqual), Occur.SHOULD);
+                    break;
+                case OperatorType.GreaterThan:
+                case OperatorType.GreaterThanEqual:
+                    ticksAligned += TimeSpan.TicksPerDay; // move to next day boundary
+                    bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticks, @where.Operator == OperatorType.GreaterThanEqual, ticksAligned, true), Occur.SHOULD);
+                    bq.Add(TranslateOperationOnLong(index, luceneFieldName, ticksAligned, OperatorType.GreaterThanEqual), Occur.SHOULD);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(@where.Operator.ToString());
+            }
+
+            return bq;
+
+        }
+
         private static Lucene.Net.Search.Query TranslateBetweenQuery(Query query, QueryMetadata metadata, Index index, BlittableJsonReaderObject parameters, bool exact, BetweenExpression be, bool secondary)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
@@ -482,25 +516,27 @@ namespace Raven.Server.Documents.Queries
 
                     if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
                     {
-                        luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
-                        valueFirst = ticksFirst;
-                        valueSecond = ticksSecond;
-                        goto case LuceneFieldType.Long;
+                        betweenQuery = index.Configuration.QueryClauseCacheDisabled ?
+                            LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive) :
+                            TranslateDateTimeBetween(index, be, fieldName, ticksFirst, ticksSecond);
                     }
-
-                    var valueFirstAsString = GetValueAsString(valueFirst);
-                    var valueSecondAsString = GetValueAsString(valueSecond);
-                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString, be.MaxInclusive, exact);
+                    else
+                    {
+                        var valueFirstAsString = GetValueAsString(valueFirst);
+                        var valueSecondAsString = GetValueAsString(valueSecond);
+                        betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString,
+                            be.MaxInclusive, exact);
+                    }
                     break;
                 case LuceneFieldType.Long:
                     var valueFirstAsLong = (long)valueFirst;
                     var valueSecondAsLong = (long)valueSecond;
-                    betweenQuery =  LuceneQueryHelper.Between(luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
+                    betweenQuery =  LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
                     break;
                 case LuceneFieldType.Double:
                     var valueFirstAsDouble = (double)valueFirst;
                     var valueSecondAsDouble = (double)valueSecond;
-                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
+                    betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
@@ -512,6 +548,37 @@ namespace Raven.Server.Documents.Queries
             }
 
             return betweenQuery;
+        }
+
+        private static Lucene.Net.Search.Query TranslateDateTimeBetween(Index index, BetweenExpression be, QueryFieldName fieldName, long ticksFirst, long ticksSecond)
+        {
+            string luceneFieldName = fieldName + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+
+            var ticksFirstAligned = ticksFirst - (ticksFirst % TimeSpan.TicksPerDay);
+            var ticksSecondAligned = ticksSecond - ( ticksSecond % TimeSpan.TicksPerDay);
+            if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary 
+                ticksFirstAligned == ticksSecondAligned) // or belonging to the same day...
+            {
+                return LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive);
+            }
+
+            var bq = new BooleanQuery();
+            var startInclusive = be.MinInclusive;
+            if (ticksFirst != ticksFirstAligned)
+            {
+                ticksFirstAligned += TimeSpan.TicksPerDay; // move to tne _next_ day boundary
+                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, true), Occur.SHOULD);
+                startInclusive = true;
+            }
+
+            var endInclusive = be.MaxInclusive || ticksSecond != ticksSecondAligned;
+            bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirstAligned, startInclusive, ticksSecondAligned, endInclusive), Occur.SHOULD);
+            if (ticksSecond != ticksSecondAligned)
+            {
+                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksSecondAligned, true, ticksSecond, be.MaxInclusive), Occur.SHOULD);
+            }
+
+            return bq;
         }
 
         private static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)
@@ -541,7 +608,7 @@ namespace Raven.Server.Documents.Queries
             return false;
         }
 
-        private unsafe static bool TryGetTime(object value, out long ticks)
+        private static unsafe bool TryGetTime(object value, out long ticks)
         {
             ticks = -1;
             DateTime dt = default;
@@ -560,7 +627,7 @@ namespace Raven.Server.Documents.Queries
                 default:
                     var otherAsString = value.ToString();
                     fixed (char* buffer = otherAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto);
+                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString!.Length, out dt, out dto);
                     break;
             }
 

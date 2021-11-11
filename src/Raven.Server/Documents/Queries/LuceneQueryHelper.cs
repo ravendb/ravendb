@@ -8,7 +8,11 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Queries.LuceneIntegration;
+using Sparrow;
 using Sparrow.Json;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -25,14 +29,14 @@ namespace Raven.Server.Documents.Queries
             return Term(fieldName, value, termType, exact: exact);
         }
 
-        public static Query Equal(string fieldName, long value)
+        public static Query Equal(Index index, string fieldName, long value)
         {
-            return CreateRange(fieldName, value, true, value, true);
+            return CreateRange(index, fieldName, value, true, value, true);
         }
 
-        public static Query Equal(string fieldName, double value)
+        public static Query Equal(Index index, string fieldName, double value)
         {
-            return CreateRange(fieldName, value, true, value, true);
+            return CreateRange( index, fieldName, value, true, value, true);
         }
 
         public static Query NotEqual(string fieldName, LuceneTermType termType, string value, bool exact)
@@ -44,97 +48,97 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query NotEqual(string fieldName, long value)
+        public static Query NotEqual(Index index, string fieldName, long value)
         {
             return new BooleanQuery
             {
                 { new MatchAllDocsQuery(), Occur.MUST },
-                { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
+                { CreateRange(index, fieldName, value, true, value, true), Occur.MUST_NOT }
             };
         }
 
-        public static Query NotEqual(string fieldName, double value)
+        public static Query NotEqual(Index index, string fieldName, double value)
         {
             return new BooleanQuery
             {
                 { new MatchAllDocsQuery(), Occur.MUST },
-                { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
+                { CreateRange(index, fieldName, value, true, value, true), Occur.MUST_NOT }
             };
         }
 
-        public static Query LessThan(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query LessThan(Index index, string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false, exact);
+            return CreateRange(index, fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false, exact);
         }
 
-        public static Query LessThan(string fieldName, long value)
+        public static Query LessThan(Index index, string fieldName, long value)
         {
-            return CreateRange(fieldName, long.MinValue, true, value, false);
+            return CreateRange(index, fieldName, long.MinValue, true, value, false);
         }
 
-        public static Query LessThan(string fieldName, double value)
+        public static Query LessThan(Index index, string fieldName, double value)
         {
-            return CreateRange(fieldName, double.MinValue, true, value, false);
+            return CreateRange(index, fieldName, double.MinValue, true, value, false);
         }
 
-        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query LessThanOrEqual(Index index, string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true, exact);
+            return CreateRange(index, fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true, exact);
         }
 
-        public static Query LessThanOrEqual(string fieldName, long value)
+        public static Query LessThanOrEqual(Index index, string fieldName, long value)
         {
-            return CreateRange(fieldName, long.MinValue, true, value, true);
+            return CreateRange(index, fieldName, long.MinValue, true, value, true);
         }
 
-        public static Query LessThanOrEqual(string fieldName, double value)
+        public static Query LessThanOrEqual(Index index, string fieldName, double value)
         {
-            return CreateRange(fieldName, double.MinValue, true, value, true);
+            return CreateRange(index, fieldName, double.MinValue, true, value, true);
         }
 
-        public static Query GreaterThan(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query GreaterThan(Index index, string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, value, termType, false, Null, LuceneTermType.Null, true, exact);
+            return CreateRange(index, fieldName, value, termType, false, Null, LuceneTermType.Null, true, exact);
         }
 
-        public static Query GreaterThan(string fieldName, long value)
+        public static Query GreaterThan(Index index, string fieldName, long value)
         {
-            return CreateRange(fieldName, value, false, long.MaxValue, true);
+            return CreateRange(index, fieldName, value, false, long.MaxValue, true);
         }
 
-        public static Query GreaterThan(string fieldName, double value)
+        public static Query GreaterThan(Index index, string fieldName, double value)
         {
-            return CreateRange(fieldName, value, false, double.MaxValue, true);
+            return CreateRange(index,fieldName, value, false, double.MaxValue, true);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, string value, bool exact)
+        public static Query GreaterThanOrEqual(Raven.Server.Documents.Indexes.Index  index, string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, value, termType, true, Null, LuceneTermType.Null, true, exact);
+            return CreateRange(index, fieldName, value, termType, true, Null, LuceneTermType.Null, true, exact);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, long value)
+        public static Query GreaterThanOrEqual(Index index, string fieldName, long value)
         {
-            return CreateRange(fieldName, value, true, long.MaxValue, true);
+            return CreateRange(index, fieldName, value, true, long.MaxValue, true);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, double value)
+        public static Query GreaterThanOrEqual(Index index, string fieldName, double value)
         {
-            return CreateRange(fieldName, value, true, double.MaxValue, true);
+            return CreateRange(index, fieldName, value, true, double.MaxValue, true);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, bool fromInclusive, string toValue, bool toInclusive, bool exact)
+        public static Query Between(Raven.Server.Documents.Indexes.Index index, string fieldName, global::Raven.Server.Documents.Queries.LuceneTermType termType, string fromValue, bool fromInclusive, string toValue, bool toInclusive, bool exact)
         {
-            return CreateRange(fieldName, fromValue, termType, fromInclusive, toValue, termType, toInclusive, exact);
+            return CreateRange(index, fieldName, fromValue, termType, fromInclusive, toValue, termType, toInclusive, exact);
         }
 
-        public static Query Between(string fieldName, long fromValue, bool fromInclusive, long toValue, bool toInclusive)
+        public static Query Between(Index index, string fieldName, long fromValue, bool fromInclusive, long toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
+            return CreateRange(index, fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
-        public static Query Between(string fieldName, double fromValue, bool fromInclusive, double toValue, bool toInclusive)
+        public static Query Between(Index index, string fieldName, double fromValue, bool fromInclusive, double toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
+            return CreateRange(index, fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
         public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false)
@@ -327,26 +331,36 @@ This edge-case has a very slim chance of happening, but still we should not igno
         }
 
 
-        private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax, bool exact)
+        private static Query CreateRange(Index index, string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue,
+            LuceneTermType maxValueType, bool inclusiveMax, bool exact)
         {
             var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
             var maxTermIsNullOrStar = maxValueType == LuceneTermType.Null || maxValue.Equals(Asterisk);
             if (minTermIsNullOrStar && maxTermIsNullOrStar)
                 return new WildcardQuery(new Term(fieldName, Asterisk));
 
-            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
+            var range = new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
+            return MaybeCacheQuery(index, range);
         }
 
-        private static Query CreateRange(string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)
+        private static Query CreateRange(Index index, string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)
         {
-            return NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            var query= NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            return MaybeCacheQuery(index, query);
         }
 
-        private static Query CreateRange(string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
+        private static Query CreateRange(Index index, string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
             var query = NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
             
-            return query;
+            return MaybeCacheQuery(index, query);
+        }
+
+        private static Query MaybeCacheQuery(Index index, Query query)
+        {
+            if (index.Configuration.QueryClauseCacheDisabled)
+                return query;
+            return new CachingQuery(query, index, query.ToString());
         }
     }
 }
