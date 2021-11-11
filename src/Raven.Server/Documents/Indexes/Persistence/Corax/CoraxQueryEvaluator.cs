@@ -6,10 +6,8 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
-using Esprima.Ast;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
@@ -222,7 +220,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 match = order.Ascending 
                     ? _searcher.OrderByAscending(match, id, orderTypeField)
                     : _searcher.OrderByDescending(match, id, orderTypeField);
-
             }
 
             return match;
