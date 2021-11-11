@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
@@ -206,7 +207,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     queryCacheKey.Index = _parent._index.Name;
                     
                     clauseCache.Set(queryCacheKey, 
-                        results,
+                        results.Bits,
                         new MemoryCacheEntryOptions
                         {
                             Size = results.Size.GetValue(SizeUnit.Bytes), 
@@ -226,6 +227,22 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 return new FastBitArrayScorer(results, similarity, disposeArray: false);
             }
 
+            private class ReturnBuffer
+            {
+                public ulong[] Buffer;
+
+                ~ReturnBuffer()
+                {
+                    if (Buffer == null) 
+                        return;
+                    ArrayPool<ulong>.Shared.Return(Buffer);
+                }
+            }
+
+            // https://ayende.com/blog/195203-A/challenge-the-code-review-bug-that-gives-me-nightmares-the-fix
+            private static ConditionalWeakTable<object, object> _joinLifetimes = new();
+
+            
             private static void EvictionCallback(object key, object value, EvictionReason _, object state)
             {
                 if (((WeakReference)state).Target is IndexReaderCachedQueries ircq)
@@ -234,7 +251,9 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     ircq.CachedQueries.TryRemove(ck.Query);
                 }
 
-                ((FastBitArray)value).Dispose();
+                var array = (ulong[])value;
+                
+                _joinLifetimes.Add(array, new ReturnBuffer{Buffer = array});
             }
 
             public override float GetSumOfSquaredWeights()
