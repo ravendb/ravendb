@@ -177,69 +177,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             }
         }
 
-        private class EagerInScorer : Scorer
-        {
-            private FastBitArray _docs;
-            private IEnumerator<int> _enum;
-            private int _currentDocId;
-            internal EagerInScorer(InQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
-            {
-                _docs = new FastBitArray(reader.MaxDoc);
-                bool hasValue = false;
-                _currentDocId = NO_MORE_DOCS;
-                foreach (string match in parent.Matches)
-                {
-                    using var termDocs = reader.TermDocs(new Term(parent.Field, match), state);
-                    while (termDocs.Next(state))
-                    {
-                        if (hasValue == false)
-                        {
-                            _currentDocId = -1;
-                            hasValue = true;
-                        }
-
-                        _docs.Set(termDocs.Doc);
-                    }
-                }
-
-                _enum = _docs.Iterate(0).GetEnumerator();
-            }
-
-            public override int DocID()
-            {
-                return _currentDocId;
-            }
-
-            public override int NextDoc(IState state)
-            {
-                if (_enum?.MoveNext() == true)
-                {
-                    _currentDocId = _enum.Current;
-                    return _currentDocId;
-                }
-                _enum?.Dispose();
-                _enum = null;
-                _docs.Dispose();
-                 _currentDocId = NO_MORE_DOCS;
-                 return NO_MORE_DOCS;
-            }
-
-            public override int Advance(int target, IState state)
-            {
-                if (_docs.Disposed) 
-                    return NO_MORE_DOCS;
-                
-                _enum?.Dispose();
-                _enum = _docs.Iterate(target).GetEnumerator();
-                return NextDoc(state);
-            }
-
-            public override float Score(IState state)
-            {
-                return 1.0f;
-            }
-        }
-
         private bool Equals(InQuery other)
         {
             if (Matches.Count != other.Matches.Count)

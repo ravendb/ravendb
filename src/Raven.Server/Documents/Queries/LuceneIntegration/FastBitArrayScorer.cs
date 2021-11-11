@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Buffers;
+using System.Collections.Generic;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             _enum = null;
             if (_disposeArray)
             {
-                _docs.Dispose();
+                ArrayPool<ulong>.Shared.Return(_docs.Bits);
             }
             _currentDocId = NO_MORE_DOCS;
             return NO_MORE_DOCS;
