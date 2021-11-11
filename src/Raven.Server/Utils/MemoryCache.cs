@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Util.Cache;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,7 @@ namespace Raven.Server.Utils
         internal readonly ILogger _logger;
 
         private readonly MemoryCacheOptions _options;
-        private readonly ConcurrentDictionary<object, CacheEntry> _entries;
+        private ConcurrentDictionary<object, CacheEntry> _entries;
 
         private long _cacheSize;
         private bool _disposed;
@@ -85,7 +86,18 @@ namespace Raven.Server.Utils
 
         private ICollection<KeyValuePair<object, CacheEntry>> EntriesCollection => _entries;
 
-        public void Clear() => _entries.Clear();
+        public void Clear()
+        {
+            var oldEntries = _entries;
+            Interlocked.Exchange(ref _entries, new ConcurrentDictionary<object, CacheEntry>());
+            Interlocked.Exchange(ref _cacheSize, 0);
+            
+            foreach (var entry in oldEntries)
+            {
+                entry.Value.SetExpired(EvictionReason.Removed);
+                entry.Value.InvokeEvictionCallbacks();
+            }
+        }
 
         public IEnumerable<KeyValuePair<object, object>> EntriesForDebug => _entries.Select(kvp => new KeyValuePair<object, object>(kvp.Key, kvp.Value.Value));
 
@@ -386,9 +398,10 @@ namespace Raven.Server.Utils
         private void Compact(long removalSizeTarget, Func<CacheEntry, long> computeEntrySize)
         {
             var entriesToRemove = new List<CacheEntry>();
-            var lowPriEntries = new List<CacheEntry>();
-            var normalPriEntries = new List<CacheEntry>();
-            var highPriEntries = new List<CacheEntry>();
+            // cache LastAccessed outside of the CacheEntry so it is stable during compaction
+            var lowPriEntries = new List<(CacheEntry entry, DateTimeOffset lastAccessed)>();
+            var normalPriEntries = new List<(CacheEntry entry, DateTimeOffset lastAccessed)>();
+            var highPriEntries = new List<(CacheEntry entry, DateTimeOffset lastAccessed)>();
             long removedSize = 0;
 
             // Sort items by expired & priority status
@@ -406,13 +419,13 @@ namespace Raven.Server.Utils
                     switch (entry.Priority)
                     {
                         case CacheItemPriority.Low:
-                            lowPriEntries.Add(entry);
+                            lowPriEntries.Add((entry, entry.LastAccessed));
                             break;
                         case CacheItemPriority.Normal:
-                            normalPriEntries.Add(entry);
+                            normalPriEntries.Add((entry, entry.LastAccessed));
                             break;
                         case CacheItemPriority.High:
-                            highPriEntries.Add(entry);
+                            highPriEntries.Add((entry, entry.LastAccessed));
                             break;
                         case CacheItemPriority.NeverRemove:
                             break;
@@ -437,7 +450,7 @@ namespace Raven.Server.Utils
             // ?. Items with the soonest sliding expiration.
             // ?. Larger objects - estimated by object graph size, inaccurate.
             static void ExpirePriorityBucket(ref long removedSize, long removalSizeTarget, Func<CacheEntry, long> computeEntrySize, List<CacheEntry> entriesToRemove,
-                List<CacheEntry> priorityEntries)
+                List<(CacheEntry Entry, DateTimeOffset LastAccessed)> priorityEntries)
             {
                 // Do we meet our quota by just removing expired entries?
                 if (removalSizeTarget <= removedSize)
@@ -450,8 +463,8 @@ namespace Raven.Server.Utils
                 // TODO: Refine policy
 
                 // LRU
-                priorityEntries.Sort((e1, e2) => e1.LastAccessed.CompareTo(e2.LastAccessed));
-                foreach (CacheEntry entry in priorityEntries)
+                priorityEntries.Sort( (e1, e2) => e1.LastAccessed.CompareTo(e2.LastAccessed));
+                foreach ((CacheEntry entry,_) in priorityEntries)
                 {
                     entry.SetExpired(EvictionReason.Capacity);
                     entriesToRemove.Add(entry);
