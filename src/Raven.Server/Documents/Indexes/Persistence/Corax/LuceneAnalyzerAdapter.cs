@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
@@ -18,8 +19,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private readonly LuceneAnalyzer _analyzer;
 
-        private LuceneAnalyzerAdapter(LuceneAnalyzer analyzer, delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> function) : 
-            base(function, default(NullTokenizer), NoTransformers)
+        private LuceneAnalyzerAdapter(LuceneAnalyzer analyzer,
+            delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
+            delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16) : 
+            base(functionUtf8, functionUtf16, default(NullTokenizer), NoTransformers)
         {
             _analyzer = analyzer;
         }
@@ -47,8 +50,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (length == 0)
                         continue; // We skip any empty token. 
 
-                    //var type = stream.GetAttribute<ITypeAttribute>();
-                    //var position = stream.GetAttribute<IPositionIncrementAttribute>();
                     var term = stream.GetAttribute<ITermAttribute>();
                     int outputLength = Encoding.UTF8.GetBytes(term.Term, output.Slice(currentOutputIdx));
 
@@ -65,12 +66,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 output = output.Slice(0, currentOutputIdx);
                 tokens = tokens.Slice(0, currentTokenIdx);
-            }    
+            }
+        }
+
+        internal static void Run(Analyzer adapter, ReadOnlySpan<char> source, ref Span<char> output, ref Span<Token> tokens)
+        {
+            // TODO: Currently we are not going to be supporting the use of UTF-16 in the Lucene Analyzer Adapter. All tests should
+            //       use ASCII values. 
+            throw new NotImplementedException();
         }
 
         public static LuceneAnalyzerAdapter Create(LuceneAnalyzer analyzer)
         {
-            return new LuceneAnalyzerAdapter(analyzer, &Run);
+            return new LuceneAnalyzerAdapter(analyzer, &Run, &Run);
         }
     }
 }
