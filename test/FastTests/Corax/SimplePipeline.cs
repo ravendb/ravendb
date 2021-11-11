@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,7 +18,7 @@ namespace FastTests.Corax
 
         [Fact]
         public void WhitespaceTokenizer()
-        {
+        {          
             Span<byte> source = Encoding.UTF8.GetBytes("Hello Kitty");
 
             Span<byte> b1 = stackalloc byte[16];
@@ -85,9 +85,21 @@ namespace FastTests.Corax
 
         private struct BasicFilter : ITokenFilter
         {
-            private static readonly byte[] stopWord = Encoding.ASCII.GetBytes("Stop");
+            public bool SupportUtf8 => true;
+
+            private const string stopWord = "Stop";
+            private static readonly byte[] stopWordBytes = Encoding.ASCII.GetBytes(stopWord);
 
             public bool Accept(ReadOnlySpan<byte> source, in Token token)
+            {
+                if (source.SequenceEqual(stopWordBytes))
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public bool Accept(ReadOnlySpan<char> source, in Token token)
             {
                 if (source.SequenceEqual(stopWord))
                 {
@@ -138,9 +150,21 @@ namespace FastTests.Corax
 
         private struct BasicLowercaseFilter : ITokenFilter
         {
-            private static readonly byte[] stopWord = Encoding.ASCII.GetBytes("stop");
+            public bool SupportUtf8 => true;
+
+            private const string stopWord = "stop";
+            private static readonly byte[] stopWordUtf8 = Encoding.ASCII.GetBytes(stopWord);
 
             public bool Accept(ReadOnlySpan<byte> source, in Token token)
+            {
+                if (source.SequenceEqual(stopWordUtf8))
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public bool Accept(ReadOnlySpan<char> source, in Token token)
             {
                 if (source.SequenceEqual(stopWord))
                 {
@@ -151,7 +175,7 @@ namespace FastTests.Corax
         }
 
         [Fact]
-        public void BasicInnerAnalyzer()
+        public void BasicInnerAnalyzerUtf8()
         {
             Span<byte> source = Encoding.UTF8.GetBytes("This is a SiMple stop stop tEsT");
 
@@ -173,6 +197,31 @@ namespace FastTests.Corax
             Assert.Equal(source[1], buffer[1]);
 
             Assert.Equal((byte)'s', buffer[10]);
+        }
+
+        [Fact]
+        public void BasicInnerAnalyzerUtf16()
+        {
+            ReadOnlySpan<char> source = "This is a SiMple stop stop tEsT".AsSpan();
+
+            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer))
+                                   .With(default(FilterTransformer<BasicLowercaseFilter>));
+
+            analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
+
+            Span<char> buffer = new char[bufferSize];
+            Span<Token> tokens = new Token[tokenSize];
+
+            analyzer.Execute(source, ref buffer, ref tokens);
+
+            Assert.Equal(source.Length, buffer.Length);
+            Assert.Equal(5, tokens.Length);
+            Assert.Equal('t', buffer[0]);
+            Assert.NotEqual(source[0], buffer[0]);
+            Assert.Equal('h', buffer[1]);
+            Assert.Equal(source[1], buffer[1]);
+
+            Assert.Equal('s', buffer[10]);
         }
     }
 }
