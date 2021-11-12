@@ -1469,6 +1469,26 @@ namespace Raven.Server.Documents.Queries
                         return methodField;
                     }
 
+                    if (string.Equals("getMetadata", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (HasFacet)
+                            ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (HasSuggest)
+                            ThrowSuggestionQueryMustContainsOnlySuggestInSelect(me, parameters);
+
+                        if (me.Arguments.Count != 1 || !(me.Arguments[0] is FieldExpression argumentExpression))
+                        {
+                            ThrowInvalidArgumentToGetMetadata(parameters);
+                            return null; // never hit
+                        }
+
+                        if (RootAliasPaths.ContainsKey(argumentExpression.FieldValue) == false)
+                            ThrowUnknownAlias(argumentExpression.FieldValue, parameters);
+
+                        return SelectField.CreateMethodCall("getMetadata", alias, ConvertSelectArguments(parameters, alias, me, methodName));
+                    }
+
                     if (IsGroupBy == false)
                         ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
 
@@ -2004,6 +2024,11 @@ namespace Raven.Server.Documents.Queries
         private void ThrowCounterInvalidArgument(string methodName, QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Invalid argument of type {expression.GetType().Name} specified as an argument of {methodName}(). Text: {expression.GetText(null)}.", QueryText, parameters);
+        }
+
+        private void ThrowInvalidArgumentToGetMetadata(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("getMetadata(doc) must be called with a single entity argument", QueryText, parameters);
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
