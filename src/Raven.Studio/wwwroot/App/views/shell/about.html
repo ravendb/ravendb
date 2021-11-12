@@ -210,9 +210,8 @@
                                        attr: { title: replaceTooltip }">
                             <i class="icon-replace"></i><span>REPLACE LICENSE</span>
                     </button>
-                    <button class="btn btn-info flex-grow"
+                    <button class="btn btn-warning flex-grow"
                             data-bind="click: forceLicenseUpdate,
-                                       visible: canForceUpdate, 
                                        disable: spinners.forceLicenseUpdate() || !isForceUpdateEnabled(),
                                        css: { 'btn-spinner': spinners.forceLicenseUpdate },
                                        attr: { title: forceUpdateTooltip }">
