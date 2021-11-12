@@ -2566,6 +2566,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddCallArgumentsToPath(string[] mceArgs, string parameter, ref string path, out string alias)
         {
+            alias = null;
+
             if (mceArgs[0] == parameter)
             {
                 AddFromAliasOrRenameArgument(ref mceArgs[0]);
@@ -2577,7 +2579,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            alias = mceArgs[mceArgs.Length - 1];
+            if (path == LinqPathProvider.CounterMethodName)
+            {
+                alias = mceArgs[mceArgs.Length - 1];
+            }
 
             path = $"{path}({args})";
         }
