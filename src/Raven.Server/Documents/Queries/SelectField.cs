@@ -136,8 +136,7 @@ namespace Raven.Server.Documents.Queries
                 IsCounter = true,
                 SourceAlias = sourceAlias,
                 HasSourceAlias = sourceAlias != null,
-                IsParameter = args[args.Length - 1].ValueTokenType == AST.ValueTokenType.Parameter,
-
+                IsParameter = args[args.Length - 1].ValueTokenType == AST.ValueTokenType.Parameter
             };
         }
 

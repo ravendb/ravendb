@@ -2435,7 +2435,7 @@ namespace Raven.Server.ServerWide
             (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
             (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
             (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core),
-
+            (CompareExchangeExpirationStorage.CompareExchangeByExpiration.Content, 51_000, SnapshotEntryType.Command),
             (SubscriptionState.Content, 53_000, SnapshotEntryType.Command)
         };
 

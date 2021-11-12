@@ -14,7 +14,15 @@ namespace Raven.Server.ServerWide
 {
     public class CompareExchangeExpirationStorage
     {
-        public static string CompareExchangeByExpiration = "CompareExchangeByExpiration";
+        public static readonly Slice CompareExchangeByExpiration;
+
+        static CompareExchangeExpirationStorage()
+        {
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+            {
+                Slice.From(ctx, nameof(CompareExchangeByExpiration), out CompareExchangeByExpiration);
+            }
+        }
 
         public static unsafe void Put(ClusterOperationContext context, Slice keySlice, long ticks)
         {
@@ -39,7 +47,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static IEnumerable<(Slice keySlice, long expiredTicks, Slice ticksSlice)> GetExpiredValues(ClusterOperationContext context, long currentTicks)
+        internal static IEnumerable<(Slice keySlice, long expiredTicks, Slice ticksSlice)> GetExpiredValues(ClusterOperationContext context, long currentTicks)
         {
             var expirationTree = context.Transaction.InnerTransaction.ReadTree(CompareExchangeByExpiration);
             using (var it = expirationTree.Iterate(false))
