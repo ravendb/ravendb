@@ -34,6 +34,8 @@ namespace Raven.Client.Documents.Linq
 
         private readonly DocumentConventions _conventions;
 
+        internal const string CounterMethodName = "counter";
+
         public LinqPathProvider(DocumentConventions conventions)
         {
             _conventions = conventions;
@@ -106,6 +108,17 @@ namespace Raven.Client.Documents.Linq
                 if (IsCounterCall(callExpression))
                 {
                     return CreateCounterResult(callExpression);
+                }
+
+                if (IsMetadataCall(callExpression))
+                {
+                    return new Result
+                    {
+                        MemberType = callExpression.Method.ReturnType,
+                        IsNestedPath = false,
+                        Path = "getMetadata",
+                        Args = new[] { callExpression.Arguments[0].ToString() }
+                    };
                 }
 
                 throw new NotSupportedException(
@@ -196,7 +209,7 @@ namespace Raven.Client.Documents.Linq
             {
                 MemberType = typeof(long?),
                 IsNestedPath = false,
-                Path = "counter",
+                Path = CounterMethodName,
                 Args = args
             };
         }
@@ -524,8 +537,8 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsCounterCall(MethodCallExpression mce)
         {
-            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == "Counter"
-                   || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == "Get";
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Counter)
+                   || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == nameof(ISessionDocumentCounters.Get);
         }
 
         public static bool IsCompareExchangeCall(MethodCallExpression mce)
@@ -572,5 +585,10 @@ namespace Raven.Client.Documents.Linq
                                                 $"Time Series query expressions must return type '{nameof(TimeSeriesRawResult)}' or '{nameof(TimeSeriesAggregationResult)}'. " +
                                                 "Did you forget to call 'ToList'?");
         }
+        public static bool IsMetadataCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Metadata);
+        }
+
     }
 }
