@@ -30,6 +30,8 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
+        private const int MaxTermLength = 1024;
+
         private readonly Analyzer _analyzer;
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
@@ -149,7 +151,7 @@ namespace Corax
         [SkipLocalsInit]
         private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
         {
-            _analyzer.GetOutputBuffersSize(512, out int bufferSize, out int tokenSize);
+            _analyzer.GetOutputBuffersSize(MaxTermLength, out int bufferSize, out int tokenSize);
 
             byte* tempWordsSpace = stackalloc byte[bufferSize];
             Token* tempTokenSpace = stackalloc Token[tokenSize];
@@ -267,7 +269,7 @@ namespace Corax
             
             var analyzer = _analyzer;
             if ( analyzer != null)
-                _analyzer.GetOutputBuffersSize(512, out bufferSize, out tokenSize);
+                _analyzer.GetOutputBuffersSize(MaxTermLength, out bufferSize, out tokenSize);
     
             byte* tempWordsSpace = stackalloc byte[bufferSize];
             Token* tempTokenSpace = stackalloc Token[tokenSize];

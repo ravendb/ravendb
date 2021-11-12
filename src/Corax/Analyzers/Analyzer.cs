@@ -309,7 +309,7 @@ namespace Corax
 
             static void RunUtf8WithConversion(Analyzer analyzer, ReadOnlySpan<byte> source, ref Span<byte> output, ref Span<Token> tokens)
             {
-                var buffer = BufferPool.Rent(source.Length * 4);
+                var buffer = BufferPool.Rent(source.Length * 5);
                 
                 Span<char> charBuffer = MemoryMarshal.Cast<byte, char>(buffer.AsSpan());
                 int characters = Encoding.UTF8.GetChars(source, charBuffer);
