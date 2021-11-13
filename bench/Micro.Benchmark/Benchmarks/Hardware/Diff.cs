@@ -17,6 +17,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Micro.Benchmark.Benchmarks.Hardware
 {

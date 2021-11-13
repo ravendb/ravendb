@@ -28,7 +28,9 @@ namespace FastTests.Issues
             nameof(string.GetHashCode),
             nameof(string.GetPinnableReference),
             nameof(string.EnumerateRunes),
-            "get_Chars"
+            "get_Chars",
+            nameof(string.TryCopyTo),
+            nameof(string.ReplaceLineEndings)
         };
 
         [Fact]

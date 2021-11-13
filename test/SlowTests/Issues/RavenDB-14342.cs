@@ -54,7 +54,9 @@ namespace SlowTests.Issues
                     using (var currentProcess = Process.GetCurrentProcess())
                     {
                         Assert.Equal(currentProcess.Id, metrics.ServerProcessId);
+#pragma warning disable CA1416 // Validate platform compatibility
                         Assert.Equal((int)Bits.NumberOfSetBits(currentProcess.ProcessorAffinity.ToInt64()), metrics.Cpu.AssignedProcessorCount);
+#pragma warning restore CA1416 // Validate platform compatibility
                     }
                     
                     Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups, metrics.Backup.MaxNumberOfConcurrentBackups);

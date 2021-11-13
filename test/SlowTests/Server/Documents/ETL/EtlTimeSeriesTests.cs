@@ -1385,7 +1385,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         private static async Task<EtlProcessProgress> GetEtlProcessProgress(DocumentStore src)
         {
             using var client = new HttpClient();
-            var url = Uri.EscapeUriString($"{src.Urls.First()}/databases/{src.Database}/etl/progress");
+            var url = $"{src.Urls.First()}/databases/{src.Database}/etl/progress";
             var response = (await client.GetAsync(url));
             response.EnsureSuccessStatusCode();
             var strResult = response.Content.ReadAsStringAsync().Result;

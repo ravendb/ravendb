@@ -29,6 +29,7 @@ using Voron.Platform.Win32;
 using Voron.Util;
 using Voron.Util.Settings;
 using Constants = Voron.Global.Constants;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron
 {

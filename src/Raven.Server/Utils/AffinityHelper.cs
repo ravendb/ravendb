@@ -17,7 +17,9 @@ namespace Raven.Server.Utils
 
         public static void SetProcessAffinity(Process process, int cores, long? processAffinityMask, out long currentlyAssignedCores)
         {
+#pragma warning disable CA1416 // Validate platform compatibility
             currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+#pragma warning restore CA1416 // Validate platform compatibility
             if (currentlyAssignedCores == cores)
             {
                 // we already set the correct number of assigned cores
@@ -53,7 +55,9 @@ namespace Raven.Server.Utils
                 bitMask = processAffinityMask.Value;
             }
 
+#pragma warning disable CA1416 // Validate platform compatibility
             process.ProcessorAffinity = new IntPtr(bitMask);
+#pragma warning restore CA1416 // Validate platform compatibility
 
             // changing the process affinity resets the thread affinity
             // we need to change the custom affinity threads as well
@@ -104,7 +108,9 @@ namespace Raven.Server.Utils
                 try
                 {
                     currentProcess.Refresh();
+#pragma warning disable CA1416 // Validate platform compatibility
                     var currentAffinity = currentProcess.ProcessorAffinity.ToInt64();
+#pragma warning restore CA1416 // Validate platform compatibility
                     action(currentAffinity);
                     return true;
                 }

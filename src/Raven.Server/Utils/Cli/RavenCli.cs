@@ -47,6 +47,7 @@ using Size = Sparrow.Size;
 
 #if !RVN
 using SizeClient = Raven.Client.Util.Size;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 #endif
 
 namespace Raven.Server.Utils.Cli

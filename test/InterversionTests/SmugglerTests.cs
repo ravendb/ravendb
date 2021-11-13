@@ -324,7 +324,7 @@ namespace InterversionTests
         private static async Task<Operation> Migrate(DocumentStore @from, DocumentStore to, DatabaseItemType exclude = DatabaseItemType.None)
         {
             using var client = new HttpClient();
-            var url = Uri.EscapeUriString($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
+            var url = Uri.EscapeDataString($"{to.Urls.First()}/admin/remote-server/build/version?serverUrl={@from.Urls.First()}");
             var rawVersionRespond = (await client.GetAsync(url)).Content.ReadAsStringAsync().Result;
             var versionRespond = JsonConvert.DeserializeObject<BuildInfo>(rawVersionRespond);
 

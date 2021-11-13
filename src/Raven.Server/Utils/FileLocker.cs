@@ -31,7 +31,9 @@ namespace Raven.Server.Utils
                 _writeLockFile = new FileStream(_lockFile, FileMode.Create,
                     FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose);
                 _writeLockFile.SetLength(1);
+#pragma warning disable CA1416 // Validate platform compatibility
                 _writeLockFile.Lock(0, 1);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (PlatformNotSupportedException)
             {
@@ -88,7 +90,9 @@ namespace Raven.Server.Utils
             {
                 try
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     _writeLockFile.Unlock(0, 1);
+#pragma warning restore CA1416 // Validate platform compatibility
                 }
                 catch (PlatformNotSupportedException)
                 {
