@@ -44,7 +44,7 @@ namespace RachisTests
             {
                 var condition = await
                     r.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex)
-                        .WaitAsync(5000);
+                        .WaitWithoutExceptionAsync(5000);
 
                 using (r.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())

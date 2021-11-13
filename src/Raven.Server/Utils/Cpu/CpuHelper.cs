@@ -56,7 +56,9 @@ namespace Raven.Server.Utils.Cpu
         {
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 return Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (NotSupportedException)
             {

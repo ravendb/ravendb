@@ -261,7 +261,7 @@ exit 129";
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
             var keyPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             var buffer = new byte[256 / 8];
-            using (var cryptoRandom = new RNGCryptoServiceProvider())
+            using (var cryptoRandom = RandomNumberGenerator.Create())
             {
                 cryptoRandom.GetBytes(buffer);
             }
