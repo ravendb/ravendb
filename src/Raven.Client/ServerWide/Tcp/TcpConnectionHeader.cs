@@ -57,7 +57,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
-        public bool CompressionSupport { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
 
         public DetailedReplicationHubAccess ReplicationHubAccess;
 
@@ -174,6 +174,20 @@ namespace Raven.Client.ServerWide.Tcp
             public SupportedFeatures(int version)
             {
                 ProtocolVersion = version;
+            }
+
+            internal SupportedFeatures(SupportedFeatures source)
+            {
+                ProtocolVersion = source.ProtocolVersion;
+                Ping = source.Ping;
+                None = source.None;
+                Drop = source.Drop;
+                Subscription = source.Subscription;
+                Cluster = source.Cluster;
+                Heartbeats = source.Heartbeats;
+                TestConnection = source.TestConnection;
+                Replication = source.Replication;
+                DataCompression = source.DataCompression;
             }
 
             public PingFeatures Ping { get; set; }
@@ -463,6 +477,13 @@ namespace Raven.Client.ServerWide.Tcp
             OutOfRange,
             NotSupported,
             Supported
+        }
+
+        public class NegotiationResponse
+        {
+            public int Version;
+
+            public LicensedFeatures LicensedFeatures;
         }
 
         public static SupportedStatus OperationVersionSupported(OperationTypes operationType, int version, out int current)

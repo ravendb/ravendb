@@ -145,6 +145,11 @@ function z_release_ace_workers() {
         .pipe(gulp.dest(PATHS.releaseTarget));
 }
 
+function z_release_rql_worker() {
+    return gulp.src(["wwwroot/rql_worker.js", "wwwroot/rql_worker.js.map"])
+        .pipe(gulp.dest(PATHS.releaseTarget));
+}
+
 function z_release_images() {
     return gulp.src('wwwroot/Content/img/**/*', { base: 'wwwroot/Content' })
         .pipe(gulp.dest(PATHS.releaseTargetContent));
@@ -297,6 +302,7 @@ const release_chain = gulp.series(
         z_release_copy_version,
         z_release_favicon,
         z_release_ace_workers,
+        z_release_rql_worker,
         z_release_images,
         z_release_html,
         z_release_css_common,

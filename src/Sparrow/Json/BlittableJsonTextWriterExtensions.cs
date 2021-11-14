@@ -140,6 +140,24 @@ namespace Sparrow.Json
             writer.WriteEndArray();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<long> items)
+        {
+            writer.WritePropertyName(name);
+
+            writer.WriteStartArray();
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteInteger(item);
+            }
+            writer.WriteEndArray();
+        }
+
         public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
         {
             writer.WritePropertyName(name);

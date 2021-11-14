@@ -4,6 +4,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
+using Raven.Server;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -42,7 +43,12 @@ namespace SlowTests.Core.AdminConsole
 
         private JToken ExecuteScript(DocumentDatabase database, string script)
         {
-            var result = new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript
+            return ExecuteScript(Server, database, script);
+        }
+
+        internal static JToken ExecuteScript(RavenServer server, DocumentDatabase database, string script)
+        {
+            var result = new AdminJsConsole(server, database).ApplyScript(new AdminJsScript
             (
                 script
             ));

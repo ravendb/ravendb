@@ -29,7 +29,7 @@ class ongoingTaskElasticSearchEtlIndexModel {
         return new ongoingTaskElasticSearchEtlIndexModel(
             {
                 IndexName: "",
-                IndexIdProperty: "",
+                DocumentIdProperty: "",
                 InsertOnlyMode: false
             }, true);
     }
@@ -37,7 +37,7 @@ class ongoingTaskElasticSearchEtlIndexModel {
     toDto(): Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchIndex {
         return {
             IndexName: this.indexName(),
-            IndexIdProperty: this.idProperty(),
+            DocumentIdProperty: this.idProperty(),
             InsertOnlyMode: this.insertOnlyMode()
         }
     }
@@ -80,7 +80,7 @@ class ongoingTaskElasticSearchEtlIndexModel {
 
     private update(dto: Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchIndex, isNew: boolean) {
         this.indexName(dto.IndexName);
-        this.idProperty(dto.IndexIdProperty);
+        this.idProperty(dto.DocumentIdProperty);
         this.insertOnlyMode(dto.InsertOnlyMode);
         this.isNew(isNew);
     }

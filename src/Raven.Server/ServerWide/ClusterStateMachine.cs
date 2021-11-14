@@ -35,6 +35,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -56,6 +57,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -81,6 +83,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
         public static readonly TableSchema ReplicationCertificatesSchema;
+        public static readonly TableSchema SubscriptionStateSchema;
 
         public class ServerWideConfigurationKey
         {
@@ -127,6 +130,16 @@ namespace Raven.Server.ServerWide
             KeyIndex
         }
 
+        public enum SubscriptionStateTable
+        {
+            // Database SEP SubscriptionId SEP type SEP key
+            // type is Revision or Document
+            // key is lowered docId for document or current change vector for revision
+            Key,
+            ChangeVector,
+            BatchId,
+        }
+
         public static readonly Slice Items;
         public static readonly Slice CompareExchange;
         public static readonly Slice CompareExchangeTombstones;
@@ -140,6 +153,9 @@ namespace Raven.Server.ServerWide
         public static readonly Slice CertificatesHashSlice;
         public static readonly Slice ReplicationCertificatesSlice;
         public static readonly Slice ReplicationCertificatesHashSlice;
+        public static readonly Slice SubscriptionState;
+        public static readonly Slice SubscriptionStateKeySlice;
+        public static readonly Slice SubscriptionStateByBatchIdSlice;
 
         public enum CertificatesTable
         {
@@ -173,6 +189,10 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CertificatesHashSlice", out CertificatesHashSlice);
                 Slice.From(ctx, "ReplicationCertificatesSlice", out ReplicationCertificatesSlice);
                 Slice.From(ctx, "ReplicationCertificatesHashSlice", out ReplicationCertificatesHashSlice);
+                Slice.From(ctx, "SubscriptionState", out SubscriptionState);
+                Slice.From(ctx, "SubscriptionStateKey", out SubscriptionStateKeySlice);
+                Slice.From(ctx, "SubscriptionStateByBatchId", out SubscriptionStateByBatchIdSlice);
+
             }
 
             ItemsSchema = new TableSchema();
@@ -267,6 +287,22 @@ namespace Raven.Server.ServerWide
                 Count = 1,
                 IsGlobal = false,
                 Name = ReplicationCertificatesHashSlice
+            });
+
+            SubscriptionStateSchema = new TableSchema();
+            SubscriptionStateSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)SubscriptionStateTable.Key,
+                Count = 1,
+                IsGlobal = false,
+                Name = SubscriptionStateKeySlice
+            });
+            SubscriptionStateSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)SubscriptionStateTable.BatchId,
+                Count = 1,
+                IsGlobal = false,
+                Name = SubscriptionStateByBatchIdSlice
             });
         }
 
@@ -417,7 +453,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutElasticSearchConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
-                    case nameof(RemoveOlapConnectionStringCommand): 
+                    case nameof(RemoveOlapConnectionStringCommand):
                     case nameof(RemoveElasticSearchConnectionStringCommand):
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
@@ -425,12 +461,14 @@ namespace Raven.Server.ServerWide
                     case nameof(EditDocumentsCompressionCommand):
                     case nameof(UpdateUnusedDatabaseIdsCommand):
                     case nameof(EditLockModeCommand):
+                    case nameof(EditPostgreSqlConfigurationCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
+                    case nameof(AcknowledgeSubscriptionBatchCommand):
+                    case nameof(RecordBatchSubscriptionDocumentsCommand):
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(UpdateExternalReplicationStateCommand):
-                    case nameof(AcknowledgeSubscriptionBatchCommand):
                     case nameof(PutSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):
                     case nameof(UpdateEtlProcessStateCommand):
@@ -1518,6 +1556,12 @@ namespace Raven.Server.ServerWide
                 context.Transaction.InnerTransaction.OpenTable(CompareExchangeTombstoneSchema, CompareExchangeTombstones).DeleteByPrimaryKeyPrefix(databaseSlice);
                 context.Transaction.InnerTransaction.OpenTable(IdentitiesSchema, Identities).DeleteByPrimaryKeyPrefix(databaseSlice);
             }
+
+            databaseLowered = $"{record.DatabaseName.ToLowerInvariant()}{SpecialChars.RecordSeparator}";
+            using (Slice.From(context.Allocator, databaseLowered, out var databaseSlice))
+            {
+                context.Transaction.InnerTransaction.OpenTable(SubscriptionStateSchema, SubscriptionState).DeleteByPrimaryKeyPrefix(databaseSlice);
+            }
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -1725,7 +1769,7 @@ namespace Raven.Server.ServerWide
 
                     if (remoteTopology.Name != localTopology.Name)
                     {
-                        Debug.Assert(false,$"Same number of topologies {remote.Length}, but has different name at i={i}, remote: {remoteTopology.Name}, local: {localTopology.Name}");
+                        Debug.Assert(false, $"Same number of topologies {remote.Length}, but has different name at i={i}, remote: {remoteTopology.Name}, local: {localTopology.Name}");
                         AddStampToAllRemotes(index, remote);
                         return true;
                     }
@@ -2469,6 +2513,7 @@ namespace Raven.Server.ServerWide
                 case nameof(EditRefreshCommand):
                 case nameof(EditDatabaseClientConfigurationCommand):
                 case nameof(EditLockModeCommand):
+                case nameof(EditPostgreSqlConfigurationCommand):
                     databaseRecord.EtagForBackup = index;
                     break;
             }
@@ -2491,7 +2536,9 @@ namespace Raven.Server.ServerWide
 
             (CompareExchangeTombstones.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
             (CertificatesSlice.Content, ClusterCommandsVersionManager.Base42CommandsVersion,SnapshotEntryType.Command),
-            (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core)
+            (RachisLogHistory.LogHistorySlice.Content, 42_000,SnapshotEntryType.Core),
+            (CompareExchangeExpirationStorage.CompareExchangeByExpiration.Content, 51_000, SnapshotEntryType.Command),
+            (SubscriptionState.Content, 53_000, SnapshotEntryType.Command)
         };
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
@@ -2531,6 +2578,8 @@ namespace Raven.Server.ServerWide
             IdentitiesSchema.Create(context.Transaction.InnerTransaction, Identities, 32);
             CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
             ReplicationCertificatesSchema.Create(context.Transaction.InnerTransaction, ReplicationCertificatesSlice, 32);
+            SubscriptionStateSchema.Create(context.Transaction.InnerTransaction, SubscriptionState, 32);
+
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
@@ -3267,7 +3316,7 @@ namespace Raven.Server.ServerWide
             var databaseRecord = BuildShardedDatabaseRecord(context, rawRecord, shardIndex);
             return new RawDatabaseRecord(context, databaseRecord);
         }
-        
+
         private static BlittableJsonReaderObject BuildShardedDatabaseRecord(JsonOperationContext context, BlittableJsonReaderObject rawRecord, int shardIndex)
         {
             if (rawRecord == null)
@@ -3557,7 +3606,7 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        private async ValueTask<int> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<TcpConnectionHeaderMessage.NegotiationResponse> ClusterReadResponseAndGetVersion(JsonOperationContext ctx, AsyncBlittableJsonTextWriter writer, Stream stream, string url)
         {
             using (var response = await ctx.ReadForMemoryAsync(stream, "cluster-ConnectToPeer-header-response"))
             {
@@ -3565,14 +3614,21 @@ namespace Raven.Server.ServerWide
                 switch (reply.Status)
                 {
                     case TcpConnectionStatus.Ok:
-                        return reply.Version;
-
+                        return new TcpConnectionHeaderMessage.NegotiationResponse
+                        {
+                            Version = reply.Version,
+                            LicensedFeatures = reply.LicensedFeatures
+                        };
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
                         if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
-                            return reply.Version;
+                            return new TcpConnectionHeaderMessage.NegotiationResponse
+                            {
+                                Version = reply.Version,
+                                LicensedFeatures = reply.LicensedFeatures
+                            };
                         }
                         //Kindly request the server to drop the connection
                         ctx.Write(writer, new DynamicJsonValue
@@ -3585,10 +3641,10 @@ namespace Raven.Server.ServerWide
                         throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.InvalidNetworkTopology:
                         throw new InvalidNetworkTopologyException($"Unable to access {url} because {reply.Message}");
+                    default:
+                        throw new InvalidOperationException($"Unable to read header response, invalid TcpConnectionStatus : {reply.Status}");
                 }
             }
-
-            return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
         public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token)
@@ -3607,7 +3663,7 @@ namespace Raven.Server.ServerWide
 
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
-            
+
             TcpClient tcpClient = null;
             Stream stream = null;
             try
@@ -3616,8 +3672,8 @@ namespace Raven.Server.ServerWide
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var result = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
-                        TcpConnectionHeaderMessage.OperationTypes.Cluster, 
-                        (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag), 
+                        TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag),
                         context, _parent.TcpConnectionTimeout, null, token);
 
                     tcpClient = result.TcpClient;

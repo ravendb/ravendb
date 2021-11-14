@@ -9,12 +9,18 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public static class ElasticSearchHelper
     {
-        public static ElasticClient CreateClient(ElasticSearchConnectionString connectionString)
+        public static ElasticClient CreateClient(ElasticSearchConnectionString connectionString, TimeSpan? requestTimeout = null, TimeSpan? pingTimeout = null)
         {
             Uri[] nodesUrls = connectionString.Nodes.Select(x => new Uri(x)).ToArray();
 
             StaticConnectionPool pool = new StaticConnectionPool(nodesUrls);
             ConnectionSettings settings = new ConnectionSettings(pool);
+
+            if (requestTimeout != null)
+                settings.RequestTimeout(requestTimeout.Value);
+
+            if (pingTimeout != null)
+                settings.PingTimeout(pingTimeout.Value);
 
             if (connectionString.Authentication != null)
             {

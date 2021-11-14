@@ -2,9 +2,10 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Util;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -45,26 +46,26 @@ namespace Raven.Server.Documents
             return Task.CompletedTask;
         }
 
-        public delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context, ServerStore serverStore = null);
+        public delegate void RefAction<T>(string databaseName, ref T configuration, JsonOperationContext context, ServerStore serverStore = null);
 
-        public delegate Task<(long, object)> SetupFunc(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject json, string raftRequestId);
+        public delegate Task<(long, object)> SetupFunc<T>(TransactionOperationContext context, string databaseName, T json, string raftRequestId);
 
-        protected async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
+        protected async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
            string debug,
            string raftRequestId,
-           RefAction beforeSetupConfiguration = null,
+           RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
             await DatabaseConfigurations(setupConfigurationFunc, debug, raftRequestId, Database.Name, this, beforeSetupConfiguration, fillJson, statusCode);
         }
 
-        internal static async Task DatabaseConfigurations(SetupFunc setupConfigurationFunc,
+        internal static async Task DatabaseConfigurations(SetupFunc<BlittableJsonReaderObject> setupConfigurationFunc,
             string debug,
             string raftRequestId,
             string databaseName,
             RequestHandler requestHandler,
-            RefAction beforeSetupConfiguration = null,
+            RefAction<BlittableJsonReaderObject> beforeSetupConfiguration = null,
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
             HttpStatusCode statusCode = HttpStatusCode.OK)
         {
@@ -96,7 +97,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        protected async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
+        {
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
+                return (-1, default);
+
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            await ServerStore.EnsureNotPassiveAsync();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+
+                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
+                await WaitForIndexToBeApplied(context, index);
+
+                return (index, configurationJson);
+            }
+        }
+
+        protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;
             using (context.OpenReadTransaction())
@@ -113,6 +135,17 @@ namespace Raven.Server.Documents
             {
                 await ServerStore.Cluster.WaitForIndexNotification(index);
             }
+        }
+
+        /// <summary>
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="type"></param>
+        public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
+        {
+            HttpContext.Items["TrafficWatch"] = (str, type);
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()

@@ -222,9 +222,9 @@ namespace Raven.Server.Web.System
                 {
                     connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
                 }
-                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnection(subscriptionState.SubscriptionId, out var _))
+                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = OngoingTaskConnectionStatus.Active;
+                    connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -721,7 +721,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.Olap:
                     var recordOlapConnectionStrings = rawRecord.OlapConnectionString;
                     if (recordOlapConnectionStrings != null && recordOlapConnectionStrings.TryGetValue(connectionStringName, out var olapConnectionString))
@@ -730,7 +730,7 @@ namespace Raven.Server.Web.System
                     }
 
                     break;
-                
+
                 case ConnectionStringType.ElasticSearch:
                     var recordElasticConnectionStrings = rawRecord.ElasticSearchConnectionStrings;
                     if (recordElasticConnectionStrings != null && recordElasticConnectionStrings.TryGetValue(connectionStringName, out var elasticConnectionString))
@@ -755,7 +755,7 @@ namespace Raven.Server.Web.System
 
         internal static async Task PutConnectionString(string databaseName, RequestHandler requestHandler)
         {
-            await DatabaseConfigurations(requestHandler.ServerStore.PutConnectionString, "put-connection-string", requestHandler.GetRaftRequestIdFromQuery(), 
+            await DatabaseConfigurations(requestHandler.ServerStore.PutConnectionString, "put-connection-string", requestHandler.GetRaftRequestIdFromQuery(),
                 databaseName, requestHandler);
         }
 
@@ -770,7 +770,7 @@ namespace Raven.Server.Web.System
             var configurationName = requestHandler.GetStringQueryString("configurationName"); // etl task name
             var transformationName = requestHandler.GetStringQueryString("transformationName");
 
-            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid), 
+            await DatabaseConfigurations((_, db, etlConfiguration, guid) => requestHandler.ServerStore.RemoveEtlProcessState(_, db, configurationName, transformationName, guid),
                 "etl-reset", requestHandler.GetRaftRequestIdFromQuery(), databaseName, requestHandler);
         }
 
@@ -920,7 +920,7 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.OlapEtls != null)
             {
                 foreach (var olapEtl in databaseRecord.OlapEtls)
@@ -953,13 +953,13 @@ namespace Raven.Server.Web.System
                     };
                 }
             }
-            
+
             if (databaseRecord.ElasticSearchEtls != null)
             {
                 foreach (var elasticSearchEtl in databaseRecord.ElasticSearchEtls)
                 {
                     databaseRecord.ElasticSearchConnectionStrings.TryGetValue(elasticSearchEtl.ConnectionStringName, out var connection);
-                    
+
                     var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, elasticSearchEtl, out var tag, out var error);
                     var taskState = GetEtlTaskState(elasticSearchEtl);
 
@@ -1142,7 +1142,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             await WriteResult(context, new OngoingTaskOlapEtlDetails
                             {
                                 TaskId = olapEtl.TaskId,
@@ -1161,7 +1161,7 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.RavenEtl:
-                            
+
                             RavenEtlConfiguration ravenEtl;
                             if (sharded)
                             {
@@ -1201,7 +1201,7 @@ namespace Raven.Server.Web.System
                                 Error = ravenEtlError
                             });
                             break;
-                        
+
                         case OngoingTaskType.ElasticSearchEtl:
 
                             var elasticSearchEtl = name != null ?
@@ -1249,6 +1249,16 @@ namespace Raven.Server.Web.System
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                             var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+                            OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
+                            if (tag != ServerStore.NodeTag)
+                            {
+                                connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+                            }
+                            else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(key, out var connectionsState))
+                            {
+                                connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                            }
+
                             var subscriptionStateInfo = new OngoingTaskSubscription
                             {
                                 TaskName = subscriptionState.SubscriptionName,
@@ -1265,10 +1275,9 @@ namespace Raven.Server.Web.System
                                 {
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                }
+                                },
+                                TaskConnectionStatus = connectionStatus
                             };
-
-                            // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
 
                             await WriteResult(context, subscriptionStateInfo);
                             break;
@@ -1490,7 +1499,7 @@ namespace Raven.Server.Web.System
                     if (type == OngoingTaskType.Subscription)
                     {
                         database.SubscriptionStorage.RaiseNotificationForTaskRemoved(taskName);
-                }
+                    }
                 }
                 finally
                 {

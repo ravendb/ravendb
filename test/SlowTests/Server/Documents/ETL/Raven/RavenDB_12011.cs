@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
+                        using (RavenEtl.TestScript(new TestRavenEtlScript
                         {
                             DocumentId = "orders/1-A",
                             IsDelete = true,
@@ -52,10 +52,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                                 {
                                     new Transformation()
                                     {
-                                        Collections =
-                                        {
-                                            "Orders"
-                                        },
+                                        Collections = {"Orders"},
                                         Name = "OrdersAndLines",
                                         Script =
                                             @"
@@ -81,14 +78,17 @@ loadToOrders(orderData);
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context);
+                        }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (RavenEtlTestScriptResult)testResult;
+                            
+                            Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(2, result.Commands.Count);
 
-                        Assert.Equal(2, result.Commands.Count);
-
-                        Assert.IsType(typeof(DeletePrefixedCommandData), result.Commands[0]);
-                        Assert.IsType(typeof(DeleteCommandData), result.Commands[1]);
+                            Assert.IsType(typeof(DeletePrefixedCommandData), result.Commands[0]);
+                            Assert.IsType(typeof(DeleteCommandData), result.Commands[1]);
+                        }
                     }
                 }
 
@@ -117,7 +117,7 @@ loadToOrders(orderData);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
+                        using (RavenEtl.TestScript(new TestRavenEtlScript
                         {
                             DocumentId = "users/1",
                             IsDelete = true,
@@ -128,10 +128,7 @@ loadToOrders(orderData);
                                 {
                                     new Transformation()
                                     {
-                                        Collections =
-                                        {
-                                            "Users"
-                                        },
+                                        Collections = {"Users"},
                                         Name = "Users",
                                         Script =
                                             @"
@@ -145,13 +142,16 @@ function deleteDocumentsOfUsersBehavior(docId) {
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context);
+                        }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (RavenEtlTestScriptResult)testResult;
+                            
+                            Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.Commands.Count);
 
-                        Assert.Equal(0, result.Commands.Count);
-
-                        Assert.Equal("document: users/1", result.DebugOutput[0]);
+                            Assert.Equal("document: users/1", result.DebugOutput[0]);
+                        }
                     }
                 }
 

@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public static Index Open(string path, DocumentDatabase documentDatabase)
+        public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
         {
             var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
 
@@ -470,6 +470,16 @@ namespace Raven.Server.Documents.Indexes
                     throw new IndexOpenException(
                         $"Could not read index type from storage in '{path}'. This indicates index data file corruption.",
                         e);
+                }
+
+                if (documentDatabase.Configuration.Indexing.SkipDatabaseIdValidationOnIndexOpening == false && generateNewDatabaseId == false)
+                {
+                    var databaseId = IndexStorage.ReadDatabaseId(name, environment);
+                    if (databaseId != null) // backward compatibility
+                    {
+                        if (databaseId != documentDatabase.DbBase64Id)
+                            throw new IndexOpenException($"Could not open index because stored database ID ('{databaseId}') is different than current database ID ('{documentDatabase.DbBase64Id}'). A common reason for this is that the index was copied from another database.");
+                    }
                 }
 
                 switch (sourceType)
@@ -792,7 +802,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool = new TransactionContextPool(environment, documentDatabase.Configuration.Memory.MaxContextSizeToKeep);
 
             _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-            _indexStorage.Initialize(environment);
+            _indexStorage.Initialize(documentDatabase, environment);
 
             IndexPersistence?.Dispose();
 
@@ -2045,18 +2055,26 @@ namespace Raven.Server.Documents.Indexes
 
         private void FlushAndSync(StorageEnvironment storageEnvironment, int timeToWaitInMilliseconds, bool tryCleanupRecycledJournals)
         {
-            // force flush and sync
-            var sp = Stopwatch.StartNew();
-            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-            if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+            try
             {
-                storageEnvironment.ForceSyncDataFile();
-            }
+                // force flush and sync
+                var sp = Stopwatch.StartNew();
+                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+                if (_logsAppliedEvent.Wait(timeToWaitInMilliseconds, _indexingProcessCancellationTokenSource.Token))
+                {
+                    storageEnvironment.ForceSyncDataFile();
+                }
 
-            var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
-            // wait for sync
-            if (timeLeft > 0)
-                Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+                var timeLeft = timeToWaitInMilliseconds - sp.ElapsedMilliseconds;
+                // wait for sync
+                if (timeLeft > 0)
+                    Task.Delay((int)timeLeft, _indexingProcessCancellationTokenSource.Token).Wait();
+            }
+            catch (OperationCanceledException)
+            {
+                // index was deleted or database was shutdown
+                return;
+            }
 
             storageEnvironment.Cleanup(tryCleanupRecycledJournals);
         }

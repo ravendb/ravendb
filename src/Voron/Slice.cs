@@ -29,7 +29,7 @@ namespace Voron
 
         public bool HasValue => Content.HasValue;
 
-        public int Size
+        public readonly int Size
         {
             get
             {
@@ -187,6 +187,14 @@ namespace Voron
             return External(context, value.Ptr, size, ByteStringType.Mutable | ByteStringType.External, out slice);
         }
 
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.ExternalScope External(ByteStringContext context, ByteString value,out Slice slice)
+        {
+            return External(context, value.Ptr, value.Length, ByteStringType.Mutable | ByteStringType.External, out slice);
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.ExternalScope External(ByteStringContext context, byte* value, int size, out Slice slice)
         {
@@ -238,7 +246,7 @@ namespace Voron
             return this.Content.ToString(Encodings.Utf8);
         }
 
-        public Span<byte> AsSpan()
+        public readonly Span<byte> AsSpan()
         {
             return new Span<byte>(Content.Ptr, Size);
         }

@@ -74,7 +74,7 @@ function jsFileList(path, filter) {
 }
 
 function workers() {
-	return ["javascript", "json", "rql", "raven_document"];
+	return ["javascript", "json", "raven_document"];
 }
 
 function modeList() {

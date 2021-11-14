@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
+﻿using Sparrow.Json;
+
+namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchItem : ExtractedItem
     {
@@ -19,7 +21,7 @@
         public ElasticSearchItem(Tombstone tombstone, string collection) : base(tombstone, collection, EtlItemType.Document)
         {
         }
-        
-        public ElasticSearchProperty Property { get; set; }
+
+        public BlittableJsonReaderObject TransformationResult { get; set; }
     }
 }

@@ -59,12 +59,14 @@ namespace Raven.Server.Documents.TimeSeries
             return bitsHeader.NumberOfBytes + GetDataStart(Header);
         }
 
+        public int Capacity => _capacity;
+
         public TimeSeriesValuesSegment(byte* buffer, int capacity)
         {
             _buffer = buffer;
             _capacity = capacity;
 
-            if (_capacity <= 0 || _capacity > 2048)
+            if (_capacity <= 0 || _capacity > TimeSeriesStorage.MaxSegmentSize)
                 InvalidCapacity();
         }
 
@@ -345,7 +347,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             int delta = deltaFromStart - tempHeader->PreviousTimestamp;
-            if (delta <= 0)
+            if (delta < 0)
                 ThrowInvalidNewDelta();
 
             int deltaOfDelta = delta - tempHeader->PreviousDelta;
@@ -481,7 +483,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         length--;
                     }
-                    
+
                     yield return new SingleResult
                     {
                         Timestamp = current,
@@ -560,14 +562,24 @@ namespace Raven.Server.Documents.TimeSeries
         {
             public byte* Pointer;
             public int Length;
-
             public byte Size => *Pointer; // the first byte is the size
+
+
+            public Span<byte> ContentAsSpan()
+            {
+                if (Pointer == null || Size == 0)
+                {
+                    return Span<byte>.Empty;
+                }
+
+                return new Span<byte>(Pointer + 1, Size); // take the content without the size byte
+            }
 
             public Span<byte> AsSpan()
             {
                 if (Pointer == null || Size == 0)
                 {
-                    return Slices.Empty.AsSpan();
+                    return Span<byte>.Empty;
                 }
 
                 return new Span<byte>(Pointer, Length);
@@ -613,7 +625,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (MoveNextInternal(out timestamp, values, state, ref tag, out status) == false)
                         return false;
 
-                    if (_parent.Version == SegmentVersion.V50000 && // fix legacy issue RavenDB-15617
+                    if (_parent.Version == SegmentVersion.V50000 &&  // fix legacy issue RavenDB-15617
                         previousTimestamp == timestamp)
                         continue;
 

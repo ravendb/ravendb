@@ -25,14 +25,23 @@ import popoverUtils = require("common/popoverUtils");
 class timeSeriesInfo {
     name = ko.observable<string>();
     numberOfEntries = ko.observable<number>();
+    hasMoreResults = ko.observable<boolean>(false);
+    
     nameAndNumberFormatted: KnockoutComputed<string>;
     
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
         this.numberOfEntries(numberOfEntries);
         
+        this.initObservables();
+    }
+    
+    private initObservables(): void {
         this.nameAndNumberFormatted = ko.pureComputed(() => {
-           return `${this.name()} (${generalUtils.formatNumberToStringFixed(this.numberOfEntries(), 0)})`;
+            const numberPart = this.numberOfEntries().toLocaleString();
+            const moreResultsPart = this.hasMoreResults() ? "+" : "";
+            
+            return `${this.name()} (${numberPart}${moreResultsPart})`;
         });
     }
 }
@@ -60,6 +69,8 @@ class editTimeSeries extends viewModelBase {
 
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
+
+    private nextItemToFetchIndex = 0 as number;
     
     private columnsCacheInfo = {
         hasTag: false,
@@ -201,7 +212,7 @@ class editTimeSeries extends viewModelBase {
 
         const timestampColumn = new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%");
         
-        grid.init((s, t) => this.fetchSeries(s, t).done(result => this.checkColumns(result)), () => {
+        grid.init((s, t) => this.fetchSeries(s).done(result => this.checkColumns(result)), () => {
             const { valuesCount, hasTag } = this.columnsCacheInfo;
             
             const columnNames = this.getColumnnNamesToUse(valuesCount);
@@ -218,7 +229,7 @@ class editTimeSeries extends viewModelBase {
             if (hasTag) {
                 columns.push(new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"));
             }
-                        
+            
             return columns;
         });
 
@@ -254,26 +265,39 @@ class editTimeSeries extends viewModelBase {
             });
     }
 
-    private fetchSeries(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>> {
+    private fetchSeries(skip: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>> {
         const fetchTask = $.Deferred<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
         const timeSeriesName = this.timeSeriesName();
         const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, take, true)
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, this.nextItemToFetchIndex, 100, true)
                 .execute()
                 .done(result => {
+                    const totalCount = skip + result.Entries.length;
+                    const skipped = result.SkippedResults || 0;
+
+                    const hasMore = this.nextItemToFetchIndex + result.Entries.length + skipped < result.TotalResults;
+                    
+                    if (hasMore) {
+                        this.nextItemToFetchIndex += result.Entries.length + skipped;
+                    } else {
+                        this.nextItemToFetchIndex = 0;
+                    }
+                    
                     const items = result.Entries;
-                    const totalResultCount = result.TotalResults || 0;
+                    const totalResultCount = totalCount || 0;
                     
                     const series = this.getSeriesFromList(timeSeriesName);
                     if (series) {
-                        series.numberOfEntries(result.TotalResults);
+                        const countForUI = hasMore ? totalCount - 1 : totalCount;
+                        series.numberOfEntries(countForUI);
+                        series.hasMoreResults(hasMore);
                     }
 
                     fetchTask.resolve({
                         items,
-                        totalResultCount
+                        totalResultCount: hasMore ? totalResultCount + 1 : totalResultCount
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -386,6 +410,7 @@ class editTimeSeries extends viewModelBase {
         this.cleanColumnsCache();
         
         this.timeSeriesName(name);
+        this.nextItemToFetchIndex = 0;
         
         router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
         
@@ -412,6 +437,9 @@ class editTimeSeries extends viewModelBase {
                         this.refresh();
                 }
             })
+            .always(() => {
+                this.nextItemToFetchIndex = 0;
+            });
     }
     
     createTimeSeries(createNew: boolean) {
@@ -550,12 +578,7 @@ class editTimeSeries extends viewModelBase {
         query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
-        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
-        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
-        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
-
-        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash, "&openGraph=true");
-        this.navigate(queryUrl);
+        recentQueriesStorage.saveAndNavigate(this.activeDatabase(), queryDto, { extraParameters: "&openGraph=true" });
     }
 
     private urlForTimeSeriesPolicies() {
@@ -567,7 +590,7 @@ class editTimeSeries extends viewModelBase {
         
         popoverUtils.longWithHover($(".raw-data-info"),
             {
-                content: `<ul style="max-width: 600px;">
+                content: `<ul style="max-width: 600px;" class="margin-top margin-top-sm">
                               <li>
                                   <small>Data below is <strong>Raw Time Series Data</strong>. Entries can be edited as needed.</small>
                               </li>
@@ -582,8 +605,7 @@ class editTimeSeries extends viewModelBase {
 
         popoverUtils.longWithHover($(".rollups-info"),
             {
-                content: `<br>
-                          <ul style="max-width: 700px;">
+                content: `<ul style="max-width: 700px;" class="margin-top margin-top-sm">
                               <li>
                                   <small>Data below is not raw data.</small><br />
                                   <small>Each entry is <strong>Rolled-Up Data</strong> that is aggregated for a <strong>specific time frame</strong> defined by a <a href="${timeseriesSettingsUrl}">Time Series Policy</a>.</small>
@@ -592,7 +614,7 @@ class editTimeSeries extends viewModelBase {
                                   <small>The rolled-up data is only available when the aggregation time frame defined by the policy has ended.</small>
                               </li>
                           </ul>`,
-                placement: "right",
+                placement: "bottom",
                 html: true,
                 container: ".edit-time-series"
             })

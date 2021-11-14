@@ -1766,7 +1766,7 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                index = Index.Open(indexPath, _documentDatabase);
+                index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false);
 
                 var differences = IndexDefinitionCompareDifferences.None;
 

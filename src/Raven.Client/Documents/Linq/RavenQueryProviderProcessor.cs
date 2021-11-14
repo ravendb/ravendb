@@ -2566,6 +2566,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddCallArgumentsToPath(string[] mceArgs, string parameter, ref string path, out string alias)
         {
+            alias = null;
+
             if (mceArgs[0] == parameter)
             {
                 AddFromAliasOrRenameArgument(ref mceArgs[0]);
@@ -2577,7 +2579,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 args += $", {QueryFieldUtil.EscapeIfNecessary(mceArgs[1])}";
             }
 
-            alias = mceArgs[mceArgs.Length - 1];
+            if (path == LinqPathProvider.CounterMethodName)
+            {
+                alias = mceArgs[mceArgs.Length - 1];
+            }
 
             path = $"{path}({args})";
         }
@@ -2879,7 +2884,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     var name = GetSelectPath(newExpression.Members[index]);
 
-                    AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
+                    if (newExpression.Arguments[index] is MemberInitExpression or NewExpression)
+                    {
+                        if (index > 0)
+                            sb.Append(", ");
+                        
+                        _jsProjectionNames.Add(name);
+                        sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(newExpression.Arguments[index]));
+                    }
+                    else
+                    {
+                        AddJsProjection(name, newExpression.Arguments[index], sb, index != 0);
+                    }
                 }
             }
 
@@ -2892,7 +2908,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         continue;
 
                     var name = GetSelectPath(field.Member);
+                    if (field.Expression is MemberInitExpression)
+                    {
+                        if (index > 0)
+                            sb.Append(", ");
+                        
+                        _jsProjectionNames.Add(name);
+                        sb.Append(name).Append(" : ").Append(TranslateSelectBodyToJs(field.Expression));
+                        continue;
+                    }
+                   
                     AddJsProjection(name, field.Expression, sb, index != 0);
+                    
                 }
             }
 

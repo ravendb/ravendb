@@ -1,6 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Nest;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
@@ -22,9 +27,35 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             ConcurrentEsEtlTests.Wait();
         }
 
-        protected void EnsureNonStaleElasticResults(ElasticClient client)
+        protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null)
         {
-            client.Indices.Refresh(new RefreshRequest(Indices.All));
+            var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
+
+            AddEtl(store,
+                new ElasticSearchEtlConfiguration
+                {
+                    Name = configurationName ?? connectionStringName,
+                    ConnectionStringName = connectionStringName,
+                    ElasticIndexes =
+                    {
+                        new ElasticSearchIndex {IndexName = $"Orders", DocumentIdProperty = "Id"},
+                        new ElasticSearchIndex {IndexName = $"OrderLines", DocumentIdProperty = "OrderId"},
+                        new ElasticSearchIndex {IndexName = $"Users", DocumentIdProperty = "UserId"},
+                    },
+                    Transforms =
+                    {
+                        new Transformation
+                        {
+                            Name = transformationName ?? $"ETL : {connectionStringName}",
+                            Collections = new List<string>(collections),
+                            Script = script,
+                            ApplyToAllDocuments = applyToAllDocuments
+                        }
+                    }
+                },
+
+                new ElasticSearchConnectionString { Name = connectionStringName, Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
         }
 
         protected IDisposable GetElasticClient(out ElasticClient client)
