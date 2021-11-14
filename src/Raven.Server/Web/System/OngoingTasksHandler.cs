@@ -191,7 +191,7 @@ namespace Raven.Server.Web.System
 
         private OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
         {
-            var connectionResult = Database.ReplicationLoader.GetExternalReplicationDestination(ex.TaskId);
+            var connectionResult = Database.ReplicationLoader.GetPullReplicationDestination(ex.TaskId, ex.Database);
             var tag = Server.ServerStore.NodeTag; // we can't know about pull replication tasks on other nodes.
 
             return new OngoingTaskPullReplicationAsHub
