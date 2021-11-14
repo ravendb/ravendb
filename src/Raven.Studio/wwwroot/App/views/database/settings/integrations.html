@@ -31,6 +31,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="margin-top padding padding-xs text-warning bg-warning" data-bind="visible: !isPostgreSqlSupportEnabled()">
+                    <small>
+                        <i class="icon-warning"></i>
+                        <span>PostgreSQL support must be explicitly enabled in your settings json file. Learn more</span>
+                        <a target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/HDTCH7/' + clientVersion() }">here</a>
+                        <span>.</span>
+                    </small>
+                </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedPostgreSqlCredentials()">
