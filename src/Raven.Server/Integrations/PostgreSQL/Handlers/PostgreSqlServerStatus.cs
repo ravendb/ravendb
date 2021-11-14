@@ -1,6 +1,7 @@
-﻿namespace Raven.Server.Integrations.PostgreSQL.Handlers;
-
-public class PostgreSqlServerStatus
+﻿namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
-    public bool Active { get; set; }
+    public class PostgreSqlServerStatus
+    {
+        public bool Active { get; set; }
+    }
 }

@@ -579,6 +579,7 @@ namespace TypingsGenerator
             // integrations
             scripter.AddType(typeof(PostgreSqlUser));
             scripter.AddType(typeof(PostgreSqlUsernames));
+            scripter.AddType(typeof(PostgreSqlServerStatus));
             
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
