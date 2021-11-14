@@ -58,9 +58,9 @@ return deleted;
                 }
             }
         }
-
-        [Theory]
-        [InlineData(@"if(this.Age % 2 === 0)
+        
+        const string _scriptShouldDelete1 = @"
+if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
     return;
@@ -68,8 +68,10 @@ loadToUsers(this);
 
 function deleteDocumentsBehavior(docId, collection, deleted) {
 return !deleted;
-}")]
-        [InlineData(@"if(this.Age % 2 === 0)
+}";
+
+        const string _scriptShouldDelete2 = @"
+if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
     return;
@@ -77,17 +79,23 @@ loadToUsers(this);
 
 function deleteDocumentsOfUsersBehavior(docId, deleted) {
 return !deleted;
-}")]
-        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
+}";
+
+        [Theory]
+        [InlineData(_scriptShouldDelete1, "Jint")]
+        [InlineData(_scriptShouldDelete1, "V8")]
+        [InlineData(_scriptShouldDelete2, "Jint")]
+        [InlineData(_scriptShouldDelete2, "V8")]
+        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 using (var session = dest.OpenSession())
                 {
                     session.Store(new User() {Name = "Crew Mate", Age = 32});
                     session.SaveChanges();
-
                 }
 
                 using (var session = src.OpenSession())
@@ -103,7 +111,8 @@ return !deleted;
 
                 using (var session = dest.OpenSession())
                 {
-                    Assert.Null(session.Load<User>("users/1-A"));
+                    var res = session.Load<User>("users/1-A");
+                    Assert.Null(res);
                 }
             }
         }

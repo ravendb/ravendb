@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanBoostFullDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanBoostFullDocument(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersAndAccounts().Execute(store);
 
@@ -50,10 +52,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanGetBoostedValues()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetBoostedValues(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersByName().Execute(store);
 

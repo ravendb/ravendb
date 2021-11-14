@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -37,10 +38,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             new ElasticSearchIndex {IndexName = UsersIndexName, DocumentIdProperty = "UserId"}
         };
 
-        [RequiresElasticSearchFact]
-        public void SimpleScript()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void SimpleScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
@@ -91,10 +93,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void SimpleScriptWithManyDocuments()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void SimpleScriptWithManyDocuments(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var numberOfOrders = 100;
@@ -153,10 +156,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [Fact]
-        public async Task Simple_script_error_expected()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Simple_script_error_expected(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var config = new ElasticSearchEtlConfiguration
                 {
@@ -200,10 +204,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Can_get_document_id()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Can_get_document_id(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 using (var session = store.OpenSession())
@@ -278,10 +283,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Can_Update_To_Be_No_Items_In_Child_TTable()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Can_Update_To_Be_No_Items_In_Child_TTable(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, DefaultScript, DefaultIndexes, DefaultCollections);
@@ -332,10 +338,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Update_of_disassembled_document()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Update_of_disassembled_document(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 using (var session = store.OpenSession())
@@ -415,10 +422,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Docs_from_two_collections_loaded_to_single_one()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Docs_from_two_collections_loaded_to_single_one(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + IndexSuffix + @"(userData)", UsersIndex, new[] { "Users", "People" });
@@ -517,10 +525,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Can_load_to_specific_collection_when_applying_to_all_docs()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Can_load_to_specific_collection_when_applying_to_all_docs(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -552,10 +561,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [RequiresElasticSearchFact]
-        public void Should_delete_existing_document_when_filtered_by_script()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Should_delete_existing_document_when_filtered_by_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -649,8 +659,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             Assert.Equal("Script 'test' must not be empty", errors[0]);
         }
 
-        [RequiresElasticSearchFact]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void Etl_from_encrypted_to_non_encrypted_db_will_work(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -683,7 +694,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
                 ModifyDatabaseName = s => dbName,
             }))
             using (GetElasticClient(out var client))
@@ -749,10 +760,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             Assert.True(c.UsingEncryptedCommunicationChannel());
         }
 
-        [Fact]
-        public async Task CanTestScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanTestScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

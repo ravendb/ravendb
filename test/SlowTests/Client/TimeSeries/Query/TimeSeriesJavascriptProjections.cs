@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -117,10 +118,11 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -220,10 +222,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_TagAsParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_TagAsParameter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -325,10 +328,11 @@ select {
         }
 
 
-        [Fact]
-        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -393,10 +397,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction_MultipleSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPassSeriesNameAsParameterToTimeSeriesDeclaredFunction_MultipleSeries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -488,10 +493,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -590,10 +596,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction_DifferentRanges()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptDeclaredFunction_DifferentRanges(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -721,10 +728,11 @@ select out(p)")
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_MultipleValues()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_MultipleValues(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -784,10 +792,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptDeclaredFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -846,10 +855,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptDeclaredFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptDeclaredFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -932,10 +942,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1000,10 +1011,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_FromLoadedDocument(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1075,10 +1087,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithLoadedTag()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithLoadedTag(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1153,10 +1166,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_MultipleSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_MultipleSeries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1231,10 +1245,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_CanDefineTmeSeriesInsideLet(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1300,10 +1315,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithVariables()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WithVariables(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1371,10 +1387,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptFunction_UsingLinq()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseTimeSeriesQueryResultAsArgumentToJavascriptFunction_UsingLinq(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1468,10 +1485,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptFunction_UsingLinq()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseTimeSeriesAggregationResultAsArgumentToJavascriptFunction_UsingLinq(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1570,10 +1588,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesAggregationInsideJsProjection_UsingLinq_WhenTsQueryExpressionIsNestedInsideAnotherExpression(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1650,10 +1669,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = DateTime.Today.EnsureUtc();
 
@@ -1742,10 +1762,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_InvokeOnDifferentObjectInstances()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_InvokeOnDifferentObjectInstances(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1829,10 +1850,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_TimeSeriesCallWithJustNameParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_TimeSeriesCallWithJustNameParameter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1917,10 +1939,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnRawResult()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnRawResult(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -1994,10 +2017,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnAggregatedResult()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnAggregatedResult(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2087,10 +2111,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResultValues()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithOrderByOnTimeSeriesResultValues(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2173,10 +2198,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnValueField()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDefineCustomJsFunctionThatHasTimeSeriesCall_UsingLinq_WithComputationOnValueField(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -2248,10 +2274,11 @@ select foo(heartrate(p))
             }
         }
 
-        [Fact]
-        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_UsingLinq_TagAsParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCallTimeSeriesDeclaredFunctionFromJavascriptProjection_UsingLinq_TagAsParameter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(20);
 
-        [Fact]
-        public async Task CanQueryMetadataForSubscriptions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanQueryMetadataForSubscriptions(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             store.Subscriptions.Create(options: new SubscriptionCreationOptions
             {

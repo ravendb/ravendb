@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -66,10 +67,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUpdateIndexWithAdditionalSources_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUpdateIndexWithAdditionalSources_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -183,7 +185,7 @@ namespace SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name); };})" },
+                    Maps = { @"map('Companies', c => ({ Name: getName(c.Name) }))" },
                     AdditionalSources = new System.Collections.Generic.Dictionary<string, string>
                     {
                         {
@@ -208,7 +210,7 @@ namespace SlowTests.Issues
             {
                 return new IndexDefinition
                 {
-                    Maps = { @"map('Companies', function (c){ return { Name: getName(c.Name); };})" },
+                    Maps = { @"map('Companies', c => ({ Name: getName(c.Name)}))" },
                     AdditionalSources = new System.Collections.Generic.Dictionary<string, string>
                     {
                         {

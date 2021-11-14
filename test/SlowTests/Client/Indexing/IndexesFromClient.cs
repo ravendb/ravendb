@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
@@ -92,10 +93,11 @@ namespace SlowTests.Client.Indexing
             }
         }
 
-        [Fact]
-        public async Task UpdateByQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task UpdateByQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -120,7 +122,7 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}' UPDATE {{ this.LastName = 'Test'; }}" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}' UPDATE {{ if (this) {{this.LastName = 'Test'; }} }}" }, new QueryOperationOptions { AllowStale = false }));
 
                 await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15));

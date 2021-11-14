@@ -26,6 +26,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
+using V8.Net;
 
 namespace Raven.Server
 {

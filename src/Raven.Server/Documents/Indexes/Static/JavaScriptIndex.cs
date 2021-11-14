@@ -1,39 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Esprima;
-using Jint;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Client.ServerWide.JavaScript;
+
+using Jint; // actually we need Esprima for analyzing groupings, but for now we use it in the old way by means of Jint (having the outdated Esprima parser version not supporting some new features like optional chaining operator '?.')
 using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
-using Jint.Runtime.Interop;
-using Raven.Client;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.Configuration;
-using Raven.Server.Documents.Indexes.Static.Counters;
-using Raven.Server.Documents.Indexes.Static.JavaScript;
-using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Esprima; // TODO to switch to the latest version Esprima directly or maybe even better to eliminate the need for it by implementing groupBy as CLR callback (why not?), but this is not critical thanks to the little trick descibed in JintEngineExForV8::ProcessJintStub
+
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions;
-using Raven.Server.ServerWide;
-using Sparrow.Server;
+using Raven.Server.Documents.Indexes.Static.Utils;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using JintEngineExForV8 = Raven.Server.Extensions.V8.JintEngineExForV8;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public sealed class JavaScriptIndex : AbstractJavaScriptIndex
+    public sealed partial class JavaScriptIndex : AbstractJavaScriptIndex
     {
         public const string NoTracking = "noTracking";
 
         public const string Load = "load";
 
         public const string CmpXchg = "cmpxchg";
-
+        
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
-            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode(), indexVersion)
+            : base(definition, configuration, modifyMappingFunctions: null, JavaScriptIndex.GetMapCode(), indexVersion)
         {
         }
 
@@ -50,292 +49,382 @@ function map(name, lambda) {
 }";
         }
 
-        protected override void OnInitializeEngine(Engine engine)
+        protected override void OnInitializeEngine()
         {
-            engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", MetadataFor)); // for backward-compatibility only
-            engine.SetValue("metadataFor", new ClrFunctionInstance(_engine, "metadataFor", MetadataFor));
-            engine.SetValue("attachmentsFor", new ClrFunctionInstance(_engine, "attachmentsFor", AttachmentsFor));
-            engine.SetValue("timeSeriesNamesFor", new ClrFunctionInstance(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
-            engine.SetValue("counterNamesFor", new ClrFunctionInstance(_engine, "counterNamesFor", CounterNamesFor));
-            engine.SetValue("loadAttachment", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachment));
-            engine.SetValue("loadAttachments", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachments));
-            engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
+            base.OnInitializeEngine();
+
+            EngineHandle.SetGlobalClrCallBack("getMetadata", (MetadataForJint, MetadataForV8)); // for backward-compatibility only
+            EngineHandle.SetGlobalClrCallBack("metadataFor", (MetadataForJint, MetadataForV8));
+            EngineHandle.SetGlobalClrCallBack("attachmentsFor", (AttachmentsForJint, AttachmentsForV8));
+            EngineHandle.SetGlobalClrCallBack("timeSeriesNamesFor", (TimeSeriesNamesForJint, TimeSeriesNamesForV8));
+            EngineHandle.SetGlobalClrCallBack("counterNamesFor", (CounterNamesForJint, CounterNamesForV8));
+            EngineHandle.SetGlobalClrCallBack("loadAttachment", (LoadAttachmentJint, LoadAttachmentV8));
+            EngineHandle.SetGlobalClrCallBack("loadAttachments", (LoadAttachmentsJint, LoadAttachmentsV8));
+            EngineHandle.SetGlobalClrCallBack("id", (GetDocumentIdJint, GetDocumentIdV8));
+
         }
 
-        protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
+        protected override void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
-            var mapsArray = definitions.GetProperty(MapsProperty).Value;
-            if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
-                ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-            var maps = mapsArray.AsArray();
-            if (maps.Length == 0)
-                ThrowIndexCreationException($"doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
-
-            collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
-            for (int i = 0; i < maps.Length; i++)
+            using (var maps = _definitions.GetProperty(MapsProperty)) 
             {
-                var mapObj = maps.Get(i.ToString());
-                if (mapObj.IsNull() || mapObj.IsUndefined() || mapObj.IsObject() == false)
-                    ThrowIndexCreationException($"map function #{i} is not a valid object");
-                var map = mapObj.AsObject();
-                if (map.HasProperty(CollectionProperty) == false)
-                    ThrowIndexCreationException($"map function #{i} is missing a collection name");
-                var mapCollectionStr = map.Get(CollectionProperty);
-                if (mapCollectionStr.IsString() == false)
-                    ThrowIndexCreationException($"map function #{i} collection name isn't a string");
-                var mapCollection = mapCollectionStr.AsString();
+                if (maps.IsNull || maps.IsUndefined || maps.IsArray == false)
+                    ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
-                if (collectionFunctions.TryGetValue(mapCollection, out var subCollectionFunctions) == false)
-                    collectionFunctions[mapCollection] = subCollectionFunctions = new Dictionary<string, List<JavaScriptMapOperation>>();
+                var mapCount = maps.ArrayLength;
+                if (mapCount == 0)
+                    ThrowIndexCreationException($"doesn't contain any map functions or '{GlobalDefinitions}.{Maps}' was modified in the script");
 
-                if (subCollectionFunctions.TryGetValue(mapCollection, out var list) == false)
-                    subCollectionFunctions[mapCollection] = list = new List<JavaScriptMapOperation>();
+                var mapsArrayForParsingJint = _definitionsForParsingJint.GetProperty(MapsProperty).Value;
+                if (mapsArrayForParsingJint.IsNull() || mapsArrayForParsingJint.IsUndefined() || mapsArrayForParsingJint.IsArray() == false)
+                    ThrowIndexCreationException($"Jint doesn't contain any map function");
 
-                if (map.HasProperty(MethodProperty) == false)
-                    ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
-                var funcInstance = map.Get(MethodProperty).As<FunctionInstance>();
-                if (funcInstance == null)
-                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
-                var operation = new JavaScriptMapOperation(_engine, resolver)
+                var mapsJint = mapsArrayForParsingJint.AsArray();
+
+                collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
+                for (int i = 0; i < mapCount; i++)
                 {
-                    MapFunc = funcInstance,
-                    IndexName = Definition.Name,
-                    MapString = mapList[i]
-                };
-                if (map.HasOwnProperty(MoreArgsProperty))
-                {
-                    var moreArgsObj = map.Get(MoreArgsProperty);
-                    if (moreArgsObj.IsArray())
+                    if (i >= mapsJint.Length)
+                        ThrowIndexCreationException($"JavaScript: Jint: maps length is less or equal then #{i}");
+                    var mapForParsingJint = mapsJint.Get(i.ToString());
+                    if (mapForParsingJint.IsUndefined())
+                        ThrowIndexCreationException($"JavaScript: Jint: map #{i} is null");
+                    var mapObjForParsingJint = mapForParsingJint.AsObject();                        
+                    if (mapObjForParsingJint == null)
+                        ThrowIndexCreationException($"JavaScript: Jint: map #{i} is not object");
+                    if (mapObjForParsingJint.HasProperty(MethodProperty) == false)
+                        ThrowIndexCreationException($"JavaScript: Jint: map function #{i} is missing its {MethodProperty} property");
+                    var funcForParsingJint = mapObjForParsingJint.Get(MethodProperty).As<FunctionInstance>();
+                    if (funcForParsingJint == null)
+                        ThrowIndexCreationException($"JavaScript: Jint: map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+
+                    using (var map = maps.GetProperty(i)) 
                     {
-                        var array = moreArgsObj.AsArray();
-                        if (array.Length > 0)
+                        if (map.IsNull || map.IsUndefined || map.IsObject == false)
+                            ThrowIndexCreationException($"map function #{i} is not a valid object");
+                        if (map.HasProperty(CollectionProperty) == false)
+                            ThrowIndexCreationException($"map function #{i} is missing a collection name");
+                        using (var mapCollectionStr = map.GetProperty(CollectionProperty))
                         {
-                            operation.MoreArguments = array;
+                            if (mapCollectionStr.IsStringEx == false)
+                                ThrowIndexCreationException($"map function #{i} collection name isn't a string");
+                            var mapCollection = mapCollectionStr.AsString;
+
+                            if (collectionFunctions.TryGetValue(mapCollection, out var subCollectionFunctions) == false)
+                                collectionFunctions[mapCollection] = subCollectionFunctions = new Dictionary<string, List<JavaScriptMapOperation>>();
+
+                            if (subCollectionFunctions.TryGetValue(mapCollection, out var list) == false)
+                                subCollectionFunctions[mapCollection] = list = new List<JavaScriptMapOperation>();
+
+                            if (map.HasProperty(MethodProperty) == false)
+                                ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
+
+                            using (var func = map.GetProperty(MethodProperty))
+                            {
+                                if (func.IsFunction == false)
+                                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a function");
+
+                                JavaScriptMapOperation operation = new JavaScriptMapOperation(this, JsIndexUtils, funcForParsingJint, func, Definition.Name, mapList[i]);
+                                if (mapObjForParsingJint != null && mapObjForParsingJint.HasOwnProperty(MoreArgsProperty))
+                                {
+                                    var moreArgsObjJint = mapObjForParsingJint.Get(MoreArgsProperty);
+                                    if (moreArgsObjJint.IsArray())
+                                    {
+                                        var arrayJint = moreArgsObjJint.AsArray();
+                                        if (arrayJint.Length > 0)
+                                        {
+                                            operation.MoreArguments = arrayJint;
+                                        }
+                                    }
+                                }
+
+                                operation.Analyze((Engine)_engineForParsing);
+                                
+                                var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
+                                if (referencedCollections.Count > 0)
+                                {
+                                    if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                                    {
+                                        collectionNames = new HashSet<CollectionName>();
+                                        ReferencedCollections.Add(mapCollection, collectionNames);
+                                    }
+
+                                    collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
+                                    collectionNames.UnionWith(referencedCollections);
+                                }
+                                
+                                if (mapReferencedCollections[i].HasCompareExchangeReferences)
+                                    CollectionsWithCompareExchangeReferences.Add(mapCollection);
+
+                                list.Add(operation);
+                            }
                         }
                     }
                 }
-
-                operation.Analyze(_engine);
-
-                var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
-                if (referencedCollections.Count > 0)
-                {
-                    if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
-                    {
-                        collectionNames = new HashSet<CollectionName>();
-                        ReferencedCollections.Add(mapCollection, collectionNames);
-                    }
-
-                    collectionNames.UnionWith(referencedCollections);
-                }
-
-                if (mapReferencedCollections[i].HasCompareExchangeReferences)
-                    CollectionsWithCompareExchangeReferences.Add(mapCollection);
-
-                list.Add(operation);
             }
-        }
-
-        private JsValue GetDocumentId(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetDocumentId(self, args);
-        }
-
-        private JsValue AttachmentsFor(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.AttachmentsFor(self, args);
-        }
-
-        private JsValue MetadataFor(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetMetadata(self, args);
-        }
-
-        private JsValue TimeSeriesNamesFor(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetTimeSeriesNamesFor(self, args);
-        }
-
-        private JsValue CounterNamesFor(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetCounterNamesFor(self, args);
-        }
-
-        private JsValue LoadAttachment(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.LoadAttachment(self, args);
-        }
-
-        private JsValue LoadAttachments(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.LoadAttachments(self, args);
         }
     }
 
-    public abstract class AbstractJavaScriptIndex : AbstractStaticIndexBase
+    public abstract partial class AbstractJavaScriptIndex : AbstractJavaScriptIndexBase
     {
-        protected const string GlobalDefinitions = "globalDefinition";
-        protected const string CollectionProperty = "collection";
-        protected const string MethodProperty = "method";
-        protected const string MoreArgsProperty = "moreArgs";
+        protected JavaScriptEngineType _jsEngineType;
+        
+        public readonly IJavaScriptUtils JsUtils;
+        public readonly JavaScriptIndexUtils JsIndexUtils;
 
-        protected const string MapsProperty = "maps";
+        protected IJavaScriptEngineForParsing _engineForParsing; // is used for maps static analysis, but not for running
+        protected ObjectInstance _definitionsForParsingJint;
 
-        private const string ReduceProperty = "reduce";
-        private const string AggregateByProperty = "aggregateBy";
-        private const string KeyProperty = "key";
-
-        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
-        {
-            Definition = definition;
-
-            var indexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
-
-            // we create the Jint instance directly instead of using SingleRun
-            // because the index is single threaded and long lived
-            var resolver = new JintPreventResolvingTasksReferenceResolver();
-            _engine = new Engine(options =>
-            {
-                options.LimitRecursion(64)
-                    .SetReferencesResolver(resolver)
-                    .MaxStatements(indexConfiguration.MaxStepsForScript)
-                    .Strict(configuration.Patching.StrictMode)
-                    .AddObjectConverter(new JintGuidConverter())
-                    .AddObjectConverter(new JintStringConverter())
-                    .AddObjectConverter(new JintEnumConverter())
-                    .AddObjectConverter(new JintDateTimeConverter())
-                    .AddObjectConverter(new JintTimeSpanConverter())
-                    .LocalTimeZone(TimeZoneInfo.Utc);
-            });
-
-            using (_engine.DisableMaxStatements())
-            {
-                var maps = GetMappingFunctions(modifyMappingFunctions);
-
-                var mapReferencedCollections = InitializeEngine(definition, maps, mapCode);
-
-                var definitions = GetDefinitions();
-
-                ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
-
-                ProcessReduce(definition, definitions, resolver, indexVersion);
-
-                ProcessFields(definition, collectionFunctions);
-            }
-
-            _javaScriptUtils = new JavaScriptUtils(null, _engine);
-        }
-
-        private List<string> GetMappingFunctions(Action<List<string>> modifyMappingFunctions)
-        {
-            if (Definition.Maps == null || Definition.Maps.Count == 0)
-                ThrowIndexCreationException("does not contain any mapping functions to process.");
-
-            var mappingFunctions = Definition.Maps.ToList();
-            ;
-            modifyMappingFunctions?.Invoke(mappingFunctions);
-
-            return mappingFunctions;
-        }
-
-        internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+        public IJsEngineHandle EngineHandle;
+        protected JsHandle _definitions;
+        private readonly long _indexVersion;
+        
+        public static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
                     return new JavaScriptIndex(definition, configuration, indexVersion);
-
                 case IndexSourceType.TimeSeries:
                     return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
-
                 case IndexSourceType.Counters:
                     return new CountersJavaScriptIndex(definition, configuration, indexVersion);
-
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 
-        private void ProcessFields(IndexDefinition definition, Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
+        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
+            : base(definition, configuration, mapCode)
         {
-            var fields = new HashSet<string>();
-            HasDynamicFields = false;
-            foreach (var (collection, vals) in collectionFunctions)
+            _jsEngineType = JsOptions.EngineType;
+
+            // we create the engine instance directly instead of using SingleRun
+            // because the index is single threaded and long lived
+            InitializeEngineSpecific();
+
+            JsUtils = JavaScriptUtilsBase.Create(null, EngineHandle);
+            JsIndexUtils = new JavaScriptIndexUtils(JsUtils, _engineForParsing);
+
+            _indexVersion = indexVersion;
+
+            InitializeEngineSpecific2();
+
+            lock (EngineHandle)
             {
-                foreach (var (subCollection, val) in vals)
+                switch (_jsEngineType)
                 {
-                    //TODO: Validation of matches fields between group by / collections / etc
-                    foreach (var operation in val)
+                    case JavaScriptEngineType.Jint:
+                        InitializeLockedJint();
+                        break;
+                    case JavaScriptEngineType.V8:
+                        InitializeLockedV8();
+                        break;
+                    default:
+                        throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
+                }
+
+                using (EngineHandle.DisableConstraints())
+                using (_engineForParsing.DisableConstraints())
+                {
+                    var maps = GetMappingFunctions(modifyMappingFunctions);
+
+                    var mapReferencedCollections = InitializeEngine(maps);
+
+                    _definitionsForParsingJint = GetDefinitionsForParsing();
+                    _definitions = GetDefinitions();
+
+                    ProcessMaps(maps, mapReferencedCollections, out var collectionFunctions);
+
+                    ProcessReduce();
+
+                    ProcessFields(collectionFunctions);
+                }
+            }
+        }
+
+        ~AbstractJavaScriptIndex()
+        {
+            _definitions.Dispose();
+            
+            switch (_jsEngineType)
+            {
+                case JavaScriptEngineType.Jint:
+                    DisposeJint();
+                    break;
+                case JavaScriptEngineType.V8:
+                    DisposeV8();
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
+            }
+        }
+
+        protected void InitializeEngineSpecific()
+        {
+            switch (_jsEngineType)
+            {
+                case JavaScriptEngineType.Jint:
+                    InitializeJint();
+                    break;
+                case JavaScriptEngineType.V8:
+                    InitializeV8();
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
+            }
+        }
+
+        protected void InitializeEngineSpecific2()
+        {
+            switch (_jsEngineType)
+            {
+                case JavaScriptEngineType.Jint:
+                    InitializeJint2();
+                    break;
+                case JavaScriptEngineType.V8:
+                    InitializeV82();
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
+            }
+        }
+
+        private void ProcessReduce()
+        {
+            using (var reduceObj = _definitions.GetProperty(ReduceProperty)) 
+            {
+                if (!reduceObj.IsUndefined && reduceObj.IsObject)
+                {
+                    var reduceObjForParsingJint = _definitionsForParsingJint.GetProperty(ReduceProperty)?.Value;
+                    if (reduceObjForParsingJint != null && reduceObjForParsingJint.IsObject())
                     {
-                        AddMapInternal(collection, subCollection, (IndexingFunc)operation.IndexingFunction);
-
-                        HasDynamicFields |= operation.HasDynamicReturns;
-                        HasBoostedFields |= operation.HasBoostedFields;
-
-                        fields.UnionWith(operation.Fields);
-                        foreach (var (k, v) in operation.FieldOptions)
+                        var reduceAsObjForParsingJint = reduceObjForParsingJint?.AsObject();
+                        var groupByKeyForParsingJint = reduceAsObjForParsingJint?.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                        if (groupByKeyForParsingJint == null)
                         {
-                            Definition.Fields.Add(k, v);
+                            throw new ArgumentException("Failed to get reduce key object");
                         }
+
+                        using (var groupByKey = reduceObj.GetProperty(KeyProperty))
+                        using (var reduce = reduceObj.GetProperty(AggregateByProperty))
+                            ReduceOperation = new JavaScriptReduceOperation(this, JsIndexUtils, groupByKeyForParsingJint, _engineForParsing, reduce, groupByKey, _indexVersion) { ReduceString = Definition.Reduce };
+                        GroupByFields = ReduceOperation.GetReduceFieldsNames();
+                        Reduce = ReduceOperation.IndexingFunction;
                     }
+                    else
+                        throw new ArgumentException("Failed to get the reduce object: ");
                 }
             }
+        }
 
-            if (definition.Fields != null)
+        protected abstract void ProcessMaps(List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions);
+
+        protected virtual void OnInitializeEngine()
+        {
+            var loadFunc = EngineHandle.CreateClrCallBack(JavaScriptIndex.Load, (LoadDocumentJint, LoadDocumentV8));
+
+            var noTrackingObject = EngineHandle.CreateObject();
+            noTrackingObject.FastAddProperty(JavaScriptIndex.Load, loadFunc.Clone(), false, false, false);
+            EngineHandle.SetGlobalProperty(JavaScriptIndex.NoTracking, noTrackingObject);
+
+            EngineHandle.SetGlobalProperty(JavaScriptIndex.Load, loadFunc);
+            EngineHandle.SetGlobalClrCallBack(JavaScriptIndex.CmpXchg, (LoadCompareExchangeValueJint, LoadCompareExchangeValueV8));
+            EngineHandle.SetGlobalClrCallBack("tryConvertToNumber", (TryConvertToNumberJint, TryConvertToNumberV8));
+            EngineHandle.SetGlobalClrCallBack("recurse", (RecurseJint, RecurseV8));
+        }
+
+        private List<MapMetadata> InitializeEngine(List<string> maps)
+        {
+            OnInitializeEngine();
+
+            EngineHandle.ExecuteWithReset(Code, "Code");
+            EngineHandle.ExecuteWithReset(MapCode, "MapCode");
+
+            if (_jsEngineType == JavaScriptEngineType.V8)
             {
-                foreach (var item in definition.Fields)
+                _engineForParsing.ExecuteWithReset(Code);
+                _engineForParsing.ExecuteWithReset(MapCode);
+            }
+
+            var sb = new StringBuilder();
+            if (Definition.AdditionalSources != null)
+            {
+                foreach (var kvpScript in Definition.AdditionalSources)
                 {
-                    if (string.Equals(item.Key, Constants.Documents.Indexing.Fields.AllFields))
-                        continue;
-
-                    fields.Add(item.Key);
+                    var script = kvpScript.Value;
+                    EngineHandle.ExecuteWithReset(script, $"./{Definition.Name}/additionalSource/{kvpScript.Key}");
+                    if (_jsEngineType == JavaScriptEngineType.V8)
+                        _engineForParsing.ExecuteWithReset(script);
+                    sb.Append(Environment.NewLine);
+                    sb.AppendLine(script);
                 }
             }
 
-            OutputFields = fields.ToArray();
-        }
-
-        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
-        {
-            var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
-            if (reduceObj != null && reduceObj.IsObject())
+            var additionalSources = sb.ToString();
+            var mapReferencedCollections = new List<MapMetadata>();
+            foreach (var map in maps)
             {
-                var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver, indexVersion) { ReduceString = definition.Reduce };
-                GroupByFields = ReduceOperation.GetReduceFieldsNames();
-                Reduce = ReduceOperation.IndexingFunction;
+                EngineHandle.ExecuteWithReset(map, "map");
+                if (_jsEngineType == JavaScriptEngineType.V8)
+                    _engineForParsing.ExecuteWithReset(map);
+                var result = CollectReferencedCollections(map, additionalSources);
+                mapReferencedCollections.Add(result);
             }
+
+            if (Definition.Reduce != null)
+            {
+                EngineHandle.ExecuteWithReset(Definition.Reduce, "reduce");
+                if (_jsEngineType == JavaScriptEngineType.V8)
+                    _engineForParsing.ExecuteWithReset(Definition.Reduce);
+            }
+
+            return mapReferencedCollections;
         }
 
-        protected abstract void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions);
-
-        private ObjectInstance GetDefinitions()
+        private MapMetadata CollectReferencedCollections(string code, string additionalSources)
         {
-            var definitionsObj = _engine.GetValue(GlobalDefinitions);
+            var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
+            var program = javascriptParser.ParseScript();
+            var loadVisitor = new EsprimaReferencedCollectionVisitor();
+            if (string.IsNullOrEmpty(additionalSources) == false)
+            {
+                try
+                {
+                    loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
+                }
+                catch {}
+            }
+
+            try
+            {
+                loadVisitor.Visit(program);
+            }
+            catch {}
+
+            return new MapMetadata
+            {
+                ReferencedCollections = loadVisitor.ReferencedCollection,
+                HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
+            };
+        }
+
+        private JsHandle GetDefinitions()
+        {
+            var definitions = EngineHandle.GetGlobalProperty(GlobalDefinitions);
+
+            if (definitions.IsNull || definitions.IsUndefined || definitions.IsObject == false)
+                ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");
+
+            if (definitions.GetProperty(MapsProperty).IsUndefined)
+                ThrowIndexCreationException($"is missing its '{MapsProperty}' property, are you modifying it in your script?");
+
+            return definitions;
+        }
+
+        private ObjectInstance GetDefinitionsForParsing()
+        {
+            var definitionsObj = _engineForParsing.GetGlobalProperty(GlobalDefinitions).Jint.Item;
 
             if (definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
                 ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");
@@ -345,267 +434,6 @@ function map(name, lambda) {
                 ThrowIndexCreationException("is missing its 'globalDefinition.maps' property, are you modifying it in your script?");
 
             return definitions;
-        }
-
-        private static readonly ParserOptions DefaultParserOptions = new ParserOptions();
-
-        private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
-        {
-            var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
-            var program = javascriptParser.ParseScript();
-            _engine.ExecuteWithReset(program);
-            var loadVisitor = new EsprimaReferencedCollectionVisitor();
-            if (string.IsNullOrEmpty(additionalSources) == false)
-                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
-
-            loadVisitor.Visit(program);
-            return new MapMetadata
-            {
-                ReferencedCollections = loadVisitor.ReferencedCollection,
-                HasCompareExchangeReferences = loadVisitor.HasCompareExchangeReferences
-            };
-        }
-
-        protected abstract void OnInitializeEngine(Engine engine);
-
-        private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
-        {
-            OnInitializeEngine(_engine);
-
-            var loadFunc = new ClrFunctionInstance(_engine, JavaScriptIndex.Load, LoadDocument);
-
-            ObjectInstance noTrackingObject = new ObjectInstance(_engine);
-            noTrackingObject.FastAddProperty(JavaScriptIndex.Load, loadFunc, false, false, false);
-            _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
-
-            _engine.SetValue(JavaScriptIndex.Load, loadFunc);
-            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunctionInstance(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
-            _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
-            _engine.SetValue("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
-
-            _engine.ExecuteWithReset(Code);
-            _engine.ExecuteWithReset(mapCode);
-
-            var sb = new StringBuilder();
-            if (definition.AdditionalSources != null)
-            {
-                foreach (var script in definition.AdditionalSources.Values)
-                {
-                    _engine.ExecuteWithReset(script);
-
-                    sb.Append(Environment.NewLine);
-                    sb.AppendLine(script);
-                }
-            }
-
-            var mapReferencedCollections = new List<MapMetadata>();
-            var additionalSources = sb.ToString();
-            foreach (var map in maps)
-            {
-                var result = ExecuteCodeAndCollectReferencedCollections(map, additionalSources);
-                mapReferencedCollections.Add(result);
-            }
-
-            if (definition.Reduce != null)
-            {
-                _engine.ExecuteWithReset(definition.Reduce);
-            }
-
-            return mapReferencedCollections;
-        }
-
-        protected void ThrowIndexCreationException(string message)
-        {
-            throw new IndexCreationException($"JavaScript index {Definition.Name} {message}");
-        }
-
-        private JsValue Recurse(JsValue self, JsValue[] args)
-        {
-            if (args.Length != 2)
-            {
-                throw new ArgumentException("The recurse(item, func) method expects two arguments, but got: " + args.Length);
-            }
-
-            var item = args[0];
-            var func = args[1] as ScriptFunctionInstance;
-
-            if (func == null)
-                throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");
-
-            return new RecursiveJsFunction(_engine, item, func).Execute();
-        }
-
-        private JsValue TryConvertToNumber(JsValue self, JsValue[] args)
-        {
-            if (args.Length != 1)
-            {
-                throw new ArgumentException("The tryConvertToNumber(value) method expects one argument, but got: " + args.Length);
-            }
-
-            var value = args[0];
-
-            if (value.IsNull() || value.IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (value.IsNumber())
-                return value;
-
-            if (value.IsString())
-            {
-                var valueAsString = value.AsString();
-                if (double.TryParse(valueAsString, out var valueAsDbl))
-                    return valueAsDbl;
-            }
-
-            return DynamicJsNull.ImplicitNull;
-        }
-
-        private JsValue LoadDocument(JsValue self, JsValue[] args)
-        {
-            if (args.Length != 2)
-            {
-                throw new ArgumentException("The load(id, collection) method expects two arguments, but got: " + args.Length);
-            }
-
-            if (args[0].IsNull() || args[0].IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (args[0].IsString() == false ||
-                args[1].IsString() == false)
-            {
-                throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
-            }
-
-            object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString(), args[1].AsString());
-            if (JavaScriptIndexUtils.GetValue(_engine, doc, out var item))
-                return item;
-
-            return DynamicJsNull.ImplicitNull;
-        }
-
-        private JsValue LoadCompareExchangeValue(JsValue self, JsValue[] args)
-        {
-            if (args.Length != 1)
-                throw new ArgumentException("The cmpxchg(key) method expects one argument, but got: " + args.Length);
-
-            var keyArgument = args[0];
-            if (keyArgument.IsNull() || keyArgument.IsUndefined())
-                return DynamicJsNull.ImplicitNull;
-
-            if (keyArgument.IsString())
-            {
-                object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, keyArgument.AsString());
-                return ConvertToJsValue(value);
-            }
-            else if (keyArgument.IsArray())
-            {
-                var keys = keyArgument.AsArray();
-                if (keys.Length == 0)
-                    return DynamicJsNull.ImplicitNull;
-
-                var values = _engine.Array.Construct(keys.Length);
-                var arrayArgs = new JsValue[1];
-                for (uint i = 0; i < keys.Length; i++)
-                {
-                    var key = keys[i];
-                    if (key.IsString() == false)
-                        ThrowInvalidType(key, Types.String);
-
-                    object value = CurrentIndexingScope.Current.LoadCompareExchangeValue(null, key.AsString());
-                    arrayArgs[0] = ConvertToJsValue(value);
-
-                    _engine.Array.PrototypeObject.Push(values, args);
-                }
-
-                return values;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Argument '{keyArgument}' was of type '{keyArgument.Type}', but either string or array of strings was expected.");
-            }
-
-            JsValue ConvertToJsValue(object value)
-            {
-                switch (value)
-                {
-                    case null:
-                        return DynamicJsNull.ImplicitNull;
-
-                    case DynamicNullObject dno:
-                        return dno.IsExplicitNull ? DynamicJsNull.ExplicitNull : DynamicJsNull.ImplicitNull;
-
-                    case DynamicBlittableJson dbj:
-                        return new BlittableObjectInstance(_engine, null, dbj.BlittableJson, id: null, lastModified: null, changeVector: null);
-
-                    default:
-                        return _javaScriptUtils.TranslateToJs(_engine, context: null, value);
-                }
-            }
-
-            static void ThrowInvalidType(JsValue value, Types expectedType)
-            {
-                throw new InvalidOperationException($"Argument '{value}' was of type '{value.Type}', but '{expectedType}' was expected.");
-            }
-        }
-
-        private const string Code = @"
-var globalDefinition =
-{
-    maps: [],
-    reduce: null
-}
-
-function groupBy(lambda) {
-    var reduce = globalDefinition.reduce = { };
-    reduce.key = lambda;
-
-    reduce.aggregate = function(reduceFunction){
-        reduce.aggregateBy = reduceFunction;
-    }
-    return reduce;
-}
-
-// createSpatialField(wkt: string)
-// createSpatialField(lat: number, lng: number)
-
-function createSpatialField() {
-    if(arguments.length == 1) {
-        return { $spatial: arguments[0] }
-}
-
-    return { $spatial: {Lng: arguments[1], Lat: arguments[0]} }
-}
-
-function createField(name, value, options) {
-    return { $name: name, $value: value, $options: options }
-}
-
-function boost(value, boost) {
-    return { $value: value, $boost: boost }
-}
-";
-
-        protected readonly IndexDefinition Definition;
-        internal readonly Engine _engine;
-        protected readonly JavaScriptUtils _javaScriptUtils;
-
-        public JavaScriptReduceOperation ReduceOperation { get; private set; }
-
-        public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
-        {
-            ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
-        }
-
-        public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
-        {
-            ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
-        }
-
-        protected class MapMetadata
-        {
-            public HashSet<CollectionName> ReferencedCollections;
-
-            public bool HasCompareExchangeReferences;
         }
     }
 }

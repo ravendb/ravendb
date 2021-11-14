@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,10 +14,11 @@ namespace SlowTests.MailingList.Rusty
         {
         }
 
-        [Fact]
-        public void Projection_Returns_Null_For_Nested_Property()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_Returns_Null_For_Nested_Property(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -46,10 +46,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = from o in session.Query<Order>()
-	                            let employee = RavenQuery.Load<Employee>(o.Employee)
-	                            select employee;
+                                let employee = RavenQuery.Load<Employee>(o.Employee)
+                                select employee;
 
-                    Assert.Equal("from 'Orders' as o load o.Employee as employee select employee", query.ToString());
+                    Assert.Equal("from 'Orders' as o load o?.Employee as employee select employee", query.ToString());
 
                     List<Employee> employees = query.ToList();
 
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                                 let employee = RavenQuery.Load<Employee>(o.Employee)
                                 select employee.FirstName;
 
-                    Assert.Equal("from 'Orders' as o load o.Employee as employee select employee.FirstName", query.ToString());
+                    Assert.Equal("from 'Orders' as o load o?.Employee as employee select employee.FirstName", query.ToString());
 
                     var employees = query.ToList();
 
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
                                 let company = RavenQuery.Load<Employee>(o.Company)
                                 select employee.FirstName;
 
-                    Assert.Equal("from 'Orders' as o load o.Employee as employee, o.Company as company select employee.FirstName", query.ToString());
+                    Assert.Equal("from 'Orders' as o load o?.Employee as employee, o?.Company as company select employee.FirstName", query.ToString());
 
                     var employees = query.ToList();
 
@@ -178,7 +178,7 @@ namespace SlowTests.Issues
                                 let employee = RavenQuery.Load<Employee>(o.Employee)
                                 select employee.Address.Country;
 
-                    Assert.Equal("from 'Orders' as o load o.Employee as employee select employee.Address.Country", query.ToString());
+                    Assert.Equal("from 'Orders' as o load o?.Employee as employee select employee.Address.Country", query.ToString());
                     var employeesCountry = query.ToList();
 
                     Assert.Equal(1, employeesCountry.Count);
@@ -216,7 +216,7 @@ namespace SlowTests.Issues
                                 let employee = RavenQuery.Load<Employee>(o.Employee)
                                 select o.ShipTo.Country;
 
-                    Assert.Equal("from 'Orders' as o load o.Employee as employee select o.ShipTo.Country", query.ToString());
+                    Assert.Equal("from 'Orders' as o load o?.Employee as employee select o.ShipTo.Country", query.ToString());
                     var shipToCountries = query.ToList();
 
                     Assert.Equal(1, shipToCountries.Count);

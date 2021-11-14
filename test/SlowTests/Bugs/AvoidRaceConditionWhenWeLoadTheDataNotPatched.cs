@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void GetReturnsFilteredResults()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void GetReturnsFilteredResults(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var users = new[]
                 {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -22,33 +23,38 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        private string ScriptWithNoIdMethodUsage => @"
-var orderData = {
-    OrderLinesCount: this.OrderLines.length,
-    TotalCost: 0
-};
+        private string ScriptWithNoIdMethodUsage(string jsEngineType)
+        {
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            return @$"
+var orderData = {{
+OrderLinesCount: this.OrderLines{optChaining}.length,
+TotalCost: 0
+}};
 
-for (var i = 0; i < this.Lines.length; i++) {
-    var line = this.Lines[i];
-    var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
-    orderData.TotalCost += cost;
-    loadTo" + OrderLinesIndexName + @"({
-        Qty: line.Quantity,
-        Product: line.Product,
-        Cost: cost
-    });
-}
+for (var i = 0; i < this.Lines{optChaining}.length; i++) {{
+var line = this.Lines[i];
+var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
+orderData.TotalCost += cost;
+loadTo" + OrderLinesIndexName + @$"({{
+    Qty: line.Quantity,
+    Product: line.Product,
+    Cost: cost
+}});
+}}
 
 loadTo" + OrdersIndexName + @"(orderData);
 ";
+        }
 
-        [RequiresElasticSearchFact]
-        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
-                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, DefaultIndexes, new List<string> { "Orders" });
+                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage(jsEngineType), DefaultIndexes, new List<string> { "Orders" });
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -98,10 +104,11 @@ loadTo" + OrdersIndexName + @"(orderData);
             }
         }
 
-        [Fact]
-        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -142,7 +149,7 @@ loadTo" + OrdersIndexName + @"(orderData);
                                        },
                                        Transforms =
                                        {
-                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage }
+                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage(jsEngineType) }
                                        }
                                    }
                                }, database, database.ServerStore, context, out var testResult))

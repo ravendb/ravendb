@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Verifications
         /// The only thing i could not recreate here is the fact that the revisions is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
-        [Fact]
-        public void CreateDataAndQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CreateDataAndQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Client;
+using FastTests.Server.JavaScript;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -31,14 +32,15 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private readonly string _azureTestsPrefix = $"olap/tests/{nameof(AzureTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
-        [AzureFact]
-        public async Task CanUploadToAzure()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanUploadToAzure(string jsEngineType)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -106,14 +108,15 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AzureFact]
-        public async Task SimpleTransformation()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation(string jsEngineType)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -213,15 +216,16 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [AzureFact]
-        public async Task CanLoadToMultipleTables()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanLoadToMultipleTables(string jsEngineType)
         {
             const string salesTableName = "Sales";
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -395,14 +399,15 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        [AzureFact]
-        public async Task CanModifyPartitionColumnName()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyPartitionColumnName(string jsEngineType)
         {
             var settings = GetAzureSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     const string partitionColumn = "order_date";
 
@@ -490,13 +495,14 @@ loadToOrders(partitionBy(['order_date', key]),
             }
         }
 
-        [AzureFact]
-        public async Task SimpleTransformation_NoPartition()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_NoPartition(string jsEngineType)
         {
             var settings = GetAzureSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
 
@@ -521,7 +527,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });
@@ -599,15 +605,16 @@ loadToOrders(noPartition(),
             }
         }
 
-        [AzureFact]
-        public async Task SimpleTransformation_MultiplePartitions()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_MultiplePartitions(string jsEngineType)
         {
             var settings = GetAzureSettings();
             var prefix = $"{settings.RemoteFolderName}/{CollectionName}/";
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
 
@@ -736,13 +743,14 @@ loadToOrders(partitionBy(
             }
         }
 
-        [AzureFact]
-        public async Task CanUseCustomPrefix()
+        [AzureTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanUseCustomPrefix(string jsEngineType)
         {
             var settings = GetAzureSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 

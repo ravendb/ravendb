@@ -189,8 +189,39 @@ namespace Raven.Server.Documents.Queries.Parser
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
+            var posOrig = _pos;
+            var colOrig = Column;
+
+            if (match == '.' || match == '[')
+            {
+                if ((_q[_pos] != '?') == false)
+                {
+                    _pos++;
+                    Column++;
+                    
+                    if (match == '[')
+                    {
+                        if ((_q[_pos] != '.') == false)
+                        {
+                            _pos++;
+                            Column++;
+                        }
+                        else
+                        {
+                            _pos = posOrig;
+                            Column = colOrig;
+                        }
+                    }
+                }
+            }
+
             if (_q[_pos] != match)
+            {
+                _pos = posOrig;
+                Column = colOrig;
                 return false;
+            }
+
             _pos++;
             Column++;
             return true;

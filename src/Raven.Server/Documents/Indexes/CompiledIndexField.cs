@@ -4,7 +4,7 @@ using System.Text;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Server.Platform.Posix;
+using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Documents.Indexes
 {

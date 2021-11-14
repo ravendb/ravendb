@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -358,10 +359,11 @@ select out(u)
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_UsingJsFunctionAsArgumentOfTimeSeriesFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_UsingJsFunctionAsArgumentOfTimeSeriesFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1129,10 +1131,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_RawQuery_UsingJsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_RawQuery_UsingJsProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 
@@ -1206,10 +1209,11 @@ select out()
             }
         }
 
-        [Fact]
-        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingJsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_UsingJsProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
 

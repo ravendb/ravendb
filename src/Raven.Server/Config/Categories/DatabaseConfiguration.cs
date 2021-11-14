@@ -1,3 +1,4 @@
+#nullable enable
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;

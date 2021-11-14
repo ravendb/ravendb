@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Tests.Infrastructure;
@@ -16,10 +17,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        [RequiresElasticSearchFact]
-        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 client.Indices.Create(OrdersIndexName, c => c
@@ -28,12 +30,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             .MatchOnlyText(t => t
                                 .Name("Id")))));
 
-                var config = SetupElasticEtl(store, @"
-var orderData = {
+                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+                var config = SetupElasticEtl(store, @$"
+var orderData = {{
     Id: id(this),
-    OrderLinesCount: this.Lines.length,
+    OrderLinesCount: this.Lines{optChaining}.length{zeroIfNull},
     TotalCost: 0
-};
+}};
 
 loadTo" + OrdersIndexName + @"(orderData);", 
                     new []{ new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" } },

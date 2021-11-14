@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,10 +30,11 @@ namespace SlowTests.Issues
             public string String { get; set; }
         }
 
-        [Fact]
-        public void CanPatchWithByteProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithByteProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -68,10 +70,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithShortProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithShortProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -107,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithIntProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithIntProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -146,10 +150,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithUIntProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithUIntProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -184,10 +189,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithLongProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithLongProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -223,10 +229,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithULongProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithULongProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -262,13 +269,14 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithGuidProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithGuidProperty(string jsEngineType)
         {
             byte[] bytes = {0, 1, 2, 3, 4, 5, 6, 7,8, 9, 10, 11, 12, 13, 14, 15};
             Guid guid = new Guid(bytes);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -308,10 +316,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithDecimalProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithDecimalProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -347,10 +356,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithFloatProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithFloatProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -386,10 +396,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithDoubleProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithDoubleProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -425,10 +436,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithBoolProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithBoolProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -464,10 +476,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPatchWithStringProperty()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithStringProperty(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

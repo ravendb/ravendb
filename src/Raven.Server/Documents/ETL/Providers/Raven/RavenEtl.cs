@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private string _recentUrl;
         public string Url => _recentUrl;
 
-        private readonly RavenEtlDocumentTransformer.ScriptInput _script;
+        private readonly ScriptInput _script;
 
         public RavenEtl(Transformation transformation, RavenEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, RavenEtlTag)
         {
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 _serverStore.Server.ServerCertificateChanged += OnServerCertificateChanged;
             }
 
-            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
+            _script = new ScriptInput(transformation);
         }
 
         public override EtlType EtlType => EtlType.Raven;
@@ -219,14 +219,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public override void Dispose()
         {
-            base.Dispose();
-
             if (_configuration.TestMode == false)
             {
                 _serverStore.Server.ServerCertificateChanged -= OnServerCertificateChanged;
 
                 _requestExecutor?.Dispose();
             }
+
+            base.Dispose();
         }
     }
 }

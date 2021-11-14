@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,11 +17,12 @@ namespace SlowTests.Issues
             public string Value { get; set; }
         }
 
-        [Fact]
-        public async Task CanIncrementOnNull()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanIncrementOnNull(string jsEngineType)
         {
             var id = "data";
-            using (var ds = GetDocumentStore())
+            using (var ds = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = ds.OpenAsyncSession())
                 {

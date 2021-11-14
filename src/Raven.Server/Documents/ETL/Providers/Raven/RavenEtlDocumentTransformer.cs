@@ -2,15 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
-using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
@@ -27,14 +22,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
-    public class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
+    public partial class RavenEtlDocumentTransformer : EtlTransformer<RavenEtlItem, ICommandData, EtlStatsScope, EtlPerformanceOperation>
     {
+        private RavenEtlScriptRun _currentRun;
+
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private PropertyDescriptor _addAttachmentMethod;
-        private PropertyDescriptor _addCounterMethod;
-        private PropertyDescriptor _addTimeSeriesMethod;
-        private RavenEtlScriptRun _currentRun;
+        private JsHandle _addAttachmentMethod;
+        private JsHandle _addCounterMethod;
+        private JsHandle _addTimeSeriesMethod;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation, script.BehaviorFunctions)
@@ -45,6 +41,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             LoadToDestinations = _script.LoadToCollections;
         }
 
+        public override void Dispose()
+        {
+            _currentRun.Dispose(); 
+            _addAttachmentMethod.Dispose();
+            _addCounterMethod.Dispose();
+            _addTimeSeriesMethod.Dispose();
+            
+            base.Dispose();
+        }
+
         public override void Initialize(bool debugMode)
         {
             base.Initialize(debugMode);
@@ -53,18 +59,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             if (_transformation.IsAddingAttachments)
-                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
+            {
+                _addAttachmentMethod = DocumentEngineHandle.CreateClrCallBack("addAttachment", (AddAttachmentJint, AddAttachmentV8), true);
+                _addAttachmentMethod.ThrowOnError();
+            }
 
             if (_transformation.Counters.IsAddingCounters)
             {
                 const string addCounter = Transformation.CountersTransformation.Add;
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter), null, null, null);
+                _addCounterMethod = DocumentEngineHandle.CreateClrCallBack(addCounter, (AddCounterJint, AddCounterV8), true);
+                _addCounterMethod.ThrowOnError();
             }
 
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
                 const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
-                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries), null, null, null);
+                _addTimeSeriesMethod = DocumentEngineHandle.CreateClrCallBack(addTimeSeries, (AddTimeSeriesJint, AddTimeSeriesV8), true);
+                _addTimeSeriesMethod.ThrowOnError();
             }
         }
 
@@ -88,16 +99,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 loadedToDifferentCollection = true;
             }
 
-            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
+            var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key).Handler;
 
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
-                metadata.Set(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
+                metadata.SetProperty(Constants.Documents.Metadata.Collection, DocumentEngineHandle.CreateValue(collectionName), throwOnError: true);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Attachments);
+                metadata.DeleteProperty(Constants.Documents.Metadata.Attachments, throwOnError: true);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Counters))
-                metadata.DeletePropertyOrThrow(Constants.Documents.Metadata.Counters);
+                metadata.DeleteProperty(Constants.Documents.Metadata.Counters, throwOnError: true);
 
             var transformed = document.TranslateToObject(Context);
 
@@ -107,122 +118,24 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.IsAddingAttachments)
             {
-                var docInstance = (ObjectInstance)document.Instance;
+                var docInstance = document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.AddAttachment, _addAttachmentMethod);
+                docInstance.SetProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
             }
 
             if (_transformation.Counters.IsAddingCounters)
             {
-                var docInstance = (ObjectInstance)document.Instance;
+                var docInstance = document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.CountersTransformation.Add, _addCounterMethod);
+                docInstance.SetProperty(Transformation.CountersTransformation.Add, _addCounterMethod, throwOnError: true);
             }
             
             if (_transformation.TimeSeries.IsAddingTimeSeries)
             {
-                var docInstance = (ObjectInstance)document.Instance;
+                var docInstance = document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
+                docInstance.SetProperty(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod, throwOnError: true);
             }
-        }
-
-        private JsValue AddAttachment(JsValue self, JsValue[] args)
-        {
-            JsValue attachmentReference = null;
-            string name = null; // will preserve original name
-
-            switch (args.Length)
-            {
-                case 2:
-                    if (args[0].IsString() == false)
-                        ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
-
-                    name = args[0].AsString();
-                    attachmentReference = args[1];
-                    break;
-                case 1:
-                    attachmentReference = args[0];
-                    break;
-                default:
-                    ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
-                    break;
-            }
-
-            if (attachmentReference.IsNull())
-                return self;
-
-            if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
-            {
-                var message =
-                    $"{Transformation.AddAttachment}() method expects to get the reference to an attachment while it got argument of '{attachmentReference.Type}' type";
-
-                if (attachmentReference.IsString())
-                    message += $" (value: '{attachmentReference.AsString()}')";
-
-                ThrowInvalidScriptMethodCall(message);
-            }
-
-            _currentRun.AddAttachment(self, name, attachmentReference);
-
-            return self;
-        }
-
-        private JsValue AddCounter(JsValue self, JsValue[] args)
-        {
-            if (args.Length != 1)
-                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
-
-            var counterReference = args[0];
-
-            if (counterReference.IsNull())
-                return self;
-
-            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CountersTransformation.Marker) == false)
-            {
-                var message =
-                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
-
-                if (counterReference.IsString())
-                    message += $" (value: '{counterReference.AsString()}')";
-
-                ThrowInvalidScriptMethodCall(message);
-            }
-
-            _currentRun.AddCounter(self, counterReference);
-
-            return self;
-        }
-        
-        private JsValue AddTimeSeries(JsValue self, JsValue[] args)
-        {
-            if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
-            {
-                ThrowInvalidScriptMethodCall(
-                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have {Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount} arguments. " +
-                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
-            }
-
-            var timeSeriesReference = args[0];
-
-            if (timeSeriesReference.IsNull())
-                return self;
-
-            if (timeSeriesReference.IsString() == false || timeSeriesReference.AsString().StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
-            {
-                var message =
-                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.Type}' type";
-
-                if (timeSeriesReference.IsString())
-                    message += $" (value: '{timeSeriesReference.AsString()}')";
-
-                message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
-                ThrowInvalidScriptMethodCall(message);
-            }
-
-            _currentRun.AddTimeSeries(self, timeSeriesReference);
-
-            return self;
         }
 
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
@@ -551,7 +464,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To)? toLoad)
         {
             toLoad = null;
-            using (var scriptRunnerResult = BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
+            using (var scriptRunnerResult = (ScriptRunnerResult)BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
             {
                 if (scriptRunnerResult.BooleanValue != null)
                 {
@@ -562,27 +475,26 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     return true;
                 }
-                else if (scriptRunnerResult.Instance.IsObject() == false)
+                else if (!scriptRunnerResult.Instance.IsObject)
                 {
                     throw new InvalidOperationException($"Return type of `{function}` function should be a boolean or object. docId({docId}), timeSeriesName({timeSeriesName})");
                 }
                 else
                 {
                     var toLoadLocal = (From: DateTime.MinValue, To: DateTime.MaxValue);
-                    foreach ((JsValue jsValue, PropertyDescriptor propertyDescriptor) in scriptRunnerResult.Instance.AsObject().GetOwnProperties())
+                    foreach ((string key, JsHandle property) in scriptRunnerResult.Instance.GetOwnProperties())
                     {
-                        var key = jsValue.AsString();
                         if (key.Equals("from", StringComparison.OrdinalIgnoreCase))
                         {
                             if (toLoadLocal.From != DateTime.MinValue)
                                 throw new InvalidOperationException($"Duplicate of property `From`/`from`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
-                            toLoadLocal.From = propertyDescriptor.Value.AsDate().ToDateTime();
+                            toLoadLocal.From = property.AsDate;
                         }
                         else if (key.Equals("to", StringComparison.OrdinalIgnoreCase))
                         {
                             if (toLoadLocal.To != DateTime.MaxValue)
                                 throw new InvalidOperationException($"Duplicate of property `To`/`to`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
-                            toLoadLocal.To = propertyDescriptor.Value.AsDate().ToDateTime();
+                            toLoadLocal.To = property.AsDate;
                         }
                         else
                         {
@@ -740,21 +652,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return Database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(Context, item.DocumentId);
         }
 
-        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
-        {
-            _currentRun.LoadAttachment(reference, attachment);
-        }
-
-        protected override void AddLoadedCounter(JsValue reference, string name, long value)
-        {
-            _currentRun.LoadCounter(reference, name, value);
-        }
-        
-        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
-        {
-            _currentRun.LoadTimeSeries(reference, name, entries);
-        }
-
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
@@ -817,131 +714,5 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
         }
-
-        public class ScriptInput
-        {
-            private readonly Dictionary<string, Dictionary<string, bool>> _collectionNameComparisons;
-
-            public readonly string[] LoadToCollections = new string[0];
-
-            public readonly PatchRequest Transformation;
-
-            public readonly PatchRequest BehaviorFunctions;
-
-            public readonly HashSet<string> DefaultCollections;
-
-            public readonly Dictionary<string, string> IdPrefixForCollection = new Dictionary<string, string>();
-
-            private readonly Dictionary<string, string> _collectionToLoadCounterBehaviorFunction;
-            
-            private readonly Dictionary<string, string> _collectionToLoadTimeSeriesBehaviorFunction;
-
-            private readonly Dictionary<string, string> _collectionToDeleteDocumentBehaviorFunction;
-
-            public bool HasTransformation => Transformation != null;
-
-            public bool HasLoadCounterBehaviors => _collectionToLoadCounterBehaviorFunction != null;
-            
-            public bool HasLoadTimeSeriesBehaviors => _collectionToLoadTimeSeriesBehaviorFunction != null;
-
-            public bool HasDeleteDocumentsBehaviors => _collectionToDeleteDocumentBehaviorFunction != null;
-
-            public ScriptInput(Transformation transformation)
-            {
-                DefaultCollections = new HashSet<string>(transformation.Collections, StringComparer.OrdinalIgnoreCase);
-
-                if (string.IsNullOrWhiteSpace(transformation.Script))
-                    return;
-
-                if (transformation.IsEmptyScript == false)
-                    Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
-
-                if (transformation.Counters.CollectionToLoadBehaviorFunction != null)
-                    _collectionToLoadCounterBehaviorFunction = transformation.Counters.CollectionToLoadBehaviorFunction;
-
-                if (transformation.TimeSeries.CollectionToLoadBehaviorFunction != null)
-                    _collectionToLoadTimeSeriesBehaviorFunction = transformation.TimeSeries.CollectionToLoadBehaviorFunction;
-
-                if (transformation.CollectionToDeleteDocumentsBehaviorFunction != null)
-                    _collectionToDeleteDocumentBehaviorFunction = transformation.CollectionToDeleteDocumentsBehaviorFunction;
-
-                if (HasLoadCounterBehaviors || HasDeleteDocumentsBehaviors || HasLoadTimeSeriesBehaviors)
-                    BehaviorFunctions = new PatchRequest(transformation.Script, PatchRequestType.EtlBehaviorFunctions);
-
-                if (transformation.IsEmptyScript == false)
-                    LoadToCollections = transformation.GetCollectionsFromScript();
-
-                foreach (var collection in LoadToCollections)
-                {
-                    IdPrefixForCollection[collection] = DocumentConventions.DefaultTransformCollectionNameToDocumentIdPrefix(collection);
-                }
-
-                if (transformation.Collections == null)
-                    return;
-
-                _collectionNameComparisons = new Dictionary<string, Dictionary<string, bool>>(transformation.Collections.Count);
-
-                foreach (var sourceCollection in transformation.Collections)
-                {
-                    _collectionNameComparisons[sourceCollection] = new Dictionary<string, bool>(transformation.Collections.Count);
-
-                    foreach (var loadToCollection in LoadToCollections)
-                    {
-                        _collectionNameComparisons[sourceCollection][loadToCollection] = string.Compare(sourceCollection, loadToCollection, StringComparison.OrdinalIgnoreCase) == 0;
-                    }
-                }
-            }
-
-            public bool TryGetLoadCounterBehaviorFunctionFor(string collection, out string functionName)
-            {
-                if(HasLoadCounterBehaviors)
-                    return _collectionToLoadCounterBehaviorFunction.TryGetValue(collection, out functionName);
-                functionName = null;
-                return false;
-            }
-            
-            public bool TryGetLoadTimeSeriesBehaviorFunctionFor(string collection, out string functionName)
-            {
-                if (HasLoadTimeSeriesBehaviors) 
-                    return _collectionToLoadTimeSeriesBehaviorFunction.TryGetValue(collection, out functionName);
-                functionName = null;
-                return false;
-            }
-
-            public bool TryGetDeleteDocumentBehaviorFunctionFor(string collection, out string functionName)
-            {
-                return _collectionToDeleteDocumentBehaviorFunction.TryGetValue(collection, out functionName);
-            }
-
-            public bool MayLoadToDefaultCollection(RavenEtlItem item, string loadToCollection)
-            {
-                if (item.Collection != null)
-                    return _collectionNameComparisons[item.Collection][loadToCollection];
-
-                var collection = item.CollectionFromMetadata;
-
-                return collection?.CompareTo(loadToCollection) == 0;
-            }
-            
-            public bool MayLoadToDefaultCollection(RavenEtlItem item)
-            {
-                if (item.Collection == null)
-                    return false;
-                
-                foreach (string loadToCollection in LoadToCollections)
-                { 
-                    if(_collectionNameComparisons.ContainsKey(loadToCollection))
-                        return true;
-                }
-
-                return false;
-            }
-        }
-
-        private enum OperationType
-        {
-            Put,
-            Delete
-        }
-    }
+   }
 }

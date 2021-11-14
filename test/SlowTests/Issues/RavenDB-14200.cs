@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -76,10 +77,11 @@ namespace SlowTests.Issues
             public Guid UnitId { get; set; }
         }
 
-        [Fact]
-        public void CanUseStringEmptyInJsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseStringEmptyInJsProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -108,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseStringEmptyInJsProjection2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseStringEmptyInJsProjection2(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -18,8 +19,9 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
-        public async Task CanAddNewTimeSeriesAndNewCounterViaPatch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanAddNewTimeSeriesAndNewCounterViaPatch(string jsEngineType)
         {
             const string timeseries = "HeartRate";
             const string ctr = "Likes";
@@ -27,7 +29,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -76,15 +78,16 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task CanAddNewTimeSeriesOnLoadedDocumentViaPatch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanAddNewTimeSeriesOnLoadedDocumentViaPatch(string jsEngineType)
         {
             const string documentId = "companies/1";
             const string employeeId = "employees/1";
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -145,15 +148,16 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
-        public async Task CanDeleteTimeSeriesOnLoadedDocumentViaPatch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanDeleteTimeSeriesOnLoadedDocumentViaPatch(string jsEngineType)
         {
             const string documentId = "companies/1";
             const string employeeId = "employees/1";
 
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

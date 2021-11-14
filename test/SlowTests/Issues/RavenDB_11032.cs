@@ -5,6 +5,7 @@ using Raven.Client.Documents.Queries;
 using Xunit;
 using Raven.Client;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task PatchByIndexShouldSupportDeclaredFunctions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task PatchByIndexShouldSupportDeclaredFunctions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

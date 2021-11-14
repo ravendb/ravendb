@@ -468,8 +468,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         var objectValue = (BlittableJsonReaderObject)column.Value;
                         if (objectValue.Count >= 2)
                         {
-                            if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Type), out object dbType) &&
-                                objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue))
+                            if (objectValue.TryGetMember(nameof(VarcharFunctionCall.Type), out object dbType) &&
+                                objectValue.TryGetMember(nameof(VarcharFunctionCall.Value), out object fieldValue))
                             {
                                 var type = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), ignoreCase: false);
                                 var value = fieldValue.ToString();
@@ -510,7 +510,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                                     colParam.Value = value;
                                 }
 
-                                if (objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Size), out object size))
+                                if (objectValue.TryGetMember(nameof(VarcharFunctionCall.Size), out object size))
                                 {
                                     colParam.Size = (int)(long)size;
                                 }

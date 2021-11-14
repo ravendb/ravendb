@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -85,7 +86,7 @@ return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
         Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId,
-        Employee: load(entry.Tag, 'Employees').FirstName
+        Employee: load(entry.Tag, 'Employees')?.FirstName
     }));
 })"
                 };
@@ -123,7 +124,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 User: g.key.User
+                                 User: g.key.User,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }
@@ -150,7 +151,7 @@ return ts.Entries.map(entry => ({
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
         Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
-        City: load(entry.Tag, 'Addresses').City,
+        City: load(entry.Tag, 'Addresses')?.City,
         Count: 1
     }));
 })"
@@ -160,7 +161,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 City: g.key.City
+                                 City: g.key.City,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }
@@ -484,7 +485,7 @@ return ({
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Employee", null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(1, terms.Length);
 
                 // delete source document
 

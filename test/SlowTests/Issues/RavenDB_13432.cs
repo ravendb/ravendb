@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
@@ -47,10 +48,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_CollectionQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_CollectionQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -134,10 +136,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_DynamicIndexQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_DynamicIndexQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -234,10 +237,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_StaticIndexQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_StaticIndexQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersByName().Execute(store);
 

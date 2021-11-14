@@ -6,13 +6,13 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {

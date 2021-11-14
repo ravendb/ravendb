@@ -231,11 +231,13 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByStartsWithQuery(string baseQuery)
+        [InlineData("from Users", "Jint")]
+        [InlineData("from Users", "V8")]
+        [InlineData("from @all_docs", "Jint")]
+        [InlineData("from @all_docs", "V8")]
+        public async Task PatchByStartsWithQuery(string baseQuery, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())
@@ -260,11 +262,13 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData("from Users")]
-        [InlineData("from @all_docs")]
-        public async Task PatchByStartsWithQueryWithNewDocument(string baseQuery)
+        [InlineData("from Users", "Jint")]
+        [InlineData("from Users", "V8")]
+        [InlineData("from @all_docs", "Jint")]
+        [InlineData("from @all_docs", "V8")]
+        public async Task PatchByStartsWithQueryWithNewDocument(string baseQuery, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 const int totalDocs = 1024 * 2;
                 using (var bulkInsert = store.BulkInsert())

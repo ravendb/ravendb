@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -18,12 +19,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldThrowBetterErrorOnInvalidJavaScriptDate()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldThrowBetterErrorOnUndefinedJavaScriptDate(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
-                new Times().Execute(store);
+                new Times1().Execute(store);
 
                 var baseline = new DateTime(2021, 1, 1);
                 const string id = "orders/1";
@@ -43,8 +45,63 @@ namespace SlowTests.Issues
 
                     Assert.True(doc.OrderedAt.Ticks > MaxJsDate);
 
+                    // here x.Ticks is undefined as it was not stored, thus it should throw
                     var q = session.Advanced.RawQuery<BlittableJsonReaderObject>(
-                        @"from index 'Times' as x 
+                        @"from index 'Times1' as x 
+                            select {
+                                DateTime : new Date(x.Ticks)
+                            }");
+
+                    var ex = Assert.Throws<RavenException>(() => q.First());
+                    Assert.Contains("Invalid 'DateInstance' on property 'DateTime'. Date value : 'NaN'", ex.Message);
+                    Assert.Contains("Note that JavaScripts 'Date' measures time as the number of milliseconds that have passed since the Unix epoch", ex.Message);
+
+                }
+            }
+        }
+
+        private class Times1 : AbstractIndexCreationTask<Order>
+        {
+            public Times1()
+            {
+                Map = orders => 
+                    from o in orders
+                    select new
+                    {
+                        o.OrderedAt.Ticks
+                    };
+            }
+        }
+        
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldThrowBetterErrorOnTooBigJavaScriptDate(string jsEngineType)
+        {
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            {
+                new Times2().Execute(store);
+
+                var baseline = new DateTime(2021, 1, 1);
+                const string id = "orders/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order {OrderedAt = baseline}, id);
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Order>(id);
+
+                    Assert.True(doc.OrderedAt.Ticks > MaxJsDate);
+
+                    // here x.Ticks is undefined as it is not within JS number-range, thus it should throw
+                    var q = session.Advanced.RawQuery<BlittableJsonReaderObject>(
+                        @"from index 'Times2' as x 
                             select {
                                 DateTime : new Date(x.Ticks)
                             }");
@@ -71,16 +128,23 @@ namespace SlowTests.Issues
             }
         }
 
-        private class Times : AbstractIndexCreationTask<Order>
+        private class Times2 : AbstractIndexCreationTask<Order, Times2.Result>
         {
-            public Times()
+            public class Result
+            {
+                public long Ticks { get; set; }
+            }
+
+            public Times2()
             {
                 Map = orders => 
                     from o in orders
-                    select new
+                    select new Result
                     {
-                        o.OrderedAt.Ticks
+                        Ticks = o.OrderedAt.Ticks
                     };
+                
+                Store(x => x.Ticks, FieldStorage.Yes);
             }
         }
     }

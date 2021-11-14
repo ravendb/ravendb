@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -14,8 +15,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void StoreAllFields_Test()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void StoreAllFields_Test(string jsEngineType)
         {
             TestDocument documentInInterest = new TestDocument
             {
@@ -23,7 +25,7 @@ namespace SlowTests.Issues
                 ArrayOfStrings = new string[] { "123", "234", "345" }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex(new MyIndex());
                 store.ExecuteIndex(new MyJSIndex());

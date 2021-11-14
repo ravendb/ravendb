@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Jint.Native;
-using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -234,6 +232,8 @@ namespace Raven.Server.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                var jsOptions = context.DocumentDatabase.JsOptions;
+
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "TestJavaScriptIndex");
                 if (input.TryGet("Definition", out BlittableJsonReaderObject index) == false)
                     ThrowRequiredPropertyNameInRequest("Definition");
@@ -250,10 +250,10 @@ namespace Raven.Server.Documents.Handlers
                 if (indexDefinition.Type.IsJavaScript() == false)
                     throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
 
-                var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                var compiledIndexBase = AbstractJavaScriptIndex.Create(indexDefinition, Database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 var inputSize = GetIntValueQueryString("inputSize", false) ?? DefaultInputSizeForTestingJavaScriptIndex;
-                var collections = new HashSet<string>(compiledIndex.Maps.Keys);
+                var collections = new HashSet<string>(compiledIndexBase.Maps.Keys);
                 var docsPerCollection = new Dictionary<string, List<DynamicBlittableJson>>();
                 using (context.OpenReadTransaction())
                 {
@@ -285,10 +285,11 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
                     }
-
-                    var mapRes = new List<ObjectInstance>();
+                    
+                    var compiledIndex = (JavaScriptIndex)compiledIndexBase;
+                    var mapRes = new List<JsHandle>();
                     //all maps
-                    foreach (var listOfFunctions in compiledIndex.Maps)
+                    foreach (var listOfFunctions in compiledIndexBase.Maps)
                     {
                         //multi maps per collection
                         foreach (var kvp in listOfFunctions.Value)
@@ -298,9 +299,9 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 if (docsPerCollection.TryGetValue(listOfFunctions.Key, out var docs))
                                 {
-                                    foreach (var res in mapFunc(docs))
+                                    foreach (JsHandle res in mapFunc(docs))
                                     {
-                                        mapRes.Add((ObjectInstance)res);
+                                        mapRes.Add(res);
                                     }
                                 }
                             }
@@ -314,46 +315,62 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteStartArray();
                         foreach (var mapResult in mapRes)
                         {
-                            if (JavaScriptIndexUtils.StringifyObject(mapResult) is JsString jsStr)
+                            using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(mapResult))
                             {
-                                if (first == false)
+                                if (jsStr.IsStringEx)
                                 {
-                                    writer.WriteComma();
+                                    if (first == false)
+                                    {
+                                        writer.WriteComma();
+                                    }
+
+                                    writer.WriteString(jsStr.AsString);
+                                    first = false;
                                 }
-                                writer.WriteString(jsStr.ToString());
-                                first = false;
                             }
                         }
+
                         writer.WriteEndArray();
                         if (indexDefinition.Reduce != null)
                         {
                             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("JavaScriptIndexTest", Database.Name))
                             {
-                                compiledIndex.SetBufferPoolForTestingPurposes(bufferPool);
-                                compiledIndex.SetAllocatorForTestingPurposes(context.Allocator);
+                                compiledIndexBase.SetBufferPoolForTestingPurposes(bufferPool);
+                                compiledIndexBase.SetAllocatorForTestingPurposes(context.Allocator);
                                 first = true;
                                 writer.WritePropertyName("ReduceResults");
                                 writer.WriteStartArray();
 
-                                var reduceResults = compiledIndex.Reduce(mapRes.Select(mr => new DynamicBlittableJson(JsBlittableBridge.Translate(context, mr.Engine, mr))));
+                                var reduceResults = compiledIndexBase.Reduce(mapRes.Select(mr =>
+                                    new DynamicBlittableJson(JsBlittableBridge.Translate(context, compiledIndexBase.EngineHandle, mr))));
 
-                                foreach (JsValue reduceResult in reduceResults)
+                                foreach (JsHandle reduceResult in reduceResults)
                                 {
-                                    if (JavaScriptIndexUtils.StringifyObject(reduceResult) is JsString jsStr)
+                                    using (reduceResult)
+                                    using (var jsStr = compiledIndex.JsIndexUtils.StringifyObject(reduceResult))
                                     {
-                                        if (first == false)
+                                        if (jsStr.IsStringEx)
                                         {
-                                            writer.WriteComma();
-                                        }
+                                            if (first == false)
+                                            {
+                                                writer.WriteComma();
+                                            }
 
-                                        writer.WriteString(jsStr.ToString());
-                                        first = false;
+                                            writer.WriteString(jsStr.AsString);
+                                            first = false;
+                                        }
                                     }
+                                }
+
+                                foreach (JsHandle mr in mapRes)
+                                {
+                                    mr.Dispose();
                                 }
                             }
 
                             writer.WriteEndArray();
                         }
+
                         writer.WriteEndObject();
                     }
                 }

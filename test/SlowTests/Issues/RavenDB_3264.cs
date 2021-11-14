@@ -4,7 +4,10 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
+using FastTests.Server.JavaScript;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -20,10 +23,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void PatcherCanOutputObjectsCorrectly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PatcherCanOutputObjectsCorrectly(string jsEngineType)
         {
-            using (var database = CreateDocumentDatabase())
+            using (var database = CreateDocumentDatabase(modifyConfiguration: RavenTestBase.Options.ModifyConfigurationForJavaScriptEngine(jsEngineType)))
             {
                 const string script = @"output(undefined);
                                 output(true);
@@ -45,7 +49,8 @@ namespace SlowTests.Issues
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 
-                    database.Scripts.GetScriptRunner(req, true, out var run);
+                    var jsOptions = context.DocumentDatabase.JsOptions;
+                    database.Scripts.GetScriptRunner(jsOptions, req, true, out var run);
                     run.DebugMode = true;
                     run.Run(context, context, "execute", new object[] { document });
                     var array = run.DebugOutput;

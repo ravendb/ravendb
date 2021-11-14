@@ -9,6 +9,8 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.ServerWide.JavaScript;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -26,8 +28,11 @@ using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
-
 using Version = Lucene.Net.Util.Version;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Jint;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries.Jint;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries.V8;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -116,18 +121,38 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (_index.SourceType)
                     {
                         case IndexSourceType.Documents:
-                            _converter = new JintLuceneDocumentConverter((MapIndex)index);
+                            _converter = _jsOptions.EngineType switch
+                            {
+                                JavaScriptEngineType.Jint => new JsLuceneDocumentConverterJint((MapIndex)index),
+                                JavaScriptEngineType.V8 => new JsLuceneDocumentConverterV8((MapIndex)index),
+                                _ => throw new NotSupportedException($"Not supported JS engine type '{_jsOptions}'.")
+                            };
                             break;
                         case IndexSourceType.TimeSeries:
-                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapTimeSeriesIndex)index);
+                            _converter = _jsOptions.EngineType switch
+                            {
+                                JavaScriptEngineType.Jint => new CountersAndTimeSeriesJsLuceneDocumentConverterJint((MapTimeSeriesIndex)index),
+                                JavaScriptEngineType.V8 => new CountersAndTimeSeriesJsLuceneDocumentConverterV8((MapTimeSeriesIndex)index),
+                                _ => throw new NotSupportedException($"Not supported JS engine type '{_jsOptions}'.")
+                            }; 
                             break;
                         case IndexSourceType.Counters:
-                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapCountersIndex)index);
+                            _converter = _jsOptions.EngineType switch
+                            {
+                                JavaScriptEngineType.Jint => new CountersAndTimeSeriesJsLuceneDocumentConverterJint((MapCountersIndex)index),
+                                JavaScriptEngineType.V8 => new CountersAndTimeSeriesJsLuceneDocumentConverterV8((MapCountersIndex)index),
+                                _ => throw new NotSupportedException($"Not supported JS engine type '{_jsOptions}'.")
+                            }; 
                             break;
                     }
                     break;
                 case IndexType.JavaScriptMapReduce:
-                    _converter = new JintLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);
+                    _converter = _jsOptions.EngineType switch
+                    {
+                        JavaScriptEngineType.Jint => new JsLuceneDocumentConverterJint((MapReduceIndex)index, storeValue: true),
+                        JavaScriptEngineType.V8 => new JsLuceneDocumentConverterV8((MapReduceIndex)index, storeValue: true),
+                        _ => throw new NotSupportedException($"Not supported JS engine type '{_jsOptions}'.")
+                    }; 
                     break;
                 case IndexType.Faulty:
                     _converter = null;

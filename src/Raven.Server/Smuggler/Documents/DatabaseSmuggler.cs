@@ -19,6 +19,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseSmuggler : SmugglerBase
     {
+        protected readonly JavaScriptOptionsForSmuggler _jsOptions;
         private readonly DocumentDatabase _database;
         public Action<IndexDefinitionAndType> OnIndexAction;
 
@@ -40,6 +41,7 @@ namespace Raven.Server.Smuggler.Documents
             base(source, destination, time, context, options, result, onProgress, token)
         {
             _database = database;
+            _jsOptions = _options.OptionsForTransformScript;
             Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false,
                 "When both source and destination are database, we might get into a delayed write for the dest while the " +
                 "source already pulsed its' read transaction, resulting in bad memory read.");
@@ -48,10 +50,10 @@ namespace Raven.Server.Smuggler.Documents
         public override SmugglerPatcher CreatePatcher() => new DatabaseSmugglerPatcher(_options, _database);
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
-        {
+            {
             result.CompareExchange.Start();
             await using (var actions = _destination.CompareExchange(_context))
-            {
+                {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
                     await InternalProcessCompareExchangeAsync(result, kvp, actions);
@@ -59,7 +61,7 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.CompareExchange;
-        }
+                }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
         {
@@ -68,16 +70,16 @@ namespace Raven.Server.Smuggler.Documents
             await using (var actions = _destination.CompareExchangeTombstones(_context))
             {
                 await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
-                {
+        {
                     await InternalProcessCompareExchangeTombstonesAsync(result, key, actions);
+                        }
                 }
-            }
 
             return result.CompareExchangeTombstones;
-        }
+            }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIndexesAsync(SmugglerResult result)
-        {
+            {
             result.Indexes.Start();
 
             await using (var actions = _destination.Indexes())
@@ -175,52 +177,52 @@ namespace Raven.Server.Smuggler.Documents
 
         protected virtual async Task InternalProcessCompareExchangeAsync(SmugglerResult result, (CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value) kvp,
             ICompareExchangeActions actions)
-        {
-            _token.ThrowIfCancellationRequested();
-            result.CompareExchange.ReadCount++;
-            if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
-                AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
-
-            if (kvp.Equals(default))
             {
-                result.CompareExchange.ErroredCount++;
+                _token.ThrowIfCancellationRequested();
+                    result.CompareExchange.ReadCount++;
+                    if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
+
+                    if (kvp.Equals(default))
+                    {
+                        result.CompareExchange.ErroredCount++;
                 return;
-            }
+                    }
 
-            try
-            {
-                await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
-                result.CompareExchange.LastEtag = kvp.Index;
-            }
-            catch (Exception e)
-            {
-                result.CompareExchange.ErroredCount++;
-                result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
-            }
-        }
+                    try
+                    {
+                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                        result.CompareExchange.LastEtag = kvp.Index;
+                    }
+                    catch (Exception e)
+                    {
+                        result.CompareExchange.ErroredCount++;
+                        result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+                    }
+                }
 
         protected virtual async Task InternalProcessCompareExchangeTombstonesAsync(SmugglerResult result, (CompareExchangeKey Key, long Index) key, ICompareExchangeActions actions)
         {
-            _token.ThrowIfCancellationRequested();
-            result.CompareExchangeTombstones.ReadCount++;
+                    _token.ThrowIfCancellationRequested();
+                    result.CompareExchangeTombstones.ReadCount++;
 
-            if (key.Equals(default))
-            {
-                result.CompareExchangeTombstones.ErroredCount++;
+                    if (key.Equals(default))
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
                 return;
-            }
+                    }
 
-            try
-            {
-                await actions.WriteTombstoneKeyAsync(key.Key.Key);
-            }
-            catch (Exception e)
-            {
-                result.CompareExchangeTombstones.ErroredCount++;
-                result.AddError($"Could not write compare exchange '{key}: {e.Message}");
-            }
-        }
-        
+                    try
+                    {
+                        await actions.WriteTombstoneKeyAsync(key.Key.Key);
+                    }
+                    catch (Exception e)
+                    {
+                        result.CompareExchangeTombstones.ErroredCount++;
+                        result.AddError($"Could not write compare exchange '{key}: {e.Message}");
+                    }
+                }
+
         protected async ValueTask WriteIndexAsync(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions)
         {
             try
@@ -229,15 +231,15 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     foreach (var indexDefinitionField in indexDefinition.Fields)
                         indexDefinitionField.Value.Analyzer = null;
-                }
+                    }
 
                 await actions.WriteIndexAsync(indexDefinition);
-            }
+                }
             catch (Exception e)
-            {
+        {
                 var exceptionMessage = e.Message;
                 if (exceptionMessage.Contains("CS1501") && exceptionMessage.Contains("'LoadDocument'"))
-                {
+            {
                     exceptionMessage =
                             "LoadDocument requires a second argument which is a collection name of the loaded document" + Environment.NewLine +
                             "For example: " + Environment.NewLine +
@@ -251,13 +253,13 @@ namespace Raven.Server.Smuggler.Documents
                 else if (exceptionMessage.Contains("CS0103") &&
                          (exceptionMessage.Contains("'AbstractIndexCreationTask'") ||
                           exceptionMessage.Contains("'SpatialIndex'")))
-                {
+        {
                     exceptionMessage = "'AbstractIndexCreationTask.SpatialGenerate' can be replaced with 'CreateSpatialField'" + Environment.NewLine +
                                        "'SpatialIndex.Generate' can be replaced with 'CreateSpatialField'" + Environment.NewLine +
                                        exceptionMessage + Environment.NewLine;
                 }
                 else if (exceptionMessage.Contains("CS0234") && exceptionMessage.Contains("'Abstractions'"))
-                {
+        {
                     exceptionMessage = "'Raven.Abstractions.Linq.DynamicList' can be removed" + Environment.NewLine +
                                        $"{exceptionMessage}" + Environment.NewLine;
                 }
@@ -267,12 +269,12 @@ namespace Raven.Server.Smuggler.Documents
                                    $"Maps: [{Environment.NewLine}{string.Join($", {Environment.NewLine}", indexDefinition.Maps)}{Environment.NewLine}]";
 
                 if (indexDefinition.Reduce != null)
-                {
+        {
                     errorMessage += Environment.NewLine + $"Reduce: {indexDefinition.Reduce}";
-                }
+                    }
 
                 result.AddError(errorMessage);
-            }
+        }
         }
     }
 }

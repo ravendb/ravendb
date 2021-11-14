@@ -24,7 +24,7 @@ namespace BenchmarkTests
         {
         }
 
-        public abstract Task InitAsync(DocumentStore store);
+        public abstract Task InitAsync(DocumentStore store, string dbNamePostfix = "", Options options = null, int count = 1_000_000);
 
         protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]
             string caller = null)
@@ -70,7 +70,7 @@ namespace BenchmarkTests
         protected TimeSpan DefaultTestOperationTimeout => Encrypted == false ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(30);
 
 
-        protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
+        public DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
         {
             X509Certificate2 adminCert = null;
 

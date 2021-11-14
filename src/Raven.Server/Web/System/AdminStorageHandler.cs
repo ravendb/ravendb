@@ -4,6 +4,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Web.System
 {

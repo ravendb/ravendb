@@ -321,7 +321,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     var markerId = $"marker/{Guid.NewGuid()}";
                     session.Store(new User { Name = "Karmel" }, markerId);
                     session.SaveChanges();
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(120) : TimeSpan.FromSeconds(30)));
                 }
 
                 Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");

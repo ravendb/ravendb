@@ -922,7 +922,7 @@ namespace FastTests
                 return _descriptionBuilder == null
                     ? base.ToString()
                     : _descriptionBuilder.ToString();
-            }
+        }
 
             public Options Clone()
             {

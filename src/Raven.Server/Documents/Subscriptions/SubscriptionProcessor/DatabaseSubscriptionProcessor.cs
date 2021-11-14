@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
 using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
@@ -78,7 +80,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
     public abstract class DatabaseSubscriptionProcessor : SubscriptionProcessor
     {
         protected readonly Size MaximumAllowedMemory;
-
+        protected readonly IJavaScriptOptions _jsOptions;
         protected readonly DocumentDatabase Database;
         protected DocumentsOperationContext DocsContext;
         protected SubscriptionConnectionsState SubscriptionConnectionsState;
@@ -92,6 +94,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
         {
             Database = database;
             MaximumAllowedMemory = new Size((Database.Is32Bits ? 4 : 32) * Voron.Global.Constants.Size.Megabyte, SizeUnit.Bytes);
+            _jsOptions = database.Configuration.JavaScript;
         }
         
         public override void InitializeProcessor()
@@ -144,7 +147,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             if (_returnRun != null)
                 return; // already init
 
-            _returnRun = Database.Scripts.GetScriptRunner(Patch, true, out Run);
+            _returnRun = Database.Scripts.GetScriptRunner(_jsOptions, Patch, true, out Run);
         }
 
         private protected class ProjectionMetadataModifier : JsBlittableBridge.IResultModifier

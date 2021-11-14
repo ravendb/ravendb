@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
@@ -33,8 +34,9 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
-        public Task SimpleTransformation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public Task SimpleTransformation(string jsEngineType)
         {
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -51,8 +53,9 @@ loadToOrders(partitionBy(key),
             return SimpleTransformationInternal(script);
         }
 
-        [Fact]
-        public Task SimpleTransformation_DifferentLoadTo_Syntax1()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public Task SimpleTransformation_DifferentLoadTo_Syntax1(string jsEngineType)
         {
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -70,8 +73,9 @@ loadTo('Orders', partitionBy(key),
             return SimpleTransformationInternal(script);
         }
 
-        [Fact]
-        public Task SimpleTransformation_DifferentLoadTo_Syntax2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public Task SimpleTransformation_DifferentLoadTo_Syntax2(string jsEngineType)
         {
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -179,8 +183,9 @@ loadTo(""Orders"", partitionBy(key),
             }
         }
 
-        [Fact]
-        public async Task SimpleTransformation2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation2(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -288,8 +293,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task SimpleTransformation_PartitionByDay()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_PartitionByDay(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -373,8 +379,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task SimpleTransformation_PartitionByHour()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_PartitionByHour(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -462,8 +469,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task CanHandleMissingFieldsOnSomeDocuments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanHandleMissingFieldsOnSomeDocuments(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -560,8 +568,9 @@ loadToOrders(partitionBy(key), o);
 
         }
 
-        [Fact]
-        public async Task CanHandleNullFieldValuesOnSomeDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanHandleNullFieldValuesOnSomeDocument(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -651,8 +660,9 @@ loadToOrders(partitionBy(key), o);
 
         }
 
-        [Fact]
-        public async Task CanUseSettingFromScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUseSettingFromScript(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -748,8 +758,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task LastModifiedTicksShouldMatch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task LastModifiedTicksShouldMatch(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -864,8 +875,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task CanModifyIdColumnName()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyIdColumnName(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1001,8 +1013,9 @@ loadToOrders(partitionBy(key), o);
             }
         }
 
-        [Fact]
-        public async Task SimpleTransformation_NoPartition()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_NoPartition(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1029,7 +1042,7 @@ loadToOrders(partitionBy(key), o);
                 var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });
@@ -1097,8 +1110,9 @@ loadToOrders(noPartition(),
 
         }
 
-        [Fact]
-        public async Task SimpleTransformation_MultiplePartitions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_MultiplePartitions(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1207,8 +1221,9 @@ loadToOrders(partitionBy(
 
         }
 
-        [Fact]
-        public async Task CanHandleLazyNumbersWithTypeChanges()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanHandleLazyNumbersWithTypeChanges(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1314,8 +1329,9 @@ loadToOrders(partitionBy(
 
         }
 
-        [Fact]
-        public async Task SimpleTransformation_CanUseSampleData()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_CanUseSampleData(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1366,8 +1382,9 @@ for (var i = 0; i < this.Lines.length; i++) {
             }
         }
 
-        [Fact]
-        public async Task CanSpecifyColumnTypeInScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanSpecifyColumnTypeInScript(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1463,8 +1480,9 @@ for (var i = 0; i < this.Lines.length; i++) {
             }
         }
 
-        [Fact]
-        public async Task CanSpecifyColumnTypeInScript2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanSpecifyColumnTypeInScript2(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1604,8 +1622,9 @@ loadToUsers(noPartition(), {
 
         }
 
-        [Fact]
-        public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task LocalOlapShouldCreateSubFoldersAccordingToPartition(string jsEngineType)
         {
             var countries = new[] { "Argentina", "Brazil", "Israel", "Poland", "United States" };
 
@@ -1747,8 +1766,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['month', orderDate.
             }
         }
 
-        [Fact]
-        public async Task ShouldCreateLocalFolderIfNotExists()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldCreateLocalFolderIfNotExists(string jsEngineType)
         {
             // RavenDB-16663
 
@@ -1813,8 +1833,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
-        public async Task CanUpdateDocIdColumnName()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateDocIdColumnName(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -1960,8 +1981,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
-        public async Task CanUpdateRunFrequency()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateRunFrequency(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -2090,8 +2112,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
-        public async Task CanUpdateCustomPartitionValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateCustomPartitionValue(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -2214,8 +2237,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
             }
         }
         
-        [Fact]
-        public async Task CanUpdateLocalSettings()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateLocalSettings(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -2359,8 +2383,9 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             }
         }
 
-        [Fact]
-        public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task LastModifiedShouldBeMillisecondsSinceUnixEpoch(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {

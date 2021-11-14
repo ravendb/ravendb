@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -28,13 +29,15 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
-        public async Task OlapTaskShouldBeHighlyAvailable()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task OlapTaskShouldBeHighlyAvailable(string jsEngineType)
         {
             var cluster = await CreateRaftCluster(3);
             var leader = cluster.Leader;
             var dbName = GetDatabaseName();
-            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
+            var storeOptions = Options.ForJavaScriptEngine(jsEngineType);
+            var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl, options: storeOptions);
 
             var stores = db.Servers.Select(s => new DocumentStore
                 {

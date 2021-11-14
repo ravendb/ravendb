@@ -3,8 +3,10 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.JavaScript;
 using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,43 +19,48 @@ namespace SlowTests.Server.Documents.Indexing.Static
         {
         }
 
-        private const string QueryWithScalarToRawStringForAllValues = @"declare function MyProjection(x){
-return {
-    IntMinVal : scalarToRawString(x, u=> u.IntMinVal),
-    IntMaxVal : scalarToRawString(x, u=> u.IntMaxVal),
-    LongMinVal : scalarToRawString(x, u=> u.LongMinVal),
-    LongMaxVal : scalarToRawString(x, u=> u.LongMaxVal),
-    DecimalMaxVal : scalarToRawString(x, u=> u.DecimalMaxVal),
-    DecimalMinVal : scalarToRawString(x, u=> u.DecimalMinVal),
-    DoubleMinVal : scalarToRawString(x, u=> u.DoubleMinVal),
-    DoubleMaxVal : scalarToRawString(x, u=> u.DoubleMaxVal),
-    DoubleNegativeInfinity : scalarToRawString(x, u=> u.DoubleNegativeInfinity),
-    DoublePositiveInfinity : scalarToRawString(x, u=> u.DoublePositiveInfinity),
-    DoubleNan : scalarToRawString(x, u=> u.DoubleNan),
-    DoubleEpsilon : scalarToRawString(x, u=> u.DoubleEpsilon),
-    FloatMinVal : scalarToRawString(x, u=> u.FloatMinVal ),
-    FloatMaxVal : scalarToRawString(x, u=> u.FloatMaxVal),
-    FloatMaxPercision : scalarToRawString(x, u=> u.FloatMaxPercision),
-    FloatNegativeInfinity : scalarToRawString(x, u=> u.FloatNegativeInfinity),
-    FloatPositiveInfinity : scalarToRawString(x, u=> u.FloatPositiveInfinity),
-    FloatNan : scalarToRawString(x, u=> u.FloatNan),
-    UintMaxVal : scalarToRawString(x, u=> u.UintMaxVal),
-    UlongMaxVal : scalarToRawString(x, u=> u.UlongMaxVal),
-    StringMaxLength : scalarToRawString(x, u=> u.StringMaxLength),
-    DateMaxPercision : scalarToRawString(x, u=> u.DateMaxPercision),
-    DateTimeOffsetMinVal : scalarToRawString(x, u=> u.DateTimeOffsetMinVal),
-    DateTimeOffsetMaxVal : scalarToRawString(x, u=> u.DateTimeOffsetMaxVal),
-    TimeSpanMinVal : scalarToRawString(x, u=> u.TimeSpanMinVal),
-    TimeSpanMaxVal : scalarToRawString(x, u=> u.TimeSpanMaxVal),
-    TimeSpanDays : scalarToRawString(x, u=> u.TimeSpanDays),
-    TimeSpanHours : scalarToRawString(x, u=> u.TimeSpanHours),
-    TimeSpanMinutes : scalarToRawString(x, u=> u.TimeSpanMinutes),
-    TimeSpanSeconds : scalarToRawString(x, u=> u.TimeSpanSeconds),
-    TimeSpanMiliseconds : scalarToRawString(x, u=> u.TimeSpanMiliseconds),
-    TimeSpanNanoseconds : scalarToRawString(x, u=> u.TimeSpanNanoseconds)
-}
-}
+    private string QueryWithScalarToRawStringForAllValues(string jsEngineType)
+        {
+            var prefix = jsEngineType == "Jint" ? "u=> u." : "\"";
+            var postfix = jsEngineType == "Jint" ? "" : "\"";
+            return @$"declare function MyProjection(x){{
+return {{
+    IntMinVal : scalarToRawString(x, {prefix}IntMinVal{postfix}),
+    IntMaxVal : scalarToRawString(x, {prefix}IntMaxVal{postfix}),
+    LongMinVal : scalarToRawString(x, {prefix}LongMinVal{postfix}),
+    LongMaxVal : scalarToRawString(x, {prefix}LongMaxVal{postfix}),
+    DecimalMaxVal : scalarToRawString(x, {prefix}DecimalMaxVal{postfix}),
+    DecimalMinVal : scalarToRawString(x, {prefix}DecimalMinVal{postfix}),
+    DoubleMinVal : scalarToRawString(x, {prefix}DoubleMinVal{postfix}),
+    DoubleMaxVal : scalarToRawString(x, {prefix}DoubleMaxVal{postfix}),
+    DoubleNegativeInfinity : scalarToRawString(x, {prefix}DoubleNegativeInfinity{postfix}),
+    DoublePositiveInfinity : scalarToRawString(x, {prefix}DoublePositiveInfinity{postfix}),
+    DoubleNan : scalarToRawString(x, {prefix}DoubleNan{postfix}),
+    DoubleEpsilon : scalarToRawString(x, {prefix}DoubleEpsilon{postfix}),
+    FloatMinVal : scalarToRawString(x, {prefix}FloatMinVal {postfix}),
+    FloatMaxVal : scalarToRawString(x, {prefix}FloatMaxVal{postfix}),
+    FloatMaxPercision : scalarToRawString(x, {prefix}FloatMaxPercision{postfix}),
+    FloatNegativeInfinity : scalarToRawString(x, {prefix}FloatNegativeInfinity{postfix}),
+    FloatPositiveInfinity : scalarToRawString(x, {prefix}FloatPositiveInfinity{postfix}),
+    FloatNan : scalarToRawString(x, {prefix}FloatNan{postfix}),
+    UintMaxVal : scalarToRawString(x, {prefix}UintMaxVal{postfix}),
+    UlongMaxVal : scalarToRawString(x, {prefix}UlongMaxVal{postfix}),
+    StringMaxLength : scalarToRawString(x, {prefix}StringMaxLength{postfix}),
+    DateMaxPercision : scalarToRawString(x, {prefix}DateMaxPercision{postfix}),
+    DateTimeOffsetMinVal : scalarToRawString(x, {prefix}DateTimeOffsetMinVal{postfix}),
+    DateTimeOffsetMaxVal : scalarToRawString(x, {prefix}DateTimeOffsetMaxVal{postfix}),
+    TimeSpanMinVal : scalarToRawString(x, {prefix}TimeSpanMinVal{postfix}),
+    TimeSpanMaxVal : scalarToRawString(x, {prefix}TimeSpanMaxVal{postfix}),
+    TimeSpanDays : scalarToRawString(x, {prefix}TimeSpanDays{postfix}),
+    TimeSpanHours : scalarToRawString(x, {prefix}TimeSpanHours{postfix}),
+    TimeSpanMinutes : scalarToRawString(x, {prefix}TimeSpanMinutes{postfix}),
+    TimeSpanSeconds : scalarToRawString(x, {prefix}TimeSpanSeconds{postfix}),
+    TimeSpanMiliseconds : scalarToRawString(x, {prefix}TimeSpanMiliseconds{postfix}),
+    TimeSpanNanoseconds : scalarToRawString(x, {prefix}TimeSpanNanoseconds{postfix})
+}}
+}}
 from EdgeCaseValues as e select MyProjection(e)";
+        }
 
         public class TypeWithDecimal
         {
@@ -162,14 +169,17 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
-        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection()
+        // TODO [shlomo] RavenDB-18121: V8 version should be activated
+        [Theory]
+        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -181,7 +191,7 @@ from EdgeCaseValues as e select MyProjection(e)";
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        QueryWithScalarToRawStringForAllValues
+                        QueryWithScalarToRawStringForAllValues(jsEngineType)
                     ).FirstAsync();
 
                     AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
@@ -189,14 +199,17 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
-        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection()
+        // TODO [shlomo] RavenDB-18121: V8 version should be activated
+        [Theory]
+        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -208,7 +221,7 @@ from EdgeCaseValues as e select MyProjection(e)";
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        QueryWithScalarToRawStringForAllValues
+                        QueryWithScalarToRawStringForAllValues(jsEngineType)
                     ).FirstAsync();
 
                     AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
@@ -216,13 +229,16 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
-        public async Task ScalarToRawThrowsOnIllegalLambdas()
+        // TODO [shlomo] RavenDB-18121: V8 version should be activated
+        [Theory]
+        [JavaScriptEngineClassData(JavaScriptEngineType.Jint)]
+        public async Task ScalarToRawThrowsOnIllegalLambdas(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -231,21 +247,25 @@ from EdgeCaseValues as e select MyProjection(e)";
                     await session.SaveChangesAsync();
                 }
 
+                // TODO [shlomo] this should work in the commented version as well
+                var prefix = "u=> u."; //jsEngineType == "Jint" ? "u=> u." : "\"";
+                var postfix = ""; //"jsEngineType == "Jint" ? "" : "\"";
+
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())
                 {
                     await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 x.IntMinVal = 4;
-var intMinValRaw = parseInt(scalarToRawString(x, u=> u.IntMinVal.OtherVal).toString());
+var intMinValRaw = parseInt(scalarToRawString(x, {prefix}IntMinVal.OtherVal{postfix}).toString());
 x.IntMinVal = intMinValRaw;
 var intMinValOriginal = x.IntMinVal;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync());
 
-                    await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
+                    /*await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
                       @"declare function MyProjection(x){
 x.IntMinVal = 4;
 var intMinValRaw = parseInt(scalarToRawString(x, u=> 4).toString());
@@ -268,27 +288,29 @@ from EdgeCaseValues as e select MyProjection(e)"
                 ).FirstAsync());
 
                     await Assert.ThrowsAsync<RavenException>(() => session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                    @"declare function MyProjection(x){
+                    @$"declare function MyProjection(x){{
 x.IntMinVal = 4;
-var intMinValRaw = parseInt(scalarToRawString(x, u=> u.IntMinVal + 5).toString());
+var intMinValRaw = parseInt(scalarToRawString(x, {prefix}IntMinVal + 5{postfix}).toString());
 x.IntMinVal = intMinValRaw;
 var intMinValOriginal = x.IntMinVal;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
-                ).FirstAsync());
+                ).FirstAsync());*/
                 }
             }
         }
 
-        [Fact]
-        public async Task CanModifyRawAndOriginalValuesTogether()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyRawAndOriginalValuesTogether(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -297,17 +319,21 @@ from EdgeCaseValues as e select MyProjection(e)"
                     await session.SaveChangesAsync();
                 }
 
+                // TODO [shlomo] this should work in the commented version as well
+                var prefix = "u=> u."; //jsEngineType == "Jint" ? "u=> u." : "\"";
+                var postfix = ""; //"jsEngineType == "Jint" ? "" : "\"";
+
                 // modify, then access raw, then access regular
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 x.IntMinVal = 4;
-var intMinValRaw = parseInt(scalarToRawString(x, u=> u.IntMinVal).toString());
+var intMinValRaw = parseInt(scalarToRawString(x, {prefix}IntMinVal{postfix}).toString());
 x.IntMinVal = intMinValRaw;
 var intMinValOriginal = x.IntMinVal;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
@@ -318,14 +344,14 @@ from EdgeCaseValues as e select MyProjection(e)"
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 x.IntMinVal = 4;
 var intMinValOriginal = x.IntMinVal;
 x.IntMinVal = intMinValOriginal;
-var intMinValRaw = parseInt(scalarToRawString(x, u=> u.IntMinVal).toString());
+var intMinValRaw = parseInt(scalarToRawString(x, {prefix}IntMinVal{postfix}).toString());
 
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
@@ -337,12 +363,12 @@ from EdgeCaseValues as e select MyProjection(e)"
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
-var intMinValRaw = scalarToRawString(x, u=> u.IntMinVal);
+                        @$"declare function MyProjection(x){{
+var intMinValRaw = scalarToRawString(x, {prefix}IntMinVal{postfix});
 var intMinValOriginal = x.IntMinVal;
 x.IntMinVal = 4;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
@@ -353,12 +379,12 @@ from EdgeCaseValues as e select MyProjection(e)"
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 var intMinValOriginal = x.IntMinVal;
-var intMinValRaw = scalarToRawString(x, u=> u.IntMinVal);
+var intMinValRaw = scalarToRawString(x, {prefix}IntMinVal{postfix});
 x.IntMinVal = 4;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
@@ -369,12 +395,12 @@ from EdgeCaseValues as e select MyProjection(e)"
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 var intMinValOriginal = x.DecimalMaxVal;
-var intMinValRaw = scalarToRawString(x, u=> u.DecimalMaxVal);
+var intMinValRaw = scalarToRawString(x, {prefix}DecimalMaxVal{postfix});
 x.DecimalMaxVal = 4;
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 
@@ -385,12 +411,12 @@ from EdgeCaseValues as e select MyProjection(e)"
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
+                        @$"declare function MyProjection(x){{
 var intMinValOriginal = x.StringMaxLength;
-var intMinValRaw = scalarToRawString(x, u=> u.StringMaxLength);
+var intMinValRaw = scalarToRawString(x, {prefix}StringMaxLength{postfix});
 x.StringMaxLength = 'shorter string';
 return x;
-}
+}}
 from EdgeCaseValues as e select MyProjection(e)"
                     ).FirstAsync();
 

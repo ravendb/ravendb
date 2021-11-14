@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure.Entities;
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_patch_by_dynamic_collection_query()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_patch_by_dynamic_collection_query(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -64,10 +66,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_patch_by_dynamic_all_docs_collection_query()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_patch_by_dynamic_all_docs_collection_query(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

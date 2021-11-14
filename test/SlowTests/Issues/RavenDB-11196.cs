@@ -8,6 +8,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using FastTests.Server.JavaScript;
 
 namespace SlowTests.Issues
 {
@@ -16,12 +17,13 @@ namespace SlowTests.Issues
         public RavenDB_11196(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact]
-        public void Should_be_James()
+        
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_be_James(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 AddEtl(src, dest, "Users", script:
                     @"

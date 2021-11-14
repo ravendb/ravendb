@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
@@ -51,11 +52,12 @@ namespace SlowTests.Issues
                 }
             }
         }
-
-        [Fact]
-        public async Task CanPatchWithFilter()
+        
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanPatchWithFilter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -98,10 +100,12 @@ Object.keys(this.Trie).filter(function(key) {
                 }
             }
         }
-        [Fact]
-        public async Task CanPatchDictionaryUsingArgs()
+        
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanPatchDictionaryUsingArgs(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

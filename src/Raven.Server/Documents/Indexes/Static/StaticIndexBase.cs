@@ -8,10 +8,18 @@ using System.Runtime.CompilerServices;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Sparrow.Json;
+using Sparrow.Server;
+using Spatial4n.Core.Shapes;
 using Spatial4n.Shapes;
+using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.ServerWide;
+using Esprima;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -628,4 +636,151 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
     }
+    
+    public abstract class AbstractJavaScriptIndexBase : AbstractStaticIndexBase
+    {
+        protected const string GlobalDefinitions = "globalDefinition";
+        protected const string CollectionProperty = "collection";
+        protected const string MethodProperty = "method";
+        protected const string MoreArgsProperty = "moreArgs";
+
+        protected const string MapsProperty = "maps";
+
+        protected const string ReduceProperty = "reduce";
+        protected const string AggregateByProperty = "aggregateBy";
+        protected const string KeyProperty = "key";
+
+        public SingleIndexConfiguration IndexConfiguration;
+        public IJavaScriptOptions JsOptions;
+        protected readonly IndexDefinition Definition;
+
+        protected string MapCode;
+
+        public JavaScriptReduceOperation ReduceOperation { get; protected set; }
+        
+        protected AbstractJavaScriptIndexBase(IndexDefinition definition, RavenConfiguration configuration, string mapCode)
+        {
+            Definition = definition;
+            MapCode = mapCode;
+
+            IndexConfiguration = new SingleIndexConfiguration(definition.Configuration, configuration);
+            JsOptions = new JavaScriptOptions(IndexConfiguration, configuration);
+        }
+
+        protected List<string> GetMappingFunctions(Action<List<string>> modifyMappingFunctions)
+        {
+            if (Definition.Maps == null || Definition.Maps.Count == 0)
+                ThrowIndexCreationException("does not contain any mapping functions to process.");
+
+            var mappingFunctions = Definition.Maps.ToList();
+            ;
+            modifyMappingFunctions?.Invoke(mappingFunctions);
+
+            return mappingFunctions;
+        }
+        
+        protected void ProcessFields(Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
+        {
+            var fields = new HashSet<string>();
+            HasDynamicFields = false;
+            foreach (var (collection, vals) in collectionFunctions)
+            {
+                foreach (var (subCollection, val) in vals)
+                {
+                    //TODO: Validation of matches fields between group by / collections / etc
+                    foreach (var operation in val)
+                    {
+                        AddMapInternal(collection, subCollection, (IndexingFunc)operation.IndexingFunction);
+
+                        HasDynamicFields |= operation.HasDynamicReturns;
+                        HasBoostedFields |= operation.HasBoostedFields;
+
+                        fields.UnionWith(operation.Fields);
+                        foreach (var (k, v) in operation.FieldOptions)
+                        {
+                            Definition.Fields.Add(k, v);
+                        }
+                    }
+                }
+            }
+
+            if (Definition.Fields != null)
+            {
+                foreach (var item in Definition.Fields)
+                {
+                    if (string.Equals(item.Key, Constants.Documents.Indexing.Fields.AllFields))
+                        continue;
+
+                    fields.Add(item.Key);
+                }
+            }
+
+            OutputFields = fields.ToArray();
+        }
+
+
+
+        protected static readonly ParserOptions DefaultParserOptions = new ParserOptions();
+        
+        protected void ThrowIndexCreationException(string message)
+        {
+            throw new IndexCreationException($"JavaScript index {Definition.Name} {message}");
+        }
+
+        protected const string Code = @"
+var globalDefinition =
+{
+    maps: [],
+    reduce: null
+}
+
+function groupBy(lambda) {
+    var reduce = globalDefinition.reduce = { };
+    reduce.key = lambda;
+
+    reduce.aggregate = function(reduceFunction){
+        reduce.aggregateBy = reduceFunction;
+    }
+    return reduce;
+}
+
+// createSpatialField(wkt: string)
+// createSpatialField(lat: number, lng: number)
+
+function createSpatialField() {
+    if(arguments.length == 1) {
+        return { $spatial: arguments[0] }
+}
+
+    return { $spatial: {Lng: arguments[1], Lat: arguments[0]} }
+}
+
+function createField(name, value, options) {
+    return { $name: name, $value: value, $options: options }
+}
+
+function boost(value, boost) {
+    return { $value: value, $boost: boost }
+}
+";
+
+
+        public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
+        {
+            ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
+        }
+
+        public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
+        {
+            ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
+        }
+
+        protected class MapMetadata
+        {
+            public HashSet<CollectionName> ReferencedCollections;
+
+            public bool HasCompareExchangeReferences;
+        }
+    }
+
 }

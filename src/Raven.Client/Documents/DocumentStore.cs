@@ -35,7 +35,7 @@ namespace Raven.Client.Documents
 
         private AsyncMultiDatabaseHiLoIdGenerator _asyncMultiDbHiLo;
 
-        private MaintenanceOperationExecutor _maintenanceOperationExecutor;
+        public MaintenanceOperationExecutor MaintenanceOperationExecutor;
 
         private OperationExecutor _operationExecutor;
 
@@ -410,7 +410,7 @@ namespace Raven.Client.Documents
             get
             {
                 AssertInitialized();
-                return _maintenanceOperationExecutor ?? (_maintenanceOperationExecutor = new MaintenanceOperationExecutor(this));
+                return MaintenanceOperationExecutor ?? (MaintenanceOperationExecutor = new MaintenanceOperationExecutor(this));
             }
         }
 

@@ -35,6 +35,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
+using FastTests.Server.JavaScript;
 using DisposableAction = Voron.Util.DisposableAction;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -84,10 +85,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task SubscriptionsBatchSizeShouldIgnoreSkippedItems()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SubscriptionsBatchSizeShouldIgnoreSkippedItems(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var sub = store.Subscriptions.Create(new SubscriptionCreationOptions<User>
                 {
@@ -215,10 +217,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public void CanUseNestedPropertiesInSubscriptionCriteria()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseNestedPropertiesInSubscriptionCriteria(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -436,10 +439,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateSubscriptionToStartFromBeginningOfTime(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -529,10 +533,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task CanUpdateSubscriptionToStartFromLastDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateSubscriptionToStartFromLastDocument(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());

@@ -20,9 +20,11 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(bool disableOnSrc)
+        [InlineData(true, "Jint")]
+        [InlineData(true, "V8")]
+        [InlineData(false, "Jint")]
+        [InlineData(false, "V8")]
+        public async Task CanDisableTcpCompressionViaConfiguration_ReplicationTest(bool disableOnSrc, string jsEngineType)
         {
             var srcServer = GetNewServer(new ServerCreationOptions
             {
@@ -34,15 +36,18 @@ namespace SlowTests.Issues
             });
             using (var srcStore = GetDocumentStore(new Options
             {
-                Server = srcServer
+                Server = srcServer,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             using (var dstStore1 = GetDocumentStore(new Options
             {
-                Server = dstServer
+                Server = dstServer,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             using (var dstStore2 = GetDocumentStore(new Options
             {
-                Server = dstServer
+                Server = dstServer,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 const string docId = "users/1";

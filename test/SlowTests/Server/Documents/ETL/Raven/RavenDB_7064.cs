@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests.Server.JavaScript;
 using FastTests.Voron.Util;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -15,15 +16,17 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public void Should_handle_attachments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_handle_attachments(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
-var attachments = this['@metadata']['@attachments'];
+var attachments = this['@metadata']?.['@attachments'];
 
 this.Name = 'James';
 
@@ -31,7 +34,7 @@ this.Name = 'James';
 
 var doc = loadToUsers(this);
 
-for (var i = 0; i < attachments.length; i++) {
+for (var i = 0; i < attachments?.length ?? 0; i++) {
     doc.addAttachment(attachments[i].Name + '-etl', loadAttachment(attachments[i].Name));
 }
 
@@ -163,11 +166,13 @@ person.addAttachment('photo2.jpg-etl', loadAttachment('photo2.jpg'));
             }
         }
 
-        [Fact]
-        public void Can_use_get_attachments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_use_get_attachments(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -217,11 +222,13 @@ for (var i = 0; i < attachments.length; i++) {
             }
         }
 
-        [Fact]
-        public void Can_use_has_attachment()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_use_has_attachment(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"

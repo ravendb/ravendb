@@ -4,6 +4,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit.Abstractions;
 
 namespace SlowTests.MailingList.Rusty
@@ -14,10 +15,11 @@ namespace SlowTests.MailingList.Rusty
         {
         }
 
-        [Fact]
-        public void Projection_Fails_To_Update_Property_After_Associated_Document_Updates()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_Fails_To_Update_Property_After_Associated_Document_Updates(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex( new PersonIndex() );
 
@@ -57,10 +59,11 @@ namespace SlowTests.MailingList.Rusty
             }
         }
 
-        [Fact]
-        public void Projection_Updates_Property_When_After_Document_Updates_If_Index_Loads_Association()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_Updates_Property_When_After_Document_Updates_If_Index_Loads_Association(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.ExecuteIndex( new PersonWithCompanyIndex() );
 

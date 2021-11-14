@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
@@ -18,11 +19,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public void Simple_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Simple_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
@@ -69,11 +72,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void SetMentorToEtlAndFailover()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void SetMentorToEtlAndFailover(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:null ,mentor: "C");
 
@@ -123,11 +128,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void No_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void No_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: null);
 
@@ -173,11 +180,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Filtering_and_transformation_with_load_document()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Filtering_and_transformation_with_load_document(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -266,11 +275,13 @@ loadToUsers(
             }
         }
 
-        [Fact]
-        public void Loading_to_different_collections()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Loading_to_different_collections(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -365,11 +376,13 @@ loadToAddresses(load(this.AddressId));
             }
         }
 
-        [Fact]
-        public void Loading_to_different_collections_using_this()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Loading_to_different_collections_using_this(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -450,11 +463,13 @@ loadToAddresses(this.Address);
             }
         }
 
-        [Fact]
-        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -491,11 +506,13 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
             }
         }
 
-        [Fact]
-        public void Update_of_disassembled_document()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Update_of_disassembled_document(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -617,11 +634,13 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public void Can_get_document_id()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_get_document_id(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
@@ -649,8 +668,9 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public void Can_put_space_after_loadTo_method_in_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_put_space_after_loadTo_method_in_script(string jsEngineType)
         {
             var config = new RavenEtlConfiguration
             {
@@ -681,8 +701,9 @@ loadToOrders(orderData);
         }
 
 
-        [Fact]
-        public void Error_if_script_does_not_contain_any_loadTo_method()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Error_if_script_does_not_contain_any_loadTo_method(string jsEngineType)
         {
             var config = new RavenEtlConfiguration
             {
@@ -709,11 +730,13 @@ loadToOrders(orderData);
             Assert.Equal("No `loadTo<CollectionName>()` method call found in 'test' script", errors[0]);
         }
 
-        [Fact]
-        public void Can_load_to_specific_collection_when_applying_to_all_docs()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_load_to_specific_collection_when_applying_to_all_docs(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 

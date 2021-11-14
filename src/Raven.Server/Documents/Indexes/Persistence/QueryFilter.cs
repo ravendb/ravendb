@@ -1,5 +1,6 @@
 using System;
 using Lucene.Net.Store;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -38,7 +39,7 @@ public class QueryFilter : IDisposable
         _queryTimings = queryTimings;
 
         var key = new CollectionQueryEnumerable.FilterKey(query.Metadata);
-        _filterSingleRun = index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
+        _filterSingleRun = documentsContext.DocumentDatabase.Scripts.GetScriptRunner(documentsContext.DocumentDatabase.JsOptions, key, readOnly: true, patchRun: out _filterScriptRun);
     }
 
     public FilterResult Apply(ref RetrieverInput input, string key)

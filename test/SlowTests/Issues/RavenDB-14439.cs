@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -21,10 +22,11 @@ namespace SlowTests.Issues
             public string ChangeVectorVal;
         }
 
-        [Fact]
-        public void CanGetChangeVectorForPatching()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetChangeVectorForPatching(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

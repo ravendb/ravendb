@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
 using Newtonsoft.Json.Serialization;
@@ -379,7 +380,7 @@ namespace SlowTests.Issues
                         select new QueryResult {FullName = user.Name + " " + user.LastName};
 
                     var queryAsString = query.ToString();
-                    Assert.Equal("from 'Users' as user select { FullName : user.name+\" \"+user.lastName }", queryAsString);
+                    Assert.Equal("from 'Users' as user select { FullName : user?.name+\" \"+user?.lastName }", queryAsString);
 
                     var queryResult = query.ToList();
 
@@ -431,11 +432,11 @@ namespace SlowTests.Issues
 
                     var queryAsString = query.ToString();
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(user) {
-	var first = user.name;
-	var last = user.lastName;
-	var format = function(){return first+"" ""+last;};
-	return { FullName : format() };
+                    @"declare function output(user) {
+    var first = user?.name;
+    var last = user?.lastName;
+    var format = function(){return first+"" ""+last;};
+    return { FullName : format() };
 }
 from 'Users' as user select output(user)", queryAsString);
 

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Xunit;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void IndexProjectionShouldSupportMathematicalAdditionOfNumberProperties()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void IndexProjectionShouldSupportMathematicalAdditionOfNumberProperties(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Document document;
                 using (var session = store.OpenSession())

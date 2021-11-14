@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -158,8 +159,8 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from 'Builds' as entry " +
-                                 "load entry.TeamCityBuildLocalId as build " +
-                                 "select { Build : build, Downloads : load(build.DownloadsIds) }"
+                                 "load entry?.TeamCityBuildLocalId as build " +
+                                 "select { Build : build, Downloads : load(build?.DownloadsIds) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -280,8 +281,8 @@ namespace SlowTests.Issues
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
-                                 "select { Build : build, Downloads : load(build.DownloadsIds) }"
+                                 "load entry?.TeamCityBuildLocalId as build " +
+                                 "select { Build : build, Downloads : load(build?.DownloadsIds) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -402,8 +403,8 @@ namespace SlowTests.Issues
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
-                                 "select { Build : build, Downloads : load(build.DownloadsIds) }"
+                                 "load entry?.TeamCityBuildLocalId as build " +
+                                 "select { Build : build, Downloads : load(build?.DownloadsIds) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -524,8 +525,8 @@ namespace SlowTests.Issues
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
-                                 "select { Build : build, Downloads : load(build.DownloadsIds) }"
+                                 "load entry?.TeamCityBuildLocalId as build " +
+                                 "select { Build : build, Downloads : load(build?.DownloadsIds) }"
                         , query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -649,8 +650,8 @@ namespace SlowTests.Issues
                     Assert.Equal("from index 'LatestBuildsIndex' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
-                                 "select { Build : build, Downloads : load(build.DownloadsIds) }"
+                                 "load entry?.TeamCityBuildLocalId as build " +
+                                 "select { Build : build, Downloads : load(build?.DownloadsIds) }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -740,7 +741,7 @@ namespace SlowTests.Issues
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
+                                 "load entry?.TeamCityBuildLocalId as build " +
                                  "select build.BuildDate"
                         , query.ToString());
 
@@ -819,7 +820,7 @@ namespace SlowTests.Issues
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0) and entry.IsPublic = $p1) " +
                                  "and (entry.Channel in ($p2)) " +
-                                 "load entry.TeamCityBuildLocalId as build " +
+                                 "load entry?.TeamCityBuildLocalId as build " +
                                  "select build.BuildDate"
                         , query.ToString());
 
@@ -888,7 +889,7 @@ namespace SlowTests.Issues
                         .Select(entry => RavenQuery.Load<TeamCityBuild>(entry.TeamCityBuildLocalId));
 
                     Assert.Equal("from 'Builds' as entry " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load"
                         , query.ToString());
 
@@ -963,7 +964,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from 'Builds' as entry " +
                                  "where (entry.ProductKey in ($p0)) and (entry.Channel in ($p1)) " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load"
                         , query.ToString());
 
@@ -1208,7 +1209,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from index 'LatestBuildsIndex' as entry " +
                                  "where (entry.ProductKey in ($p0)) and (entry.Channel in ($p1)) " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load"
                         , query.ToString());
 
@@ -1297,7 +1298,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from index 'LatestBuildsIndex' as entry " +
                                  "where (entry.ProductKey in ($p0)) and (entry.Channel in ($p1)) " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load"
                         , query.ToString());
 
@@ -1386,7 +1387,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from index 'LatestBuildsIndex' as entry " +
                                  "where (entry.ProductKey in ($p0)) and (entry.Channel in ($p1)) " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load"
                         , query.ToString());
 
@@ -1451,7 +1452,7 @@ namespace SlowTests.Issues
 
 
                     Assert.Equal("from 'Builds' as entry " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load.BuildDate"
                         , query.ToString());
 
@@ -1531,7 +1532,7 @@ namespace SlowTests.Issues
 
 
                     Assert.Equal("from 'Builds' as entry " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load.Object1.Object2.Name"
                         , query.ToString());
 
@@ -1607,7 +1608,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from 'Builds' as entry " +
                                  "where entry.IsPublic = $p0 " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load.BuildDate"
                         , query.ToString());
 
@@ -1683,7 +1684,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from 'Builds' as entry " +
                                  "where entry.IsPublic = $p0 " +
-                                 "load entry.TeamCityBuildLocalId as __load " +
+                                 "load entry?.TeamCityBuildLocalId as __load " +
                                  "select __load.BuildDate"
                         , query.ToString());
 

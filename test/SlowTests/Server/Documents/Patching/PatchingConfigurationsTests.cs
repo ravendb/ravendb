@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
@@ -45,13 +46,13 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
+        // for Jint only as V8 doesn't support the restriction on maximum steps
         [Fact]
         public async Task MaximumScriptSteps()
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => 
-                record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "20"
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "30"
             }))
             {
                 using (var session = store.OpenSession())

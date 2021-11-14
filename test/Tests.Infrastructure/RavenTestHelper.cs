@@ -178,7 +178,10 @@ namespace FastTests
 
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
-            var converted = NormalizeNewLines(expected);
+            expected = expected.Replace("    ", "\t");
+            actual = actual.Replace("    ", "\t");
+            
+            var converted = ConvertRespectingNewLines(expected);
 
             Assert.Equal(converted, actual);
         }

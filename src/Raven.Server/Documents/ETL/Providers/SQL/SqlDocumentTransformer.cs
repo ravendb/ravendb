@@ -1,23 +1,18 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using Jint.Native;
-using Jint.Runtime;
-using Jint.Runtime.Interop;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
-    internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    internal partial class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
-        private static readonly JsValue DefaultVarCharSize = 50;
+        private static readonly int DefaultVarCharSize = 50;
         
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
@@ -57,11 +52,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             base.Initialize(debugMode);
             
-            DocumentScript.ScriptEngine.SetValue("varchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "varchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
+            DocumentEngineHandle.SetGlobalClrCallBack("varchar",
+                (((value, values) => ToVarcharTranslatorJint(VarcharFunctionCall.AnsiStringType, values)),
+                (engine, isConstructCall, self, args) => ToVarcharTranslatorV8(VarcharFunctionCall.AnsiStringType, args))
+            );
 
-            DocumentScript.ScriptEngine.SetValue("nvarchar",
-                new ClrFunctionInstance(DocumentScript.ScriptEngine, "nvarchar", (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+            DocumentEngineHandle.SetGlobalClrCallBack("nvarchar",
+                (((value, values) => ToVarcharTranslatorJint(VarcharFunctionCall.StringType, values)),
+                (engine, isConstructCall, self, args) => ToVarcharTranslatorV8(VarcharFunctionCall.StringType, args))
+            );
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -129,28 +128,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true;
         }
 
-        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
-        {
-            var strReference = reference.ToString();
-            if (_loadedAttachments.TryGetValue(strReference, out var loadedAttachments) == false)
-            {
-                loadedAttachments = new Queue<Attachment>();
-                _loadedAttachments.Add(strReference, loadedAttachments);
-            }
-
-            loadedAttachments.Enqueue(attachment);
-        }
-
-        protected override void AddLoadedCounter(JsValue reference, string name, long value)
-        {
-            throw new NotSupportedException("Counters aren't supported by SQL ETL");
-        }
-
-        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
-        {
-            throw new NotSupportedException("Time series aren't supported by SQL ETL");
-        }
-
         private SqlTableWithRecords GetOrAdd(string tableName)
         {
             if (_tables.TryGetValue(tableName, out SqlTableWithRecords table) == false)
@@ -199,40 +176,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     continue;
 
                 GetOrAdd(sqlTable.TableName).Deletes.Add(item);
-            }
-        }
-
-        private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
-        {
-            if (args[0].IsString() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
-
-            var sizeSpecified = args.Length > 1;
-
-            if (sizeSpecified && args[1].IsNumber() == false)
-                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
-
-            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
-
-            item.Set(nameof(VarcharFunctionCall.Type), type, true);
-            item.Set(nameof(VarcharFunctionCall.Value), args[0], true);
-            item.Set(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
-
-            return item;
-        }
-
-        public class VarcharFunctionCall
-        {
-            public static JsValue AnsiStringType = DbType.AnsiString.ToString();
-            public static JsValue StringType = DbType.String.ToString();
-
-            public DbType Type { get; set; }
-            public object Value { get; set; }
-            public int Size { get; set; }
-
-            private VarcharFunctionCall()
-            {
-
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using Jint.Runtime;
+using V8Exception = V8.Net.V8Exception;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -51,6 +52,11 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             var error = sb.ToString();
             return (error, true);
+        }
+    
+        static internal (string Message, bool Success) PrepareErrorMessageForJavaScriptIndexFuncException(string script, V8Exception jse)
+        {
+            return (jse.Message, true);
         }
     }
 }

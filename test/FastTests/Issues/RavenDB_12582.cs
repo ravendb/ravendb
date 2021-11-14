@@ -1,4 +1,5 @@
 ﻿using System;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -12,10 +13,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void PatchOperationShouldReceiveCompleteInformation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PatchOperationShouldReceiveCompleteInformation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Sparrow;
 using Sparrow.Json;
@@ -15,10 +16,11 @@ namespace SlowTests.Server.Documents.Patching
         {
         }
 
-        [Fact]
-        public void DebugResultsWhenLoadingData()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenLoadingData(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday;
                 
@@ -105,10 +107,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public void DebugResultsWhenModifyingDocuments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenModifyingDocuments(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -142,10 +145,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
-        public void DebugResultsWhenModifyingCounters()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenModifyingCounters(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -197,10 +201,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
-        public void DebugResultsWhenModifyingTimeSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenModifyingTimeSeries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 
@@ -273,10 +278,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
-        public void DebugResultsWhenDeletingDocumentsAndCounters()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenDeletingDocumentsAndCounters(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -311,10 +317,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
-        public void DebugResultsWhenDeletingTimeSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenDeletingTimeSeries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 
@@ -374,10 +381,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public void DebugResultsWhenModifyingData()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenModifyingData(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday.EnsureUtc();
                 
@@ -490,10 +498,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
-        public void DebugResultsWhenDeletingData()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void DebugResultsWhenDeletingData(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = RavenTestHelper.UtcToday.ToUniversalTime();
                 

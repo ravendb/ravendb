@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Subscriptions
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
 
-        public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
+        public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentSubscriptions subscriptions, DocumentConventions conventions)
         {
             SubscriptionCreationOptions subscriptionCreationOptions = new SubscriptionCreationOptions
             {
@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
                 MentorNode = MentorNode,
                 Disabled = Disabled
             };
-            return DocumentSubscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
+            return subscriptions.CreateSubscriptionOptionsFromGeneric(conventions, 
                 subscriptionCreationOptions, Filter, Projection, Includes);
         }
     }

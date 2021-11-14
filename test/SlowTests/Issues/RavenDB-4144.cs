@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void can_save_javascript_array_values()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void can_save_javascript_array_values(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var foo = new Foo
                 {
@@ -51,10 +53,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void can_use_non_existing_function1()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void can_use_non_existing_function1(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var foo = new Foo
                 {
@@ -81,10 +84,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void can_use_non_existing_function2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void can_use_non_existing_function2(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var foo = new Foo
                 {
@@ -111,10 +115,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void can_use_non_existing_function3()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void can_use_non_existing_function3(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var foo = new Foo
                 {
@@ -143,10 +148,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void can_evaluate_function()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void can_evaluate_function(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var foo = new Foo
                 {

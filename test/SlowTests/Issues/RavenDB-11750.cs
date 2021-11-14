@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using NodaTime;
 using Raven.Client.Documents;
@@ -101,12 +102,14 @@ namespace SlowTests.Issues
             documentStore.Conventions.RegisterQueryValueConverter<Instant>(InstantQueryValueConverter);
         }
 
-        [Fact]
-        public async Task CanUsePatchWithNodaTime()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUsePatchWithNodaTime(string jsEngineType)
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = ModifyDocumentStore
+                ModifyDocumentStore = ModifyDocumentStore,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 await CreateUserAsync(store, "mark");

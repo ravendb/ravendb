@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,10 +24,11 @@ namespace SlowTests.Issues
             public string Date2 { get; set; }
         }
 
-        [Fact]
-        public void LastModifiedShouldBeAvailableInPatchContext()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void LastModifiedShouldBeAvailableInPatchContext(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

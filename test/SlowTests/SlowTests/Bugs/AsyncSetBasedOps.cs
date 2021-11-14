@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -32,12 +33,13 @@ namespace SlowTests.SlowTests.Bugs
 #pragma warning restore 414,649
         }
 
-        [Fact]
-        public async Task AwaitAsyncPatchByIndexShouldWork()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task AwaitAsyncPatchByIndexShouldWork(string jsEngineType)
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false")
             }))
             {
                 string lastUserId = null;

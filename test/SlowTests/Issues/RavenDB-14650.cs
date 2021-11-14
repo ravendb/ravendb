@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -20,10 +21,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanGetArrayWithType()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetArrayWithType(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var list = new List<int> { 1, 2, 3, 4, 5 };
                 var requestExecuter = store.GetRequestExecutor();
@@ -65,10 +67,11 @@ select doc.Array";
             }
         }
 
-        [Fact]
-        public void CanGetByteArrayWithType()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetByteArrayWithType(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))

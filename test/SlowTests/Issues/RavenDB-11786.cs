@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task SubscriptionsWorksWithCounter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SubscriptionsWorksWithCounter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {                    
@@ -55,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task SubscriptionsWorksWithCompareExchange()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SubscriptionsWorksWithCompareExchange(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 string userId;
                 string cmpxValueOriginal;

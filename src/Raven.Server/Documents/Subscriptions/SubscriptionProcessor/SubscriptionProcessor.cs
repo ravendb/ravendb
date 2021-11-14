@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Subscriptions;
@@ -16,7 +17,8 @@ public abstract class SubscriptionProcessor : IDisposable
 {
     protected readonly ServerStore Server;
     protected readonly SubscriptionConnectionBase Connection;
-        
+    protected readonly IJavaScriptOptions _jsOptions;
+
     protected EndPoint RemoteEndpoint;
     protected SubscriptionState SubscriptionState;
     protected SubscriptionWorkerOptions Options;

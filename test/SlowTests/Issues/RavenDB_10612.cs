@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldBeAbleToPatchInDebugWhenMetadataIdPropertyIsTouched()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldBeAbleToPatchInDebugWhenMetadataIdPropertyIsTouched(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

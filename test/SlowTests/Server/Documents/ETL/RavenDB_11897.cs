@@ -14,14 +14,14 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Theory]
-        [InlineData(@"
+        private const string Should_handle_as_empty_script_but_filter_out_deletions_Script1 = @"
     
     function deleteDocumentsOfUsersBehavior(docId) {
         return false;
     }
-")]
-        [InlineData(@"
+";
+
+        private const string Should_handle_as_empty_script_but_filter_out_deletions_Script2 = @"
     
     function deleteDocumentsOfUsersBehavior(docId) {
       if (true)
@@ -31,11 +31,19 @@ namespace SlowTests.Server.Documents.ETL
 
       return true;
     }
-")]
-        public void Should_handle_as_empty_script_but_filter_out_deletions(string script)
+";
+        
+        
+        [Theory]
+        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script1, "Jint")]
+        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script2, "Jint")]
+        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script1, "V8")]
+        [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script2, "V8")]
+        public void Should_handle_as_empty_script_but_filter_out_deletions(string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: script);
 

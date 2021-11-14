@@ -43,11 +43,13 @@ namespace SlowTests.Server.Documents.Patching
         }
 
         [Theory]
-        [InlineData(100)]
-        [InlineData(1300)]
-        public void CanPatchCollection(int count)
+        [InlineData(100, "Jint")]
+        [InlineData(1300, "Jint")]
+        [InlineData(100, "V8")]
+        [InlineData(1300, "V8")]
+        public void CanPatchCollection(int count, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var x = store.OpenSession())
                 {

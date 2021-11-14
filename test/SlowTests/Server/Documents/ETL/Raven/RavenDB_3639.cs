@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using FastTests.Server.JavaScript;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,11 +18,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public void Docs_are_transformed_according_to_provided_collection_specific_scripts()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Docs_are_transformed_according_to_provided_collection_specific_scripts(string jsEngineType)
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var master = GetDocumentStore(options))
+            using (var slave = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 

@@ -15,6 +15,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using IJavaScriptOptions = Raven.Server.Config.Categories.IJavaScriptOptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -33,6 +34,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
+using IndexesStatic = Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -63,7 +65,7 @@ using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
-
+    
 namespace Raven.Server.Documents
 {
     public class DocumentDatabase : IDisposable
@@ -224,6 +226,20 @@ namespace Raven.Server.Documents
         public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? string.Empty;
 
         public RavenConfiguration Configuration { get; }
+
+        public IJavaScriptOptions JsOptions
+        {
+            get
+            {
+                return GetJsOptions(Configuration);
+            }
+        }
+
+        public static IJavaScriptOptions GetJsOptions(RavenConfiguration configuration)
+        {
+            var jsOptions = new IndexesStatic.JavaScriptOptions(configuration);
+            return jsOptions;
+        }
 
         public QueryRunner QueryRunner { get; }
 
@@ -565,7 +581,7 @@ namespace Raven.Server.Documents
 
                 if (await ExecuteClusterTransactionOneByOne(batch))
                     batchCollector.AllCommandsBeenProcessed = true;
-            }
+                }
             foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
@@ -615,24 +631,24 @@ namespace Raven.Server.Documents
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                Task indexTask = null;
-                if (options.WaitForIndexesTimeout != null)
-                {
+                    Task indexTask = null;
+                    if (options.WaitForIndexesTimeout != null)
+                    {
                     indexTask = BatchHandlerProcessorForBulkDocs.WaitForIndexesAsync(this, options.WaitForIndexesTimeout.Value,
-                        options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                }
+                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
 
                 var result = new ClusterTransactionCompletionResult
-                {
-                    Array = mergedCommands.Replies[index],
-                    IndexTask = indexTask,
-                };
+                    {
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
                 ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, result);
-                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-            }
+                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+                }
             catch (Exception e)
             {
                 // nothing we can do

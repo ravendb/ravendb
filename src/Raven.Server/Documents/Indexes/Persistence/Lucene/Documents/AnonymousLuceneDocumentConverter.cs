@@ -74,7 +74,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (_isMultiMap == false)
                 accessor = _propertyAccessor ?? (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess));
             else
+            {
                 accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
+            }
 
             var storedValue = _storeValue ? new DynamicJsonValue() : null;
 

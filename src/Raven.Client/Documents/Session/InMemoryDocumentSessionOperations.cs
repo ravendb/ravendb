@@ -252,7 +252,7 @@ namespace Raven.Client.Documents.Session
             TransactionMode = options.TransactionMode;
             DisableAtomicDocumentWritesInClusterWideTransaction = options.DisableAtomicDocumentWritesInClusterWideTransaction;
 
-            _javascriptCompilationOptions = new JavascriptCompilationOptions(
+            _javascriptCompilationOptionsWithOptChaining = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                 extensions: new JavascriptConversionExtension[]
                 {
@@ -260,7 +260,18 @@ namespace Raven.Client.Documents.Session
                     JavascriptConversionExtensions.NullableSupport.Instance
                 })
             {
-                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
+                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions, true) 
+            };
+            
+            _javascriptCompilationOptionsWoOptChaining = new JavascriptCompilationOptions(
+                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
+                extensions: new JavascriptConversionExtension[]
+                {
+                    JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                    JavascriptConversionExtensions.NullableSupport.Instance
+                })
+            {
+                CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions, false) 
             };
         }
 

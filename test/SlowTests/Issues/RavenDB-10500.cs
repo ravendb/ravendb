@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
             public List<Document> SubDocuments { get; set; }
         }
 
-        [Fact]
-        public void CanQueryWhenLetPresent()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanQueryWhenLetPresent(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -71,10 +73,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWhenLetPresent_WithArrayParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanQueryWhenLetPresent_WithArrayParameter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

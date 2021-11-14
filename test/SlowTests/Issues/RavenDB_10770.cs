@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,10 +23,11 @@ namespace SlowTests.Issues
             public List<Document> SubDocuments { get; set; }
         }
 
-        [Fact]
-        public void ConcurrentProjectionsWithLazy()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ConcurrentProjectionsWithLazy(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var doc1 = new Document
                 {

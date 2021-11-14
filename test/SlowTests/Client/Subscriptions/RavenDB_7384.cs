@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents;
@@ -76,10 +77,11 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task UpdatingSubscriptionScriptShouldNotChangeVector()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task UpdatingSubscriptionScriptShouldNotChangeVector(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var subscriptionName = store.Subscriptions.Create<User>(options: new SubscriptionCreationOptions()
                 {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -39,10 +40,11 @@ namespace SlowTests.Server.Documents.Indexing
                 Stores.Add(x => x.Count, FieldStorage.Yes);
             }
         }
-        [Fact]
-        public void ReduceIndexProjectionWithoutStoredFields()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ReduceIndexProjectionWithoutStoredFields(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new ReduceIndex().Execute(store);
 
@@ -66,10 +68,11 @@ Count: user.Count
             }
         }
 
-        [Fact]
-        public void ReduceIndexProjectionWithStoredFields()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ReduceIndexProjectionWithStoredFields(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new ReduceIndex().Execute(store);
 

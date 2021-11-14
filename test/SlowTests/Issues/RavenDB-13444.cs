@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Xunit;
@@ -23,10 +24,11 @@ namespace SlowTests.Issues
             public double Field { get; set; }
         }
 
-        [Fact]
-        public void Can_overwrite_int_to_decimal_by_patch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_overwrite_int_to_decimal_by_patch(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -53,10 +55,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Patch_on_decimal_that_results_in_round_number_should_not_change_type_to_int()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Patch_on_decimal_that_results_in_round_number_should_not_change_type_to_int(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

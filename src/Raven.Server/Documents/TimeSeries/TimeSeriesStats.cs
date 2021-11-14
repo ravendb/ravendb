@@ -326,9 +326,9 @@ namespace Raven.Server.Documents.TimeSeries
         public (long Count, DateTime Start, DateTime End) GetStats(ref TableValueReader tvr)
         {
             var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
-            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)), DateTimeKind.Utc);
             var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
-
+            
             return (count, start, end);
         }
 

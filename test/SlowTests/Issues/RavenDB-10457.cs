@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
+using Microsoft.Azure.Documents.SystemFunctions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
@@ -41,21 +43,34 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = from item in session.Query<TestDocument, TestDocumentByName>()
-                        let prices = item.PriceConfig.Select(s => new {s.Value.Price, s.Value.Quantity})
-                        select new {item.Name, Prices = prices.ToList()};
+                                let prices = item.PriceConfig.Select(s => new { s.Key, s.Value.Price, s.Value.Quantity })
+                                select new
+                                {
+                                    item.Name,
+                                    Prices = prices.ToList()
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(item) {
-	var prices = Object.map(item.PriceConfig, function(v, k){ return {Price:v.Item1,Quantity:v.Item2};});
-	return { Name : item.Name, Prices : prices };
+@"declare function output(item) {
+    var prices = Object.map(item?.PriceConfig, function(v, k){ return {Key:k,Price:v?.Item1,Quantity:v?.Item2};});
+    return { Name : item?.Name, Prices : prices };
 }
 from index 'TestDocumentByName' as item select output(item)", query.ToString());
 
                     var queryResult = query.ToList();
 
-                    var expected = testDoc.PriceConfig.Select(s => new {s.Value.Price, s.Value.Quantity}).ToList();
+                    var expected = testDoc.PriceConfig.Select(s => new
+                    {
+                        s.Key,
+                        s.Value.Price,
+                        s.Value.Quantity
+                    })
+                    .ToList();
+                    expected.Sort((x, y) => String.Compare(x.Key, y.Key));
 
-                    Assert.Equal(expected, queryResult[0].Prices);
+                    var queryResultPrices = queryResult[0].Prices;
+                    queryResultPrices.Sort((x, y) => String.Compare(x.Key, y.Key));
+                    Assert.Equal(expected, queryResultPrices);
                 }
             }
         }
@@ -75,9 +90,9 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                         select new {Total = total.ToList()};
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(item) {
-	var total = Object.map(item.MusicCollection, function(v, k){ return v.map(function(x){return x.Quantity*x.Price;}).reduce(function(a, b) { return a + b; }, 0);});
-	return { Total : total };
+@"declare function output(item) {
+    var total = Object.map(item?.MusicCollection, function(v, k){ return (((v??[]).map(function(x){return x?.Quantity*x?.Price;}))?.reduce(function(a, b) { return a + b; }, 0));});
+    return { Total : total };
 }
 from index 'TestDocumentByName' as item select output(item)", query.ToString());
 
@@ -111,9 +126,9 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                         select new {item.Name, GeorgeAlbums = georgeAlbums.ToList(),};
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(item) {
-	var georgeAlbums = Object.keys(item.MusicCollection).map(function(a){return{Key: a,Value:item.MusicCollection[a]};}).filter(function(x){return x.Key.startsWith(""G"");}).map(function(s){return s.Value.map(function(x){return {Title:x.Title,ReleaseDate:x.ReleaseDate};});});
-	return { Name : item.Name, GeorgeAlbums : georgeAlbums };
+@"declare function output(item) {
+    var georgeAlbums = (((((Object.keys(item?.MusicCollection)?.map(function(a){return{Key: a,Value:item?.MusicCollection[a]};}))??[]).filter(function(x){return (x?.Key?.startsWith(""G""));}))??[]).map(function(s){return ((s?.Value??[]).map(function(x){return {Title:x?.Title,ReleaseDate:x?.ReleaseDate};}));}));
+    return { Name : item?.Name, GeorgeAlbums : georgeAlbums };
 }
 from index 'TestDocumentByName' as item select output(item)", query.ToString());
 
@@ -146,9 +161,9 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                         select new {item.Name, AlbumsByArtists = artists.ToList()};
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(item) {
-	var artists = Object.map(item.MusicCollection, function(v, k){ return v.map(function(x){return {Title:x.Title,ReleaseDate:x.ReleaseDate};});});
-	return { Name : item.Name, AlbumsByArtists : artists };
+@"declare function output(item) {
+    var artists = Object.map(item?.MusicCollection, function(v, k){ return ((v??[]).map(function(x){return {Title:x?.Title,ReleaseDate:x?.ReleaseDate};}));});
+    return { Name : item?.Name, AlbumsByArtists : artists };
 }
 from index 'TestDocumentByName' as item select output(item)", query.ToString());
 

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -22,13 +23,15 @@ namespace SlowTests.Server.Documents
         {
         }
 
-        [Fact]
-        public async Task CanCompactDatabase()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanCompactDatabase(string jsEngineType)
         {
             var path = NewDataPath();
             using (var store = GetDocumentStore(new Options
             {
-                Path = path
+                Path = path,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));

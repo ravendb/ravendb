@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,10 +31,11 @@ namespace SlowTests.Issues
             public int Level { get; set; }
         }
 
-        [Fact]
-        public void ProjectingDateViaJsShouldHaveSameValueAsSimpleDateProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ProjectingDateViaJsShouldHaveSameValueAsSimpleDateProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

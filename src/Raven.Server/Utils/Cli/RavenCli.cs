@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 #if !RVN
-using Jint;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -1033,50 +1032,6 @@ namespace Raven.Server.Utils.Cli
                     Console.ResetColor();
             }
             return true;
-        }
-
-        public static string ConvertResultToString(ScriptRunnerResult result)
-        {
-            var ms = new MemoryStream();
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var writer = new BlittableJsonTextWriter(ctx, ms))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName("Result");
-
-                if (result.IsNull)
-                {
-                    writer.WriteNull();
-                }
-                else if (result.RawJsValue.IsBoolean())
-                {
-                    writer.WriteBool(result.RawJsValue.AsBoolean());
-                }
-                else if (result.RawJsValue.IsString())
-                {
-                    writer.WriteString(result.RawJsValue.AsString());
-                }
-                else if (result.RawJsValue.IsDate())
-                {
-                    var date = result.RawJsValue.AsDate();
-                    writer.WriteString(date.ToDateTime().ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
-                }
-                else if (result.RawJsValue.IsNumber())
-                {
-                    writer.WriteDouble(result.RawJsValue.AsNumber());
-                }
-                else
-                {
-                    writer.WriteObject(result.TranslateToObject(ctx));
-                }
-
-                writer.WriteEndObject();
-                writer.Flush();
-            }
-
-            var str = Encoding.UTF8.GetString(ms.ToArray());
-            return str;
         }
 
         private static bool CommandLowMem(List<string> args, RavenCli cli)

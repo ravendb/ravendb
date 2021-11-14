@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Sparrow.Server;
 using Xunit;
@@ -18,12 +19,13 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = TimeSpan.FromSeconds(10);
 
-        [Fact] 
-        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldUseIdPropertySupportWhenTranslatingPredicateToJS(string jsEngineType)
         {
             var workspaceId = "workspaces/1";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

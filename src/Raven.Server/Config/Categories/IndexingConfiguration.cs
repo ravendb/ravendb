@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
@@ -16,6 +17,7 @@ using Raven.Server.Utils.Features;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Config.Categories
 {
@@ -205,11 +207,30 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutAfterEtagReachedInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public TimeSetting MapTimeoutAfterEtagReached { get; protected set; }
 
-        [Description("Max number of steps in the script execution of a JavaScript index")]
-        [DefaultValue(10_000)]
+        [Description("EXPERT: the type of JavaScript engine that will be used by RavenDB: 'Jint'  or 'V8'")]
+        [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.EngineForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public JavaScriptEngineType? JsEngineType { get; set; }
+
+        [Description("EXPERT: Enables Strict Mode in JavaScript engine. Default: true")]
+        [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.StrictModeForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool? JsStrictMode { get; set; }
+
+        [Description("EXPERT: Maximum number of steps in the JS script execution (Jint)")]
+        [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.MaxStepsForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public int MaxStepsForScript { get; set; }
+        public int? JsMaxSteps { get; set; }
+
+        [Description("EXPERT: Maximum duration in milliseconds of the JS script execution (V8)")]  // TODO [shlomo] To expose in Jint TimeConstraint2 class (as it was made to MaxStatements)
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [DefaultValue(null)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.MaxDurationForScript", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting? JsMaxDuration { get; set; }
 
         [Description("Time (in minutes) between index cleanup")]
         [DefaultValue(10)]
@@ -415,6 +436,12 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Static.RequireAdminToDeployJavaScriptIndexes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool RequireAdminToDeployJavaScriptIndexes { get; set; }
+
+        [Description("Indicate if index may have recursive dependencies on other indexes")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.AllowRecursiveDependencies", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool AllowRecursiveDependencies { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

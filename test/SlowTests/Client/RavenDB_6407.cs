@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -19,10 +20,11 @@ namespace SlowTests.Client
             public int Votes;
         }
         
-        [Fact]
-        public void WillPreserverRemovedPropertiesAcrossSaves()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void WillPreserverRemovedPropertiesAcrossSaves(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

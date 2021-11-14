@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_project_using_let_and_have_nested_query_with_let_that_refers_to_the_outer_let()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_project_using_let_and_have_nested_query_with_let_that_refers_to_the_outer_let(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (var session = store.OpenSession())
             {
                 const string categoryListId = "reference/categoryList";

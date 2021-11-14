@@ -12,6 +12,7 @@ using Lucene.Net.Documents;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -27,12 +28,17 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Static;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        protected readonly IJavaScriptOptions _jsOptions; 
+
         public static readonly Lucene.Net.Search.ScoreDoc ZeroScore = new Lucene.Net.Search.ScoreDoc(-1, 0f);
 
         public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
@@ -46,9 +52,9 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly char _identitySeparator;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
-        private Dictionary<string, Document> _loadedDocuments;
-        private Dictionary<string, Document> _loadedDocumentsByAliasName;
-        private HashSet<string> _loadedDocumentIds;
+        protected Dictionary<string, Document> _loadedDocuments;
+        protected Dictionary<string, Document> _loadedDocumentsByAliasName;
+        protected HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentFields DocumentFields;
 
@@ -66,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Results
         private QueryTimingsScope _functionScope;
         private QueryTimingsScope _loadScope;
 
-        private TimeSeriesRetriever _timeSeriesRetriever;
+        protected TimeSeriesRetriever _timeSeriesRetriever;
 
         protected QueryResultRetrieverBase(
             ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
@@ -93,6 +99,9 @@ namespace Raven.Server.Documents.Queries.Results
             DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+            
+            _jsOptions = _database?.JsOptions ?? DocumentsStorage?.DocumentDatabase?.JsOptions ?? 
+                new JavaScriptOptions();
         }
 
         protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
@@ -363,7 +372,7 @@ namespace Raven.Server.Documents.Queries.Results
             return default;
         }
 
-        private (Document Document, List<Document> List) CreateNewDocument(Document doc, string key, object fieldVal)
+        protected (Document Document, List<Document> List) CreateNewDocument(Document doc, string key, object fieldVal)
         {
             switch (fieldVal)
             {
@@ -453,7 +462,7 @@ namespace Raven.Server.Documents.Queries.Results
             result[key] = fieldVal;
         }
 
-        private static void ThrowInvalidQueryBodyResponse(object fieldVal)
+        protected static void ThrowInvalidQueryBodyResponse(object fieldVal)
         {
             throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
@@ -582,7 +591,7 @@ namespace Raven.Server.Documents.Queries.Results
             };
         }
 
-        internal class FieldType
+        public class FieldType
         {
             public bool IsArray;
             public bool IsJson;
@@ -680,7 +689,7 @@ namespace Raven.Server.Documents.Queries.Results
             return context.Sync.ReadForMemory(stringValue, field.Name);
         }
 
-        private static void ThrowBinaryValuesNotSupported()
+        protected static void ThrowBinaryValuesNotSupported()
         {
             throw new NotSupportedException("Cannot convert binary values");
         }
@@ -943,11 +952,11 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private class QueryKey : ScriptRunnerCache.Key
+        protected class QueryKey : ScriptRunnerCache.Key
         {
-            private readonly Dictionary<string, DeclaredFunction> _functions;
+            protected readonly Dictionary<string, DeclaredFunction> _functions;
 
-            private bool Equals(QueryKey other)
+            protected bool Equals(QueryKey other)
             {
                 if (_functions?.Count != other._functions?.Count)
                     return false;
@@ -1011,7 +1020,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings, CancellationToken token)
+        protected object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings, CancellationToken token)
         {
             if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
@@ -1023,7 +1032,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             var key = new QueryKey(query.DeclaredFunctions);
-            using (_scriptRunnerCache.GetScriptRunner(key, readOnly: true, patchRun: out var run))
+            using (_scriptRunnerCache.GetScriptRunner(_jsOptions, key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings, token))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
@@ -1039,7 +1048,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private static bool TryGetTimeSeriesFunction(string methodName, Query query, out DeclaredFunction func)
+        protected static bool TryGetTimeSeriesFunction(string methodName, Query query, out DeclaredFunction func)
         {
             func = default;
 
@@ -1048,7 +1057,7 @@ namespace Raven.Server.Documents.Queries.Results
                    func.Type == DeclaredFunction.FunctionType.TimeSeries;
         }
 
-        private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
+        protected bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {
             if (field.IsDocumentId)
             {
@@ -1079,7 +1088,7 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-        private static string GetIdFromDocument(Document document)
+        protected static string GetIdFromDocument(Document document)
         {
             if (document.Id != null)
             {
@@ -1106,15 +1115,15 @@ namespace Raven.Server.Documents.Queries.Results
             return null;
         }
 
-        private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
+        protected static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
         {
             throw new NotSupportedException(
                 $"Attempted to read multiple values in field {fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value}, but it isn't an array and should have only a single value, did you forget '[]' ?");
         }
 
-        private class UniqueFieldNames : IEqualityComparer<IFieldable>
+        protected class UniqueFieldNames : IEqualityComparer<IFieldable>
         {
-            public static readonly UniqueFieldNames Instance = new UniqueFieldNames();
+            public static readonly UniqueFieldNames Instance = new();
 
             public bool Equals(IFieldable x, IFieldable y)
             {
@@ -1124,30 +1133,6 @@ namespace Raven.Server.Documents.Queries.Results
             public int GetHashCode(IFieldable obj)
             {
                 return obj.Name.GetHashCode();
-            }
-        }
-
-        private class QueryResultModifier : JsBlittableBridge.IResultModifier
-        {
-            public static readonly QueryResultModifier Instance = new QueryResultModifier();
-
-            private QueryResultModifier()
-            {
-            }
-
-            public void Modify(ObjectInstance json)
-            {
-                ObjectInstance metadata;
-                var value = json.Get(Constants.Documents.Metadata.Key);
-                if (value.Type == Types.Object)
-                    metadata = value.AsObject();
-                else
-                {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
-                    json.Set(Constants.Documents.Metadata.Key, metadata, false);
-                }
-
-                metadata.Set(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
@@ -77,10 +78,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanUseToCharArrayInsideProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseToCharArrayInsideProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

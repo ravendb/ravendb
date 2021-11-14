@@ -13,26 +13,31 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Theory]
-        [InlineData("Orders", null)]
-        [InlineData(null, null)]
-        [InlineData("Orders", @"
+        private const string MustNotIterateCountersTooFarScript = @"
     loadToOrders(this);
 
 function loadCountersOfOrdersBehavior(doc, counter)
 {
     return true;
 }
-")]
-        public void MustNotIterateCountersTooFar(string collection, string script)
+";
+        
+        [Theory]
+        [InlineData("Orders", null, "Jint")]
+        [InlineData(null, null, "Jint")]
+        [InlineData("Orders", MustNotIterateCountersTooFarScript, "Jint")]
+        [InlineData("Orders", null, "V8")]
+        [InlineData(null, null, "V8")]
+        [InlineData("Orders", MustNotIterateCountersTooFarScript, "V8")]
+        public void MustNotIterateCountersTooFar(string collection, string script, string jsEngineType)
         {
             using (var src = GetDocumentStore(new Options()
             {
-                ModifyDatabaseRecord = x =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x =>
                 {
                     x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "20";
                     x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedItems)] = "20";
-                }
+                })
             }))
             using (var dest = GetDocumentStore())
             {

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                                     doc.ExtraProperty
                                 };
 
-                    Assert.Equal("from index 'DocumentIndex' as x load x.DocumentId as doc select { Id : id(doc), Name : doc.Name, ExtraProperty : doc.ExtraProperty }",
+                    Assert.Equal("from index 'DocumentIndex' as x load x?.DocumentId as doc select { Id : id(doc), Name : doc?.Name, ExtraProperty : doc?.ExtraProperty }",
                         query.ToString());
 
                     var result = query.SingleOrDefault();

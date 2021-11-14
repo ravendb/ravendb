@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -22,10 +23,11 @@ namespace SlowTests.Client.Subscriptions
             public int ZipCode { get; set; }
         }
 
-        [Fact]
-        public async Task StronglyTypedDataSubscriptions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task StronglyTypedDataSubscriptions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

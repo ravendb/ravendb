@@ -979,9 +979,11 @@ namespace Tests.Infrastructure
             return urls;
         }
 
-        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
+        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null, Options options = null)
         {
-            return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
+            var record = new DatabaseRecord(databaseName);
+            options?.ModifyDatabaseRecord.Invoke(record);
+            return CreateDatabaseInCluster(record, replicationFactor, leadersUrl, certificate);
         }
 
         public void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)

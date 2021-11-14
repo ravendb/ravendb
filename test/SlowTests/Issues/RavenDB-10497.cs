@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,11 +21,12 @@ namespace SlowTests.Issues
             public List<Document> SubDocuments { get; set; }
         }
 
-        [Fact]
-        public void CanQueryMinMaxDatesCoalescing()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanQueryMinMaxDatesCoalescing(string jsEngineType)
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

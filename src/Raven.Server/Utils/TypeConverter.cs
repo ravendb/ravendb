@@ -1,35 +1,41 @@
 using System;
+using System.IO;
+using System.Text;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
-using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client;
-using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Server.Documents.Indexes.Static.JavaScript.Jint;
+using Raven.Server.Documents.Indexes.Static.JavaScript.V8;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Patch.Jint;
+using Raven.Server.Documents.Patch.V8;
 using Raven.Server.Exceptions;
-using Raven.Server.Extensions;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Raven.Client.ServerWide.JavaScript;
+using Raven.Server.Config.Categories;
+using Raven.Server.Extensions.Jint;
+using V8.Net;
 
 namespace Raven.Server.Utils
 {
-    internal static class TypeConverter
+    public static class TypeConverter
     {
         private const string TypePropertyName = "$type";
 
@@ -43,6 +49,16 @@ namespace Raven.Server.Utils
 
         private static readonly TypeCache<bool> _isSupportedTypeCache = new (512);
 
+        public static JavaScriptEngineType GetJsEngineType(IJavaScriptOptions jsOptions)
+        { 
+            return GetJsEngineType(jsOptions?.EngineType); 
+        }
+        
+        public static JavaScriptEngineType GetJsEngineType(JavaScriptEngineType? jsEngineType)
+        { 
+            return jsEngineType ?? JavaScriptEngineType.Jint; 
+        }
+        
         private static bool IsSupportedTypeInternal(object value)
         {
             if (value is DynamicNullObject)
@@ -179,12 +195,14 @@ namespace Raven.Server.Utils
             return UnlikelyIsSupportedType(value);
         }
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, bool forIndexing = false, 
+            IJsEngineHandle engine = null, JsonOperationContext context = null, bool isRoot = true)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, out _);
+            return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, out _, isRoot: isRoot);
         }
 
-        public static object ToBlittableSupportedType(object value, out BlittableSupportedReturnType returnType, bool flattenArrays = false, bool forIndexing = false, Engine engine = null, JsonOperationContext context = null)
+        public static object ToBlittableSupportedType(object value, out BlittableSupportedReturnType returnType, bool flattenArrays = false, bool forIndexing = false, 
+            IJsEngineHandle engine = null, JsonOperationContext context = null)
         {
             return ToBlittableSupportedType(value, value, flattenArrays, forIndexing, 0, engine, context, out returnType);
         }
@@ -217,7 +235,7 @@ namespace Raven.Server.Utils
                 type == typeof(DateOnly) || type == typeof(TimeOnly))
                 return BlittableSupportedReturnType.Same;
 
-            if (value is JsValue)
+            if (value is JsHandle || value is JsValue || value is InternalHandle)
                 return BlittableSupportedReturnType.Javascript;
 
             if (value is IEnumerable<IFieldable> || value is IFieldable)
@@ -238,7 +256,8 @@ namespace Raven.Server.Utils
             return BlittableSupportedReturnType.Runtime;
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context, out BlittableSupportedReturnType blittableSupportedReturnType)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, bool forIndexing, int recursiveLevel, 
+            IJsEngineHandle engine, JsonOperationContext context, out BlittableSupportedReturnType blittableSupportedReturnType, bool isRoot = true)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
@@ -270,55 +289,128 @@ namespace Raven.Server.Utils
                 case BlittableSupportedReturnType.String: return value.ToString();
                 case BlittableSupportedReturnType.Javascript:
                 {
-                    var js = (JsValue)value;
-                    if (js.IsNull())
+                    JsValue valueJint = null;
+                    InternalHandle valueV8 = InternalHandle.Empty;
+                    if (value is JsHandle jsHandle)
                     {
-                        if (forIndexing && js is DynamicJsNull dynamicJsNull)
-                            return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+                        var jsEngineType = jsHandle.EngineType;
+                        switch (jsEngineType)
+                        {
+                            case JavaScriptEngineType.Jint:
+                                valueJint = jsHandle.Jint.Item;
+                                break;
+                            case JavaScriptEngineType.V8:
+                                valueV8 = jsHandle.V8.Item;
+                                break;
+                            default:
+                                throw new NotSupportedException($"Not supported JS engine kind '{jsEngineType}'.");
+                        }
+                    }
+                    else if (value is JsValue)
+                        valueJint = (JsValue)value;
+                    else if (value is InternalHandle)
+                        valueV8 = (InternalHandle)value;
 
+                    if (valueJint != null)
+                    {
+                        if (valueJint.IsNull())
+                        {
+                            if (forIndexing && valueJint is DynamicJsNullJint dynamicJsNull)
+                                return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+
+                            return null;
+                        }
+
+                        if (valueJint.IsUndefined())
+                            return null;
+                        if (valueJint.IsString())
+                            return valueJint.AsString();
+                        if (valueJint.IsBoolean())
+                            return valueJint.AsBoolean();
+                        if (valueJint.IsNumber())
+                            return valueJint.AsNumber();
+                        if (valueJint.IsDate())
+                            return valueJint.AsDate().ToDateTime();
+                        //object wrapper is an object so it must come before the object
+                        if (valueJint is ObjectWrapper ow)
+                        {
+                            var target = ow.Target;
+                            switch (target)
+                            {
+                                case LazyStringValue lsv:
+                                    return lsv;
+                                case LazyCompressedStringValue lcsv:
+                                    return lcsv;
+                                case LazyNumberValue lnv:
+                                    return lnv; //should be already blittable supported type.
+                            }
+
+                            ThrowInvalidObject(new JsHandle(valueJint));
+                        }
+                        //Array is an object in Jint
+                        else if (valueJint.IsArray())
+                        {
+                            var arr = valueJint.AsArray();
+                            var convertedArray = EnumerateArray(root, arr, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
+                            return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
+                        }
+                        else if (valueJint.IsObject())
+                        {
+                            return JsBlittableBridgeJint.Translate(context, (Engine)engine, valueJint.AsObject(), isRoot: isRoot);
+                        }
+                        ThrowInvalidObject(new JsHandle(valueJint));
+                    }
+                    else if (!valueV8.IsEmpty)
+                    {
+                        if (valueV8.IsNull)
+                        {
+                            if (forIndexing && valueV8.IsObject && valueV8.Object is DynamicJsNullV8 dynamicJsNull)
+                                return dynamicJsNull.IsExplicitNull ? DynamicNullObject.ExplicitNull : DynamicNullObject.Null;
+
+                            return null;
+                        }
+
+                        if (valueV8.IsUndefined)
+                            return null;
+                        if (valueV8.IsStringEx)
+                            return valueV8.AsString;
+                        if (valueV8.IsRegExp)              // added, check
+                            return valueV8.AsString;
+                        if (valueV8.IsBoolean)
+                            return valueV8.AsBoolean;
+                        if (valueV8.IsInt32)               // added, check
+                            return valueV8.AsInt32;
+                        if (valueV8.IsNumberEx)
+                            return valueV8.AsDouble;
+                        if (valueV8.IsDate)
+                            return valueV8.AsDate;
+                        if (valueV8.IsArray)
+                        {
+                            var convertedArray = EnumerateArray(root, valueV8, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
+                            return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
+                        }                
+                        if (valueV8.IsObject)
+                        {
+                            object boundObject = valueV8.BoundObject;
+                            if (boundObject != null)
+                            {
+                                switch (boundObject)
+                                {
+                                    case LazyStringValue lsv:
+                                        return lsv;
+                                    case LazyCompressedStringValue lcsv:
+                                        return lcsv;
+                                    case LazyNumberValue lnv:
+                                        return lnv; //should be already blittable supported type.
+                                }
+                            }
+                            return JsBlittableBridgeV8.Translate(context, (V8Engine)engine, valueV8, isRoot: isRoot);
+                        }
+                        ThrowInvalidObject(new JsHandle(valueV8));
                         return null;
                     }
 
-                    if (js.IsUndefined())
-                        return DynamicNullObject.Null;
-                    if (js.IsString())
-                        return js.AsString();
-                    if (js.IsBoolean())
-                        return js.AsBoolean();
-                    if (js.IsNumber())
-                        return js.AsNumber();
-                    if (js.IsDate())
-                        return js.AsDate().ToDateTime();
-                    //object wrapper is an object so it must come before the object
-                    if (js is ObjectWrapper ow)
-                    {
-                        var target = ow.Target;
-                        switch (target)
-                        {
-                            case LazyStringValue lsv:
-                                return lsv;
-                            case LazyCompressedStringValue lcsv:
-                                return lcsv;
-                            case LazyNumberValue lnv:
-                                return lnv; //should be already blittable supported type.
-                        }
-
-                        ThrowInvalidObject(js);
-                    }
-                    //Array is an object in Jint
-                    else if (js.IsArray())
-                    {
-                        var arr = js.AsArray();
-                        var convertedArray = EnumerateArray(root, arr, flattenArrays, forIndexing, recursiveLevel + 1, engine, context);
-                        return new DynamicJsonArray(flattenArrays ? Flatten(convertedArray) : convertedArray);
-                    }
-                    else if (js.IsObject())
-                    {
-                        return JsBlittableBridge.Translate(context, engine, js.AsObject());
-                    }
-
-                    ThrowInvalidObject(js);
-                    return null;
+                    throw new InvalidOperationException("Invalid object type " + value.GetType());
                 }
                 case BlittableSupportedReturnType.Enumerable:
                 {
@@ -419,12 +511,12 @@ namespace Raven.Server.Utils
             return kvpKeyAsString;
         }
 
-        private static void ThrowInvalidObject(JsValue jsValue)
+        private static void ThrowInvalidObject(JsHandle jsValue)
         {
-            throw new InvalidOperationException("Invalid type " + jsValue);
+            throw new InvalidOperationException("Invalid type " + jsValue.ValueType);
         }
 
-        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static IEnumerable<object> EnumerateArray(object root, ArrayInstance arr, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle engine, JsonOperationContext context)
         {
             foreach (var (key, val) in arr.GetOwnPropertiesWithoutLength())
             {
@@ -432,7 +524,18 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, bool forIndexing, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static IEnumerable<object> EnumerateArray(object root, InternalHandle jsArr, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle engine, JsonOperationContext context)
+        {
+            for (int i = 0; i < jsArr.ArrayLength; i++)
+            {
+                using (var value = jsArr.GetProperty(i))
+                {
+                    yield return ToBlittableSupportedType(root, value, flattenArrays, forIndexing, recursiveLevel, engine, context, out _);
+                }
+            }
+        }
+
+        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, bool forIndexing, int recursiveLevel, IJsEngineHandle engine, JsonOperationContext context)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
             
@@ -707,15 +810,14 @@ namespace Raven.Server.Utils
 
         public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
         {
+            if (value is JsHandle) // We don't cache JS types
+                return PropertyAccessor.CreateMapReduceOutputAccessorJs(groupByFields);
+
             var type = value.GetType();
-
-            if (type == typeof(ObjectInstance)) // We don't cache JS types
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
-
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
                 return PropertyAccessor.Create(type, value);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(value, groupByFields, type: type));
         }
 
 
@@ -743,6 +845,55 @@ namespace Raven.Server.Utils
             _treatAsEnumerableCache.Put(item.GetType(), result);
 
             return result;
+        }
+        
+        public static string ConvertResultToString(ScriptRunnerResult resultBase)
+        {
+            var result = (ScriptRunnerResult)resultBase;
+            var ms = new MemoryStream();
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, ms))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName("Result");
+
+                if (result.IsNull)
+                {
+                    writer.WriteNull();
+                }
+                else if (result.RawJsValue.IsBoolean)
+                {
+                    writer.WriteBool(result.RawJsValue.AsBoolean);
+                }
+                else if (result.RawJsValue.IsStringEx)
+                {
+                    writer.WriteString(result.RawJsValue.AsString);
+                }
+                else if (result.RawJsValue.IsDate)
+                {
+                    var date = result.RawJsValue.AsDate;
+                    writer.WriteString(date.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                }
+                else if (result.RawJsValue.IsInt32)
+                {
+                    writer.WriteInteger(result.RawJsValue.AsInt32);
+                }
+                else if (result.RawJsValue.IsNumberEx)
+                {
+                    writer.WriteDouble(result.RawJsValue.AsDouble);
+                }
+                else
+                {
+                    writer.WriteObject(result.TranslateToObject(ctx));
+                }
+
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            var str = Encoding.UTF8.GetString(ms.ToArray());
+            return str;
         }
     }
 }

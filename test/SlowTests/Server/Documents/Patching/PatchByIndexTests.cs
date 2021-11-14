@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using MySqlX.XDevAPI;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -33,10 +34,11 @@ namespace SlowTests.Server.Documents.Patching
 
         private static readonly TimeSpan CancelAfter = TimeSpan.FromMinutes(10);
 
-        [Fact]
-        public async Task PatchByIndex_WhenFinish_ShouldFreeInternalUsageMemory()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task PatchByIndex_WhenFinish_ShouldFreeInternalUsageMemory(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await GetDatabase(store.Database);
 

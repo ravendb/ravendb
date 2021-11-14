@@ -12,11 +12,15 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Voron.Impl;
+using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 {
     public class OutputReduceToCollectionCommandBatcher : IDisposable
     {
+        private readonly IJavaScriptOptions _jsOptions;
+        
         private static int BatchSize = PlatformDetails.Is32Bits == false
             ? 4096
             : 1024;
@@ -36,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             new Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocId)>>();
 
         public OutputReduceToCollectionCommandBatcher(
+            IJavaScriptOptions jsOptions, 
             DocumentDatabase database,
             string outputReduceToCollection,
             long? reduceOutputIndex,
@@ -44,6 +49,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             JsonOperationContext indexContext,
             TransactionHolder indexWriteTxHolder)
         {
+            _jsOptions = jsOptions;
             _database = database;
             _outputReduceToCollection = outputReduceToCollection;
             _reduceOutputIndex = reduceOutputIndex;
@@ -163,6 +169,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                                 stats.AddReduceError($"Failed to build document ID based on provided pattern for output to collection references. {e}");
                         }
                     }
+                    V8EngineEx.DisposeJsObjectsIfNeeded(value);
                 }
 
                 if (referenceDocIdBuilder != null && patternPropertiesAddedSuccessfully)

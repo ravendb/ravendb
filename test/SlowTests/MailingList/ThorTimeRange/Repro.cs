@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
@@ -146,10 +147,11 @@ namespace SlowTests.MailingList.ThorTimeRange
             }
         }
 
-        [Fact]
-        public void CanPersistAndLoad_FAILS()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPersistAndLoad_FAILS(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Utility.CreateTestData(store);
 

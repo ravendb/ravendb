@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
@@ -16,11 +17,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task MustNotSkipAnyDocumentsIfTaskIsCanceledDuringLoad(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dst = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -82,11 +85,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task MustNotSkipAnyDocumentsIfLoadFailsAndThereWereSomeInternalFiltering(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dst = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 

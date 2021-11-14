@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Raven.Client.Documents.Operations;
@@ -68,10 +69,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void IndexingOfLoadDocumentWhileChanged()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void IndexingOfLoadDocumentWhileChanged(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var bulk = store.BulkInsert())
                 {
@@ -194,10 +196,11 @@ update {
             }
         }
 
-        [Fact]
-        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var bulk = store.BulkInsert())
                 {

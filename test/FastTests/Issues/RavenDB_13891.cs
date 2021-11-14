@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Xunit;
@@ -14,10 +15,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public async Task PatchedDocumentShouldBeReplaced()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task PatchedDocumentShouldBeReplaced(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 string personId = null;
                 using (var s = store.OpenAsyncSession())

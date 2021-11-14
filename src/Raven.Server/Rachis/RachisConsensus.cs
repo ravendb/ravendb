@@ -44,7 +44,7 @@ namespace Raven.Server.Rachis
     {
         private readonly ServerStore _serverStore;
 
-        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(serverStore.Server.CipherSuitesPolicy, seed)
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(serverStore.Configuration, serverStore.Server.CipherSuitesPolicy, seed)
         {
             _serverStore = serverStore;
         }
@@ -390,6 +390,8 @@ namespace Raven.Server.Rachis
         public int? MaximalVersion { get; set; }
         public long? MaxSizeOfSingleRaftCommandInBytes { get; set; }
 
+        public RavenConfiguration Configuration;
+        
         private Leader _currentLeader;
         public Leader CurrentLeader => _currentLeader;
         private TaskCompletionSource<object> _topologyChanged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -400,8 +402,9 @@ namespace Raven.Server.Rachis
         private string _lastStateChangeReason;
         public Candidate Candidate { get; private set; }
 
-        protected RachisConsensus(CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
+        protected RachisConsensus(RavenConfiguration configuration, CipherSuitesPolicy cipherSuitesPolicy, int? seed = null)
         {
+            Configuration = configuration;
             CipherSuitesPolicy = cipherSuitesPolicy;
             _rand = seed.HasValue ? new Random(seed.Value) : new Random();
             LogHistory = new RachisLogHistory();

@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                                 let c = RavenQuery.Load<Company>(o.Company)
                                 select c.Name;
 
-                    Assert.Equal("from index 'Index1' as o load o.Company as c select c.Name"
+                    Assert.Equal("from index 'Index1' as o load o?.Company as c select c.Name"
                         , query.ToString());
 
                     var result = query.ToList();

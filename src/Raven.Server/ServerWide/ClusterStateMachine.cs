@@ -27,6 +27,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Server.Config.Categories;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -34,7 +35,6 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
@@ -3932,7 +3932,6 @@ namespace Raven.Server.ServerWide
                             {
                                 [nameof(DatabaseRecord.Settings)] = TypeConverter.ToBlittableSupportedType(settings)
                             };
-
                             break;
 
                         case ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution:

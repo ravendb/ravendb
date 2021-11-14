@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanPatchNestedSubclass()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchNestedSubclass(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var cat = new Pet { Id = Guid.NewGuid().ToString(), Name = "Cat" };
                 var john = new Person { Id = Guid.NewGuid().ToString(), Name = "John", Pet = cat };

@@ -1,7 +1,11 @@
 using System;
 using System.Diagnostics;
+using Raven.Client.ServerWide.JavaScript;
+using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils.Cli;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -38,12 +42,14 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 DocumentsOperationContext docsCtx = null;
-                using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
+                IJavaScriptOptions jsOptions = _database?.JsOptions ?? _server?.Configuration.JavaScript ?? 
+                    (IJavaScriptOptions)(new JavaScriptOptions());
+                using (_server.AdminScripts.GetScriptRunner(jsOptions, new AdminJsScriptKey(script.Script), false, out var run))
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
                 using (var result = run.Run(ctx, docsCtx, "execute", new object[] {_server, _database}))
                 {
-                    var toJson = RavenCli.ConvertResultToString(result);
+                    var toJson = TypeConverter.ConvertResultToString(result);
 
                     if (Log.IsOperationsEnabled)
                     {

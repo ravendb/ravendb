@@ -3,6 +3,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {

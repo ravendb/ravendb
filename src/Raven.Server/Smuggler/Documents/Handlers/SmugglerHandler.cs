@@ -51,8 +51,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var processor = new SmugglerHandlerProcessorForValidateOptions<DocumentsOperationContext>(this))
             {
                 await processor.ExecuteAsync();
-            }
-        }
+                }
+                }
 
         [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostExport()
@@ -653,5 +653,5 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
             return HttpContext.Request.Body;
         }
-    }
-}
+            }
+        }

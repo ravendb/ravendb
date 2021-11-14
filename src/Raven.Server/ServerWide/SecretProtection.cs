@@ -22,7 +22,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide

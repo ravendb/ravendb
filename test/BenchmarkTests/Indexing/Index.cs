@@ -190,7 +190,7 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        public override async Task InitAsync(DocumentStore store)
+        public override async Task InitAsync(DocumentStore store, string dbNamePostfix = "", Options options = null, int count = 1_000_000)
         {
             await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord(IndexDatabaseName)));
             await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(CreateDatabaseRecord(ReIndexDatabaseName)));

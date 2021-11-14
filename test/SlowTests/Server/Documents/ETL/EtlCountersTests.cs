@@ -23,17 +23,21 @@ namespace SlowTests.Server.Documents.ETL
         }
         
         [Theory]
-        [InlineData(16)]
-        [InlineData(1024)]
-        public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest(int count)
+        [InlineData(16, "Jint")]
+        [InlineData(1024, "Jint")]
+        [InlineData(16, "V8")]
+        [InlineData(1024, "V8")]
+        public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest(int count, string jsEngineType)
         {
-            const string script = @"
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+            string script = @$"
 var doc = loadToUsers(this);
 var counters = this['@metadata']['@counters'];
-for (var i = 0; i < counters.length; i++) {
+for (var i = 0; i < counters{optChaining}.length{zeroIfNull}; i++) {{
     doc.addCounter(loadCounter(counters[i]));
-}";
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions:_options);
+}}";
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, "Users", script, srcOptions:_options);
 
             var entity = new User();
             var counters = Enumerable.Range(0, count).Select(i => "Likes" + i).ToArray();
@@ -71,17 +75,21 @@ for (var i = 0; i < counters.length; i++) {
         }
 
         [Theory]
-        [InlineData(16)]
-        [InlineData(1024)]
-        public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest2(int count)
+        [InlineData(16, "Jint")]
+        [InlineData(16, "V8")]
+        [InlineData(1024, "Jint")]
+        [InlineData(1024, "V8")]
+        public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest2(int count, string jsEngineType)
         {
-            const string script = @"
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+            string script = @$"
 var doc = loadToUsers(this);
 var counters = this['@metadata']['@counters'];
-for (var i = 0; i < counters.length; i++) {
+for (var i = 0; i < counters{optChaining}.length{zeroIfNull}; i++) {{
     doc.addCounter(loadCounter(counters[i]));
-}";
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
+}}";
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, "Users", script, srcOptions: _options);
 
             var entity = new User();
             var counters = Enumerable.Range(0, count).Select(i => "Likes" + i).ToArray();

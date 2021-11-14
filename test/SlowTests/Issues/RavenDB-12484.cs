@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
@@ -13,8 +14,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ProjectionAgainstMissingBasicValueTypes()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ProjectionAgainstMissingBasicValueTypes(string jsEngineType)
         {
             const string documentId = "document-id";
 
@@ -26,7 +28,8 @@ namespace SlowTests.Issues
                     {
                         CustomizeJsonDeserializer = des => des.NullValueHandling = NullValueHandling.Ignore
                     };
-                }
+                },
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var s = store.OpenSession())

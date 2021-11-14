@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Client;
+using FastTests.Server.JavaScript;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -29,14 +30,15 @@ namespace SlowTests.Server.Documents.ETL.Olap
         private readonly string _googleCloudTestsPrefix = $"olap-tests/{nameof(GoogleCloudTests)}-{Guid.NewGuid()}";
         private const string CollectionName = "Orders";
 
-        [GoogleCloudFact]
-        public async Task CanUploadToGoogleCloud()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanUploadToGoogleCloud(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -103,14 +105,15 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [GoogleCloudFact]
-        public async Task SimpleTransformation()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -208,15 +211,16 @@ loadToOrders(partitionBy(key),
             }
         }
 
-        [GoogleCloudFact]
-        public async Task CanLoadToMultipleTables()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanLoadToMultipleTables(string jsEngineType)
         {
             const string salesTableName = "Sales";
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -388,14 +392,15 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        [GoogleCloudFact]
-        public async Task CanModifyPartitionColumnName()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyPartitionColumnName(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
 
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     const string partitionColumn = "order_date";
 
@@ -483,13 +488,14 @@ loadToOrders(partitionBy(['order_date', key]),
             }
         }
 
-        [GoogleCloudFact]
-        public async Task SimpleTransformation_NoPartition()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_NoPartition(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
 
@@ -514,7 +520,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });
@@ -591,13 +597,14 @@ loadToOrders(noPartition(),
             }
         }
 
-        [GoogleCloudFact]
-        public async Task SimpleTransformation_MultiplePartitions()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation_MultiplePartitions(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = DateTime.SpecifyKind(new DateTime(2020, 1, 1), DateTimeKind.Utc);
 
@@ -675,13 +682,14 @@ loadToOrders(partitionBy(
             }
         }
 
-        [GoogleCloudFact]
-        public async Task CanPartitionByCustomDataFieldViaScript()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanPartitionByCustomDataFieldViaScript(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1);
 
@@ -748,13 +756,14 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
         }
 
-        [GoogleCloudFact]
-        public async Task CanHandleSpecialCharsInFolderPath()
+        [GoogleCloudTheory]
+        [JavaScriptEngineClassData]
+        public async Task CanHandleSpecialCharsInFolderPath(string jsEngineType)
         {
             var settings = GetGoogleCloudSettings();
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     using (var session = store.OpenAsyncSession())
                     {
@@ -897,7 +906,7 @@ for (var i = 0; i < this.Lines.length; i++){
 
         private GoogleCloudSettings GetGoogleCloudSettings([CallerMemberName] string caller = null)
         {
-            var googleCloudSettings = GoogleCloudFactAttribute.GoogleCloudSettings;
+            var googleCloudSettings = GoogleCloudTheoryAttribute.GoogleCloudSettings;
             if (googleCloudSettings == null)
                 return null;
 

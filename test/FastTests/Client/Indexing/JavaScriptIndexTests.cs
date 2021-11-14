@@ -10,6 +10,7 @@ using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
+using FastTests.Server.JavaScript;
 
 namespace FastTests.Client.Indexing
 {
@@ -606,7 +607,7 @@ namespace FastTests.Client.Indexing
                 }
             }
         }
-        private class ProductsWarrentyResult
+        private class ProductsWarrantyResult
         {
             public string Warranty { get; set; }
             public int Duration { get; set; }
@@ -619,7 +620,7 @@ namespace FastTests.Client.Indexing
         {
             using (var store = GetDocumentStore(options))
             {
-                store.ExecuteIndex(new ProductsWarrenty());
+                store.ExecuteIndex(new ProductsWarranty());
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Product
@@ -659,7 +660,7 @@ namespace FastTests.Client.Indexing
                     });
                     session.SaveChanges();
                     Indexes.WaitForIndexing(store);
-                    var res = session.Query<ProductsWarrentyResult>("ProductsWarrenty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
+                    var res = session.Query<ProductsWarrantyResult>("ProductsWarranty").Where(u => u.Duration > 20).ProjectInto<Product>().Single();
                     Assert.Equal(res.Name, "p3");
                 }
             }
@@ -973,9 +974,9 @@ map('Users', function (u){ return { Name: u.Name, Count: 1, Product: GetProductN
             }
         }
 
-        private class ProductsWarrenty : AbstractJavaScriptIndexCreationTask
+        private class ProductsWarranty : AbstractJavaScriptIndexCreationTask
         {
-            public ProductsWarrenty()
+            public ProductsWarranty()
             {
                 Maps = new HashSet<string>
                 {
@@ -1000,7 +1001,7 @@ map('Products', prod => {
                     result.Duration = 6;
                 }
 
-                if (prod.Mode == Refurbished)
+                if (prod.Mode == 'Refurbished')
                     result.Duration /= 2;
 
                 return result;
@@ -1157,7 +1158,7 @@ map('Products', prod => {
                             order.Lines.forEach(l => {
                                 res.push({
                                     Product: l.Product,
-                                    Month: new Date( (new Date(order.OrderedAt)).getFullYear(),(new Date(order.OrderedAt)).getMonth(),1),
+                                    Month: new Date( Date.UTC((new Date(order.OrderedAt)).getFullYear(),(new Date(order.OrderedAt)).getMonth(),1)),
                                     Count: 1,
                                 })
                             });

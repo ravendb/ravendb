@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,11 @@ namespace SlowTests.Issues
             public TestView[] Children { get; set; }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToEmptyArray()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToEmptyArray(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -59,10 +61,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToNonEmptyArray()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToNonEmptyArray(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -111,10 +114,11 @@ namespace SlowTests.Issues
             public Dictionary<string, string> Dictionary { get; set; }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToEmptyList()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToEmptyList(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -137,10 +141,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectToListWithParmeter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectToListWithParmeter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -201,10 +206,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToNewListWithInitializers()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToNewListWithInitializers(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -256,10 +262,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToDictionary()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToDictionary(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -297,10 +304,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectDefaultingToHashSet()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDefaultingToHashSet(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

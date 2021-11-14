@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Voron.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
@@ -69,7 +70,7 @@ loadToOrders(orderData);
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task ReplicateMultipleBatches()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -160,7 +161,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task SimpleTransformation()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -206,7 +207,7 @@ DROP DATABASE [SqlReplication-{dbName}]";
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -260,7 +261,7 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanLoadToTableWithSchemaName()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -321,10 +322,11 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
             }
         }
 
-        [Fact]
-        public async Task NullPropagation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task NullPropagation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -344,11 +346,13 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, @"var orderData = {
+                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+                    SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
-    OrderLinesCount: this.OrderLines_Missing.length,
+    OrderLinesCount: this.OrderLines_Missing{optChaining}.length{zeroIfNull},
     TotalCost: 0
-};
+}};
 loadToOrders(orderData);");
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -373,7 +377,7 @@ loadToOrders(orderData);");
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task NullPropagation_WithExplicitNull()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -394,11 +398,12 @@ loadToOrders(orderData);");
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, @"var orderData = {
+                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
-    City: this.Address.City,
+    City: this.Address{optChaining}.City,
     TotalCost: 0
-};
+}};
 loadToOrders(orderData);");
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
@@ -423,7 +428,7 @@ loadToOrders(orderData);");
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task RavenDB_3341()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -475,7 +480,7 @@ loadToOrders(orderData);");
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanUpdateToBeNoItemsInChildTable()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -520,7 +525,7 @@ loadToOrders(orderData);");
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanDelete()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -561,7 +566,7 @@ loadToOrders(orderData);");
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task RavenDB_3172()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -674,11 +679,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         }
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanTestScript(bool performRolledBackTransaction)
+        [InlineData(true, "Jint")]
+        [InlineData(false, "Jint")]
+        [InlineData(true, "V8")]
+        [InlineData(false, "V8")]
+        public async Task CanTestScript(bool performRolledBackTransaction, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -904,7 +911,7 @@ loadToOrders(orderData);
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task Should_error_if_attachment_doesnt_exist()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -977,7 +984,7 @@ loadToOrders(orderData);
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task LoadingMultipleAttachments()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1052,7 +1059,7 @@ for (var i = 0; i < attachments.length; i++)
         [RetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanSkipSettingFieldIfAttachmentDoesntExist()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1163,11 +1170,11 @@ loadToOrders(orderData);
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Users]
 (
-    [Id] [nvarchar](50) NOT NULL,
-    [FirstName] [varchar](30) NOT NULL,
-    [LastName] [nvarchar](30) NULL,
-    [FirstName2] [varchar](30) NOT NULL,
-    [LastName2] [nvarchar](30) NULL
+[Id] [nvarchar](50) NOT NULL,
+[FirstName] [varchar](30) NOT NULL,
+[LastName] [nvarchar](30) NULL,
+[FirstName2] [varchar](30) NOT NULL,
+[LastName2] [nvarchar](30) NULL
 )
 ");
                     using (var session = store.OpenAsyncSession())
@@ -1196,10 +1203,10 @@ var names = this.Name.split(' ');
 
 loadToUsers(
 {
-    FirstName: varchar(names[0], 30),
-    LastName: nvarchar(names[1], 30),
-    FirstName2: varchar(names[0]),
-    LastName2:  nvarchar(names[1]),
+FirstName: varchar(names[0], 30),
+LastName: nvarchar(names[1], 30),
+FirstName2: varchar(names[0]),
+LastName2:  nvarchar(names[1]),
 });
 "
                                 }
@@ -1233,8 +1240,8 @@ loadToUsers(
                     CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
-    [Id] [nvarchar](50) NOT NULL,
-    [Pic] [varbinary](max) NULL
+[Id] [nvarchar](50) NOT NULL,
+[Pic] [varbinary](max) NULL
 )
 ");
                     using (var session = store.OpenSession())
@@ -1257,13 +1264,13 @@ CREATE TABLE [dbo].[Orders]
                         session.SaveChanges();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
 
                     SetupSqlEtl(store, connectionString, @"
 
 var orderData = {
-    Id: id(this),
-    Pic: loadAttachment('my-attachment') 
+Id: id(this),
+Pic: loadAttachment('my-attachment') 
 };
 
 loadToOrders(orderData);
@@ -1279,7 +1286,7 @@ loadToOrders(orderData);
 
                     Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
 
-                    etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
+            etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
 
                     etlDone.Wait(TimeSpan.FromMinutes(1));
                 }

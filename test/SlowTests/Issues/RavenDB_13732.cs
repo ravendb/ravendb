@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -21,10 +22,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SupportAttachmentsForInIndex_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void SupportAttachmentsForInIndex_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new AttachmentIndex();
                 index.Execute(store);
@@ -141,10 +143,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseTryConvertInIndex_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseTryConvertInIndex_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new ConvertIndex();
                 index.Execute(store);
@@ -213,10 +216,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseRecurse_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseRecurse_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new Posts_Recurse().Execute(store);
 
@@ -241,10 +245,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void SupportForCreateFieldWithOptions_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void SupportForCreateFieldWithOptions_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new CreateFieldItems_JavaScript().Execute(store);
 

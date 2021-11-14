@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ProjectionShouldBeIncludedWithBothProjections()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ProjectionShouldBeIncludedWithBothProjections(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -68,10 +70,11 @@ limit 1"
             }
         }
 
-        [Fact]
-        public void ResultsFromProjectionShouldNotBeTrackedBySession()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ResultsFromProjectionShouldNotBeTrackedBySession(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

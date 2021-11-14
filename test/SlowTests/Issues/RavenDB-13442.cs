@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_project_with_two_loads_when_2nd_load_argument_defined_in_let_between_the_loads()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_project_with_two_loads_when_2nd_load_argument_defined_in_let_between_the_loads(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Setup(store);
 

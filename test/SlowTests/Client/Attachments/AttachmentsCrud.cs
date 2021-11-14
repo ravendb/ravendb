@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
@@ -473,10 +474,11 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
-        public async Task CanPatchWithoutConflictsOnAttachments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanPatchWithoutConflictsOnAttachments(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

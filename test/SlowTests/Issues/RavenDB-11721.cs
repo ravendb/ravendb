@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents;
 using Xunit.Abstractions;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanSwitchFromDocumentQueryToStronglyTypedProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanSwitchFromDocumentQueryToStronglyTypedProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -43,8 +45,8 @@ namespace SlowTests.Issues
                             };
                     const string expected = "from 'Users' as u " +
                                             "where u.Name = $p0 " +
-                                            "load u.AddressId as address " +
-                                            "select { Name : u.Name, Country : address.Country }";
+                                            "load u?.AddressId as address " +
+                                            "select { Name : u?.Name, Country : address?.Country }";
                     for (int i = 0; i < 3; i++)
                     {
                         Assert.Equal(expected, q.ToString());
@@ -63,10 +65,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task AsyncCanSwitchFromDocumentQueryToStronglyTypedProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task AsyncCanSwitchFromDocumentQueryToStronglyTypedProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -91,8 +94,8 @@ namespace SlowTests.Issues
                             };
                     const string expected = "from 'Users' as u " +
                                             "where u.Name = $p0 " +
-                                            "load u.AddressId as address " +
-                                            "select { Name : u.Name, Country : address.Country }";
+                                            "load u?.AddressId as address " +
+                                            "select { Name : u?.Name, Country : address?.Country }";
                     for (int i = 0; i < 3; i++)
                     {
                         Assert.Equal(expected, q.ToString());
