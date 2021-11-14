@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             foreach (var item in elasticSearchItems)
             {
-                idsToDelete.Add(ElasticSearchEtl.LowerCaseIndexIdProperty(item.DocumentId));
+                idsToDelete.Add(ElasticSearchEtl.LowerCaseDocumentIdProperty(item.DocumentId));
             }
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                 foreach (var item in index.Inserts)
                 {
-                    using (var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.Property.RawValue, index))
+                    using (var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.TransformationResult, index))
                     {
                         sb.AppendLine(ElasticSearchEtl.IndexBulkAction);
                         sb.AppendLine(json.ToString());

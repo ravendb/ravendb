@@ -470,7 +470,7 @@ class ongoingTasks extends viewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    confirmEnableOngoingTask(model: ongoingTaskModel) {
+    confirmEnableOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
 
         this.confirmationMessage("Enable Task",
@@ -488,7 +488,7 @@ class ongoingTasks extends viewModelBase {
         });
     }
 
-    confirmDisableOngoingTask(model: ongoingTaskModel | ongoingTaskReplicationHubDefinitionListModel) {
+    confirmDisableOngoingTask(model: ongoingTaskListModel | ongoingTaskReplicationHubDefinitionListModel) {
         const db = this.activeDatabase();
 
         this.confirmationMessage("Disable Task",
@@ -506,7 +506,7 @@ class ongoingTasks extends viewModelBase {
        });
     }
 
-    confirmRemoveOngoingTask(model: ongoingTaskModel) {
+    confirmRemoveOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
         
         const taskType = ongoingTaskModel.mapTaskType(model.taskType());
@@ -523,7 +523,7 @@ class ongoingTasks extends viewModelBase {
             });
     }
 
-    private deleteOngoingTask(db: database, model: ongoingTaskModel) {
+    private deleteOngoingTask(db: database, model: ongoingTaskListModel) {
         new deleteOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName())
             .execute()
             .done(() => this.fetchOngoingTasks());

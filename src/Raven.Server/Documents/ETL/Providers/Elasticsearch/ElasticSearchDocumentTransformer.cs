@@ -8,6 +8,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
@@ -69,9 +70,19 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 ThrowLoadParameterIsMandatory(nameof(indexName));
 
             var result = document.TranslateToObject(Context);
-            var property = new ElasticSearchProperty {RawValue = result};
 
-            GetOrAdd(indexName).Inserts.Add(new ElasticSearchItem(Current) {Property = property});
+
+            var index = GetOrAdd(indexName);
+
+            if (result.TryGet(index.DocumentIdProperty, out object _) == false)
+            {
+                result.Modifications = new DynamicJsonValue
+                {
+                    [index.DocumentIdProperty] = ElasticSearchEtl.LowerCaseDocumentIdProperty(Current.Document.Id)
+                };
+            }
+
+            index.Inserts.Add(new ElasticSearchItem(Current) {TransformationResult = result});
         }
 
         public override List<ElasticSearchIndexWithRecords> GetTransformedResults()

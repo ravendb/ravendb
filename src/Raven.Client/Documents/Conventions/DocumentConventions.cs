@@ -262,6 +262,7 @@ namespace Raven.Client.Documents.Conventions
         private Size _maxContextSizeToKeep;
         private ISerializationConventions _serialization;
         private bool? _disableAtomicDocumentWritesInClusterWideTransaction;
+        private bool _disableTcpCompression;
 
         public Func<InMemoryDocumentSessionOperations, object, string, bool> ShouldIgnoreEntityChanges
         {
@@ -1136,6 +1137,20 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _disableAtomicDocumentWritesInClusterWideTransaction = value;
+            }
+        }
+
+        /// <summary>
+        /// Disables the usage of TCP data compression.
+        /// </summary>
+        public bool DisableTcpCompression
+        {
+            get => _disableTcpCompression;
+            set
+            {
+                AssertNotFrozen();
+
+                _disableTcpCompression = value;
             }
         }
 
