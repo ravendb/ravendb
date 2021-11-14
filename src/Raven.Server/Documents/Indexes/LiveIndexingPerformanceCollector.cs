@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Utils.Stats;
 using Sparrow.Json;
+using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Documents.Indexes
 {

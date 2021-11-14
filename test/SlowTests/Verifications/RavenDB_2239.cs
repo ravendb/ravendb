@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -22,6 +23,11 @@ namespace SlowTests.Verifications
             public string Description { get; set; }
             public int Num { get; set; }
 
+        }
+
+        private class DocumentDivided
+        {
+            public double a { get; set; }
         }
 
         private class DocumentName
@@ -116,10 +122,11 @@ namespace SlowTests.Verifications
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
-        public void SmallLogTransformerTest()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void SmallLogTransformerTest(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var sw = new Stopwatch();
                 sw.Restart();
@@ -128,10 +135,8 @@ namespace SlowTests.Verifications
                 {
                     var cntr = 0;
                     sw.Restart();
-                    Assert.Throws<InvalidOperationException>(() =>
-                    {
-                        var ravenQueryable = session.Advanced
-                        .RawQuery<Document>(@"
+
+                    var script = @"
 declare function get(d){
     if(d.Num == 0) {
         return {}.DoesNotExistsAndWillThrow();
@@ -140,23 +145,44 @@ declare function get(d){
 }
 from index 'Document/Index' as d
 select get(d)
-");
-                        using (var enumerator = session.Advanced.Stream(ravenQueryable))
-                        {
-                            enumerator.MoveNext();
-                            sw.Stop();
-                            Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
-                            cntr++;
-                            while (enumerator.MoveNext())
-                            {
-                                sw.Restart();
-                                Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
-                                cntr++;
-                            }
-                        }
-                    });
-                    Assert.True(cntr == 10, $"{cntr} == 10");
+";
+                    var ravenQueryable = session.Advanced
+                        .RawQuery<DocumentDivided>(script);
+                    
+                    using (var enumerator = session.Advanced.Stream(ravenQueryable))
+                    {
+                        bool more = enumerator.MoveNext();
+                        sw.Stop();
+                        Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
+                        Assert.True(more);
 
+                        while (more)
+                        {
+                            sw.Restart();
+                            Trace.WriteLine("Time to first result with transformer: " + sw.Elapsed);
+
+                            if (cntr != 10)
+                            {
+                                Assert.Equal(100.0 / (10 - cntr), enumerator.Current.Document.a);
+                            }
+
+                            cntr++;
+                            
+                            if (cntr == 10)
+                            {
+                                Assert.Throws<InvalidOperationException>(() =>
+                                {
+                                    more = enumerator.MoveNext();
+                                });
+                            }
+                            else
+                            {
+                                more = enumerator.MoveNext();
+                            }
+
+                        }
+                    }
+                    Assert.True(cntr == 11, $"{cntr} == 11");
                 }
 
             }

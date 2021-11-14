@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void PatchShouldPreserverOrderOfProperties()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PatchShouldPreserverOrderOfProperties(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var (properties, djv) = GenerateRandomProperties();
 

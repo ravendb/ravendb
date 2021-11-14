@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -132,10 +133,11 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Fact]
-        public async Task LazyLoadById()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task LazyLoadById(string jsEngineType)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
             new Contact_ByName().Execute(store);
 
             using (var session = store.OpenSession())
@@ -235,10 +237,13 @@ select {
             public List<string> DetailIds { get; set; }
         }
 
-        [Fact]
-        public async Task WithTransformer()
+        
+        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task WithTransformer(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
 
                 using (var session = store.OpenSession())

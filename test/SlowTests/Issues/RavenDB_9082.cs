@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseProjectionWithArrowFunctionAndStatementBody()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseProjectionWithArrowFunctionAndStatementBody(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

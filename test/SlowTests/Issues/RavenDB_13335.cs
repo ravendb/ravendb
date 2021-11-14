@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
@@ -24,10 +25,11 @@ namespace SlowTests.Issues
             public bool Throw { get; set; }
         }
 
-        [Fact]
-        public async Task CanDisposeOfClonesEvenIfScriptsFails()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanDisposeOfClonesEvenIfScriptsFails(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 await Store(store, true);
                 try

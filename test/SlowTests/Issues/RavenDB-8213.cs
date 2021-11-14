@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
@@ -79,10 +80,11 @@ update
             }
         }
 
-        [Fact]
-        public void ErrorInInvocationShouldReportLineAndColumnNumber()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ErrorInInvocationShouldReportLineAndColumnNumber(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -101,8 +103,10 @@ update
 }");
 
                     var ex = Assert.Throws<Raven.Client.Exceptions.Documents.Patching.JavaScriptException>(() => projection.ToList());
-                    Assert.Contains("at toString", ex.Message);
-                    Assert.Contains("radix must be between 2 and 36", ex.Message);
+                    Assert.Contains(jsEngineType == "Jint" ? "<anonymous>:3:16" : "anonymousCode.js:3:24", ex.Message);
+                    Assert.Contains((jsEngineType == "Jint" ? "at " : "at Number.") + "toString", ex.Message);
+                    var argument = jsEngineType == "Jint" ? "" : "argument ";
+                    Assert.Contains($"radix {argument}must be between 2 and 36", ex.Message);
                 }
             }
         }

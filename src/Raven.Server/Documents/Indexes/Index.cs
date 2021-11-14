@@ -68,6 +68,7 @@ using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using Size = Sparrow.Size;
+using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -84,6 +85,10 @@ namespace Raven.Server.Documents.Indexes
 
     public abstract class Index : ITombstoneAware, IDisposable, ILowMemoryHandler
     {
+        protected IJavaScriptOptions _jsOptions;
+        
+        public IJavaScriptOptions JsOptions { get { return _jsOptions;  } }
+
         private int _writeErrors;
 
         private int _unexpectedErrors;
@@ -117,8 +122,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly SemaphoreSlim _doingIndexingWork = new SemaphoreSlim(1, 1);
 
         private readonly SemaphoreSlim _executingIndexing = new SemaphoreSlim(1, 1);
-
-
+        
         private long _allocatedAfterPreviousCleanup = 0;
 
         /// <summary>
@@ -604,6 +608,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
+            _jsOptions = new JavaScriptOptions(configuration, documentDatabase.Configuration); // TODO [shlomo] check if this is correct: new SingleIndexConfiguration(definition.Configuration, configuration)?
+            
             InitializeMetrics(configuration);
 
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);

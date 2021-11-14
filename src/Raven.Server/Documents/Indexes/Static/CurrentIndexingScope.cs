@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadDocumentStats;
         private IndexingStatsScope _loadAttachmentStats;
         private IndexingStatsScope _loadCompareExchangeValueStats;
-        private JavaScriptUtils _javaScriptUtils;
+        private JavaScriptUtilsBase _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
         public readonly QueryOperationContext QueryContext;
 
@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return _getSpatialField(name);
         }
 
-        public void RegisterJavaScriptUtils(JavaScriptUtils javaScriptUtils)
+        public void RegisterJavaScriptUtils(JavaScriptUtilsBase javaScriptUtils)
         {
             if (_javaScriptUtils != null)
                 return;

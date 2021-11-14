@@ -51,7 +51,7 @@ namespace SlowTests.Server.Documents.Patching
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => 
-                record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "20"
+                record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "30"
             }))
             {
                 using (var session = store.OpenSession())

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -19,10 +20,11 @@ namespace SlowTests.Client.Subscriptions
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
-        [Fact]
-        public async Task ShouldSupportProjectionAndFilter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldSupportProjectionAndFilter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()
                 {

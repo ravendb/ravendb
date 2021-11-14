@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Graph;
+using FastTests.Server.JavaScript;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -17,14 +18,16 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task PatchingClusterTransactionDocumentShouldWork()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task PatchingClusterTransactionDocumentShouldWork(string jsEngineType)
         {
             var (_, leader) = await CreateRaftCluster(3);
             using (var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,
-                ReplicationFactor = 3
+                ReplicationFactor = 3,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 var user1 = new User

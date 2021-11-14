@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
@@ -53,12 +54,13 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public void CanProjectStoredStringFieldThatLooksLikeLargeNumberUsingJsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectStoredStringFieldThatLooksLikeLargeNumberUsingJsProjection(string jsEngineType)
         {
             var id = "080034951900720231";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new MyIndex().Execute(store);
 
@@ -92,13 +94,14 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void CanExtractStoredNumberFieldsUsingJsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanExtractStoredNumberFieldsUsingJsProjection(string jsEngineType)
         {
             long l = 9007199254740990;
             double d = 1.7976931348623157e+308;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new MyIndex().Execute(store);
 

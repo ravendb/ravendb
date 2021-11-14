@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -14,10 +15,11 @@ namespace SlowTests.Bugs.LiveProjections
         {
         }
 
-        [Fact]
-        public void ComplexLiveProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ComplexLiveProjection(string jsEngineType)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new ProductDetailsReport_ByProductId().Execute((IDocumentStore)documentStore);
 

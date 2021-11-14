@@ -175,8 +175,8 @@ namespace Raven.Server.Documents.Queries
                 if (_query.Metadata.FilterScript != null)
                 {
                     var key = new FilterKey(_query.Metadata);
-                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
-            	}
+                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(database.JsOptions, key, readOnly: true, patchRun: out _filterScriptRun);
+                }
             }
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)

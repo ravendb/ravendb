@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
+using Raven.Server.Config;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -12,6 +13,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class EdgeQueryStep : IGraphQueryStep
     {
+        private RavenConfiguration _configuration;
         private List<Match> _results = new List<Match>();
         private int _index = -1;
 
@@ -22,8 +24,9 @@ namespace Raven.Server.Documents.Queries.Graph
         public IGraphQueryStep Left => _left;
         public IGraphQueryStep Right => _right;
 
-        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, WithEdgesExpression edgesExpression, MatchPath edgePath, BlittableJsonReaderObject queryParameters, OperationCancelToken token)
+        public EdgeQueryStep(RavenConfiguration configuration, IGraphQueryStep left, IGraphQueryStep right, WithEdgesExpression edgesExpression, MatchPath edgePath, BlittableJsonReaderObject queryParameters, OperationCancelToken token)
         {
+            _configuration = configuration;
             _left = left;
             _right = right;
 
@@ -71,7 +74,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters, _token)
+            return new EdgeQueryStep(_configuration, _left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -255,10 +258,10 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
-            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, graphDebugInfo);
+            AnalyzeEdge(_configuration, _edgesExpression, _edgePath.Alias, match, prev, graphDebugInfo);
         }
 
-        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev,
+        public static string AnalyzeEdge(RavenConfiguration configuration, WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev,
             GraphDebugInfo graphDebugInfo)
         {
             var edge = match.GetResult(edgeAlias.Value);

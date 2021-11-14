@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Xunit;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new DocumentIndex().Execute(store);
 
@@ -45,7 +47,7 @@ namespace SlowTests.Issues
                                     doc.ExtraProperty
                                 };
 
-                    Assert.Equal("from index 'DocumentIndex' as x load x.DocumentId as doc select { Id : id(doc), Name : doc.Name, ExtraProperty : doc.ExtraProperty }",
+                    Assert.Equal("from index 'DocumentIndex' as x load x?.DocumentId as doc select { Id : id(doc), Name : doc?.Name, ExtraProperty : doc?.ExtraProperty }",
                         query.ToString());
 
                     var result = query.SingleOrDefault();

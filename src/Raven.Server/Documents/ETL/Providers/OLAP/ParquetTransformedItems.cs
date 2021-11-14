@@ -422,8 +422,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             using (var objectValue = (BlittableJsonReaderObject)prop.Value)
             {
-                if (objectValue.Count < 2 || objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Type), out object dbType) == false ||
-                    objectValue.TryGetMember(nameof(SqlDocumentTransformer.VarcharFunctionCall.Value), out object fieldValue) == false)
+                if (objectValue.Count < 2 || objectValue.TryGetMember(nameof(VarcharFunctionCall.Type), out object dbType) == false ||
+                    objectValue.TryGetMember(nameof(VarcharFunctionCall.Value), out object fieldValue) == false)
                 {
                     prop.Value = objectValue.ToString();
                     data ??= new List<string>();

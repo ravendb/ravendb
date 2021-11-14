@@ -10,8 +10,10 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
@@ -25,7 +27,8 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
-        private readonly JavascriptCompilationOptions _javascriptCompilationOptions;
+        private readonly JavascriptCompilationOptions _javascriptCompilationOptionsWithOptChaining;
+        private readonly JavascriptCompilationOptions _javascriptCompilationOptionsWoOptChaining;
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
         {
@@ -36,9 +39,10 @@ namespace Raven.Client.Documents.Session
 
         public void Increment<T, U>(string id, Expression<Func<T, U>> path, U valToAdd)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
+            pathScript = AddThisToPathScript(pathScript);
 
-            var variable = $"this.{pathScript}";
+            var variable = $"{pathScript}";
             var value = $"args.val_{_valsCount}";
              
             var patchRequest = new PatchRequest
@@ -64,9 +68,10 @@ namespace Raven.Client.Documents.Session
         public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
             
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
+            pathScript = AddThisToPathScript(pathScript);
             
-            var variable = $"this.{pathScript}";
+            var variable = $"{pathScript}";
             var value = $"args.val_{_valsCount}";
             
             var patchRequest = new PatchRequest
@@ -106,14 +111,19 @@ namespace Raven.Client.Documents.Session
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder)
         {
             var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
+            var useOptionalChaining = JavaScriptExtensions.UseOptionalChaining(RequestExecutor);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                     new LinqMethods(),
                     extension,
                     JavascriptConversionExtensions.ToStringSupport.Instance,
-                    JavascriptConversionExtensions.ConstantSupport.Instance)
+                    JavascriptConversionExtensions.ConstantSupport.Instance
+                )
+                {
+                    CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(DocumentConventions.Default, useOptionalChaining)
+                }
             );
 
             var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
@@ -137,11 +147,13 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
-            var patchScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var useOptionalChaining = JavaScriptExtensions.UseOptionalChaining(RequestExecutor);
+            var pathScript = path.CompileToJavascript(useOptionalChaining ? _javascriptCompilationOptionsWithOptChaining : _javascriptCompilationOptionsWoOptChaining);
+            pathScript = AddThisToPathScript(pathScript);
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{patchScript} = args.val_{_valsCount};",
+                Script = $"{pathScript} = args.val_{_valsCount};",
                 Values =
                 {
                     [$"val_{_valsCount}"] = valueToUse
@@ -178,13 +190,30 @@ namespace Raven.Client.Documents.Session
             Patch(id, path, value);
         }
 
+        private static string AddThisToPathScript(string pathScript)
+        {
+            var thisPos = 0;
+            for (int i = 0; i < pathScript.Length; i++)
+            {
+                if (pathScript[i] != '(')
+                {
+                    break;
+                }
+                thisPos++;
+            }
+            pathScript = pathScript.Insert(thisPos, "this.");
+            return pathScript;
+        }
+
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
 
             var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
 
-            var patchRequest = new PatchRequest {Script = $"this.{pathScript} = args.val_{_valsCount};", Values = {[$"val_{_valsCount}"] = valueToUse}};
+            pathScript = AddThisToPathScript(pathScript);
+            
+            var patchRequest = new PatchRequest {Script = $"{pathScript} = args.val_{_valsCount};", Values = {[$"val_{_valsCount}"] = valueToUse}};
 
             _valsCount++;
 
@@ -206,14 +235,20 @@ namespace Raven.Client.Documents.Session
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
             var extension = new JavascriptConversionExtensions.CustomMethods {Suffix = _customCount++};
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
+            var useOptionalChaining = JavaScriptExtensions.UseOptionalChaining(RequestExecutor);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                     new LinqMethods(),
                     extension,
                     JavascriptConversionExtensions.ToStringSupport.Instance,
-                    JavascriptConversionExtensions.ConstantSupport.Instance));
+                    JavascriptConversionExtensions.ConstantSupport.Instance
+                )
+                {
+                    CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(DocumentConventions.Default, useOptionalChaining)
+                }
+                );
 
             var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
 
@@ -226,7 +261,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder)
         {
-            var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
+            var pathScript = path.CompileToJavascript(_javascriptCompilationOptionsWoOptChaining);
 
             if (!(dictionaryAdder.Body is MethodCallExpression call))
             {
@@ -234,6 +269,8 @@ namespace Raven.Client.Documents.Session
                 return; // never hit
             }
 
+            pathScript = AddThisToPathScript(pathScript);
+            
             var patchRequest = new PatchRequest();
             object key;
             switch (call.Method.Name)
@@ -241,13 +278,13 @@ namespace Raven.Client.Documents.Session
                 case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                     object value;
                     (key, value) = GetKeyAndValue<TKey, TValue>(call);
-                    patchRequest.Script = $"this.{pathScript}.{key} = args.val_{_valsCount};";
+                    patchRequest.Script = $"{pathScript}.{key} = args.val_{_valsCount};";
                     patchRequest.Values[$"val_{_valsCount}"] = value;
                     _valsCount++;
                     break;
                 case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
                     key = GetKey(call);
-                    patchRequest.Script = $"delete this.{pathScript}.{key};";
+                    patchRequest.Script = $"delete {pathScript}.{key};";
                     break;
                 default:
                     throw new InvalidOperationException("Unsupported method: " + call.Method.Name);
@@ -270,12 +307,13 @@ namespace Raven.Client.Documents.Session
         private static PatchRequest CreatePatchRequest<T>(Expression<Func<JavaScriptArray<T>, object>> arrayAdder, string pathScript, string adderScript,
             JavascriptConversionExtensions.CustomMethods extension)
         {
-            var script = $"this.{pathScript}{adderScript}";
+            pathScript = AddThisToPathScript(pathScript);
+            var script = $"{pathScript}{adderScript}";
 
             if (arrayAdder.Body is MethodCallExpression mce &&
                 mce.Method.Name == nameof(JavaScriptArray<T>.RemoveAll))
             {
-                script = $"this.{pathScript} = {script}";
+                script = $"{pathScript} = {script}";
             }
 
             return new PatchRequest {Script = script, Values = extension.Parameters};

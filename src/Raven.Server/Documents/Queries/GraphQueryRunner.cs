@@ -271,6 +271,7 @@ namespace Raven.Server.Documents.Queries
                     var resultAsJson = new DynamicJsonValue();
                     matchResults[i].PopulateVertices(resultAsJson);
 
+                    var jsOptions = Database.JsOptions;
                     using (var result = queryContext.Documents.ReadObject(resultAsJson, "graph/result"))
                     {
                         if (filter.IsMatchedBy(result, query.QueryParameters) == false)

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_RQL(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -46,7 +48,7 @@ namespace SlowTests.Issues
                                     Company = order.Company,
                                 };
 
-                    Assert.Equal("from 'Orders' as 'order' select { Employee : load(order.Employee), Company : order.Company }"
+                    Assert.Equal("from 'Orders' as 'order' select { Employee : load(order?.Employee), Company : order?.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -58,10 +60,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Javascript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -89,7 +92,7 @@ namespace SlowTests.Issues
                                 };
 
                     Assert.Equal("from 'Orders' as _function select { " +
-                                 "Employee : load(_function.Employee), Company : _function.Company }"
+                                 "Employee : load(_function?.Employee), Company : _function?.Company }"
                                 , query.ToString());
 
                     var result = query.ToList();
@@ -101,10 +104,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_From_Alias_thats_a_Reserved_Word_in_Both_RQL_and_Javascript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -133,7 +137,7 @@ namespace SlowTests.Issues
                                     Company = load.Company,
                                 };
 
-                    Assert.Equal("from 'Orders' as _load select { Employee : load(_load.Employee), Company : _load.Company }"
+                    Assert.Equal("from 'Orders' as _load select { Employee : load(_load?.Employee), Company : _load?.Company }"
                         , query.ToString());
 
                     var result = query.ToList();
@@ -145,10 +149,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_Let_with_From_Alias_thats_a_Reserved_Word_in_RQL(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -185,9 +190,9 @@ namespace SlowTests.Issues
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(__alias0) {
-	var order = __alias0;
-	var sum = order.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
-	return { Sum : sum };
+    var order = __alias0;
+    var sum = (((order?.Lines??[]).map(function(l){return l?.PricePerUnit*l?.Quantity;}))?.reduce(function(a, b) { return a + b; }, 0));
+    return { Sum : sum };
 }
 from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)", query.ToString());
 
@@ -199,10 +204,11 @@ from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)",
             }
         }
 
-        [Fact]
-        public void Can_Use_Let_with_Multipule_Aliases_that_are_Reserved_Words_in_RQL()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_Let_with_Multipule_Aliases_that_are_Reserved_Words_in_RQL(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -255,25 +261,25 @@ from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)",
                                 let sum = order.Lines.Sum(l => l.PricePerUnit * l.Quantity * load.AccountsReceivable)
                                 select new
                                 {
-                                    Comapny = load,
+                                    Company = load,
                                     Sum = sum,
                                     Employees = update.Select(e => e.FirstName).ToList()
                                 };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(__alias0) {
-	var order = __alias0;
-	var include = order.Company;
-	var _load = load(include);
-	var update = load(_load.EmployeesIds);
-	var sum = order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*_load.AccountsReceivable;}).reduce(function(a, b) { return a + b; }, 0);
-	return { Comapny : _load, Sum : sum, Employees : update.map(function(e){return e.FirstName;}) };
+    var order = __alias0;
+    var include = order?.Company;
+    var _load = load(include);
+    var update = load(_load?.EmployeesIds);
+    var sum = (((order?.Lines??[]).map(function(l){return l?.PricePerUnit*l?.Quantity*_load?.AccountsReceivable;}))?.reduce(function(a, b) { return a + b; }, 0));
+    return { Company : _load, Sum : sum, Employees : ((update??[]).map(function(e){return e?.FirstName;})) };
 }
 from 'Orders' as __alias0 select output(__alias0)", query.ToString());
 
                     var result = query.ToList();
 
-                    Assert.Equal("GD", result[0].Comapny.Name);
+                    Assert.Equal("GD", result[0].Company.Name);
                     Assert.Equal(500, result[0].Sum);
                     Assert.Equal(2, result[0].Employees.Count);
                     Assert.Equal("Jerry", result[0].Employees[0]);
@@ -283,10 +289,11 @@ from 'Orders' as __alias0 select output(__alias0)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Load_via_Let_with_Alias_Thats_a_Reserved_Word_in_RQL()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Load_via_Let_with_Alias_Thats_a_Reserved_Word_in_RQL(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -313,10 +320,10 @@ from 'Orders' as __alias0 select output(__alias0)", query.ToString());
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __alias0) {
-	var update = __alias0;
-	return { Company : update.Name };
+    var update = __alias0;
+    return { Company : update?.Name };
 }
-from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
+from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -325,10 +332,11 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
             }
         }
 
-        [Fact]
-        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_RQL()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_RQL(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -364,11 +372,11 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
                                 };
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __alias0) {
-	var update = __alias0;
-	var include = load(o.Employee);
-	return { Company : update.Name, Employee : include.FirstName };
+    var update = __alias0;
+    var include = load(o?.Employee);
+    return { Company : update?.Name, Employee : include?.FirstName };
 }
-from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)"
+from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)".Replace("    ", "\t")
                 , query.ToString());
 
                     var result = query.ToList();
@@ -379,10 +387,11 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)"
             }
         }
 
-        [Fact]
-        public void Can_do_Multipule_Loads_Where_1st_has_Alias_thats_a_Reserved_Word_and_2nd_has_LoadArg_thats_dependent_on_the_1st_Alias()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_do_Multipule_Loads_Where_1st_has_Alias_thats_a_Reserved_Word_and_2nd_has_LoadArg_thats_dependent_on_the_1st_Alias(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -425,11 +434,11 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)"
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, __alias0) {
-	var update = __alias0;
-	var employees = load(update.EmployeesIds);
-	return { Company : update.Name, Employees : employees.map(function(e){return e.FirstName;}) };
+    var update = __alias0;
+    var employees = load(update?.EmployeesIds);
+    return { Company : update?.Name, Employees : ((employees??[]).map(function(e){return e?.FirstName;})) };
 }
-from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query.ToString());
+from 'Orders' as o load o?.Company as __alias0 select output(o, __alias0)", query.ToString());
 
                     var result = query.ToList();
 
@@ -442,10 +451,11 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
             }
         }
 
-        [Fact]
-        public void Can_Use_Let_with_Variable_Name_thats_a_Reserved_Word_in_Javascript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_Let_with_Variable_Name_thats_a_Reserved_Word_in_Javascript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -481,8 +491,8 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o) {
-	var _function = o.Lines.map(function(l){return l.PricePerUnit*l.Quantity;}).reduce(function(a, b) { return a + b; }, 0);
-	return { Sum : _function };
+    var _function = (((o?.Lines??[]).map(function(l){return l?.PricePerUnit*l?.Quantity;}))?.reduce(function(a, b) { return a + b; }, 0));
+    return { Sum : _function };
 }
 from 'Orders' as o select output(o)", query.ToString());
 
@@ -493,10 +503,11 @@ from 'Orders' as o select output(o)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_Javascript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_Javascript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -539,11 +550,11 @@ from 'Orders' as o select output(o)", query.ToString());
                                 };
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, _function) {
-	var _super = _function.AccountsReceivable;
-	var _var = load(_function.EmployeesIds);
-	return { Company : _function, Number : _super, Employees : _var.map(function(e){return e.FirstName;}) };
+    var _super = _function?.AccountsReceivable;
+    var _var = load(_function?.EmployeesIds);
+    return { Company : _function, Number : _super, Employees : ((_var??[]).map(function(e){return e?.FirstName;})) };
 }
-from 'Orders' as o load o.Company as _function select output(o, _function)", query.ToString());
+from 'Orders' as o load o?.Company as _function select output(o, _function)", query.ToString());
 
                     var result = query.ToList();
 
@@ -592,10 +603,11 @@ from 'Orders' as o load o.Company as _function select output(o, _function)", que
             }
         }
 
-        [Fact]
-        public void Can_Use_RQL_Reserved_Words_As_Projections_Names_Complex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Use_RQL_Reserved_Words_As_Projections_Names_Complex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -620,7 +632,7 @@ from 'Orders' as o load o.Company as _function select output(o, _function)", que
                     var result = query.ToList();
 
                     Assert.Equal("from 'Orders' as o select " +
-                                 "{ Update : o.Company.substr(10), Include : o.Employee.substr(10) }", query.ToString());
+                                 "{ Update : (o?.Company?.substr(10)), Include : (o?.Employee?.substr(10)) }", query.ToString());
 
                     Assert.Equal("1-A", result[0].Update);
                     Assert.Equal("1-A", result[0].Include);

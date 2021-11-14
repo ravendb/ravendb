@@ -68,7 +68,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 try
                 {
-                    var scriptRunner = new ScriptRunner(Database, Database.Configuration, false);
+                    var scriptRunner = ScriptRunner.CreateScriptRunner(Database, Database.Configuration, false);
                     scriptRunner.TryCompileScript(string.Format(@"
                     function execute(){{
                         {0}

@@ -4,10 +4,12 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.Utils;
+using Raven.Server.Config;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
+using Raven.Server.Config.Categories;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
@@ -20,10 +22,11 @@ namespace Raven.Server.Documents.Queries.Graph
         public Dictionary<string, BlittableJsonReaderObject> IncludedEdges;
         public WithEdgesExpression Edge;
         public StringSegment EdgeAlias;
-
-
-        public SingleEdgeMatcher(SingleEdgeMatcher step, IGraphQueryStep right, char identityPartsSeparator)
+        private readonly IJavaScriptOptions _jsOptions;
+        
+        public SingleEdgeMatcher(RavenConfiguration configuration, SingleEdgeMatcher step, IGraphQueryStep right, char identityPartsSeparator)
         {
+            _jsOptions = DocumentDatabase.GetJsOptions(configuration);
             Right = right;
             _identityPartsSeparator = identityPartsSeparator;
             QueryParameters = step.QueryParameters;

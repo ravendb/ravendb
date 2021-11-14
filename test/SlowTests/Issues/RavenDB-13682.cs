@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -166,10 +167,11 @@ limit 1")
             }
         }
 
-        [Fact]
-        public void CanProjectDistanceComputation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectDistanceComputation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

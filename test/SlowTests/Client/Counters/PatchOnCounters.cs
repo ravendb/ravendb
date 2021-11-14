@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
@@ -14,10 +15,11 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
-        public void CanIncrementSingleCounter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIncrementSingleCounter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -47,10 +49,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanIncrementSingleCounterWithId()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIncrementSingleCounterWithId(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -80,10 +83,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void AddingNewCounterShouldUpdateMetadata()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void AddingNewCounterShouldUpdateMetadata(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -121,10 +125,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CounterDeletionShouldUpdateMetadata()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CounterDeletionShouldUpdateMetadata(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -170,10 +175,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanGetCounterNameFromMetadataAndIncrement()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetCounterNameFromMetadataAndIncrement(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -205,10 +211,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanIncrementTwoCountersAtOnce()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIncrementTwoCountersAtOnce(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -253,10 +260,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanIncrementCountersViaPatchByQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIncrementCountersViaPatchByQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -319,10 +327,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanDeleteSingleCounter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDeleteSingleCounter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -358,10 +367,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanDeleteSingleCounterWithId()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDeleteSingleCounterWithId(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -389,10 +399,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanDeleteAllCountersOfDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDeleteAllCountersOfDocument(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -442,10 +453,11 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CanDeleteCountersViaPatchByQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanDeleteCountersViaPatchByQuery(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

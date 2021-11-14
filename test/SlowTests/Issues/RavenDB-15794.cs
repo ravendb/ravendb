@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         }
         
 
-        [Fact]
-        public void CirclesShouldIntersect()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CirclesShouldIntersect(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());

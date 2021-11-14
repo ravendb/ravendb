@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -55,10 +56,12 @@ namespace SlowTests.Issues
 
             }
         }
-        [Fact]
-        public void JSShouldReceiveValidStoredObjectsArray()
+        
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JSShouldReceiveValidStoredObjectsArray(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersIndexWithStoredArray().Execute(store);
                 using (var session = store.OpenSession())
@@ -100,10 +103,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void MakeSureStoredInexedValueIsNotStoredInDocumentDuringPatchOperation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void MakeSureStoredInexedValueIsNotStoredInDocumentDuringPatchOperation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersIndexWithStoredArray().Execute(store);
                 using (var session = store.OpenSession())

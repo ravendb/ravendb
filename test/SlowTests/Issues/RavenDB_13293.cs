@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -177,8 +178,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanPassNodeTagToRestorePatchOperation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanPassNodeTagToRestorePatchOperation(string jsEngineType)
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
@@ -192,6 +194,7 @@ namespace SlowTests.Issues
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
+                Options.ModifyForJavaScriptEngine(jsEngineType).Invoke(doc);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 myNodesList.AddRange(databaseResult.Topology.AllNodes);
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Dynamic;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Patch_by_id_must_not_cause_endless_operation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Patch_by_id_must_not_cause_endless_operation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -51,10 +53,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Patch_by_starts_with_and_id_must_not_cause_endless_operation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Patch_by_starts_with_and_id_must_not_cause_endless_operation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

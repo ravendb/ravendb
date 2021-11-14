@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -30,7 +31,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     @"timeSeries.map('Companies', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })"
@@ -47,7 +48,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Companies', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })"
@@ -65,7 +66,7 @@ return ts.Entries.map(entry => ({
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
         Name: ts.Name,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })"
@@ -84,7 +85,7 @@ return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
         Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId,
-        Employee: load(entry.Tag, 'Employees').FirstName
+        Employee: load(entry.Tag, 'Employees')?.FirstName
     }));
 })"
                 };
@@ -111,7 +112,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId,
         Count: 1
     }));
@@ -122,7 +123,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 User: g.key.User
+                                 User: g.key.User,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }
@@ -148,8 +149,8 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
-        City: load(entry.Tag, 'Addresses').City,
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
+        City: load(entry.Tag, 'Addresses')?.City,
         Count: 1
     }));
 })"
@@ -159,7 +160,7 @@ return ts.Entries.map(entry => ({
                              .aggregate(g => ({
                                  HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
                                  Date: g.key.Date,
-                                 City: g.key.City
+                                 City: g.key.City,
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
             }
@@ -183,21 +184,21 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Companies', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })",
                     @"timeSeries.map('Companies', 'HeartRate2', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })",
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
+        Date: new Date(Date.UTC(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate())),
         User: ts.DocumentId
     }));
 })",
@@ -220,10 +221,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void BasicMapIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
@@ -377,10 +379,11 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task BasicMapIndexWithLoad(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -481,7 +484,7 @@ return ({
                 Assert.Equal(2, WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount, 2));
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Employee", null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(1, terms.Length);
 
                 // delete source document
 
@@ -537,10 +540,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void BasicMapReduceIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);
@@ -716,11 +720,12 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task BasicMapReduceIndexWithLoad(string jsEngineType)
         {
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var today = RavenTestHelper.UtcToday;
 
@@ -863,10 +868,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeriesFromCollection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanMapAllTimeSeriesFromCollection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1009,10 +1015,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanMapAllTimeSeries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1200,12 +1207,13 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMultiMapIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task BasicMultiMapIndex(string jsEngineType)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var timeSeriesIndex = new MyMultiMapTsIndex();
                 await timeSeriesIndex.ExecuteAsync(store);
@@ -1261,12 +1269,13 @@ return ({
             }
         }
 
-        [Fact]
-        public void TimeSeriesNamesFor()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TimeSeriesNamesFor(string jsEngineType)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new Companies_ByTimeSeriesNames();
                 index.Execute(store);

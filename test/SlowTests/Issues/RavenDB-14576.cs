@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void JavascriptIndexShouldPassContextToTypeConverter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JavascriptIndexShouldPassContextToTypeConverter(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using var session = store.OpenSession();
                 for (int i = 0; i < 500; i++)
@@ -45,8 +47,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void JavascriptIndexShouldThrowOnExceptionInReduceStage()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JavascriptIndexShouldThrowOnExceptionInReduceStage(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -93,7 +96,7 @@ namespace SlowTests.Issues
         ParentId: user.NestedItems.NestedItemId,
         ParentName: user.NestedItems.NestedItemName,
         ChildDocument: {
-            Name: user.Name,
+            Name: user.UserName,
             Id: id(user),
             Etag: user.Etag,
             Type: user.Type

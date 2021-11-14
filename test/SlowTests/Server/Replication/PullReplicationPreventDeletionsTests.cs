@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -28,8 +29,9 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
-        public async Task PreventDeletionOnHubSinkCompromised()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task PreventDeletionOnHubSinkCompromised(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
@@ -45,7 +47,8 @@ namespace SlowTests.Server.Replication
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase
+                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             });
             
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
@@ -146,8 +149,9 @@ namespace SlowTests.Server.Replication
             Assert.True(result, lastError);
         }
 
-        [Fact]
-        public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task DeleteWhenAcceptSinkDeletionsFlagOff(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
@@ -158,7 +162,8 @@ namespace SlowTests.Server.Replication
 
             using var hubStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => hubDatabase
+                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => hubDatabase,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             });
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options

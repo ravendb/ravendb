@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
@@ -18,10 +19,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void ShouldReturnLastModifiedInUtc()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldReturnLastModifiedInUtc(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

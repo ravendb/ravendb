@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void JsConvertorShouldIgnoreValueProperyOfNullable()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JsConvertorShouldIgnoreValueProperyOfNullable(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {                
                 using (var session = store.OpenSession())
                 {
@@ -43,7 +45,7 @@ namespace SlowTests.Issues
                         };
                     
                     Assert.Equal("from 'Users' as u where u.Active != $p0 " +
-                                 "select { Name : u.FirstName+\" \"+u.LastName, Active : u.Active }", query.ToString());
+                                 "select { Name : u?.FirstName+\" \"+u?.LastName, Active : u?.Active }", query.ToString());
                     
                     var result = query.ToList();
                     
@@ -54,10 +56,11 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
-        public void ToDictionaryWithNullableValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ToDictionaryWithNullableValue(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var debtor = new Debtor()
                 {

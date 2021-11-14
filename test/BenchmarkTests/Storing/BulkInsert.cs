@@ -114,7 +114,7 @@ namespace BenchmarkTests.Storing
             }
         }
 
-        public override Task InitAsync(DocumentStore store)
+        public override Task InitAsync(DocumentStore store, string dbNamePostfix = "", Options options = null, int count = 1_000_000)
         {
             return Task.CompletedTask;
         }

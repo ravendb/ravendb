@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Xunit;
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task Can_Generate_Correct_Javascript_Projection_for_IDictionary()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Can_Generate_Correct_Javascript_Projection_for_IDictionary(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(
@@ -47,8 +49,8 @@ namespace SlowTests.Issues
 
                 var q1 = query.ToString();
                 var expected =
-                    "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
-                    "Phone : Object.keys(customer.Phones).map(function(a){return{Key: a,Value:customer.Phones[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
+                    "from 'Users' as customer select { CustomerName : customer?.GivenName+\" \"+customer?.FamilyName, " +
+                    "Phone : (((Object.keys(customer?.Phones)?.map(function(a){return{Key: a,Value:customer?.Phones[a]};}))??[]).filter(function(phone){return phone?.Key===\"Work\";})) }";
                 Assert.Equal(expected, q1);
 
                 var query2 =
@@ -65,8 +67,8 @@ namespace SlowTests.Issues
 
                 var q2 = query2.ToString();
                 expected =
-                    "from 'Users' as customer select { CustomerName : customer.GivenName+\" \"+customer.FamilyName, " +
-                    "Phone : Object.keys(customer.Phones2).map(function(a){return{Key: a,Value:customer.Phones2[a]};}).filter(function(phone){return phone.Key===\"Work\";}) }";
+                    "from 'Users' as customer select { CustomerName : customer?.GivenName+\" \"+customer?.FamilyName, " +
+                    "Phone : (((Object.keys(customer?.Phones2)?.map(function(a){return{Key: a,Value:customer?.Phones2[a]};}))??[]).filter(function(phone){return phone?.Key===\"Work\";})) }";
                 Assert.Equal(expected, q2);
 
                 var res1 = await query.ToArrayAsync();

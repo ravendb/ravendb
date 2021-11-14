@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Queries;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Project_With_Multiple_Nested_Loads_Executes()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Project_With_Multiple_Nested_Loads_Executes(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,10 +97,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Project_With_Multiple_Nested_Lets_And_Loads_Executes()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Project_With_Multiple_Nested_Lets_And_Loads_Executes(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -90,10 +91,11 @@ namespace SlowTests.Issues
             public string OtherField { get; set; }
         }
 
-        [Fact]
-        public void SupportForCreateFieldWithOptions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void SupportForCreateFieldWithOptions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new Index1().Execute(store);
                 new Index1_JavaScript().Execute(store);

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,12 +16,27 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void CanSuccessfullyPatchInBatches()
+        [Theory]
+        [InlineData(10_000, "Jint", 0, 0)]
+        [InlineData(1000, "V8", 2, 2)]
+        [InlineData(1000, "V8", 10, 10)]
+        [InlineData(1000, "V8", 10, 25)]
+        [InlineData(10_000, "V8", 10, 25)]
+        //[InlineData(1000, "V8", 10, 50)]
+        //[InlineData(10_000, "V8", 10, 50)]
+        //[InlineData(1000, "V8", 10, 250)]
+        //[InlineData(2000, "V8", 3, 500)]
+        //[InlineData(5_000, "V8", 4, 1000)]
+        public void CanSuccessfullyPatchInBatches(int count, string jsEngineType, int targetContextCountPerEngine, int maxEngineCount)
         {
-            using (var store = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType, d =>
             {
-                const int count = 512;
+                d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.TargetContextCountPerEngine)] = targetContextCountPerEngine.ToString();            
+                d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = maxEngineCount.ToString();            
+            });
+            using (var store = GetDocumentStore(options))
+            {
+                // 2406 V8 isolates max count achieved, 2415 failed
                 using (var s = store.OpenSession())
                 {
                     for (int i = 0; i < count; i++)
@@ -35,7 +52,7 @@ namespace SlowTests.Bugs
                 var batchesFirstHalf =
                     Enumerable.Range(0, count / 2).Select(i => new PatchOperation("users/" + i, null, new PatchRequest
                     {
-                        Script = $"this.Name='Users-{i}';"
+                        Script = $"if (this) {{ this.Name='Users-{i}'; }}"
                     }));
                 foreach (var patchCommandData in batchesFirstHalf)
                 {
@@ -46,7 +63,7 @@ namespace SlowTests.Bugs
                 var batchesSecondHalf =
                     Enumerable.Range(count / 2, count / 2).Select(i => new PatchOperation("users/" + i, null, new PatchRequest
                     {
-                        Script = $"this.Name='Users-{i}';"
+                        Script = $"if (this) {{ this.Name='Users-{i}'; }}"
                     }));
                 foreach (var patchCommandData in batchesSecondHalf)
                 {

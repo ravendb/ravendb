@@ -9,6 +9,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
+using Raven.Client.ServerWide.JavaScript;
 
 namespace Raven.Server.ServerWide.Commands
 {

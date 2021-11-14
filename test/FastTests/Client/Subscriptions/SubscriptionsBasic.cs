@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
@@ -1091,10 +1092,11 @@ namespace FastTests.Client.Subscriptions
             public string SomeProp { get; set; }
         }
 
-        [Fact]
-        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             const string someProp = "SomeValue";
             using (var session = store.OpenAsyncSession())
@@ -1134,10 +1136,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Subscription_WhenProjectWithId_ShouldTranslateToJavascriptIdFunction(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             var entity = new User();
             using (var session = store.OpenAsyncSession())

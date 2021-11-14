@@ -86,6 +86,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.CatchClause:
                     VisitCatchClause(statement.As<CatchClause>());
                     break;
+                case Nodes.ChainExpression:
+                    VisitChainExpression(statement.As<ChainExpression>());
+                    break;
                 default:
                     VisitUnknownNode(statement);
                     break;
@@ -106,6 +109,11 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             VisitIdentifier(catchClause.Param.As<Identifier>());
             VisitStatement(catchClause.Body);
+        }
+        
+        private void VisitChainExpression(ChainExpression chainExpression)
+        {
+            VisitExpression(chainExpression.Expression);
         }
 
         public virtual void VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -320,6 +328,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     break;
                 case Nodes.ArrowFunctionExpression:
                     VisitArrowFunctionExpression(expression.As<ArrowFunctionExpression>());
+                    break;
+                case Nodes.ChainExpression:
+                    VisitChainExpression(expression.As<ChainExpression>());
                     break;
                 default:
                     VisitUnknownNode(expression);
@@ -618,6 +629,9 @@ namespace Raven.Server.Documents.Indexes.Static
                     break;
                 case Nodes.ClassExpression:
                     VisitClassExpression(node.As<ClassExpression>());
+                    break;
+                case Nodes.ChainExpression:
+                    VisitChainExpression(node.As<ChainExpression>());
                     break;
                 default:
                     VisitUnknownNode(node);

@@ -26,6 +26,7 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
+using V8.Net;
 
 namespace Raven.Server
 {
@@ -208,6 +209,17 @@ namespace Raven.Server
                             }
 
                             Console.WriteLine("Server started, listening to requests...");
+
+                            /*int count = 20000;
+                            var engines = new V8Engine[count];
+                            for (int i = 0; i < count; i++)
+                            {
+                                Console.WriteLine($"creating engine: {i}");
+                                var engine = new V8Engine(false);
+                                //string[] optionsCmd = {"--max_heap_size=16*1024*1024*1024"}; //, "--initial_heap_size=1024"};  // max_old_space_size, min_semi_space_size, max_semi_space_size
+                                //engine.SetFlagsFromCommandLine(optionsCmd);
+                                engines[i] = engine;
+                            }*/
 
                             prevColor = Console.ForegroundColor;
                             Console.ForegroundColor = ConsoleColor.DarkGray;

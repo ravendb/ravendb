@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
@@ -20,10 +21,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_patch_expires_in_metadata()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Can_patch_expires_in_metadata(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,10 +56,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public async Task Test_patch_should_return_original_doc_if_patch_status_is_not_modified()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Test_patch_should_return_original_doc_if_patch_status_is_not_modified(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

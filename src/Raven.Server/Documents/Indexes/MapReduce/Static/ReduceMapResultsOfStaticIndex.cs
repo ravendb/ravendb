@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 resultObjects.Add(output);
             }
 
-            return new AggregatedAnonymousObjects(resultObjects, _propertyAccessor, indexContext);
+            return new AggregatedAnonymousObjects(_jsOptions, resultObjects, _propertyAccessor, indexContext);
         }
 
         private class DynamicIterationOfAggregationBatchWrapper : IEnumerable<DynamicBlittableJson>

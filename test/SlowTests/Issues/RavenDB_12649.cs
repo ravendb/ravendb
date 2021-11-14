@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,12 +15,13 @@ namespace SlowTests.Issues
 
         private const string StatusPostfix = "/status";
 
-        [Fact]
-        public void ProjectionWithLoadFails()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ProjectionWithLoadFails(string jsEngineType)
         {
             const string documentId = "document-id";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

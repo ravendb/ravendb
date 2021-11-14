@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_project_on_sub_collection_with_Id_property()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_project_on_sub_collection_with_Id_property(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -59,8 +61,8 @@ namespace SlowTests.Issues
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         "from 'PostComments' as x select { " +
-                            "Comments : x.Comments.map(function(comment){return {comment:comment,owner:load(comment.OwnerId)};})" +
-                                        ".map(function(__rvn0){return {Id:id(__rvn0.comment),Owner:{Id:id(__rvn0.owner)}};}) }"
+                            "Comments : ((((x?.Comments??[]).map(function(comment){return {comment:comment,owner:load(comment?.OwnerId)};}))" +
+                                        "??[]).map(function(__rvn0){return {Id:id((__rvn0?.comment)),Owner:{Id:id((__rvn0?.owner))}};})) }"
                         , query.ToString());
 
 

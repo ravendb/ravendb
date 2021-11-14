@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,10 +37,11 @@ namespace SlowTests.Issues
             public Dog[] Dogs;
         } 
         
-        [Fact]
-        public async Task CanProjectNoValuesFromResult()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectNoValuesFromResult(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -69,8 +71,9 @@ select project(u)
             }
         } 
 
-        [Fact]
-        public async Task CanProjectMultipleValuesFromManyResult()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectMultipleValuesFromManyResult(string jsEngineType)
         {
             using var store = GetDocumentStore();
 
@@ -106,10 +109,11 @@ select project(u)
         } 
 
 
-        [Fact]
-        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectMultipleValuesFromSingleResultInCollectionQuery(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -139,10 +143,11 @@ select project(u)
             }
         } 
         
-        [Fact]
-        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectMultipleValuesFromSingleResultInIndexQuery(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -174,10 +179,11 @@ select project(u)
         } 
 
         
-        [Fact]
-        public async Task CanProjectTimeSeriesInCollectionQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectTimeSeriesInCollectionQuery(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -213,10 +219,11 @@ select project(e)
             }
         } 
         
-        [Fact]
-        public async Task CanProjectTimeSeriesInIndexQuery()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanProjectTimeSeriesInIndexQuery(string jsEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
 
             using (var session = store.OpenAsyncSession())
             {

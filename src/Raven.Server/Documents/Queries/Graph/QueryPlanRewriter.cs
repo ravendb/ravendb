@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (ReferenceEquals(right, step.Right) == false)
                 {
                     modified = true;
-                    steps.Add(new SingleEdgeMatcher(step, right, _documentsStorage.DocumentDatabase.IdentityPartsSeparator));
+                    steps.Add(new SingleEdgeMatcher(_documentsStorage.DocumentDatabase.Configuration, step, right, _documentsStorage.DocumentDatabase.IdentityPartsSeparator));
                 }
                 else
                 {

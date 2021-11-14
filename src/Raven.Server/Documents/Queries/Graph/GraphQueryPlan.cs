@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
             }
 
-            return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters, _token)
+            return new EdgeQueryStep(_database.Configuration, left, right, withEdge, edge, _query.QueryParameters, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 });
             }
 
-            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters), _token)
+            var recursiveStep = new RecursionQueryStep(_database.Configuration, left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters), _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };

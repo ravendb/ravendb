@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
             public byte[] Password { get; set; }
         }
 
-        [Fact]
-        public void CanPatchWithByteArray()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchWithByteArray(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var password = new byte[10];
                 password[0] = 1;

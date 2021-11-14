@@ -3,11 +3,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Raven.Server.Config.Categories;
+using PatchJint = Raven.Server.Documents.Patch.Jint;
+using PatchV8 = Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -68,33 +69,33 @@ namespace Raven.Server.Documents.Patch
 
             public abstract override int GetHashCode();
         }
-
-        public ScriptRunner.ReturnRun GetScriptRunner(Key key, bool readOnly, out ScriptRunner.SingleRun patchRun)
+        
+        public ScriptRunner.ReturnRun GetScriptRunner(IJavaScriptOptions jsOptions, Key key, bool readOnly, out ScriptRunner.SingleRun patchRun, bool executeScriptsSource = true)
         {
             if (key == null)
             {
                 patchRun = null;
                 return new ScriptRunner.ReturnRun();
             }
-            var scriptRunner = GetScriptRunner(key);
-            var returnRun = scriptRunner.GetRunner(out patchRun);
+            var scriptRunner = GetScriptRunner(jsOptions, key);
+            var returnRun = scriptRunner.GetRunner(out patchRun, executeScriptsSource);
             patchRun.ReadOnly = readOnly;
             return returnRun;
         }
-
-        private ScriptRunner GetScriptRunner(Key script)
+        
+        private ScriptRunner GetScriptRunner(IJavaScriptOptions jsOptions, Key script)
         {
             if (_cache.TryGetValue(script, out var lazy))                
                 return lazy.Value;
 
-            return GetScriptRunnerUnlikely(script);
+            return GetScriptRunnerUnlikely(jsOptions, script);
         }
 
-        private ScriptRunner GetScriptRunnerUnlikely(Key script)
+        private ScriptRunner GetScriptRunnerUnlikely(IJavaScriptOptions jsOptions, Key script) // TODO [shlomo] jsOptions should be taken into account
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                var runner = new ScriptRunner(_database, _configuration, EnableClr);
+                ScriptRunner runner = new ScriptRunner(_database, _configuration, EnableClr);
                 script.GenerateScript(runner);
                 runner.ScriptType = script.GetType().Name;
                 return runner;

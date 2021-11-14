@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -16,10 +17,11 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
-        public async Task ArtificalDocumentsMatchIndexEntries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ArtificalDocumentsMatchIndexEntries(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 await new SeasonHarvestEstimates_ByDeliverySite().ExecuteAsync(store);
 

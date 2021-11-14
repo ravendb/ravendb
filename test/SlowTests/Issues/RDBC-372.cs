@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -131,10 +132,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void RawQueryWithBlittableJsonReturnType_JsProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void RawQueryWithBlittableJsonReturnType_JsProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -1447,11 +1448,13 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
+        [InlineData(false, "Jint")]
+        [InlineData(true, "Jint")]
+        [InlineData(false, "V8")]
+        [InlineData(true, "V8")]
+        public async Task DeleteRevisionsBeforeFromConsole(bool useConsole, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database,
                     modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);

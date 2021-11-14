@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
@@ -28,8 +29,9 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void CanLoadWithWrappedParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanLoadWithWrappedParameter(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -78,8 +80,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectWithWrappedParameter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectWithWrappedParameter(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -123,8 +126,8 @@ namespace SlowTests.Issues
                                 };
 
                     Assert.Equal("from 'Orders' as o select { " +
-                                 "Any : o.Lines.some(function(x){return x.ProductName===$p0;}), " +
-                                 "NestedQuery : o.Lines.filter(function(x){return x.PricePerUnit<$p1;}).map(function(y){return y.ProductName;}) }",
+                                 "Any : ((o?.Lines??[]).some(function(x){return x?.ProductName===$p0;})), " +
+                                 "NestedQuery : ((((o?.Lines??[]).filter(function(x){return x?.PricePerUnit<$p1;}))??[]).map(function(y){return y?.ProductName;})) }",
                                  query.ToString());
 
                     var result = query.ToList();
@@ -138,8 +141,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectWithWrappedParameterAndLet()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectWithWrappedParameterAndLet(string jsEngineType)
         {
             using (var store = GetDocumentStore())
             {
@@ -197,8 +201,8 @@ namespace SlowTests.Issues
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(o, $p0, $p1, $p2, $p3) {
-	var totalSpentOnOrder = function(order){return order.Lines.map(function(x){return x.PricePerUnit*x.Quantity*(1-$p0);}).reduce(function(a, b) { return a + b; }, 0);};
-	return { Sum : totalSpentOnOrder(o), Any : o.Lines.some(function(x){return x.ProductName===$p1;}), NestedQuery : o.Lines.filter(function(x){return x.PricePerUnit<$p2;}).map(function(y){return y.ProductName;}), Company : load($p3).Name };
+    var totalSpentOnOrder = function(order){return (((order?.Lines??[]).map(function(x){return x?.PricePerUnit*x?.Quantity*(1-$p0);}))?.reduce(function(a, b) { return a + b; }, 0));};
+    return { Sum : totalSpentOnOrder(o), Any : ((o?.Lines??[]).some(function(x){return x?.ProductName===$p1;})), NestedQuery : ((((o?.Lines??[]).filter(function(x){return x?.PricePerUnit<$p2;}))??[]).map(function(y){return y?.ProductName;})), Company : load($p3)?.Name };
 }
 from 'Orders' as o select output(o, $p0, $p1, $p2, $p3)", query.ToString());
 

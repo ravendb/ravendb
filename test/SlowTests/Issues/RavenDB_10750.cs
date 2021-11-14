@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldNotCreatePropertyAfterAccessingIt()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldNotCreatePropertyAfterAccessingIt(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -65,10 +67,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ShouldNotProjectPropertyValueIfOnlyViewedStoredIndexedValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldNotProjectPropertyValueIfOnlyViewedStoredIndexedValue(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -100,10 +103,11 @@ b:u.newField
         }
 
 
-        [Fact]
-        public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValue(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -138,10 +142,11 @@ b:u.newField
         }
 
 
-        [Fact]
-        public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValueShouldRespectOperationsOrder()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValueShouldRespectOperationsOrder(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new UsersIndex().Execute(store);
                 using (var session = store.OpenSession())

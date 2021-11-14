@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
@@ -15,14 +16,14 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_delete_all_entries_from_compressed_tree_in_map_reduce_index(string jsEngineType)
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(new Options
-            {
-                Path = path
-            }))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            options.Path = path;
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -22,10 +23,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void ShouldNotRetrieveOperationDetails()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldNotRetrieveOperationDetails(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
@@ -70,10 +72,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ShouldRetrieveOperationDetailsWhenTheyWereRequested()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ShouldRetrieveOperationDetailsWhenTheyWereRequested(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {

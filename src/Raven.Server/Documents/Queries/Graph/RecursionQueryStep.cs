@@ -4,6 +4,7 @@ using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
+using Raven.Server.Config;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -12,6 +13,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class RecursionQueryStep : IGraphQueryStep
     {
+        private RavenConfiguration _configuration;
         private readonly IGraphQueryStep _left;
         private ISingleGraphStep _next;
         private readonly List<SingleEdgeMatcher> _steps;
@@ -40,8 +42,9 @@ namespace Raven.Server.Documents.Queries.Graph
             public bool AlreadyAdded;
         }
 
-        public RecursionQueryStep(IGraphQueryStep left, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options, OperationCancelToken token)
+        public RecursionQueryStep(RavenConfiguration configuration, IGraphQueryStep left, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options, OperationCancelToken token)
         {
+            _configuration = configuration;
             _left = left;
             _steps = steps;
             _recursive = recursive;
@@ -119,7 +122,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options, _token)
+            return new RecursionQueryStep(_configuration, _left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options, _token)
             {
                 CollectIntermediateResults = CollectIntermediateResults
             };
@@ -276,12 +279,14 @@ namespace Raven.Server.Documents.Queries.Graph
 
         internal class RecursionSingleStep : ISingleGraphStep
         {
+            private RavenConfiguration _configuration;
             private OperationCancelToken _token;
             private readonly RecursionQueryStep _parent;
             private List<Match> _matches = new List<Match>();
 
-            public RecursionSingleStep(RecursionQueryStep parent, OperationCancelToken token)
+            public RecursionSingleStep(RavenConfiguration configuration, RecursionQueryStep parent, OperationCancelToken token)
             {
+                _configuration = configuration;
                 _token = token;
                 _parent = parent;
             }
@@ -609,7 +614,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     if (step.Edge != null)
                     {
-                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, graphDebugInfo);
+                        var next = EdgeQueryStep.AnalyzeEdge(_configuration, step.Edge, step.EdgeAlias, singleMatch, prev, graphDebugInfo);
                         if (next != null)
                             prev = next;
                     }
@@ -621,7 +626,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ISingleGraphStep GetSingleGraphStepExecution()
         {
-            return new RecursionSingleStep(this, _token);
+            return new RecursionSingleStep(_configuration, this, _token);
         }
     }
 }

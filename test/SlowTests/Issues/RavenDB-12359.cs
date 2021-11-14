@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,10 +55,11 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
-        public void CanProjectHasValuePropertyOfNullable()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectHasValuePropertyOfNullable(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Setup(store);
 
@@ -70,7 +72,7 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt.HasValue
                                 };
 
-                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d.NullableInt != null }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d?.NullableInt != null }"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -81,10 +83,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanProjectHasValuePropertyOfNullable2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectHasValuePropertyOfNullable2(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Setup(store);
                 using (var s = store.OpenSession())
@@ -96,7 +99,7 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt.HasValue
                                 };
 
-                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d.NullableInt != null }"
+                    Assert.Equal("from 'MyDocs' as d order by id() select { HasValue : d?.NullableInt != null }"
                         , query.ToString());
 
                     var results = query.ToList();
@@ -107,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void TestGreaterThanOrEqualToZero()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TestGreaterThanOrEqualToZero(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Setup(store);
 
@@ -123,7 +127,7 @@ namespace SlowTests.Issues
                                 };
 
                     Assert.Equal("from 'MyDocs' as d select { " +
-                                 "HasValue : d.NullableInt>0||d.NullableInt===0 }"
+                                 "HasValue : d?.NullableInt>0||d?.NullableInt===0 }"
                                  , query.ToString());
 
                     var results = query.ToList();
@@ -135,14 +139,56 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void NullableDateTimeProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void NullableDateTimeProjectionUTC(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var newSession = store.OpenSession())
                 {
-                    var now = DateTime.UtcNow;
+                    var nowUTC = DateTime.UtcNow;
+                    newSession.Store(new Person
+                    {
+                        BirthDate = nowUTC
+                    });
+                    newSession.SaveChanges();
+
+                    var query = newSession.Query<Person>()
+                        .Select(x => new Projection
+                        {
+                            BirthHour = x.BirthDate != null ? x.BirthDate.Value.Hour : (int?)null,
+                            BirthDay = x.BirthDate != null ? x.BirthDate.Value.Day : (int?)null,
+                            BirthMonth = x.BirthDate != null ? x.BirthDate.Value.Month : (int?)null,
+                            BirthYear = x.BirthDate != null ? x.BirthDate.Value.Year : (int?)null
+                        });
+
+                    var queryString = query.ToString();
+                    Assert.Equal("from 'People' as x select { " +  
+                                 "BirthHour : x?.BirthDate!=null?(x?.BirthDate?.getHours()):null, " +
+                                 "BirthDay : x?.BirthDate!=null?(x?.BirthDate?.getDate()):null, " +
+                                 "BirthMonth : x?.BirthDate!=null?(x?.BirthDate?.getMonth()+1):null, " +
+                                 "BirthYear : x?.BirthDate!=null?(x?.BirthDate?.getFullYear()):null }", queryString);
+
+                    var list = query.ToList();
+                    Assert.Equal(1, list.Count);
+                    Assert.Equal(nowUTC.Hour, list[0].BirthHour);
+                    Assert.Equal(nowUTC.Day, list[0].BirthDay);
+                    Assert.Equal(nowUTC.Month, list[0].BirthMonth);
+                    Assert.Equal(nowUTC.Year, list[0].BirthYear);
+                }
+            }
+        }
+
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void NullableDateTimeProjectionLocal(string jsEngineType)
+        {
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var now = DateTime.Now;
                     newSession.Store(new Person
                     {
                         BirthDate = now
@@ -152,18 +198,22 @@ namespace SlowTests.Issues
                     var query = newSession.Query<Person>()
                         .Select(x => new Projection
                         {
+                            BirthHour = x.BirthDate != null ? x.BirthDate.Value.Hour : (int?)null,
                             BirthDay = x.BirthDate != null ? x.BirthDate.Value.Day : (int?)null,
                             BirthMonth = x.BirthDate != null ? x.BirthDate.Value.Month : (int?)null,
                             BirthYear = x.BirthDate != null ? x.BirthDate.Value.Year : (int?)null
                         });
 
                     var queryString = query.ToString();
-                    Assert.Equal("from 'People' as x select { BirthDay : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getDate():null, " +
-                                 "BirthMonth : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getMonth()+1:null, " +
-                                 "BirthYear : x.BirthDate!=null?new Date(Date.parse(x.BirthDate)).getFullYear():null }", queryString);
+                    Assert.Equal("from 'People' as x select { " +
+                                 "BirthHour : x?.BirthDate!=null?(x?.BirthDate?.getHours()):null, " +
+                                 "BirthDay : x?.BirthDate!=null?(x?.BirthDate?.getDate()):null, " +
+                                 "BirthMonth : x?.BirthDate!=null?(x?.BirthDate?.getMonth()+1):null, " +
+                                 "BirthYear : x?.BirthDate!=null?(x?.BirthDate?.getFullYear()):null }", queryString);
 
                     var list = query.ToList();
                     Assert.Equal(1, list.Count);
+                    Assert.Equal(now.Hour, list[0].BirthHour);
                     Assert.Equal(now.Day, list[0].BirthDay);
                     Assert.Equal(now.Month, list[0].BirthMonth);
                     Assert.Equal(now.Year, list[0].BirthYear);
@@ -178,11 +228,11 @@ namespace SlowTests.Issues
             {
                 using (var newSession = store.OpenSession())
                 {
-                    var now = DateTime.UtcNow;
-                    var sinceBirth = now - new DateTime(1985, 8, 13);
+                    var nowUTC = DateTime.UtcNow;
+                    var sinceBirth = nowUTC - new DateTime(1985, 8, 13);
                     newSession.Store(new Person
                     {
-                        BirthDate = now,
+                        BirthDate = nowUTC,
                         SinceBirth = sinceBirth
                     });
                     newSession.SaveChanges();
@@ -205,9 +255,9 @@ namespace SlowTests.Issues
 
                     var list = query.ToList();
                     Assert.Equal(1, list.Count);
-                    Assert.Equal(now.Day, list[0].BirthDay);
-                    Assert.Equal(now.Month, list[0].BirthMonth);
-                    Assert.Equal(now.Year, list[0].BirthYear);
+                    Assert.Equal(nowUTC.Day, list[0].BirthDay);
+                    Assert.Equal(nowUTC.Month, list[0].BirthMonth);
+                    Assert.Equal(nowUTC.Year, list[0].BirthYear);
                     Assert.Equal(sinceBirth.TotalMilliseconds, list[0].SinceBirthTotalMilliseconds);
                 }
             }
@@ -222,6 +272,8 @@ namespace SlowTests.Issues
 
         private class Projection
         {
+            public int? BirthHour { get; set; }
+
             public int? BirthDay { get; set; }
 
             public int? BirthMonth { get; set; }

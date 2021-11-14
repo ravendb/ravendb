@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Esprima;
+using Esprima.Ast;
+using Raven.Client.ServerWide.JavaScript;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
@@ -69,10 +73,10 @@ namespace Raven.Server.Documents.Patch
                     runner.AddScript(function.Value.FunctionText);
                 }
             }
-            runner.AddScript(GenerateRootScript());
+            runner.AddScript(GenerateRootScript(runner.JsOptions.EngineType));
         }
 
-        protected virtual string GenerateRootScript()
+        protected virtual string GenerateRootScript(JavaScriptEngineType jsEngineType)
         {
             switch (Type)
             {
@@ -88,7 +92,6 @@ namespace Raven.Server.Documents.Patch
  function __actual_func(args) {{ 
 Raven_ExplodeArgs(this, args);
 {Script}
-
 }};
 
 function execute(doc, args){{ 
@@ -104,10 +107,38 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
 
 }}";
                 case PatchRequestType.EtlBehaviorFunctions:
-                    return Script;
+                    return FilterCode(Script);
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private string FilterCode(string script)
+        {
+            var javascriptParser = new JavaScriptParser(script, new ParserOptions());
+            var program = javascriptParser.ParseScript();
+            return FilterCodeForNode(program.Body, script);
+        }
+
+        private string FilterCodeForNode(IEnumerable<Statement> nodes, string script)
+        {
+            var result = "";
+            foreach (var item in nodes)
+            {
+                if (item.Type == Nodes.BlockStatement)
+                {
+                    var blockResult = FilterCodeForNode(item.As<BlockStatement>().Body, script);
+                    if (blockResult != "")
+                        result += $"{{\n{blockResult}}}\n\n";
+                }
+                else if (item.Type == Nodes.FunctionDeclaration || item.Type == Nodes.VariableDeclaration || item.Type == Nodes.ClassDeclaration)
+                {
+                    var startPos = item.Range.Start;
+                    var endPos = item.Range.End;
+                    result += script.Substring(startPos, endPos - startPos) + "\n\n";
+                }
+            }
+            return result;
         }
 
         public override bool Equals(object obj)

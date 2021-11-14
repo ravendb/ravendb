@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace FastTests.Issues
             public Dictionary<string, int> Values { get; set; }
         }
 
-        [Fact]
-        public void TranslateDictionaryFunctions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TranslateDictionaryFunctions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

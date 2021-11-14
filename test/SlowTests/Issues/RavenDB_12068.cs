@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,12 +13,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void TernaryOperatorPrecedence()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TernaryOperatorPrecedence(string jsEngineType)
         {
             const string documentId = "document-id";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

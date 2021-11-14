@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Queries.Results
     public class GraphQueryResultRetriever : QueryResultRetrieverBase
     {
         private readonly GraphQuery _graphQuery;
-        private readonly DocumentsOperationContext _context;
+        private new readonly DocumentsOperationContext _context;
 
         public GraphQueryResultRetriever(GraphQuery graphQuery, DocumentDatabase database,
             IndexQueryServerSide query,

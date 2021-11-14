@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -19,10 +20,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             public int Fax { get; set; }
         }
 
-        [Fact]
-        public async Task CanUseIdMethodInJavascriptIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUseIdMethodInJavascriptIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new JavaScriptIndexWithIdMethod().Execute(store);
 
@@ -58,10 +60,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
-        public async Task CanUseGetMetadataMethodInJavascriptIndex()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUseGetMetadataMethodInJavascriptIndex(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new JavaScriptIndexWithGetMetadataMethod().Execute(store);
 

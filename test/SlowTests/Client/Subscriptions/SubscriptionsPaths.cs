@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,8 +23,9 @@ namespace SlowTests.Client.Subscriptions
             public List<Node> Children = new List<Node>();
         }
 
-        [Fact]
-        public void PositivePathWithCollectionsTyped()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PositivePathWithCollectionsTyped(string jsEngineType)
         {
             var nestedNode = new Node
             {
@@ -44,7 +46,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -63,13 +65,14 @@ namespace SlowTests.Client.Subscriptions
 
                 Node key;
                 Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
-                Assert.False(keys.TryTake(out key, TimeSpan.FromSeconds(1)));
+                Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
                 subscription.Dispose();
             }
         }
 
-        [Fact]
-        public void PositivePathWithCollectionsUntyped()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PositivePathWithCollectionsUntyped(string jsEngineType)
         {
             var nestedNode = new Node
             {
@@ -90,7 +93,7 @@ namespace SlowTests.Client.Subscriptions
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -99,16 +102,17 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
+                var optEmptyArray = jsEngineType == "Jint" ? "" : "?? []";
                 var subscriptionID = store.Subscriptions.Create(new SubscriptionCreationOptions()
                 {
-                    Query = @"
-declare function areAllGrandchildsGrandchilds(doc){
-        return doc.Children.every(function (child) { 
-            return child.Children.every(function (grandchild){ 
+                    Query = $@"
+declare function areAllGrandchildsGrandchilds(doc){{
+        return (doc.Children{optEmptyArray}).every(function (child) {{ 
+            return (child.Children{optEmptyArray}).every(function (grandchild){{ 
                 return grandchild.Name == 'Grandchild'
-            });
-        });
-}
+            }});
+        }});
+}}
 
 From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 });
@@ -122,13 +126,14 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
 
                 object key;
                 Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
-                Assert.False(keys.TryTake(out key, TimeSpan.FromSeconds(1)));
+                Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
                 subscription.Dispose();
             }
         }
 
-        [Fact]
-        public void NegativePathWithCollectionsTyped()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void NegativePathWithCollectionsTyped(string jsEngineType)
         {
             var nestedNode = new Node
             {
@@ -149,7 +154,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -168,13 +173,14 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
 
                 Node key;
                 Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
-                Assert.False(keys.TryTake(out key, TimeSpan.FromSeconds(1)));
+                Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
                 subscription.Dispose();
             }
         }
 
-        [Fact]
-        public void NegativePathWithCollectionsUntyped()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void NegativePathWithCollectionsUntyped(string jsEngineType)
         {
             var nestedNode = new Node
             {
@@ -195,7 +201,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 Name = "ChildlessParent",
                 Children = null
             };
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

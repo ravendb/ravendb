@@ -3,12 +3,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using IndexingFields = Raven.Client.Constants.Documents.Indexing.Fields;
 
 namespace SlowTests.Issues
 {
@@ -59,21 +61,23 @@ namespace SlowTests.Issues
 
         private class Companies_With_Attachments_JavaScript : AbstractJavaScriptIndexCreationTask
         {
-            public Companies_With_Attachments_JavaScript()
+            public Companies_With_Attachments_JavaScript(string jsEngineType)
             {
+                var optChaining = jsEngineType == "Jint" ? "" : "?";
+            
                 Maps = new HashSet<string>
                 {
-                    @"map('Companies', function (company) {
+                    @$"map('Companies', function (company) {{
 var attachment = loadAttachment(company, company.ExternalId);
-return {
+return {{
     CompanyName: company.Name,
-    AttachmentName: attachment.Name,
-    AttachmentContentType: attachment.ContentType,
-    AttachmentHash: attachment.Hash,
-    AttachmentSize: attachment.Size,
-    AttachmentContent: attachment.getContentAsString('utf8')
-};
-})"
+    AttachmentName: attachment{optChaining}.Name,
+    AttachmentContentType: attachment{optChaining}.ContentType,
+    AttachmentHash: attachment{optChaining}.Hash,
+    AttachmentSize: attachment{optChaining}.Size,
+    AttachmentContent: attachment{optChaining}.getContentAsString('utf8')
+}};
+}})"
                 };
             }
         }
@@ -506,12 +510,14 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Attachments_JavaScript()
+        // [shlomo] jint version is going to work after upgrading jint-ravendb
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Index_Attachments_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
-                var index = new Companies_With_Attachments_JavaScript();
+                var index = new Companies_With_Attachments_JavaScript(jsEngineType);
                 index.Execute(store);
 
                 store.Maintenance.Send(new StopIndexingOperation());
@@ -543,23 +549,33 @@ return attachments.map(attachment => ({
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("hr", terms[0]);
 
+                var termsCount = jsEngineType == "Jint" ? 0 : 1;
+                
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentName), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(termsCount, terms.Length);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentType), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(termsCount, terms.Length);
+                if (termsCount > 0)
+                    Assert.Equal(IndexingFields.NullValue, terms[0]);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentHash), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(termsCount, terms.Length);
+                if (termsCount > 0)
+                    Assert.Equal(IndexingFields.NullValue, terms[0]);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentSize), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(termsCount, terms.Length);
+                if (termsCount > 0)
+                    Assert.Equal(IndexingFields.NullValue, terms[0]);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContent), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(termsCount, terms.Length);
+                if (termsCount > 0)
+                    Assert.Equal(IndexingFields.NullValue, terms[0]);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
-                Assert.Equal(0, terms.Length);
+                Assert.Equal(0, terms.Length); // as there is no this field at all
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
@@ -693,10 +709,11 @@ return attachments.map(attachment => ({
             }
         }
 
-        [Fact]
-        public void Can_Index_Multiple_Attachments_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Index_Multiple_Attachments_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new Companies_With_Multiple_Attachments_JavaScript();
                 index.Execute(store);

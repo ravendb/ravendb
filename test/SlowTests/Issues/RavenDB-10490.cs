@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_Load_Inside_Let_With_Argument_Predefined_in_Let()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_Load_Inside_Let_With_Argument_Predefined_in_Let(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -46,10 +48,10 @@ namespace SlowTests.Issues
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u) {
-	var detailId = ""details/1-A"";
-	var name = u.Name;
-	var detail = load(detailId);
-	return { Name : name, DetailId : detailId, Detail : detail };
+    var detailId = ""details/1-A"";
+    var name = u?.Name;
+    var detail = load(detailId);
+    return { Name : name, DetailId : detailId, Detail : detail };
 }
 from 'Users' as u select output(u)", query.ToString());
 

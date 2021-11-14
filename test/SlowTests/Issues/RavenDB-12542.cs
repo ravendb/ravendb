@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -103,10 +104,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Pattern_match_node_index_query_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Pattern_match_node_index_query_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new IndexOrdersProductsWithPricePerUnit().Execute(store);

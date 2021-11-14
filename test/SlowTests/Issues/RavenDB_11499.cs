@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
             public ushort Ushort { get; set; }
         }
 
-        [Fact]
-        public void CanPatchSbyteAndUshort()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanPatchSbyteAndUshort(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

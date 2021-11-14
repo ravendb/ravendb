@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Xunit;
@@ -14,9 +15,9 @@ namespace SlowTests.Queries
         {
         }
 
-        protected DocumentStore GetLoadedStore()
+        protected DocumentStore GetLoadedStore(string jsEngineType)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
             using (var session = store.OpenSession())
             {
                 session.Store(new Category());
@@ -75,9 +76,9 @@ namespace SlowTests.Queries
             return store;
         }
 
-        public List<T> Query<T>(string q, T type, Dictionary<string, object> parameters = null)
+        public List<T> Query<T>(string jsEngineType, string q, T type, Dictionary<string, object> parameters = null)
         {
-            using (var store = GetLoadedStore())
+            using (var store = GetLoadedStore(jsEngineType))
             {
                 //WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenSession())
@@ -95,10 +96,11 @@ namespace SlowTests.Queries
                 }
             }
         }
-        [Fact]
-        public void QueriesUsingArrowFunc()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void QueriesUsingArrowFunc(string jsEngineType)
         {
-            var actual = Query(@"
+            var actual = Query(jsEngineType, @"
 from Employees as e
 select {
     Notes: e.Notes.map(x=>x.toUpperCase())
@@ -110,14 +112,25 @@ select {
             Assert.Equal(new[] { "PALE", "DOG", "BIG" }, actual[1].Notes);
 
         }
+        
+        
+        const string SimpleFieldProjectionScript1 = "from Companies select Address.City as City";
+        const string SimpleFieldProjectionScript2 = "from Companies c select c.Address.City as City";
+        const string SimpleFieldProjectionScript3 = "from Companies as c select c.Address.City as City";
+        const string SimpleFieldProjectionScript4 = "from Companies as c select { City: c.Address.City }";
+        
         [Theory]
-        [InlineData("from Companies select Address.City as City")]
-        [InlineData("from Companies c select c.Address.City as City")]
-        [InlineData("from Companies as c select c.Address.City as City")]
-        [InlineData("from Companies as c select { City: c.Address.City }")]
-        public void SimpleFieldProjection(string q)
+        [InlineData(SimpleFieldProjectionScript1, "Jint")]
+        [InlineData(SimpleFieldProjectionScript2, "Jint")]
+        [InlineData(SimpleFieldProjectionScript3, "Jint")]
+        [InlineData(SimpleFieldProjectionScript4, "Jint")]
+        [InlineData(SimpleFieldProjectionScript1, "V8")]
+        [InlineData(SimpleFieldProjectionScript2, "V8")]
+        [InlineData(SimpleFieldProjectionScript3, "V8")]
+        [InlineData(SimpleFieldProjectionScript4, "V8")]
+        public void SimpleFieldProjection(string q, string jsEngineType)
         {
-            var actual = Query(q, new { City = "" });
+            var actual = Query(jsEngineType, q, new { City = "" });
             Assert.Equal(new[]
             {
                 new {City = "Hadera" },
@@ -127,17 +140,29 @@ select {
                 actual);
         }
 
+        const string TestProjectionsOfConstAndVariablesScript1 = "from Categories select 1 as V";
+        const string TestProjectionsOfConstAndVariablesScript2 = "from Categories select 1.2 as V";
+        const string TestProjectionsOfConstAndVariablesScript3 = "from Categories select $t as V";
+        const string TestProjectionsOfConstAndVariablesScript4 = "from Categories select 'hello there' as V";
+        const string TestProjectionsOfConstAndVariablesScript5 = "from Categories select \"hello there\" as V";
+        const string TestProjectionsOfConstAndVariablesScript6 = "from Categories as c select {V: c['@metadata']['@collection'] }";
 
         [Theory]
-        [InlineData("from Categories select 1 as V", "1")]
-        [InlineData("from Categories select 1.2 as V", "1.2")]
-        [InlineData("from Categories select $t as V", "1234")]
-        [InlineData("from Categories select 'hello there' as V", "hello there")]
-        [InlineData("from Categories select \"hello there\" as V", "hello there")]
-        [InlineData("from Categories as c select {V: c['@metadata']['@collection'] }", "Categories")]
-        public void TestProjectionsOfConstAndVariables(string q, string v)
+        [InlineData(TestProjectionsOfConstAndVariablesScript1, "1", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript2, "1.2", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript3, "1234", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript4, "hello there", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript5, "hello there", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript6, "Categories", "Jint")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript1, "1", "V8")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript2, "1.2", "V8")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript3, "1234", "V8")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript4, "hello there", "V8")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript5, "hello there", "V8")]
+        [InlineData(TestProjectionsOfConstAndVariablesScript6, "Categories", "V8")]
+        public void TestProjectionsOfConstAndVariables(string q, string v, string jsEngineType)
         {
-            var actual = Query(q, new { V = "" }, new Dictionary<string, object>
+            var actual = Query(jsEngineType, q, new { V = "" }, new Dictionary<string, object>
             {
                 ["t"] = 1234
             });
@@ -149,21 +174,31 @@ select {
 
         }
 
-        [Theory]
-        [InlineData("from Employees where FirstName = 'Phoebe' include ReportsTo")]
-        [InlineData("from Employees as e where e.FirstName = 'Phoebe' include e.ReportsTo")]
-        [InlineData("from Employees where FirstName = 'Oscar' include ReportsTo")]
-        [InlineData(@"
+        private const string includesScript1 = "from Employees where FirstName = 'Phoebe' include ReportsTo";
+        private const string includesScript2 = "from Employees as e where e.FirstName = 'Phoebe' include e.ReportsTo";
+        private const string includesScript3 = "from Employees where FirstName = 'Oscar' include ReportsTo";
+
+        private const string includesScript4 = @"
 declare function project(e){
     include(e.ReportsTo)
     return e;
 }
 from Employees as e 
 where e.FirstName = 'Oscar'
-select project(e)")]
-        public void Includes(string q)
+select project(e)";
+
+        [Theory]
+        [InlineData(includesScript1, "Jint")]
+        [InlineData(includesScript2, "Jint")]
+        [InlineData(includesScript3, "Jint")]
+        [InlineData(includesScript4, "Jint")]
+        [InlineData(includesScript1, "V8")]
+        [InlineData(includesScript2, "V8")]
+        [InlineData(includesScript3, "V8")]
+        [InlineData(includesScript4, "V8")]
+        public void Includes(string q, string jsEngineType)
         {
-            using (var store = GetLoadedStore())
+            using (var store = GetLoadedStore(jsEngineType))
             {
                 using (var s = store.OpenSession())
                 {
@@ -184,15 +219,25 @@ select project(e)")]
             }
 
         }
+        
+        
+        const string FilterByPropertyScript1 = "from Companies where Address.City = 'Hadera'";
+        const string FilterByPropertyScript2 = "from Companies c where c.Address.City = 'Hadera'";
+        const string FilterByPropertyScript3 = "from Companies c where c.Address.City != 'Toruń' and c.Address.City != 'Buenos Aires'";
+        const string FilterByPropertyScript4 = "from Companies where Address.City = $city ";
 
         [Theory]
-        [InlineData("from Companies where Address.City = 'Hadera'")]
-        [InlineData("from Companies c where c.Address.City = 'Hadera'")]
-        [InlineData("from Companies c where c.Address.City != 'Toruń' and c.Address.City != 'Buenos Aires'")]
-        [InlineData("from Companies where Address.City = $city ")]
-        public void FilterByProperty(string q)
+        [InlineData(FilterByPropertyScript1, "Jint")]
+        [InlineData(FilterByPropertyScript2, "Jint")]
+        [InlineData(FilterByPropertyScript3, "Jint")]
+        [InlineData(FilterByPropertyScript4, "Jint")]
+        [InlineData(FilterByPropertyScript1, "V8")]
+        [InlineData(FilterByPropertyScript2, "V8")]
+        [InlineData(FilterByPropertyScript3, "V8")]
+        [InlineData(FilterByPropertyScript4, "V8")]
+        public void FilterByProperty(string q, string jsEngineType)
         {
-            var actual = Query(q, new Company { }, new Dictionary<string, object>
+            var actual = Query(jsEngineType, q, new Company { }, new Dictionary<string, object>
             {
                 ["city"] = "Hadera"
             });
@@ -200,26 +245,28 @@ select project(e)")]
             Assert.Equal("Hadera", actual[0].Address.City);
         }
 
-        [Theory]
-        [InlineData(@"
+        const string projectingRelatedScript1 = @"
 from Employees e 
 where e.FirstName = 'Phoebe' 
 load e.ReportsTo r 
-select e.FirstName as A, r.FirstName as B", "Phoebe", "Oscar")]
-        [InlineData(@"
+select e.FirstName as A, r.FirstName as B";
+            
+        const string projectingRelatedScript2 = @"
 from Employees e 
 where e.FirstName = 'Oscar' 
 load e.ReportsTo r 
-select e.FirstName as A, r.FirstName as B", "Oscar", null)]
-        [InlineData(@"
+select e.FirstName as A, r.FirstName as B";
+        
+        const string projectingRelatedScript3 = @"
 from Employees e 
 where e.FirstName = 'Oscar' 
 load e.ReportsTo r 
 select {     
     A: e.FirstName +' '+e.LastName, 
-    B: r.FirstName +' ' + r.LastName 
-} ", "Oscar Aharon-Eini", "null null")]
-        [InlineData(@"
+    B: r?.FirstName +' ' + r?.LastName 
+} ";
+        
+        const string projectingRelatedScript4 = @"
 declare function name(e) {
     if( e == null)
         return null;
@@ -231,18 +278,31 @@ load e.ReportsTo r
 select { 
     A: name(e), 
     B: name(r)
-} ", "Oscar Aharon-Eini", null)]
-        [InlineData(@"
+} ";
+        
+        const string projectingRelatedScript5 = @"
 from Employees e 
 where e.FirstName = 'Phoebe' 
 load e.ReportsTo r 
 select { 
     A: e.FirstName +' '+e.LastName, 
     B: r.FirstName +' ' + r.LastName 
-} ", "Phoebe Eini", "Oscar Aharon-Eini")]
-        public void ProjectingRelated(string q, string nameA, string nameB)
+}";
+        
+        [Theory]
+        [InlineData(projectingRelatedScript1, "Phoebe", "Oscar", "Jint")]
+        [InlineData(projectingRelatedScript2, "Oscar", null, "Jint")]
+        [InlineData(projectingRelatedScript3, "Oscar Aharon-Eini", "undefined undefined", "Jint")]
+        [InlineData(projectingRelatedScript4, "Oscar Aharon-Eini", null, "Jint")]
+        [InlineData(projectingRelatedScript5, "Phoebe Eini", "Oscar Aharon-Eini", "Jint")]
+        [InlineData(projectingRelatedScript1, "Phoebe", "Oscar", "V8")]
+        [InlineData(projectingRelatedScript2, "Oscar", null, "V8")]
+        [InlineData(projectingRelatedScript3, "Oscar Aharon-Eini", "undefined undefined", "V8")]
+        [InlineData(projectingRelatedScript4, "Oscar Aharon-Eini", null, "V8")]
+        [InlineData(projectingRelatedScript5, "Phoebe Eini", "Oscar Aharon-Eini", "V8")]
+        public void ProjectingRelated(string q, string nameA, string nameB, string jsEngineType)
         {
-            var actual = Query(q, new { A = "", B = "" });
+            var actual = Query(jsEngineType, q, new { A = "", B = "" });
             Assert.Equal(1, actual.Count);
             Assert.Equal(new { A = nameA, B = nameB }, actual[0]);
         }

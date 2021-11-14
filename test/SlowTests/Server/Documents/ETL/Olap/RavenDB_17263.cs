@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
@@ -17,10 +18,11 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
-        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldNotReuseCustomPartitionFromPreviousTestRun(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -66,7 +68,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                                     var orderDate = new Date(this.OrderedAt);
                                     var year = orderDate.getFullYear();
                                     var month = orderDate.getMonth();
-                                    var key = new Date(year, month);
+                                    var key = new Date(Date.UTC(year, month));
 
                                     loadToOrders(partitionBy(['order_date', key], ['location', $customPartitionValue]),
                                     {

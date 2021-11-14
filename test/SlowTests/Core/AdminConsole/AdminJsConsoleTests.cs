@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Extensions;
@@ -20,10 +21,11 @@ namespace SlowTests.Core.AdminConsole
             DoNotReuseServer();
         }
 
-        [Fact]
-        public async Task CanGetSettings()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanGetSettings(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -59,10 +61,11 @@ namespace SlowTests.Core.AdminConsole
             return token;
         }
 
-        [Fact]
-        public async Task CanGetResultAsDateObject()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanGetResultAsDateObject(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var startTime = database.StartTime;
@@ -75,10 +78,11 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public async Task CanGetResultAsPrimitiveObject()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanGetResultAsPrimitiveObject(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var maxConcurrentFlushes = (long)database.Configuration.Storage.MaxConcurrentFlushes;
@@ -107,10 +111,11 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public async Task CanGetResultAsComplexObject()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanGetResultAsComplexObject(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var requestsMeter = database.Metrics.Requests.RequestsPerSec;
@@ -141,10 +146,11 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public async Task CanConvertAllJsonTypesToString()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanConvertAllJsonTypesToString(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -170,10 +176,11 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public async Task CanModifyConfigurationOnTheFly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyConfigurationOnTheFly(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var configuration = database.Configuration;
@@ -195,8 +202,9 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public void CanGetServerSettings()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetServerSettings(string jsEngineType)
         {
             var result = ExecuteScript(null, @"
                             return { 
@@ -208,13 +216,14 @@ namespace SlowTests.Core.AdminConsole
             Assert.Equal(10L, result["MaxConcurrentFlushes"]);
         }
 
-        [Fact]
-        public void CanGetServerStoreConfigs()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetServerStoreConfigs(string jsEngineType)
         {
             DoNotReuseServer();
             var result = ExecuteScript(null, @"
                             return { 
-                                StrictMode: server.ServerStore.Configuration.Patching.StrictMode,
+                                StrictMode: server.ServerStore.Configuration.JavaScript.StrictMode,
                                 MaxConcurrentFlushes: server.ServerStore.Configuration.Storage.MaxConcurrentFlushes
                             };"
             );
@@ -230,8 +239,9 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
-        public void CanModifyServerConfigurationOnTheFly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanModifyServerConfigurationOnTheFly(string jsEngineType)
         {
             var configuration = Server.Configuration;
 
@@ -251,8 +261,9 @@ namespace SlowTests.Core.AdminConsole
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }
 
-        [Fact]
-        public void CanReturnNullResult()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanReturnNullResult(string jsEngineType)
         {
             var result = ExecuteScript(null, "return null");
             Assert.Equal(JValue.CreateNull(), (JValue)result);

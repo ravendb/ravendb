@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Subscriptions
             return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, options, predicate, null, includes: null), database, token);
         }
 
-        internal static SubscriptionCreationOptions CreateSubscriptionOptionsFromGeneric<T>(
+        internal SubscriptionCreationOptions CreateSubscriptionOptionsFromGeneric<T>(
             DocumentConventions conventions,
             SubscriptionCreationOptions criteria,
             Expression<Func<T, bool>> predicate,
@@ -124,6 +124,7 @@ namespace Raven.Client.Documents.Subscriptions
                 criteria.Query = queryBuilder.Append(" as doc").ToString();
             }
 
+            var useOptionalChaining = JavaScriptExtensions.UseOptionalChaining(_store?.MaintenanceOperationExecutor?.RequestExecutor);
             if (predicate != null)
             {
                 var script = predicate.CompileToJavascript(
@@ -142,8 +143,12 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                         JavascriptConversionExtensions.StringSupport.Instance,
-                        new JavascriptConversionExtensions.IdentityPropertySupport(conventions)
-                    ));
+                        new JavascriptConversionExtensions.IdentityPropertySupport(conventions),
+                        JavascriptConversionExtensions.MemberExpressionSupport.Instance
+                    )
+                    {
+                        CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(conventions, useOptionalChaining)
+                    });
 
                 queryBuilder
                     .Insert(0, $"declare function predicate() {{ return {script} }}{Environment.NewLine}")
@@ -172,8 +177,12 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.CounterSupport.Instance,
                         JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                         new JavascriptConversionExtensions.LoadSupport(),
-                        JavascriptConversionExtensions.MemberInit.Instance
-                    ));
+                        JavascriptConversionExtensions.MemberInit.Instance,
+                        JavascriptConversionExtensions.MemberExpressionSupport.Instance
+                    )
+                    {
+                        CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(conventions, useOptionalChaining)
+                    });
 
                 queryBuilder
                     .AppendLine()

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -174,8 +175,9 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
-        public async Task CanCompactEncryptedDb()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanCompactEncryptedDb(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -209,7 +211,7 @@ namespace SlowTests.Authentication
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
                 Path = path
             }))
             {

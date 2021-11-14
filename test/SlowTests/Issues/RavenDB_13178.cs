@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MaxStepsForScript)] = "1"
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.JsMaxSteps)] = "1"
             }))
             {
                 new UsersByPhones().Execute(store);

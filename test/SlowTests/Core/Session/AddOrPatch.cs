@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Core.Session
         {
         }
         
-        [Fact]
-        public void CanAddOrPatch()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanAddOrPatch(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var id = "users/1";
                 using (var session = store.OpenSession())
@@ -73,11 +75,12 @@ namespace SlowTests.Core.Session
             }
         }
         
-        [Fact]
-        public void CanAddOrPatchAddItemToAnExistingArray()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanAddOrPatchAddItemToAnExistingArray(string jsEngineType)
         {
             
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 
                 var id = "users/1";
@@ -153,10 +156,11 @@ namespace SlowTests.Core.Session
             }
         }
         
-        [Fact]
-        public void CanAddOrPatchIncrement()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanAddOrPatchIncrement(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var id = "users/1";
                 using (var session = store.OpenSession())

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
@@ -16,8 +17,9 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Fact]
-        public void Etl_from_encrypted_to_non_encrypted_db_will_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Etl_from_encrypted_to_non_encrypted_db_will_work(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -49,13 +51,14 @@ namespace SlowTests.Server.Documents.ETL
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
                 ModifyDatabaseName = s => dbName,
             }))
             using (var dstServer = GetNewServer())
             using (var dest = GetDocumentStore(new Options()
             {
-                Server = dstServer
+                Server = dstServer,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 AddEtl(src, new RavenEtlConfiguration()
@@ -110,8 +113,9 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Etl_from_encrypted_to_encrypted_db_will_work_even_if_AllowEtlOnNonEncryptedChannel_is_set(string jsEngineType)
         {
             var certificates = Certificates.SetupServerAuthentication();
             var srcDbName = GetDatabaseName();
@@ -147,14 +151,14 @@ namespace SlowTests.Server.Documents.ETL
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
                 ModifyDatabaseName = s => srcDbName,
             }))
             using (var dest = GetDocumentStore(new Options
             {
                 AdminCertificate = adminCert,
                 ClientCertificate = adminCert,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Encrypted = true),
                 ModifyDatabaseName = s => dstDbName,
             }))
             {

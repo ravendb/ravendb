@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using FastTests.Graph;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Can_handle_string_array_as_edge_simple_select()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_handle_string_array_as_edge_simple_select(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,10 +51,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_handle_string_array_as_edge_with_select_and_recursive_query()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_handle_string_array_as_edge_with_select_and_recursive_query(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -82,10 +85,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_handle_string_array_as_edge_js_select()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_handle_string_array_as_edge_js_select(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

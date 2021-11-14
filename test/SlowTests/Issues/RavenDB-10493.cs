@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
             public DateTime? DateTime;
         }
 
-        [Fact]
-        public void CanTranslateDateTimeMinValueMaxValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanTranslateDateTimeMinValueMaxValue(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -43,7 +45,7 @@ namespace SlowTests.Issues
                                 };
 
                     var expectedQuery =
-                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
+                        $"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ DateTime : x?.DateTime, DateTimeMinValue : new Date(-62135596800000), DateTimeMaxValue : new Date(253402297199999) }};{Environment.NewLine}}}{Environment.NewLine}from 'Articles' as x select output(x)";
 
                     Assert.Equal(expectedQuery, query.ToString());
 

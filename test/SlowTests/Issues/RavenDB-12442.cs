@@ -15,11 +15,13 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue)]
-        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString)]
-        public void Can_convert_stored_null_value_and_empty_string(string str)
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue, "Jint")]
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.NullValue, "V8")]
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, "Jint")]
+        [InlineData(Raven.Client.Constants.Documents.Indexing.Fields.EmptyString, "V8")]
+        public void Can_convert_stored_null_value_and_empty_string(string str, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

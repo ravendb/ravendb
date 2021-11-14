@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -37,10 +38,11 @@ namespace FastTests.Client
   
          */
         
-        [Fact]
-        public void RawQuery_with_transformation_function_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void RawQuery_with_transformation_function_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -119,10 +121,11 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
-        public void LinqQuery_with_transformation_function_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void LinqQuery_with_transformation_function_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

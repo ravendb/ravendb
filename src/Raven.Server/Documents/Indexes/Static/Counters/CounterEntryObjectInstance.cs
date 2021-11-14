@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         {
             _entry = entry ?? throw new ArgumentNullException(nameof(entry));
 
-            SetPrototypeOf(engine.Object.PrototypeObject);
+            SetPrototypeOf(engine.Realm.Intrinsics.Object.PrototypeObject);
         }
 
         public override bool Delete(JsValue property)

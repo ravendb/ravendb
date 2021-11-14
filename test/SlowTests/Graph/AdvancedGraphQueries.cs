@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using FastTests.Blittable;
 using FastTests.Graph;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -58,10 +59,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
 
@@ -543,10 +545,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void FindFriendlies_with_javascript_select_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void FindFriendlies_with_javascript_select_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 WaitForUserToContinueTheTest(store);
@@ -621,10 +624,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_and_edge_filter_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_and_edge_filter_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -655,10 +659,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_and_edge_filter_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_and_edge_filter_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -1012,10 +1017,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Projection_of_edge_array_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_of_edge_array_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1230,10 +1236,11 @@ namespace SlowTests.Graph
         }
 
 
-        [Fact]
-        public void Projection_of_complex_edge_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_of_complex_edge_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 Indexes.WaitForIndexing(store);
@@ -1258,10 +1265,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Projection_of_complex_edge_with_filter_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Projection_of_complex_edge_with_filter_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 Indexes.WaitForIndexing(store);
@@ -1300,10 +1308,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Edge_projection_in_multi_hop_query_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Edge_projection_in_multi_hop_query_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -1363,10 +1372,11 @@ namespace SlowTests.Graph
             }
         }   
 
-        [Fact]
-        public void Longest_recursion_should_work_properly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Longest_recursion_should_work_properly(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 
@@ -1383,10 +1393,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Shortest_and_lazy_recursion_should_work_properly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Shortest_and_lazy_recursion_should_work_properly(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())

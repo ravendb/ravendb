@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
@@ -15,14 +16,15 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow(string jsEngineType)
         {
             var exportPath = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");
 
             DatabaseStatistics initialStats;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | DatabaseItemType.Attachments | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 

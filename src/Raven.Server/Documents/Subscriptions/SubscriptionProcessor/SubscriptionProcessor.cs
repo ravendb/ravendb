@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Jint.Native;
-using Jint.Native.Object;
-using Jint.Runtime;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
@@ -72,6 +70,8 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
     public abstract class SubscriptionProcessor : IDisposable
     {
+        protected readonly IJavaScriptOptions _jsOptions;
+
         protected readonly ServerStore Server;
         protected readonly DocumentDatabase Database;
         protected readonly SubscriptionConnection Connection;
@@ -99,6 +99,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         protected SubscriptionProcessor(ServerStore server, DocumentDatabase database, SubscriptionConnection connection)
         {
+            _jsOptions = database.Configuration.JavaScript;
             Server = server;
             Database = database;
             Connection = connection;
@@ -142,7 +143,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             if (_returnRun != null)
                 return; // already init
 
-            _returnRun = Database.Scripts.GetScriptRunner(Patch, true, out Run);
+            _returnRun = Database.Scripts.GetScriptRunner(_jsOptions, Patch, true, out Run);
         }
 
         protected HashSet<long> Active;
@@ -170,19 +171,20 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             {
             }
 
-            public void Modify(ObjectInstance json)
+            public void Modify(JsHandle json)
             {
-                ObjectInstance metadata;
-                var value = json.Get(Constants.Documents.Metadata.Key);
-                if (value.Type == Types.Object)
-                    metadata = value.AsObject();
-                else
+                using (var jsMetadata = json.GetProperty(Constants.Documents.Metadata.Key))
                 {
-                    metadata = json.Engine.Object.Construct(Array.Empty<JsValue>());
-                    json.Set(Constants.Documents.Metadata.Key, metadata, false);
-                }
+                    var engine = json.Engine;
+                    if (!jsMetadata.IsObject)
+                    {
+                        using (var jsMetadataNew = engine.CreateObject())
+                            jsMetadata.Set(jsMetadataNew);
+                        json.SetProperty(Constants.Documents.Metadata.Key, jsMetadata.Clone(), throwOnError:false);
+                    }
 
-                metadata.Set(Constants.Documents.Metadata.Projection, JsBoolean.True, false);
+                    jsMetadata.SetProperty(Constants.Documents.Metadata.Projection, engine.CreateValue(true), throwOnError:false);
+                }
             }
         }
 

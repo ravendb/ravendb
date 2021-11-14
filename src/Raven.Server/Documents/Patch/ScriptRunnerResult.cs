@@ -1,58 +1,79 @@
 using System;
-using Jint;
-using Jint.Native;
-using Jint.Native.Object;
 using Sparrow.Json;
+using Raven.Client.ServerWide.JavaScript;
+using PatchJint = Raven.Server.Documents.Patch.Jint;
+using PatchV8 = Raven.Server.Documents.Patch.V8;
 
 namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunnerResult : IDisposable
     {
+        private readonly JavaScriptEngineType _jsEngineType; 
+        
         private readonly ScriptRunner.SingleRun _parent;
-
-        public ScriptRunnerResult(ScriptRunner.SingleRun parent, JsValue instance)
+        public JsHandle Instance;
+        
+        public ScriptRunnerResult(ScriptRunner.SingleRun parent, JsHandle instance)
         {
             _parent = parent;
-            Instance = instance;
+            Instance = instance.Clone();
+            _jsEngineType = Instance.EngineType;
         }
 
-        public readonly JsValue Instance;
-
-        public ObjectInstance GetOrCreate(JsValue property)
+        ~ScriptRunnerResult()
         {
-            if (Instance.AsObject() is BlittableObjectInstance b)
-                return b.GetOrCreate(property);
-            var parent = Instance.AsObject();
-            var o = parent.Get(property);
-            if (o == null || o.IsUndefined() || o.IsNull())
-            {
-                o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
-                parent.Set(property, o, false);
-            }
-            return o.AsObject();
+            Instance.Dispose();
         }
 
-        public bool? BooleanValue => Instance.IsBoolean() ? Instance.AsBoolean() : (bool?)null;
+        public IJsEngineHandle EngineHandle => _parent.ScriptEngineHandle;
 
-        public bool IsNull => Instance == null || Instance.IsNull() || Instance.IsUndefined();
-        public string StringValue => Instance.IsString() ? Instance.AsString() : null;
-        public JsValue RawJsValue => Instance;
+        public JsHandle GetOrCreate(string propertyName)
+        {
+            if (Instance.Object is IBlittableObjectInstance boi)
+                return boi.GetOrCreate(propertyName);
+
+            JsHandle o = Instance.GetProperty(propertyName);
+            if (o.IsUndefined || o.IsNull)
+            {
+                o.Dispose();
+                o = _parent.ScriptEngineHandle.CreateObject();
+                Instance.SetProperty(propertyName, new JsHandle(ref o), throwOnError: true);
+            }
+            return o;
+        }
+
+        public bool? BooleanValue => Instance.IsBoolean ? Instance.AsBoolean : (bool?)null;
+
+        public bool IsNull => Instance.IsEmpty || Instance.IsNull || Instance.IsUndefined;
+        public string StringValue => Instance.IsStringEx ? Instance.AsString : null;
+        public JsHandle RawJsValue => Instance;
 
         public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (IsNull)
                 return null;
 
-            var obj = Instance.AsObject();
-            return JsBlittableBridge.Translate(context, _parent.ScriptEngine, obj, modifier, usageMode);
+            return _jsEngineType switch
+            {
+                JavaScriptEngineType.Jint => PatchJint.JsBlittableBridgeJint.Translate(context, _parent.ScriptEngineJint, Instance.Jint.Obj, modifier, usageMode),
+                JavaScriptEngineType.V8 => PatchV8.JsBlittableBridgeV8.Translate(context, _parent.ScriptEngineV8, Instance.V8.Item, modifier, usageMode),
+                _ => throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.")
+            };
         }
 
         public void Dispose()
         {
-            if (Instance is BlittableObjectInstance boi)
-                boi.Reset();
+            if (Instance.IsObject)
+            {
+                var io = Instance.Object;
+                if (io is PatchJint.BlittableObjectInstanceJint boiJint)
+                    boiJint.Reset();
+                else if (io is PatchV8.BlittableObjectInstanceV8 boiV8)
+                    boiV8.Reset();
+            }
 
-            _parent?.JavaScriptUtils.Clear();
+            _parent?.JsUtilsBase.Clear();
         }
+        
     }
 }

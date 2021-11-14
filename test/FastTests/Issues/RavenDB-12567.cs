@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests.Graph;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,10 +13,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void Recursive_queries_should_handle_self_cycles_properly()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Recursive_queries_should_handle_self_cycles_properly(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -45,10 +47,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Recursive_queries_with_self_cycles_and_regular_cycles_should_properly_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Recursive_queries_with_self_cycles_and_regular_cycles_should_properly_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

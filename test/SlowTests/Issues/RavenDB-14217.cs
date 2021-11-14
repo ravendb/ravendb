@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Orders;
 using Xunit;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseAliasesOnFunctions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseAliasesOnFunctions(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

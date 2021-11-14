@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
-        public void PatchShouldThrowIfAllowStaleIsSetToFalseAndTimeoutHasPassed()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void PatchShouldThrowIfAllowStaleIsSetToFalseAndTimeoutHasPassed(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var index = new Companies_ByName();
                 index.Execute(store);

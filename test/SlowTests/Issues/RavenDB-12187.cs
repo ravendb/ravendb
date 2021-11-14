@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,10 +13,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Query_with_cycle_and_where_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Query_with_cycle_and_where_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 WaitForUserToContinueTheTest(store);

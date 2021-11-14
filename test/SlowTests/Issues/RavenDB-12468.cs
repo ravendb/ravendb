@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using SlowTests.Graph;
@@ -67,10 +68,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Should_support_id_operator_in_simple_select()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_support_id_operator_in_simple_select(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 CreateData(store);
                 using (var session = store.OpenSession())

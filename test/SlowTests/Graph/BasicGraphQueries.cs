@@ -1,7 +1,9 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
@@ -35,14 +37,14 @@ namespace SlowTests.Graph
             };
         }
 
-        private List<T> Query<T>(string q, Action<IDocumentStore> mutate = null, StalenessParameters parameters = null)
+        private List<T> Query<T>(string q, Action<IDocumentStore> mutate = null, StalenessParameters parameters = null, string? jsEngineType = null)
         {
             if (parameters == null)
             {
                 parameters = StalenessParameters.Default;
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = jsEngineType == null ? GetDocumentStore() : GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
@@ -128,8 +130,9 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void CanProjectSameDocumentTwice()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectSameDocumentTwice(string jsEngineType)
         {
             var results = Query<OrderAndProduct>(@"
 match (Orders as o where id() = 'orders/828-A')-[Lines select Product]->(Products as p)
@@ -137,7 +140,7 @@ select {
     OrderId: id(o),
     Product: p.Name
 }
-");
+", jsEngineType: jsEngineType);
             Assert.Equal(3, results.Count);
             foreach (var item in results)
             {
@@ -146,8 +149,9 @@ select {
             }
         }
 
-        [Fact]
-        public void CanProjectEdges()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectEdges(string jsEngineType)
         {
             var results = Query<OrderAndProduct>(@"
 match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
@@ -156,7 +160,7 @@ select {
     Product: p.Name,
     Discount: l.Discount
 }
-");
+", jsEngineType: jsEngineType);
             Assert.Equal(3, results.Count);
             foreach (var item in results)
             {
@@ -166,8 +170,9 @@ select {
             }
         }
 
-        [Fact]
-        public void CanSkipAndTake()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanSkipAndTake(string jsEngineType)
         {
             var results = Query<OrderAndProduct>(@"
 match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
@@ -177,14 +182,15 @@ select {
     Discount: l.Discount
 }
 Limit 1,1
-");
+", jsEngineType: jsEngineType);
             Assert.Equal(1, results.Count);
             var res = results.First();
             Assert.Equal("Ipoh Coffee", res.Product);
         }
 
-        [Fact]
-        public void CanIncludeFromJavaScriptInGraphQueries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanIncludeFromJavaScriptInGraphQueries(string jsEngineType)
         {
             var rawQuery =
                         @"
@@ -202,7 +208,7 @@ declare function includeProducts(doc)
 match (Orders as o where id() = 'orders/821-A')
 select  includeProducts(o)
 ";
-            TestIncludeQuery(rawQuery);
+            TestIncludeQuery(rawQuery, jsEngineType);
         }
 
         [Fact]
@@ -216,9 +222,9 @@ include Lines.Product
             TestIncludeQuery(rawQuery);
         }
 
-        private void TestIncludeQuery(string rawQuery)
+        private void TestIncludeQuery(string rawQuery, string? jsEngineType = null)
         {
-            using (var store = GetDocumentStore())
+            using (var store = jsEngineType == null ? GetDocumentStore() : GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -238,10 +244,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_source_node()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_filter_source_node(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -257,10 +264,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_destination_node()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_filter_destination_node(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -276,10 +284,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_edge()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_filter_edge(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -386,7 +395,7 @@ select p", mutate: (store) =>
             public string Employee, Boss;
             public string[] MiddleManagement;
         }
-
+        
         [Fact]
         public void CanUseMultiHopInQueries()
         {
@@ -403,8 +412,9 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             }
         }
 
-        [Fact]
-        public void CanUseMultiHopInQueriesWithScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseMultiHopInQueriesWithScript(string jsEngineType)
         {
             var results = Query<EmployeeRelations>(@"
 match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees as intermediary) }-[ReportsTo]->(Employees as boss)
@@ -413,7 +423,7 @@ select {
     MiddleManagement: n.map(f => load(f.m)).map(f => f.FirstName + ' ' + f.LastName),
     Boss: boss.FirstName + ' ' + boss.LastName
 }
-");
+", jsEngineType: jsEngineType);
             Assert.Equal(1, results.Count);
             foreach (var item in results)
             {
@@ -570,10 +580,11 @@ select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
             }
         }
 
-        [Fact]
-        public void CanCustomizeRecursionBehavior_DefaultsToLazy()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCustomizeRecursionBehavior_DefaultsToLazy(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 SetupHobbitAncestry(store);
 
@@ -595,10 +606,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCustomizeRecursionBehavior_All()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCustomizeRecursionBehavior_All(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 SetupHobbitAncestry(store);
 
@@ -633,12 +645,15 @@ select {
 
 
         [Theory]
-        [InlineData("lazy", new[] { "Bungo" })]
-        [InlineData("shortest", new[] { "Bungo" })]
-        [InlineData("longest", new[] { "Bungo", "Mungo", "Balbo Baggins" })]
-        public void CanCustomizeRecursionBehavior(string behavior, string[] expected)
+        [InlineData("Jint", "lazy", new[] { "Bungo" })]
+        [InlineData("Jint", "shortest", new[] { "Bungo" })]
+        [InlineData("Jint", "longest", new[] { "Bungo", "Mungo", "Balbo Baggins" })]
+        [InlineData("V8", "lazy", new[] { "Bungo" })]
+        [InlineData("V8", "shortest", new[] { "Bungo" })]
+        [InlineData("V8", "longest", new[] { "Bungo", "Mungo", "Balbo Baggins" })]
+        public void CanCustomizeRecursionBehavior(string jsEngineType, string behavior, string[] expected)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 SetupHobbitAncestry(store);
 

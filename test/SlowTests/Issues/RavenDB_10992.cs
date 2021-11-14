@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
@@ -47,8 +48,9 @@ namespace SlowTests.Issues
             public DocumentStatus Status { get; set; }
         }
 
-        [Fact]
-        public void CanGetDefaultNonSerializedEnumValue()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanGetDefaultNonSerializedEnumValue(string jsEngineType)
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
             using (var store = GetDocumentStore(options: new Options
@@ -59,7 +61,8 @@ namespace SlowTests.Issues
                     {
                         CustomizeJsonSerializer = c => c.NullValueHandling = NullValueHandling.Ignore
                     };
-                }
+                },
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenSession())

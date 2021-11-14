@@ -7,10 +7,14 @@ namespace Raven.Client.Extensions
     internal class PropertyNameConventionJSMetadataProvider : JavascriptMetadataProvider
     {
         private readonly DocumentConventions _conventions;
+        public bool UseOptionalChanining;
+        public string OptionalChanining;
 
-        public PropertyNameConventionJSMetadataProvider(DocumentConventions conventions)
+        public PropertyNameConventionJSMetadataProvider(DocumentConventions conventions, bool useOptionalChanining = false)
         {
             _conventions = conventions;
+            UseOptionalChanining = useOptionalChanining;
+            OptionalChanining = UseOptionalChanining ? "?" : "";
         }
 
         public class MemberMetadata : IJavascriptMemberMetadata

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUsePagingWhilePatchingOrDeleting()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUsePagingWhilePatchingOrDeleting(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new Companies_ByName().Execute(store);
 

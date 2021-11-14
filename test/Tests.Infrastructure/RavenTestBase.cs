@@ -630,6 +630,37 @@ namespace FastTests
                 _frozen = frozen;
             }
 
+            public static Options ForJavaScriptEngine(string jsEngineType, Action<DatabaseRecord> modifyMore = null)
+            {
+                return new Options() { ModifyDatabaseRecord = ModifyForJavaScriptEngine(jsEngineType, modifyMore) };
+            }
+
+            public static Action<DatabaseRecord> ModifyForJavaScriptEngine(string jsEngineType, Action<DatabaseRecord> modifyMore = null)
+            {
+                return d =>
+                {
+                    if (modifyMore != null)
+                        modifyMore(d);
+                    d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.EngineType)] = jsEngineType;
+                };
+            }
+            
+            public Options SetJavaScriptEngine(string jsEngineType)
+            {
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, ModifyDatabaseRecord);
+                return this;
+            }
+
+            public static Action<Dictionary<string, string>> ModifyConfigurationForJavaScriptEngine(string jsEngineType, Action<Dictionary<string, string>> modifyMore = null)
+            {
+                return configuration =>
+                {
+                    if (modifyMore != null)
+                        modifyMore(configuration);
+                    configuration.Add(RavenConfiguration.GetKey(x => x.JavaScript.EngineType), jsEngineType);
+                };
+            }
+            
             public string Path
             {
                 get => _path;

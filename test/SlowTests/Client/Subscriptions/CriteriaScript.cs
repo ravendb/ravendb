@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -23,9 +24,11 @@ namespace SlowTests.Client.Subscriptions
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(30);
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task BasicCriteriaTest(bool useSsl)
+        [InlineData(false, "Jint")]
+        [InlineData(false, "V8")]
+        [InlineData(true, "Jint")]
+        [InlineData(true, "V8")]
+        public async Task BasicCriteriaTest(bool useSsl, string jsEngineType)
         {
             string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
@@ -44,7 +47,8 @@ namespace SlowTests.Client.Subscriptions
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
@@ -84,9 +88,11 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task CriteriaScriptWithTransformation(bool useSsl)
+        [InlineData(false, "Jint")]
+        [InlineData(false, "V8")]
+        [InlineData(true, "Jint")]
+        [InlineData(true, "V8")]
+        public async Task CriteriaScriptWithTransformation(bool useSsl, string jsEngineType)
         {
             string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
@@ -105,7 +111,8 @@ namespace SlowTests.Client.Subscriptions
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))

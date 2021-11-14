@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;

@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jint.Native;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
-    internal class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
+    internal partial class ElasticSearchDocumentTransformer : EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation>
     {
         private readonly ElasticSearchEtlConfiguration _config;
         private readonly Dictionary<string, ElasticSearchIndexWithRecords> _indexes;
@@ -45,21 +43,6 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             if (DocumentScript == null)
                 return;
-        }
-
-        protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
-        {
-            throw new NotSupportedException("Attachments aren't supported by ElasticSearch ETL");
-        }
-
-        protected override void AddLoadedCounter(JsValue reference, string name, long value)
-        {
-            throw new NotSupportedException("Counters aren't supported by ElasticSearch ETL");
-        }
-
-        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
-        {
-            throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
         protected override string[] LoadToDestinations { get; }

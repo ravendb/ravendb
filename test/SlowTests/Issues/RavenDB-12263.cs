@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using FastTests.Graph;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
@@ -64,10 +65,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void All_paths_in_recursive_graph_queries_with_fixed_destination_should_return_proper_paths()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void All_paths_in_recursive_graph_queries_with_fixed_destination_should_return_proper_paths(string jsEngineType)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 CreateData(store);
 
@@ -96,10 +98,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void All_paths_in_recursive_graph_queries_without_fixed_destination_should_return_proper_paths()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void All_paths_in_recursive_graph_queries_without_fixed_destination_should_return_proper_paths(string jsEngineType)
         {
-            using(var store = GetDocumentStore())
+            using(var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 CreateData(store);
 
@@ -114,8 +117,7 @@ namespace SlowTests.Issues
                         select 
                         {
                             IdOfTraversalStart : id(Buddy), 
-                            LikesPath : RecursiveLikes.map(x => x.PathElement).join('>>'), 
-                            IdOfTraversalEnd : id(TraversalDestination)
+                            LikesPath : RecursiveLikes.map(x => x.PathElement).join('>>')
                         }
                     ").ToList();
                     

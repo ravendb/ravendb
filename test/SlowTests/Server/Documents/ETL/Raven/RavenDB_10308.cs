@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
 using Raven.Tests.Core.Utils.Entities;
@@ -78,11 +79,12 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        [Fact]
-        public void Should_not_send_attachments_metadata_when_using_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_not_send_attachments_metadata_when_using_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");

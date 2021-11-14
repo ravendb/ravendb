@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
@@ -56,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task Should_Not_Send_Include_Message_Via_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Should_Not_Send_Include_Message_Via_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

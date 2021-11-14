@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,8 +15,9 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanProjectFromCollectionNotInJson()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanProjectFromCollectionNotInJson(string jsEngineType)
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -25,7 +27,8 @@ namespace SlowTests.Issues
                     {
                         CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
                     };
-                }
+                },
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var s = store.OpenSession())
@@ -93,10 +96,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void ChainPropagationOnMissingCollection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void ChainPropagationOnMissingCollection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -113,7 +117,8 @@ namespace SlowTests.Issues
                         })
                         .SingleOrDefault();
 
-                    Assert.False(doc?.HasTags);
+                    Assert.NotNull(doc);
+                    Assert.False(doc.HasTags);
                 }
             }
         }

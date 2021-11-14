@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -411,10 +412,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseCompareExchangeValueIncludesInQueries_Dynamic_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
@@ -663,10 +665,11 @@ select incl(c)"
             }
         }
 
-        [Fact]
-        public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new Companies_ByName().Execute(store);
 

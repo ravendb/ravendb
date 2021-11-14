@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -14,10 +15,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Recursive_alias_without_select_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Recursive_alias_without_select_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -74,10 +76,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Alias_of_node_inside_recursive_clause_in_select_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Alias_of_node_inside_recursive_clause_in_select_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -94,10 +97,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Alias_of_node_inside_recursive_clause_with_indexer_token_on_recursive_alias_in_select_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Alias_of_node_inside_recursive_clause_with_indexer_token_on_recursive_alias_in_select_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -146,10 +150,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Alias_of_node_inside_recursive_clause_with_indexer_token_on_recursive_alias_and_on_alias_in_select_should_work()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Alias_of_node_inside_recursive_clause_with_indexer_token_on_recursive_alias_and_on_alias_in_select_should_work(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())

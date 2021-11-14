@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -128,10 +129,12 @@ namespace SlowTests.Bugs.Indexing
             }
         }        
 
-        [Fact]
-        public void CanCreateCompletelyDynamicFieldsWithProjection()
+        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void CanCreateCompletelyDynamicFieldsWithProjection(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new Product_ByAttributeStored().Execute(store);
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -515,14 +516,16 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
             }, interval: _waitInterval);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument(string jsEngineType)
         {
             string[] collections = { "Users" };
-            const string script = @"
+            string script = @"{wrapper}
 if(this.Name.startsWith('M') === false)
     return;
 loadToUsers(this);
+}
 
 function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 {
@@ -533,6 +536,10 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 }
 "; // the month is 0-indexed
 
+            bool isJint = jsEngineType == "Jint";
+            var wrapper = isJint ? "{" : "const transformDocument = () => {"; 
+            script = script.Replace("{wrapper}", wrapper);
+            
             var times = Enumerable.Range(0, 4)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))
                 .ToArray();
@@ -542,7 +549,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             const double value = 58d;
             var users = new[] { new User { Name = "Mar" }, new User { Name = "Nar" } };
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options, jsEngineType: jsEngineType);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -796,12 +803,11 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         }
 
         [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment()
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeries()
         {
             const string collection = "Users";
             const string script = @"
 var user = loadToUsers(this);
-user.addAttachment(loadAttachment('photo'));
 
 function loadTimeSeriesOfUsersBehavior(doc, ts)
 {
@@ -816,6 +822,60 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             string attachmentSourceName = "photo";
 
             var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                var entity = new User { Name = "Joe Doe" };
+                await session.StoreAsync(entity, documentId);
+                session.TimeSeriesFor(documentId, timeSeriesName).Append(time, new[] { value }, tag);
+
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                session.TimeSeriesFor(documentId, timeSeriesName).Append(time + TimeSpan.FromSeconds(1), new[] { value }, tag);
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = dest.OpenAsyncSession();
+                var ts = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                return ts?.Length;
+            }, 2);
+        }
+
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment(string jsEngineType)
+        {
+            const string collection = "Users";
+            string script = @"{wrapper}
+    var user = loadToUsers(this);
+    user.addAttachment(loadAttachment('photo'));
+}
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return true;
+}";
+
+            bool isJint = jsEngineType == "Jint";
+            var wrapper = isJint ? "{" : "const transformDocument = () => {"; 
+            script = script.Replace("{wrapper}", wrapper);
+
+            var time = new DateTime(2020, 04, 27);
+            const string timeSeriesName = "Heartrate";
+            const string tag = "fitbit";
+            const double value = 58d;
+            const string documentId = "users/1";
+            string attachmentSourceName = "photo";
+
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options, jsEngineType: jsEngineType);
 
             using (var session = src.OpenAsyncSession())
             {

@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Commands;
 using Xunit;
 using Sparrow.Json.Parsing;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls(string jsEngineType)
         {
-            using (var store = GetDocumentStore())                
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))                
             {
                 var executer = store.GetRequestExecutor();
 
@@ -58,10 +60,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldWrappedWithObjectShouldReturnArrayOfObjectsWithNulls()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldWrappedWithObjectShouldReturnArrayOfObjectsWithNulls(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var executer = store.GetRequestExecutor();
 

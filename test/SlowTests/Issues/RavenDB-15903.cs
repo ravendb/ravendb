@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Support_TimeSpan_In_Projections()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Support_TimeSpan_In_Projections(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseDate = new DateTime(2020, 01, 01, 0, 0, 0, 0);
                 var newDate = baseDate.AddYears(1).AddMonths(3).AddDays(2).AddHours(5).AddMinutes(6).AddSeconds(34).AddMilliseconds(8);

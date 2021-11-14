@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using System.Linq;
+using FastTests.Server.JavaScript;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,11 @@ namespace SlowTests.Issues
             public string DocId;
         }
 
-        [Fact]
-        public void TestProjectingNullProperty1()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TestProjectingNullProperty1(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

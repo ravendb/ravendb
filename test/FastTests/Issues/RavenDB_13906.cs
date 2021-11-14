@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations;
+﻿using FastTests.Server.JavaScript;
+using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +11,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void OnAfterSaveChangesOnPatchShouldWork()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void OnAfterSaveChangesOnPatchShouldWork(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var condition = false;
                 string id;
