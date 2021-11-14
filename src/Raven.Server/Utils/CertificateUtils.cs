@@ -83,21 +83,24 @@ namespace Raven.Server.Utils
                 return false;
             }
 
-            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
-                return false;
-
-            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
+            X509Certificate2 knownIssuerCert;
+            try
             {
-                // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
-                var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
-                if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
-                {
-                    issuerPinningHash = currentElementPinningHash;
-                    return false;
-                }
+                knownIssuerCert = knownCertChain.ChainElements.Count > 1
+                    ? knownCertChain.ChainElements[1].Certificate
+                    : knownCertChain.ChainElements[0].Certificate;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot extract pinning hash from the client certificate's issuer '{issuerCertificate?.FriendlyName} {issuerCertificate?.Thumbprint}'.", e);
+                return false;
             }
 
-            return true;
+            var sameIssuerKey = knownIssuerCert.GetPublicKeyPinningHash() == issuerCertificate.GetPublicKeyPinningHash();
+            var sameSubject = knownIssuerCert.Subject == issuerCertificate.Subject;
+            
+            return sameIssuerKey && sameSubject;
         }
 
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)

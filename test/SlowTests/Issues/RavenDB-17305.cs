@@ -13,6 +13,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron.Util;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
             string certFileName = Path.GetTempFileName();
             using var _ = new DisposableAction(() => IOExtensions.DeleteFile(certFileName));
             File.WriteAllBytes(certFileName, certificate.Export(X509ContentType.Pkcs12));
-            SetupServerAuthentication(serverCertPath: certFileName);
+            SetupServerAuthentication(certificates: new TestCertificatesHolder(certFileName, null, null, null));
             var store = GetDocumentStore(new Options { ModifyDocumentStore = documentStore => documentStore.Certificate = new X509Certificate2(certFileName) });
 
             Assert.StartsWith("https", store.Urls[0]);
@@ -99,6 +100,10 @@ namespace SlowTests.Issues
                     }
                 }
             }
+        }
+
+        public RavenDB_17305(ITestOutputHelper output) : base(output)
+        {
         }
     }
 }
