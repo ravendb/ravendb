@@ -1574,7 +1574,7 @@ class query extends viewModelBase {
             this.effectiveFetcher = ko.observable<fetcherType>(() => {
                 return $.when({
                     items: tab.value.Results.map(x => new document(x)),
-                    totalResultCount: tab.value.Count
+                    totalResultCount: tab.value.Results.length
                 });
             });
 
