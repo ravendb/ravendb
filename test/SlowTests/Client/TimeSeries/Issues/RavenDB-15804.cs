@@ -8,6 +8,9 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -1439,6 +1442,75 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         Assert.True(Equals(tsA[i], tsB[i]));
                     }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task IncrementalTimeSeriesQueryShouldWork()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Oren" }, "products/77-A");
+                    await session.SaveChangesAsync();
+                }
+
+                DateTime now = DateTime.Today;
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 1500; i < 8_000; i += 3)
+                    {
+                        session.IncrementalTimeSeriesFor("products/77-A", "INC:Views").Increment(now.AddSeconds(i * 13), -1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                for (int j = 0; j < 10; j++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 1500; i < 8_000; i += 3)
+                        {
+                            session.IncrementalTimeSeriesFor("products/77-A", "INC:Views").Increment(now.AddSeconds(i * j * 13), -i * 4);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                for (int j = 0; j < 10; j++)
+                {
+
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 1500; i < 8_000; i += 6)
+                        {
+                            session.IncrementalTimeSeriesFor("products/77-A", "INC:Views").Increment(now.AddSeconds(i * j * 13), i * 7);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    IRavenQueryable<TimeSeriesAggregationResult> query = session.Query<User>()
+                            .Where(u => u.Name == "Oren")
+                            .Select(q => RavenQuery.TimeSeries(q, "INC:Views")
+                            .GroupBy(g => g.Minutes(15))
+                                .Select(g => new
+                                {
+                                    Avg = g.Average(),
+                                    Cnt = g.Sum()
+                                })
+                            .ToList());
+
+                    var result = query.ToList();
                 }
             }
         }
