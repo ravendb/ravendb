@@ -421,6 +421,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new DatabaseOldestBackup(server.ServerStore));
             store.Add(new DatabaseDisabledCount(server.ServerStore));
             store.Add(new DatabaseEncryptedCount(server.ServerStore));
+            store.Add(new DatabaseFaultedCount(server.ServerStore));
             store.Add(new DatabaseNodeCount(server.ServerStore));
 
             store.Add(new TotalDatabaseNumberOfIndexes(server.ServerStore));
