@@ -10,11 +10,14 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
@@ -425,6 +428,11 @@ namespace Raven.Server.Documents.Replication
                 AssertNotClusterTransactionDocumentForLegacyReplication(state.Item);
             }
 
+            if (_parent.SupportedFeatures.Replication.IncrementalTimeSeries == false)
+            {
+                AssertNotIncrementalTimeSeriesForLegacyReplication(state.Item);
+            }
+
             // We want to limit batch sizes to reasonable limits.
             var totalSize =
                 state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
@@ -506,6 +514,42 @@ namespace Raven.Server.Documents.Replication
                 throw new LegacyReplicationViolationException(message);
             }
         }
+
+        private void AssertNotIncrementalTimeSeriesForLegacyReplication(ReplicationBatchItem item)
+        {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment || item.Type == ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange)
+            {
+                using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    LazyStringValue name;
+                    switch (item)
+                    {
+                        case TimeSeriesDeletedRangeItem timeSeriesDeletedRangeItem:
+                            TimeSeriesValuesSegment.ParseTimeSeriesKey(timeSeriesDeletedRangeItem.Key, context, out _, out name);
+                            break;
+                        case TimeSeriesReplicationItem timeSeriesReplicationItem:
+                            name = timeSeriesReplicationItem.Name;
+                            break;
+                        default:
+                            return;
+                    }
+
+                    if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
+                        return;
+                }
+
+                // the other side doesn't support incremental time series, stopping replication
+                var message = $"{_parent.Node.FromString()} found an item of type 'IncrementalTimeSeries' to replicate to {_parent.Destination.FromString()}, " +
+                              $"while we are in legacy mode (downgraded our replication version to match the destination). " +
+                              $"Can't send Incremental-TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support Incremental-TimeSeries feature. Stopping replication.";
+
+                if (_log.IsInfoEnabled)
+                    _log.Info(message);
+
+                throw new LegacyReplicationViolationException(message);
+            }
+        }
+
 
         private TimeSpan GetDelayReplication()
         {
