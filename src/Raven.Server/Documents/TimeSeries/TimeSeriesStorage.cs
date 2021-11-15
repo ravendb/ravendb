@@ -691,9 +691,13 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             ValidateSegment(segment);
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
-
-            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
+            using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: null, timeStamp: baseline))
             {
+                var slicer = holder.SliceHolder;
+
+                if (holder.LoadCurrentSegment())
+                    Stats.UpdateCountOfExistingStats(context, slicer, collectionName, -holder.ReadOnlySegment.NumberOfLiveEntries);
+
                 Stats.UpdateStats(context, slicer, collectionName, segment, baseline, segment.NumberOfLiveEntries);
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
