@@ -27,6 +27,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         private byte* _buffer;
         private int _capacity;
+
+        private bool _recomputeRequired;
+        public bool RecomputeRequired => _recomputeRequired;
+
         private SegmentHeader* Header => (SegmentHeader*)_buffer;
 
         public byte* Ptr => _buffer;
@@ -65,6 +69,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             _buffer = buffer;
             _capacity = capacity;
+            _recomputeRequired = false;
 
             if (_capacity <= 0 || _capacity > TimeSeriesStorage.MaxSegmentSize)
                 InvalidCapacity();
@@ -118,7 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
-            Header->Version = SegmentVersion.Current;
+            Header->Version = SegmentVersion.V50001; // we might upgrade it later in case of duplicate timestamps
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
@@ -128,6 +133,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public const ulong Live = 0;
         public const ulong Dead = 1;
+
         public const int MaxNumberOfValues = 32;
 
         public static void AssertValueStatus(ulong status)
@@ -136,7 +142,7 @@ namespace Raven.Server.Documents.TimeSeries
                 throw new InvalidOperationException("Schrödinger's cat must be either 'Dead' or 'Alive'.");
         }
 
-        public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag, ulong status)
+        public bool Append(ByteStringContext allocator, int deltaFromStart, Span<double> vals, Span<byte> tag, ulong status, Span<double> aggregated = default)
         {
             if (vals.Length != Header->NumberOfValues)
                 ThrowInvalidNumberOfValues(vals);
@@ -173,21 +179,14 @@ namespace Raven.Server.Documents.TimeSeries
                 tempBitsBuffer.AddValue(status, 1);
 
                 var prevs = new Span<StatefulTimestampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
-                AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
-                if (NumberOfLiveEntries == 0 &&
-                    status == Live)
-                {
-                    for (int i = 0; i < vals.Length; i++)
-                    {
-                        prevs[i].Max = prevs[i].Min = prevs[i].First = vals[i];
-                    }
-                }
+                AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
                 for (int i = 0; i < vals.Length; i++)
                 {
-                    AddValue(ref prevs[i], ref tempBitsBuffer, vals[i], status);
+                    AddValue(ref prevs[i], ref tempBitsBuffer, vals[i], status, aggregated.Length > 0 ? aggregated[i] : null);
                 }
+
                 bool insertTag = false;
                 var prevTagIndex = FindPreviousTag(tag, tempHeader);
                 if (prevTagIndex >= 0)
@@ -247,7 +246,24 @@ namespace Raven.Server.Documents.TimeSeries
 
                 Memory.Copy(Header, tempHeader, copiedHeaderSize);
 
+                _recomputeRequired = tempHeader->Version == SegmentVersion.DuplicateLast || 
+                                     tempHeader->Version == SegmentVersion.ContainDuplicates;
+
                 return true;
+            }
+        }
+
+        private static void MarkDuplicatedIfNeeded(SegmentHeader* tempHeader, int deltaFromStart)
+        {
+            if (tempHeader->PreviousTimestamp == deltaFromStart)
+            {
+                tempHeader->Version = SegmentVersion.DuplicateLast; // last value is a duplicate
+            }
+            else
+            {
+                // contain duplicates but not the last value
+                if (tempHeader->Version == SegmentVersion.DuplicateLast)
+                    tempHeader->Version = SegmentVersion.ContainDuplicates;
             }
         }
 
@@ -346,6 +362,8 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
             }
 
+            MarkDuplicatedIfNeeded(tempHeader, deltaFromStart);
+
             int delta = deltaFromStart - tempHeader->PreviousTimestamp;
             if (delta < 0)
                 ThrowInvalidNewDelta();
@@ -380,27 +398,40 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
 
-        private static void AddValue(ref StatefulTimestampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status)
+        private static void AddValue(ref StatefulTimestampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status, double? aggregated)
         {
             long val = BitConverter.DoubleToInt64Bits(dblVal);
 
             ulong xorWithPrevious = (ulong)(prev.PreviousValue ^ val);
 
             if (IsValid(status, val))
+                // we rely on this to unwrap the raw values
+                // but will yield wrong result if last value in the entire segment is a duplicate
+                prev.PreviousValue = val; 
+
+            if (aggregated.HasValue)
             {
-                if (double.IsNaN(prev.First))
+                dblVal = aggregated.Value;
+                val = BitConverter.DoubleToInt64Bits(aggregated.Value);
+            }
+
+            if (IsValid(status, val))
+            {
+                var first = prev.Count == 0;
+                if (first)
                     prev.First = dblVal;
 
-                prev.PreviousValue = val;
-
-                prev.Count++;
                 prev.Sum += dblVal;
-                prev.Max = double.IsNaN(prev.Max)
+                
+                prev.Max = first
                     ? dblVal
                     : Math.Max(prev.Max, dblVal);
-                prev.Min = double.IsNaN(prev.Min)
+                
+                prev.Min = first
                     ? dblVal
                     : Math.Min(prev.Min, dblVal);
+
+                prev.Count++;
             }
 
             if (xorWithPrevious == 0)
@@ -447,6 +478,118 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public Enumerator GetEnumerator(ByteStringContext allocator) => new Enumerator(this, allocator);
+
+        public void AssertNoRecomputeRequired()
+        {
+            if (_recomputeRequired)
+                throw new InvalidOperationException("This segment contains duplicate values and need to be recomputed");
+        }
+
+        public class ReadTimestampState
+        {
+            public int Delta;
+            public ulong Status;
+            public double[] Values;
+            public TimestampState[] TimestampState;
+            public TagPointer TagPointer;
+
+            public ReadTimestampState(int numberOfValues)
+            {
+                Delta = 0;
+                Status = 0;
+                Values = new double[numberOfValues];
+                TimestampState = new TimestampState[numberOfValues];
+                TagPointer = new TagPointer();
+            }
+
+            public void CopyTo(ReadTimestampState other)
+            {
+                other.Delta = Delta;
+                other.Status = Status;
+                for (var index = 0; index < other.TimestampState.Length; index++)
+                {
+                    other.TimestampState[index] = TimestampState[index];
+                }
+
+                for (var index = 0; index < Values.Length; index++)
+                {
+                    other.Values[index] = Values[index];
+                }
+
+                other.TagPointer.Pointer = TagPointer.Pointer;
+                other.TagPointer.Length = TagPointer.Length;
+            }
+        }
+
+        public void Append(ByteStringContext context, ReadTimestampState readState, Span<double> aggregated)
+        {
+            if (Append(context, readState.Delta, readState.Values, readState.TagPointer.AsSpan(), readState.Status, aggregated) == false)
+                throw new InvalidOperationException("This must not happened, do we need to split?"); // TODO: can this really happened??
+        }
+
+        public TimeSeriesValuesSegment Recompute(ByteStringContext context)
+        {
+            if (_recomputeRequired == false)
+                return this;
+
+            context.Allocate(TimeSeriesStorage.MaxSegmentSize, out var buffer);
+            var segment = new TimeSeriesValuesSegment(buffer.Ptr, TimeSeriesStorage.MaxSegmentSize);
+
+            segment.Initialize(NumberOfValues);
+            var current = new ReadTimestampState(NumberOfValues);
+            var prev = new ReadTimestampState(NumberOfValues);
+
+            Span<double> aggregated = stackalloc double[NumberOfValues];
+            Span<double> aggregatedNaN = stackalloc double[NumberOfValues];
+
+            for (var index = 0; index < aggregatedNaN.Length; index++)
+            {
+                aggregatedNaN[index] = double.NaN;
+            }
+
+            using var it = GetEnumerator(context);
+            if (it.MoveNext(out prev.Delta, prev.Values, prev.TimestampState, ref prev.TagPointer, out prev.Status) == false)
+                throw new InvalidOperationException("This segment can't be empty");
+
+            var prevDelta = prev.Delta;
+            InitialAggregate(aggregated, prev);
+
+            prev.CopyTo(current);
+
+            while (it.MoveNext(out current.Delta, current.Values, current.TimestampState, ref current.TagPointer, out current.Status))
+            {
+                if (current.Delta == prevDelta)
+                {
+                    segment.Append(context, prev, aggregatedNaN);
+                    current.CopyTo(prev);
+                    for (var index = 0; index < aggregated.Length; index++)
+                    {
+                        aggregated[index] += current.Values[index];
+                    }
+                    continue;
+                }
+
+                segment.Append(context, prev, aggregated);
+
+                current.CopyTo(prev);
+                prevDelta = prev.Delta;
+                InitialAggregate(aggregated, prev);
+            }
+
+            segment.Append(context, prev, aggregated);
+
+            segment._recomputeRequired = false;
+            return segment;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void InitialAggregate(Span<double> aggregated, ReadTimestampState prev)
+        {
+            for (var index = 0; index < aggregated.Length; index++)
+            {
+                aggregated[index] = prev.Values[index];
+            }
+        }
 
         public static LazyStringValue SetTimestampTag(JsonOperationContext context, TagPointer tagPointer)
         {
@@ -583,6 +726,11 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 return new Span<byte>(Pointer, Length);
+            }
+
+            public override string ToString()
+            {
+                return Encodings.Utf8.GetString(ContentAsSpan());
             }
         }
 

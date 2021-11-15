@@ -941,6 +941,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
             {
+                if (newValueSegment.RecomputeRequired)
+                    newValueSegment = newValueSegment.Recompute(_context.Allocator);
+
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
                 ValidateSegment(newValueSegment);
@@ -2327,6 +2330,9 @@ namespace Raven.Server.Documents.TimeSeries
         {
             if (segment.NumberOfBytes > MaxSegmentSize)
                 throw new ArgumentOutOfRangeException("Attempted to write a time series segment that is larger (" + segment.NumberOfBytes + ") than the maximum size allowed.");
+
+            if (segment.RecomputeRequired)
+                throw new InvalidOperationException("Recomputation of this segment is required.");
         }
 
         public long GetNumberOfTimeSeriesSegments(DocumentsOperationContext context)

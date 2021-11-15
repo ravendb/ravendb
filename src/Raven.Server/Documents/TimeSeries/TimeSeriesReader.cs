@@ -44,6 +44,15 @@ namespace Raven.Server.Documents.TimeSeries
                 [nameof(TimeSeriesEntry.IsRollup)] = Type == SingleResultType.RolledUp,
             };
         }
+
+        public void CopyTo(SingleResult dest)
+        {
+            dest.Status = Status;
+            Values.CopyTo(dest.Values);
+            dest.Tag = Tag?.CloneOnSameContext();
+            dest.Type = Type;
+            dest.Timestamp = Timestamp;
+        }
     }
 
     public class SegmentResult
@@ -98,6 +107,7 @@ namespace Raven.Server.Documents.TimeSeries
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
+        private bool _yieldDuplicateValues;
 
         public bool IsRaw { get; }
 
@@ -113,6 +123,11 @@ namespace Raven.Server.Documents.TimeSeries
             _from = from;
             _to = to;
             IsRaw = _name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false;
+        }
+
+        public void ForceYieldDuplicateValues()
+        {
+            _yieldDuplicateValues = true;
         }
 
         internal bool Init()
@@ -292,7 +307,8 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to &&
-                        _currentSegment.InvalidLastValue() == false) // legacy issue RavenDB-15645
+                        _currentSegment.InvalidLastValue() == false && // legacy issue RavenDB-15645 
+                        _currentSegment.Version != SegmentVersion.DuplicateLast) 
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment;
@@ -348,7 +364,118 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public IEnumerable<SingleResult> YieldSegmentMergeDuplicates(DateTime baseline, bool includeDead = false)
+        {
+            var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
+            if (shouldBreak)
+                yield break;
+
+            using var enumerator = _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead).GetEnumerator();
+
+            var previous = new SingleResult {Values = new double[_currentSegment.NumberOfValues]};
+            var current = new SingleResult {Values = new double[_currentSegment.NumberOfValues]};
+            var aggregated = new double[_currentSegment.NumberOfValues];
+
+            while (true)
+            {
+                if (enumerator.MoveNext() == false)
+                    yield break;
+
+                if (enumerator.Current.Timestamp > _to)
+                    yield break;
+
+                if (enumerator.Current.Timestamp < _from)
+                    continue;
+
+                enumerator.Current.CopyTo(previous);
+
+                var isDuplicate = false;
+                while (true)
+                {
+                    if (enumerator.MoveNext())
+                    {
+                        enumerator.Current.CopyTo(current);
+                    }
+                    else
+                    {
+                        if (isDuplicate)
+                        {
+                            previous.Tag = null;
+                            aggregated.CopyTo(previous.Values);
+                        }
+                        yield return previous;
+                        yield break;
+                    }
+
+                    if (current.Timestamp != previous.Timestamp)
+                    {
+                        if (isDuplicate)
+                        {
+                            previous.Tag = null;
+                            aggregated.CopyTo(previous.Values);
+                        }
+                        
+                        yield return previous;
+
+                        if (current.Timestamp > _to)
+                            yield break;
+
+                        current.CopyTo(previous);
+
+                        if (isDuplicate)
+                        {
+                            isDuplicate = false;
+                            ResetAggregation(aggregated);
+                        }
+                        continue;
+                    }
+
+                    Aggregate(aggregated, current);
+
+                    if (isDuplicate == false)
+                    {
+                        Aggregate(aggregated, previous);
+                        isDuplicate = true;
+                    }
+                }
+            }
+        }
+
+        private static void ResetAggregation(double[] aggregated)
+        {
+            for (int i = 0; i < aggregated.Length; i++)
+            {
+                aggregated[i] = 0;
+            }
+        }
+
+        private static void Aggregate(double[] aggregated, SingleResult result)
+        {
+            for (var index = 0; index < aggregated.Length; index++)
+            {
+                aggregated[index] += result.Values.Span[index];
+            }
+        }
+
         public IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
+        {
+            if (_yieldDuplicateValues)
+                return YieldSegmentRaw(baseline, includeDead);
+
+            switch (_currentSegment.Version)
+            {
+                case SegmentVersion.V50000:
+                case SegmentVersion.V50001:
+                    return YieldSegmentRaw(baseline, includeDead);
+                case SegmentVersion.ContainDuplicates:
+                case SegmentVersion.DuplicateLast:
+                    return YieldSegmentMergeDuplicates(baseline, includeDead);
+                default:
+                    throw new ArgumentOutOfRangeException($"Unknown version {_currentSegment.Version}");
+            }
+        }
+
+        public IEnumerable<SingleResult> YieldSegmentRaw(DateTime baseline, bool includeDead = false)
         {
             var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
             if (shouldBreak)
@@ -357,16 +484,16 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var result in _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead))
             {
                 if (result.Timestamp > _to)
-                        yield break;
+                    yield break;
 
                 if (result.Timestamp < _from)
-                        continue;
+                    continue;
 
                 result.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
 
                 yield return result;
-                    }
-                }
+            }
+        }
 
         public DateTime NextSegmentBaseline()
         {

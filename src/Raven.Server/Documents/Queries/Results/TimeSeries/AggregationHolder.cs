@@ -24,6 +24,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private readonly InterpolationType _interpolationType;
 
         private readonly AggregationType[] _types;
+        public bool Contains(AggregationType type) => _types.Contains(type);
+
         private readonly string[] _names;
         private double? _percentile;
 
