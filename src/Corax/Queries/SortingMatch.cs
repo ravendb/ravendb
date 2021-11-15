@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
+using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
 {
@@ -16,72 +17,6 @@ namespace Corax.Queries
         private readonly TComparer _comparer;
         private readonly int _take;
         public long TotalResults;
-        private struct SequenceItem
-        {
-            public readonly byte* Ptr;
-            public readonly int Size;
-
-            public SequenceItem( byte* ptr, int size)
-            {
-                Ptr = ptr;
-                Size = size;
-            }
-        }
-
-        private struct NumericalItem<T> where T : unmanaged
-        {
-            public readonly T Value;
-            public NumericalItem(in T value)
-            {
-                Value = value;
-            }
-        }
-
-        private struct MatchComparer<T, W> : IComparer<MatchComparer<T, W>.Item>
-            where T : IMatchComparer
-            where W : struct
-        {
-            public struct Item
-            {
-                public long Key;
-                public W Value;
-            }
-
-            private readonly T _comparer;
-
-            public MatchComparer(in T comparer)
-            {
-                _comparer = comparer;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int Compare(Item ix, Item iy)
-            {
-                if (ix.Key > 0 && iy.Key > 0)
-                {
-                    if (typeof(W) == typeof(SequenceItem))
-                    {
-                        return _comparer.CompareSequence(
-                            new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
-                            new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<long>))
-                    {
-                        return _comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
-                    }
-                    else if (typeof(W) == typeof(NumericalItem<double>))
-                    {
-                        return _comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
-                    }
-                }
-                else if (ix.Key > 0)
-                {
-                    return 1;
-                }
-
-                return -1;
-            }
-        }
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
         {
@@ -150,6 +85,10 @@ namespace Corax.Queries
             //            correct. 
             Debug.Assert(_take <= matches.Length);
 
+            int totalMatches = _inner.Fill(matches);
+            if (totalMatches == 0)
+                return 0;
+
             var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * Unsafe.SizeOf<MatchComparer<TComparer, W>.Item>() * matches.Length);
             var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, W>.Item>(matchesKeysHolder);
 
@@ -158,10 +97,6 @@ namespace Corax.Queries
             var bKeys = itemKeys[^matches.Length..]; 
 
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
-
-            int totalMatches = _inner.Fill(matches);
-            if (totalMatches == 0)
-                return 0;
 
             TotalResults += totalMatches;
 

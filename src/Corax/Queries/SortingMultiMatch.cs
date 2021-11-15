@@ -1,0 +1,498 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Sparrow;
+using static Corax.Queries.SortingMatch;
+
+namespace Corax.Queries
+{
+    public unsafe struct SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> : IQueryMatch
+        where TInner : IQueryMatch
+        where TComparer1 : struct, IMatchComparer
+        where TComparer2 : struct, IMatchComparer
+        where TComparer3 : struct, IMatchComparer
+        where TComparer4 : struct, IMatchComparer
+        where TComparer5 : struct, IMatchComparer
+        where TComparer6 : struct, IMatchComparer
+        where TComparer7 : struct, IMatchComparer
+        where TComparer8 : struct, IMatchComparer
+        where TComparer9 : struct, IMatchComparer
+    {
+        private readonly IndexSearcher _searcher;
+        private readonly IQueryMatch _inner;
+        private readonly TComparer1 _comparer1;
+        private readonly TComparer2 _comparer2;
+        private readonly TComparer3 _comparer3;
+        private readonly TComparer4 _comparer4;
+        private readonly TComparer5 _comparer5;
+        private readonly TComparer6 _comparer6;
+        private readonly TComparer7 _comparer7;
+        private readonly TComparer8 _comparer8;
+        private readonly TComparer9 _comparer9;
+        private readonly int _totalComparers;
+        private readonly int _take;
+
+        private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[] _compareFuncs;        
+
+        public long TotalResults;
+
+        public long Count => throw new NotSupportedException();
+
+        public QueryCountConfidence Confidence => throw new NotSupportedException();
+
+        internal SortingMultiMatch(
+            IndexSearcher searcher, in TInner inner,
+            in TComparer1 comparer1 = default,
+            in TComparer2 comparer2 = default,
+            in TComparer3 comparer3 = default,
+            in TComparer4 comparer4 = default,
+            in TComparer5 comparer5 = default,
+            in TComparer6 comparer6 = default,
+            in TComparer7 comparer7 = default,
+            in TComparer8 comparer8 = default,
+            in TComparer9 comparer9 = default,
+            int take = -1)
+        {
+            _searcher = searcher;
+            _inner = inner;
+            _take = take;
+
+            // PERF: We dont want to initialize any if we are not going to be using them. 
+            Unsafe.SkipInit(out _comparer2);
+            Unsafe.SkipInit(out _comparer3);
+            Unsafe.SkipInit(out _comparer4);
+            Unsafe.SkipInit(out _comparer5);
+            Unsafe.SkipInit(out _comparer6);
+            Unsafe.SkipInit(out _comparer7);
+            Unsafe.SkipInit(out _comparer8);
+            Unsafe.SkipInit(out _comparer9);
+
+            _compareFuncs = new delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[9];
+
+            TotalResults = 0;
+
+            _comparer1 = comparer1;
+            if (typeof(TComparer2) == typeof(SortingMultiMatch.NullComparer))
+                throw new NotSupportedException($"{nameof(SortingMultiMatch)} must have at least 2 different comparers. When a single comparer is needed use {nameof(SortingMatch)} instead.");
+
+            _comparer2 = comparer2;
+            _compareFuncs[0] = GetFunctionCall<TComparer2>(comparer2.FieldType);
+            _totalComparers = 1;
+
+            if (typeof(TComparer3) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer3 = comparer3;
+            _compareFuncs[1] = GetFunctionCall<TComparer3>(comparer3.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer4) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer4 = comparer4;
+            _compareFuncs[2] = GetFunctionCall<TComparer4>(comparer4.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer5) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer5 = comparer5;
+            _compareFuncs[3] = GetFunctionCall<TComparer5>(comparer5.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer6) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer6 = comparer6;
+            _compareFuncs[4] = GetFunctionCall<TComparer6>(comparer6.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer7) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer7 = comparer7;
+            _compareFuncs[5] = GetFunctionCall<TComparer7>(comparer7.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer8) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer8 = comparer8;
+            _compareFuncs[6] = GetFunctionCall<TComparer8>(comparer8.FieldType);
+            _totalComparers++;
+
+            if (typeof(TComparer9) == typeof(SortingMultiMatch.NullComparer))
+                return;
+            _comparer9 = comparer9;
+            _compareFuncs[7] = GetFunctionCall<TComparer9>(comparer9.FieldType);
+            _totalComparers++;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static delegate*<ref SortingMultiMatch<TInner, 
+            TComparer1, TComparer2, TComparer3, 
+            TComparer4, TComparer5, TComparer6, 
+            TComparer7, TComparer8, TComparer9>, 
+            int, UnmanagedSpan, UnmanagedSpan, int> GetFunctionCall<TComparer>(MatchCompareFieldType fieldType) where TComparer : struct, IMatchComparer
+        {
+            return fieldType switch
+            {
+                MatchCompareFieldType.Sequence => &CompareSequence<TComparer>,
+                MatchCompareFieldType.Integer => &CompareNumerical<TComparer, long>,
+                MatchCompareFieldType.Floating => &CompareNumerical<TComparer, double>,
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        public int AndWith(Span<long> prevMatches)
+        {
+            throw new NotSupportedException($"SortingMultiMatch does not support the operation {nameof(AndWith)}.");
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Fill(Span<long> matches)
+        {
+            return _comparer1.FieldType switch
+            {
+                MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
+                MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
+                MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
+                _ => throw new ArgumentOutOfRangeException(_comparer1.FieldType.ToString())
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool Get<W>(in IndexEntryReader reader, int fieldId, long x, out W key) where W : struct
+        {
+            if (typeof(W) == typeof(SequenceItem))
+            {
+                var readX = reader.Read(fieldId, out var sv);
+                key = (W)(object)new SequenceItem((byte*)Unsafe.AsPointer(ref sv[0]), sv.Length);
+                return readX;
+            }
+            else if (typeof(W) == typeof(NumericalItem<long>))
+            {
+                var readX = reader.Read<long>(fieldId, out var value);
+                key = (W)(object)new NumericalItem<long>(value);
+                return readX;
+            }
+            else if (typeof(W) == typeof(NumericalItem<double>))
+            {
+                var readX = reader.Read<double>(fieldId, out var value);
+                key = (W)(object)new NumericalItem<double>(value);
+                return readX;
+            }
+
+            Unsafe.SkipInit(out key);
+            return false;
+        }
+
+        internal struct MultiMatchComparer<T, W> : IComparer<MultiMatchComparer<T, W>.Item>
+            where T : IMatchComparer
+            where W : struct
+        {
+            private SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> _multiMatch;
+
+            public struct Item
+            {
+                public long Key;
+                public W Value;
+                public UnmanagedSpan Entry;
+            }
+
+            public MultiMatchComparer(SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> multiMatch)
+            {
+                _multiMatch = multiMatch;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int Compare(Item ix, Item iy)
+            {
+                if (ix.Key > 0 && iy.Key > 0)
+                {
+                    int result = Compare<TComparer1, W>(_multiMatch._comparer1, ix, iy);
+                    if (result == 0)
+                    {
+                        // We will only call this when there is no other choice. 
+                        result = _multiMatch._compareFuncs[0](ref _multiMatch, 0,ix.Entry, iy.Entry);
+                    }
+
+                    return result;
+                }
+                else if (ix.Key > 0)
+                {
+                    return 1;
+                }
+
+                return -1;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static int Compare<TComparer, TW> (TComparer comparer, Item ix, Item iy)
+                where TComparer : IMatchComparer
+                where TW : struct
+            {
+                if (typeof(TW) == typeof(SequenceItem))
+                {
+                    return comparer.CompareSequence(
+                        new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
+                        new ReadOnlySpan<byte>(((SequenceItem)(object)iy.Value).Ptr, ((SequenceItem)(object)iy.Value).Size));
+                }
+                else if (typeof(TW) == typeof(NumericalItem<long>))
+                {
+                    return comparer.CompareNumerical(((NumericalItem<long>)(object)ix.Value).Value, ((NumericalItem<long>)(object)iy.Value).Value);
+                }
+                else if (typeof(TW) == typeof(NumericalItem<double>))
+                {
+                    return comparer.CompareNumerical(((NumericalItem<double>)(object)ix.Value).Value, ((NumericalItem<double>)(object)iy.Value).Value);
+                }
+                return -1;
+            }
+        }
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int Fill<W>(Span<long> matches) where W : struct
+        {
+            // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
+            //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
+            //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
+            //            correct. 
+            Debug.Assert(_take <= matches.Length);
+
+            int totalMatches = _inner.Fill(matches);
+            if (totalMatches == 0)
+                return 0;
+
+            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
+            TotalResults += totalMatches;
+
+            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length);
+            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(matchesKeysHolder);
+
+            // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
+            var matchesKeys = matchesKeysSpan[0..matches.Length];
+            var bKeys = matchesKeysSpan[^matches.Length..];
+
+
+            var searcher = _searcher;
+            var fieldId = _comparer1.FieldId;
+            var comparer = new MultiMatchComparer<TComparer1, W>(this);            
+            for (int i = 0; i < totalMatches; i++)
+            {
+                UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
+                var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value);
+                matchesKeys[i].Key = read ? matches[i] : -matches[i];
+                matchesKeys[i].Entry = matchIndexEntry;
+            }
+
+            // We sort the first batch. That will also mean that we will sort the indexes too. 
+            var sorter = new Sorter<MultiMatchComparer<TComparer1, W>.Item, long, MultiMatchComparer<TComparer1, W>>(comparer);
+            sorter.Sort(matchesKeys[0..totalMatches], matches);
+
+            Span<long> bValues = stackalloc long[matches.Length];
+            while (true)
+            {
+                // We get a new batch
+                int bTotalMatches = _inner.Fill(bValues);
+                TotalResults += bTotalMatches;
+
+                // When we don't have any new batch, we are done.
+                if (bTotalMatches == 0)
+                {
+                    QueryContext.MatchesPool.Return(matchesKeysHolder);
+                    return totalMatches;
+                }
+
+                // We get the keys to sort.
+                for (int i = 0; i < bTotalMatches; i++)
+                {
+                    UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
+                    var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, bValues[i], out bKeys[i].Value);
+                    bKeys[i].Key = read ? bValues[i] : -bValues[i];
+                    bKeys[i].Entry = matchIndexEntry;
+                }
+
+                int bIdx = 0;
+                int kIdx = 0;
+
+                // Get rid of all the elements that are bigger than the last one.
+                ref var lastElement = ref matchesKeys[take - 1];
+                for (; bIdx < bTotalMatches; bIdx++)
+                {
+                    if (comparer.Compare(lastElement, bKeys[bIdx]) >= 0)
+                    {
+                        bKeys[kIdx] = bKeys[bIdx];
+                        
+                        kIdx++;
+                    }
+                        
+                }
+                bTotalMatches = kIdx;
+
+                // We sort the new batch
+                sorter.Sort(bKeys[0..bTotalMatches], bValues);
+
+                // We merge both batches. 
+                int aTotalMatches = Math.Min(totalMatches, take);
+
+                int aIdx = aTotalMatches;
+                bIdx = 0;
+                kIdx = 0;
+
+                while (aIdx > 0 && aIdx >= aTotalMatches / 8)
+                {
+                    // If the 'bigger' of what we had is 'bigger than'
+                    if (comparer.Compare(matchesKeys[aIdx - 1], bKeys[0]) <= 0)
+                        break;
+
+                    aIdx /= 2;
+                }
+
+                // This is the new start location on the matches. 
+                kIdx = aIdx;
+
+                // If we bailed on the first check, nothing to do here. 
+                if (aIdx == aTotalMatches - 1 || kIdx >= take)
+                    goto End;
+
+                // PERF: This can be improved with TimSort like techniques (Galloping) but given the amount of registers and method calls
+                //       involved requires careful timing to understand if we are able to gain vs a more compact code and predictable
+                //       memory access patterns. 
+
+                while (aIdx < aTotalMatches && bIdx < bTotalMatches && kIdx < take)
+                {
+                    var result = comparer.Compare(matchesKeys[aIdx], bKeys[bIdx]);                    
+                    if (result == 0)
+                    {
+                        // We will only call this when there is no other choice. 
+                        result = _compareFuncs[0](ref this, 0, matchesKeys[aIdx].Entry, bKeys[bIdx].Entry);                        
+                    }
+
+                    if (result < 0)
+                    {
+                        matches[kIdx] = matchesKeys[aIdx].Key;
+                        aIdx++;
+                    }
+                    else
+                    {
+                        matches[kIdx] = bKeys[bIdx].Key;
+                        matchesKeys[kIdx] = bKeys[bIdx];
+                        bIdx++;
+                    }
+                    kIdx++;
+                }
+
+                // If there is no more space in the buffer, discard everything else.
+                if (kIdx >= take)
+                    goto End;
+
+                // PERF: We could improve this with a CopyTo (won't do that for now). 
+
+                // Copy the rest, given that we have failed on one of the other 2 only a single one will execute.
+                while (aIdx < aTotalMatches && kIdx < take)
+                {
+                    matches[kIdx++] = matchesKeys[aIdx++].Key;
+                }
+
+                while (bIdx < bTotalMatches && kIdx < take)
+                {
+                    matches[kIdx] = bKeys[bIdx].Key;
+                    matchesKeys[kIdx] = bKeys[bIdx]; // We are using a new key, therefore we have to update it. 
+                    kIdx++;
+                    bIdx++;
+                }
+
+            End:
+                totalMatches = kIdx;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static IMatchComparer GetComparer(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx)
+        {
+            switch(comparerIdx)
+            {
+                case 0: return current._comparer2;
+                case 1: return current._comparer3;
+                case 2: return current._comparer4;
+                case 3: return current._comparer5;
+                case 4: return current._comparer6;
+                case 5: return current._comparer7;
+                case 6: return current._comparer8;
+                case 7: return current._comparer9;
+            }
+
+            throw new NotSupportedException("MultiMatchComparer only support up to 9 different comparisons.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private static int CompareSequence<TComparer>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
+            where TComparer : struct, IMatchComparer
+        {
+            var comparer = (TComparer)GetComparer(ref current, comparerIdx);
+            var comp1Reader = new IndexEntryReader(item1);
+            var comp2Reader = new IndexEntryReader(item2);
+
+            bool read1 = comp1Reader.Read(comparer.FieldId, out var sv1);
+            bool read2 = comp2Reader.Read(comparer.FieldId, out var sv2);
+            if (read1 && read2)
+            {
+                var result = comparer.CompareSequence(sv1, sv2);
+                int nextComparer = comparerIdx + 1;
+                if (result == 0 && nextComparer < current._totalComparers)
+                {
+                    return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                }
+                return result;
+            }
+
+            if (read1)
+                return -1;
+            return 1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private static int CompareNumerical<TComparer, T>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
+            where TComparer : struct, IMatchComparer
+        {
+            var comparer = (TComparer)GetComparer(ref current, comparerIdx);
+            var comp1Reader = new IndexEntryReader(item1);
+            var comp2Reader = new IndexEntryReader(item2);
+
+            bool read1, read2;
+
+            if (typeof(T) == typeof(long) )
+            {
+                read1 = comp1Reader.Read<long>(comparer.FieldId, out var si1);
+                read2 = comp2Reader.Read<long>(comparer.FieldId, out var si2);
+                if (read1 && read2)
+                {
+                    var result = comparer.CompareNumerical<long>(si1, si2);
+                    int nextComparer = comparerIdx + 1;
+                    if (result == 0 && nextComparer < current._totalComparers)
+                    {
+                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                    }
+                    return result;
+                }
+            }
+            else
+            {
+                read1 = comp1Reader.Read<double>(comparer.FieldId, out var sd1);
+                read2 = comp2Reader.Read<double>(comparer.FieldId, out var sd2);
+                if (read1 && read2)
+                {
+                    var result = comparer.CompareNumerical<double>(sd1, sd2);
+                    int nextComparer = comparerIdx + 1;
+                    if (result == 0 && nextComparer < current._totalComparers)
+                    {
+                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                    }
+                    return result;
+                }
+            }
+
+            if (read1)
+                return -1;
+            return 1;         
+        }
+    }
+}

@@ -19,7 +19,7 @@ namespace Corax.Queries
         }
 
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
-        
+
         public long Count => throw new NotSupportedException();
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
