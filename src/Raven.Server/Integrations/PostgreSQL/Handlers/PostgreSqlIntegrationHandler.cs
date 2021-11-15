@@ -22,6 +22,21 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
     public class PostgreSqlIntegrationHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/integrations/postgresql/server/status", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetServerStatus()
+        {
+            AssertCanUsePostgreSqlIntegration();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var dto = new PostgreSqlServerStatus { Active = Server.PostgresServer.Active };
+
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(dto);
+                writer.WriteObject(context.ReadObject(djv, "PostgreSqlServerStatus"));
+            }
+        }
+
         [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetUsernamesList()
         {

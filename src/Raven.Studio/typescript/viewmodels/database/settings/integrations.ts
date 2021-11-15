@@ -3,6 +3,7 @@ import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import postgreSqlCredentialsModel = require("models/database/settings/postgreSqlCredentialsModel");
 import getIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/getIntegrationsPostgreSqlCredentialsCommand");
+import getIntegrationsPostgreSqlSupportCommand = require("commands/database/settings/getIntegrationsPostgreSqlSupportCommand");
 import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/saveIntegrationsPostgreSqlCredentialsCommand");
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
 
@@ -15,6 +16,9 @@ class integrations extends viewModelBase {
     //TODO
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     errorText: KnockoutComputed<string>;
+
+    clientVersion = viewModelBase.clientVersion;
+    isPostgreSqlSupportEnabled = ko.observable<boolean>();
     
     spinners = {
         test: ko.observable<boolean>(false)
@@ -38,7 +42,13 @@ class integrations extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
-        return this.getAllIntegrationsCredentials();
+        return $.when<any>(this.getAllIntegrationsCredentials(), this.getPostgreSqlSupportStatus());
+    }
+    
+    private getPostgreSqlSupportStatus(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlServerStatus> {
+        return new getIntegrationsPostgreSqlSupportCommand(this.activeDatabase())
+            .execute()
+            .done(result => this.isPostgreSqlSupportEnabled(result.Active))
     }
     
     private getAllIntegrationsCredentials(): JQueryPromise<Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames> {
