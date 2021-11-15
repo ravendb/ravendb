@@ -1453,7 +1453,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Oren" }, "products/77-A");
+                    await session.StoreAsync(new User {Name = "Oren"}, "products/77-A");
                     await session.SaveChangesAsync();
                 }
 
@@ -1500,17 +1500,221 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     IRavenQueryable<TimeSeriesAggregationResult> query = session.Query<User>()
-                            .Where(u => u.Name == "Oren")
-                            .Select(q => RavenQuery.TimeSeries(q, "INC:Views")
+                        .Where(u => u.Name == "Oren")
+                        .Select(q => RavenQuery.TimeSeries(q, "INC:Views")
                             .GroupBy(g => g.Minutes(15))
-                                .Select(g => new
-                                {
-                                    Avg = g.Average(),
-                                    Cnt = g.Sum()
-                                })
+                            .Select(g => new {Avg = g.Average(), Cnt = g.Sum()})
                             .ToList());
 
                     var result = query.ToList();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryDuplicateValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var incrementOperations = new List<SingleResult>();
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
+                        Values = new double[] {1},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                    });
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
+                        Values = new double[] {3},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                    });
+
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
+                        Values = new double[] {-4},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                    });
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
+                        Values = new double[] {4},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                    });
+
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        db.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context, "users/ayende", "Users",
+                            IncrementalTsName, incrementOperations);
+
+                        tx.Commit();
+                    }
+
+                    using (context.OpenReadTransaction())
+                    {
+                        var segment = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, 0)
+                            .Single();
+                        Assert.Equal(SegmentVersion.DuplicateLast, segment.Segment.Version);
+                        var values = segment.Segment.SegmentValues.Span[0];
+
+                        Assert.Equal(2, values.Count);
+                        Assert.Equal(4, values.First);
+                        Assert.Equal(4, values.Max);
+                        Assert.Equal(0, values.Min);
+                        Assert.Equal(4, values.Sum);
+
+                        // Last will not work, since we use it to unwrap the values, instead on query we open the segment if needed
+                        //Assert.Equal(0, values.Last);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+from Users
+where id() == 'users/ayende'
+select timeseries(
+    from 'INC:HeartRate'
+    between $start and $end
+    group by '10 min'
+    select sum(), last())
+")
+                        .AddParameter("start", "2020-04-04T11:50:00")
+                        .AddParameter("end", "2020-04-04T13:50:00");
+                    var result = query.First();
+                    Assert.Equal(2, result.Count);
+                    Assert.Equal(2, result.Results.Length);
+
+                    Assert.Equal(1, result.Results[0].Count[0]);
+                    Assert.Equal(1, result.Results[1].Count[0]);
+
+                    Assert.Equal(4, result.Results[0].Last[0]);
+                    Assert.Equal(0, result.Results[1].Last[0]);
+
+                    Assert.Equal(4, result.Results[0].Sum[0]);
+                    Assert.Equal(0, result.Results[1].Sum[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryDuplicateValues2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var incrementOperations = new List<SingleResult>();
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
+                        Values = new double[] {1},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                    });
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
+                        Values = new double[] {3},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                    });
+
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
+                        Values = new double[] {-4},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                    });
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
+                        Values = new double[] {4},
+                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                    });
+
+                    incrementOperations.Add(new SingleResult
+                    {
+                        Timestamp = DateTime.Parse("2020-04-04T12:10:00"),
+                        Values = new double[] {-4},
+                        Tag = context.GetLazyString("TC:DEC-test-1-" + 3.ToString("000"))
+                    });
+
+                    using (var tx = context.OpenWriteTransaction())
+                    {
+                        db.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context, "users/ayende", "Users",
+                            IncrementalTsName, incrementOperations);
+
+                        tx.Commit();
+                    }
+
+                    using (context.OpenReadTransaction())
+                    {
+                        var segment = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, 0)
+                            .Single();
+                        Assert.Equal(SegmentVersion.ContainDuplicates, segment.Segment.Version);
+                        var values = segment.Segment.SegmentValues.Span[0];
+
+                        Assert.Equal(3, values.Count);
+                        Assert.Equal(4, values.First);
+                        Assert.Equal(4, values.Max);
+                        Assert.Equal(-4, values.Min);
+                        Assert.Equal(0, values.Sum);
+                        Assert.Equal(-4, values.Last);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+from Users
+where id() == 'users/ayende'
+select timeseries(
+    from 'INC:HeartRate'
+    between $start and $end
+    group by '10 min'
+    select sum(), last())
+")
+                        .AddParameter("start", "2020-04-04T11:50:00")
+                        .AddParameter("end", "2020-04-04T13:50:00");
+                    var result = query.First();
+                    Assert.Equal(3, result.Count);
+                    Assert.Equal(3, result.Results.Length);
+
+                    Assert.Equal(1, result.Results[0].Count[0]);
+                    Assert.Equal(1, result.Results[1].Count[0]);
+                    Assert.Equal(1, result.Results[2].Count[0]);
+
+                    Assert.Equal(4, result.Results[0].Last[0]);
+                    Assert.Equal(0, result.Results[1].Last[0]);
+                    Assert.Equal(-4, result.Results[2].Last[0]);
+
+                    Assert.Equal(4, result.Results[0].Sum[0]);
+                    Assert.Equal(0, result.Results[1].Sum[0]);
+                    Assert.Equal(-4, result.Results[2].Sum[0]);
                 }
             }
         }

@@ -387,6 +387,8 @@ namespace Raven.Server.Documents.Handlers
 
             var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
+            reader.ForceYieldDuplicateValues();
+
             var dbCv = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
             // init hash
