@@ -493,6 +493,9 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of bytes written (documents, attachments, counters) in all loaded databases")]
                 public const string TotalDataWrittenPerSecond = "5.1.9.2";
 
+                [Description("Number of faulted databases")]
+                public const string FaultedCount = "5.1.10";
+
                 public static DynamicJsonArray ToJson()
                 {
                     var array = new DynamicJsonArray();
