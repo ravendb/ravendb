@@ -14,7 +14,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        [RequiresElasticSearchFact]
+        [RequiresElasticSearchFact(Skip = "Suspicion that this test causes test hangs")]
         public void ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
         {
             using (var store = GetDocumentStore())
