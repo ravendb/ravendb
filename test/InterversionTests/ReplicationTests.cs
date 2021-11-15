@@ -83,7 +83,7 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task IncrementalTimeSeriesWithDuplicatesShouldNotBreakReplicationToOldServer()
+        public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer()
         {
             const string version = "5.2.3";
             const string incrementalTsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
@@ -91,82 +91,24 @@ namespace InterversionTests
             var baseline = DateTime.UtcNow;
 
             using (var oldStore = await GetDocumentStoreAsync(version))
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var store = GetDocumentStore())
             {
-                await SetupReplication(storeA, storeB);
-                await SetupReplication(storeB, storeA);
-
-                using (var session = storeA.OpenAsyncSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, docId);
+                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
+                        .Increment(baseline, 1);
+
                     await session.SaveChangesAsync();
                 }
-                Assert.True(WaitForDocument<User>(storeB, docId, u => u.Name == "ayende"));
 
-                // increment on storeA
-                using (var session = storeA.OpenSession())
-                {
-                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
-                        .Increment(baseline, 1);
+                await SetupReplication(store, oldStore);
 
-                    session.SaveChanges();
-                }
-                await EnsureReplicatingAsync(storeA, storeB);
-
-                // increment on storeB
-                using (var session = storeB.OpenSession())
-                {
-                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
-                        .Increment(baseline, 1);
-
-                    session.SaveChanges();
-                }
-                await EnsureReplicatingAsync(storeB, storeA);
-
-                foreach (var store in new[] { storeA, storeB })
-                {
-                    var values = store.Operations
-                        .Send(new GetTimeSeriesOperation(docId, incrementalTsName, returnFullResults: true));
-
-                    Assert.NotNull(values.TotalResults);
-                    Assert.NotNull(values.SkippedResults);
-
-                    Assert.Equal(2, values.TotalResults);
-                    Assert.Equal(1, values.SkippedResults);
-
-                    foreach (var entry in values.Entries)
-                    {
-                        Assert.NotEmpty(entry.NodeValues);
-                        Assert.Equal(2, entry.NodeValues.Count);
-
-                        foreach (var nodeValue in entry.NodeValues)
-                        {
-                            Assert.Equal(1, nodeValue.Value.Length);
-                            Assert.Equal(1, nodeValue.Value[0]);
-                        }
-                    }
-                }
-
-                // replicate to old server
-                // this replication batch should work, because the destination will append the entire ts-segment
-                await SetupReplication(storeA, oldStore);
-
-                await EnsureReplicatingAsync(storeA, oldStore);
-                await EnsureNoReplicationLoop(Server, storeA.Database);
-
-                // increment on storeA
-                using (var session = storeA.OpenSession())
-                {
-                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
-                        .Increment(baseline, 1);
-
-                    session.SaveChanges();
-                }
-
-                // now the destination can't append the entire segment and will enumerate all values
-                await EnsureReplicatingAsync(storeA, oldStore);
-                await EnsureNoReplicationLoop(Server, storeA.Database);
+                var replicationLoader = (await GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
+                Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("IncrementalTimeSeries"))));
             }
         }
 
