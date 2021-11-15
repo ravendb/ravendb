@@ -144,7 +144,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Integrations',
             nav: true,
             css: 'icon-integrations',
-            dynamicHash: appUrls.integrations
+            dynamicHash: appUrls.integrations,
+            requiredAccess: "DatabaseAdmin"
         }),
         new separatorMenuItem(),
         new separatorMenuItem('Advanced'),

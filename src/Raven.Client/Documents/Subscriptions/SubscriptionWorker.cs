@@ -278,7 +278,7 @@ namespace Raven.Client.Documents.Subscriptions
             bool compressionSupport = false;
 #if NETCOREAPP3_1_OR_GREATER
             var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
-            if (version >= 53_000)
+            if (version >= 53_000 && (_store.Conventions.DisableTcpCompression == false))
                 compressionSupport = true;
 #endif
 

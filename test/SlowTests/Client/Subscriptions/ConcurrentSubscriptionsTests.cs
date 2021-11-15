@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -162,7 +164,7 @@ namespace SlowTests.Client.Subscriptions
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
                     MaxDocsPerBatch = 2
                 }))
-                await using (var Subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                await using (var subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.Concurrent,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -185,7 +187,7 @@ namespace SlowTests.Client.Subscriptions
                     var waitBeforeConn1FinishesSecondBatch = new AsyncManualResetEvent();
                     var batchesProcessedByConn1 = 0;
 
-                    var _ = Subscription2.Run(async x =>
+                    var _ = subscription2.Run(async x =>
                     {
                         foreach (var item in x.Items)
                         {
@@ -217,7 +219,7 @@ namespace SlowTests.Client.Subscriptions
                         }
 
                         batchesProcessedByConn1++;
-                        if (batchesProcessedByConn1 == 2)
+                        if (batchesProcessedByConn1 == 1)
                         {
                             waitUntilConn1FinishesBatch.Set();
                             await waitBeforeConn1FinishesSecondBatch.WaitAsync();
@@ -713,6 +715,105 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(1, subscriptionConnectionsState.GetConnections().Count);
                     await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6 || con1Docs.Count + con2Docs.Count == 8), 6000);
                     await AssertNoLeftovers(store, id);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
+        [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
+        public async Task CannotConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy1,
+                });
+                using var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy2,
+                });
+
+                var mre1 = new ManualResetEventSlim();
+
+                subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
+
+                var t = subscription1.Run(x =>
+                {
+
+                });
+
+                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                mre1.Reset();
+
+                await Assert.ThrowsAsync<SubscriptionInUseException>(() => subscription2.Run((_) => { }));
+                await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
+            }
+        }
+
+        [Theory]
+        [InlineData(SubscriptionOpeningStrategy.TakeOver, SubscriptionOpeningStrategy.Concurrent)]
+        [InlineData(SubscriptionOpeningStrategy.Concurrent, SubscriptionOpeningStrategy.TakeOver)]
+        public async Task CanDropAndConnectInDifferentMode(SubscriptionOpeningStrategy strategy1, SubscriptionOpeningStrategy strategy2)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using var subscription1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy1,
+                });
+                using var subscription2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = strategy2,
+                });
+
+                var mre1 = new ManualResetEventSlim();
+                var mre2 = new ManualResetEventSlim();
+
+                subscription1.OnEstablishedSubscriptionConnection += mre1.Set;
+                subscription2.OnEstablishedSubscriptionConnection += mre2.Set;
+
+                var t = subscription1.Run(x =>
+                {
+
+                });
+
+                Assert.True(mre1.Wait(TimeSpan.FromSeconds(15)));
+                mre1.Reset();
+                
+                await store.Subscriptions.DropSubscriptionWorkerAsync(subscription1);
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => t);
+
+                t = subscription2.Run((_) => { });
+                Assert.True(mre2.Wait(TimeSpan.FromSeconds(15)));
+            }
+        }
+
+        [Fact]
+        public async Task ThrowOnInvalidLicense()
+        {
+            DoNotReuseServer();
+            using (var store = GetDocumentStore())
+            {
+                Server.ServerStore.LicenseManager.LicenseStatus.Attributes["concurrentSubscriptions"] = false;
+
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                }))
+                {
+                    var t = subscription.Run(x =>
+                    {
+                       
+                    });
+
+                    var ex = await Assert.ThrowsAsync<SubscriptionInvalidStateException>(() => t.WaitAndThrowOnTimeout(TimeSpan.FromSeconds(15)));
+                    Assert.Contains("Your current license doesn't include the Concurrent Subscriptions feature", ex.ToString());
                 }
             }
         }

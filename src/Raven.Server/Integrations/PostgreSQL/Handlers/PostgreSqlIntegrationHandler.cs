@@ -22,6 +22,21 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 {
     public class PostgreSqlIntegrationHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/integrations/postgresql/server/status", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public async Task GetServerStatus()
+        {
+            AssertCanUsePostgreSqlIntegration();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var dto = new PostgreSqlServerStatus { Active = Server.PostgresServer.Active };
+
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(dto);
+                writer.WriteObject(context.ReadObject(djv, "PostgreSqlServerStatus"));
+            }
+        }
+
         [RavenAction("/databases/*/admin/integrations/postgresql/users", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetUsernamesList()
         {
@@ -35,7 +50,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                 using (transactionOperationContext.OpenReadTransaction())
                     databaseRecord = Database.ServerStore.Cluster.ReadDatabase(transactionOperationContext, Database.Name, out long index);
 
-                var usernames = new List<User>();
+                var usernames = new List<PostgreSqlUsername>();
 
                 var users = databaseRecord?.Integrations?.PostgreSql?.Authentication?.Users;
 
@@ -45,7 +60,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
                     {
                         foreach (var user in users)
                         {
-                            var username = new User { Username = user.Username };
+                            var username = new PostgreSqlUsername { Username = user.Username };
                             usernames.Add(username);
                         }
                     }

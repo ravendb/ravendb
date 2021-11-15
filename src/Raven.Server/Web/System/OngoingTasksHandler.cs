@@ -222,9 +222,9 @@ namespace Raven.Server.Web.System
                 {
                     connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
                 }
-                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var _))
+                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = OngoingTaskConnectionStatus.Active;
+                    connectionStatus = connectionsState.IsSubscriptionActive()? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -1203,6 +1203,16 @@ namespace Raven.Server.Web.System
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                             var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+                            OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
+                            if (tag != ServerStore.NodeTag)
+                            {
+                                connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+                            }
+                            else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(key, out var connectionsState))
+                            {
+                                connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                            }
+
                             var subscriptionStateInfo = new OngoingTaskSubscription
                             {
                                 TaskName = subscriptionState.SubscriptionName,
@@ -1219,11 +1229,10 @@ namespace Raven.Server.Web.System
                                 {
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                }
+                                },
+                                TaskConnectionStatus = connectionStatus
                             };
-
-                            // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
-
+                            
                             await WriteResult(context, subscriptionStateInfo);
                             break;
 

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Newtonsoft.Json.Linq;
 using Npgsql;
 using NpgsqlTypes;
@@ -13,31 +12,19 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Operations.Integrations;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
-using Raven.Server;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Integrations.PostgreSQL
 {
-    public class RavenDB_16880 : RavenTestBase
+    public class RavenDB_16880 : PostgreSqlIntegrationTestBase
     {
-        Dictionary<string, string> postgressSettings = new Dictionary<string, string>()
-        {
-            { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled), "true"},
-            { RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Port), "0"} // a free port will be allocated so tests can run in parallel
-        };
-
-        private const string correctUid = "root";
-        private const string correctPassword = "s3cr3t";
-
         public RavenDB_16880(ITestOutputHelper output) : base(output)
         {
         }
@@ -47,7 +34,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from Employees";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -73,7 +60,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from Employees select LastName, FirstName";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -103,7 +90,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 "\r\nwhere TABLE_SCHEMA not in ('information_schema', 'pg_catalog')" +
                 "\r\norder by TABLE_SCHEMA, TABLE_NAME";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -129,7 +116,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             const string secondField = "LastName";
             string query = $"from Employees select {firstField}, {secondField}";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -154,7 +141,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             string query = $"from Employees select {firstField}, {secondField}";
             const string idField = "id()";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -175,7 +162,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from index 'Orders/Totals'";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -220,7 +207,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
             const string query = "from index 'Orders/Totals' select Total";
             const string totalField = "Total";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -316,13 +303,13 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         [Fact]
         public async Task CanTalkToSecuredServer()
         {
-            var certificates = SetupServerAuthentication(postgressSettings);
+            var certificates = SetupServerAuthentication(EnablePostgresSqlSettings);
             var dbName = GetDatabaseName();
             var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             const string query = "from Employees";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -341,8 +328,8 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                         {
                             new PostgreSqlUser()
                             {
-                                Username = correctUid,
-                                Password = correctPassword
+                                Username = CorrectUser,
+                                Password = CorrectPassword
                             }
                         }
                     }
@@ -366,13 +353,13 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         [Fact]
         public async Task MustNotConnectToToSecuredServerWithoutProvidingValidCredentials()
         {
-            var certificates = SetupServerAuthentication(postgressSettings);
+            var certificates = SetupServerAuthentication(EnablePostgresSqlSettings);
             var dbName = GetDatabaseName();
             var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             const string query = "from Employees";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -397,7 +384,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                        {
                            new PostgreSqlUser()
                            {
-                               Username = correctUid,
+                               Username = CorrectUser,
                                Password = "incorrect_password"
                            }
                        }
@@ -416,7 +403,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from 'Products' where PricePerUnit > @p";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -445,7 +432,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         {
             const string query = "from index 'Orders/ByCompany'";
 
-            DoNotReuseServer(postgressSettings);
+            DoNotReuseServer(EnablePostgresSqlSettings);
 
             using (var store = GetDocumentStore())
             {
@@ -501,47 +488,6 @@ select new
             }
         }
 
-        private DataTable Select(
-            NpgsqlConnection connection,
-            string query,
-            Dictionary<string, (NpgsqlDbType, object)> namedArgs = null)
-        {
-            using var cmd = new NpgsqlCommand(query, connection);
-
-            if (namedArgs != null)
-            {
-                foreach (var (key, val) in namedArgs)
-                {
-                    cmd.Parameters.AddWithValue(key, val.Item1, val.Item2);
-                }
-            }
-
-            using var reader = cmd.ExecuteReader();
-
-            var dt = new DataTable();
-            dt.Load(reader);
-
-            return dt;
-        }
-
-        private string GetConnectionString(DocumentStore store, RavenServer server, bool? forceSslMode = null)
-        {
-            var uri = new Uri(store.Urls.First());
-
-            var host = server.GetListenIpAddresses(uri.Host).First().ToString();
-            var database = store.Database;
-            var port = server.PostgresServer.GetListenerPort();
-
-            string connectionString;
-
-            if (server.Certificate.Certificate == null || forceSslMode == false)
-                connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};";
-            else
-                connectionString = $"Host={host};Port={port};Database={database};Uid={correctUid};Password={correctPassword};SSL Mode=Prefer;Trust Server Certificate=true";
-
-            return connectionString;
-        }
-
         private List<string> GetColumnNames(DataTable dataTable)
         {
             return dataTable.Columns
@@ -549,21 +495,6 @@ select new
                 .Select(x => x.ColumnName)
                 .ToList();
         }
-
-
-        private async Task<DataTable> Act(DocumentStore store, string query, RavenServer server, bool? forceSslMode = null, Dictionary<string, (NpgsqlDbType, object)> parameters = null)
-        {
-            var connectionString = GetConnectionString(store, server, forceSslMode);
-
-            await using var connection = new NpgsqlConnection(connectionString);
-            await connection.OpenAsync();
-
-            var result = Select(connection, query, parameters);
-
-            await connection.CloseAsync();
-            return result;
-        }
-
 
         public static void AssertDatabaseCollections(CollectionStatistics expected, DataTable actual)
         {

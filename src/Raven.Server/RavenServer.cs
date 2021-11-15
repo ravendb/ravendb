@@ -2108,7 +2108,10 @@ namespace Raven.Server
                 //At this stage the error is not relevant.
 
                 if (header.LicensedFeatures != null)
-                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression;
+                {
+                    header.LicensedFeatures.DataCompression &= ServerStore.LicenseManager.LicenseStatus.HasTcpDataCompression && 
+                                                               Configuration.Server.DisableTcpCompression == false;
+                }
 
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,

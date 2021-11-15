@@ -43,7 +43,7 @@ class postgreSqlCredentialsModel {
     generatePassword(): JQueryPromise<string> {
         return new generateSecretCommand()
             .execute()
-            .done(secret => this.password(secret.substring(0, 8)));
+            .done(secret => this.password(secret));
     }
     
     copyPasswordToClipboard(): void {

@@ -109,5 +109,10 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Server.LogsStream.Disable", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableLogsStream { get; set; }
+
+        [Description("EXPERT: Disable TCP data compression")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Server.Tcp.Compression.Disable", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableTcpCompression { get; set; }
     }
 }
