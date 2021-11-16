@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -98,6 +97,46 @@ namespace InterversionTests
                     await session.StoreAsync(new User { Name = "ayende" }, docId);
                     session.IncrementalTimeSeriesFor(docId, incrementalTsName)
                         .Increment(baseline, 1);
+
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplication(store, oldStore);
+
+                var replicationLoader = (await GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
+                Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("IncrementalTimeSeries"))));
+            }
+        }
+
+        [Fact]
+        public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer2()
+        {
+            const string version = "5.2.3";
+            const string incrementalTsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
+            const string docId = "users/1";
+            var baseline = DateTime.UtcNow;
+
+            using (var oldStore = await GetDocumentStoreAsync(version))
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" }, docId);
+                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
+                        .Increment(baseline, 1);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(docId);
+                    session.IncrementalTimeSeriesFor(u, incrementalTsName)
+                        .Increment(baseline, 1);
+
+                    u.Name = "oren";
 
                     await session.SaveChangesAsync();
                 }
