@@ -691,7 +691,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             ValidateSegment(segment);
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
-            using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: null, timeStamp: baseline))
+            using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
                 var slicer = holder.SliceHolder;
 
@@ -735,7 +735,7 @@ namespace Raven.Server.Documents.TimeSeries
                 });
             }
 
-            EnsureStatsAndDataIntegrity(context, documentId, name, segment);
+            EnsureStatsAndDataIntegrity(context, documentId, name, segment, collectionName, baseline);
 
             return true;
         }
@@ -931,7 +931,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment, _collection, BaselineDate);
 
                 return count;
             }
@@ -959,7 +959,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment, _collection, BaselineDate);
             }
 
             public void AppendToNewSegment(SingleResult item)
@@ -991,7 +991,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Insert(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment, _collection, BaselineDate);
             }
 
             public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
@@ -2438,7 +2438,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         [Conditional("DEBUG")]
-        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment)
+        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment, CollectionName collectionName, DateTime baseline)
         {
             if (context.Transaction.InnerTransaction.IsWriteTransaction == false)
                 return;
@@ -2496,6 +2496,12 @@ namespace Raven.Server.Documents.TimeSeries
                     var noNaN = segment.YieldAllValues(context, baseline: default, includeDead: false).All(x => x.Values.ToArray().All(y => double.IsNaN(y) == false));
                     Debug.Assert(noNaN, "Rollup has NaN");
                 }
+
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithBaseline(baseline))
+                {
+                    Debug.Assert(tss.IsOverlapping(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline) == false, "Segment is overlapping another segment");
+                }
+
             }
         }
 
