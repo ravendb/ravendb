@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.TimeSeries
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
-        private bool _yieldDuplicateValues;
+        private DetailedSingleResult _details;
 
         public bool IsRaw { get; }
 
@@ -125,10 +126,12 @@ namespace Raven.Server.Documents.TimeSeries
             IsRaw = _name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false;
         }
 
-        public void ForceYieldDuplicateValues()
+        public void IncludeDetails()
         {
-            _yieldDuplicateValues = true;
+            _details = new DetailedSingleResult(_context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(_context));;
         }
+
+        public DetailedSingleResult GetDetails => _details ?? throw new ArgumentNullException($"Forget to explicitly to 'IncludeDetails'?");
 
         internal bool Init()
         {
@@ -403,6 +406,11 @@ namespace Raven.Server.Documents.TimeSeries
                             previous.Tag = null;
                             aggregated.CopyTo(previous.Values);
                         }
+                        else
+                        {
+                            _details?.Add(previous);
+                        }
+
                         yield return previous;
                         yield break;
                     }
@@ -414,8 +422,13 @@ namespace Raven.Server.Documents.TimeSeries
                             previous.Tag = null;
                             aggregated.CopyTo(previous.Values);
                         }
-                        
+                        else
+                        {
+                            _details?.Add(previous);
+                        }
+
                         yield return previous;
+                        _details?.Reset();
 
                         if (current.Timestamp > _to)
                             yield break;
@@ -441,6 +454,34 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public class DetailedSingleResult
+        {
+            private readonly string _databaseChangeVector;
+            public Dictionary<string, double[]> Details = new Dictionary<string, double[]>();
+
+            public DetailedSingleResult(string databaseChangeVector)
+            {
+                _databaseChangeVector = databaseChangeVector;
+            }
+
+            public void Add(SingleResult result)
+            {
+                Details[FetchNodeDetails(result, _databaseChangeVector)] = result.Values.ToArray();
+            }
+
+            public void Reset()
+            {
+                Details.Clear();
+            }
+
+            private static string FetchNodeDetails(SingleResult result, string databaseChangeVector)
+            {
+                var dbId = result.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
+                var nodeTag = ChangeVectorUtils.GetNodeTagById(databaseChangeVector, dbId) ?? "?";
+                return nodeTag + "-" + dbId;
+            }
+        }
+
         private static void ResetAggregation(double[] aggregated)
         {
             for (int i = 0; i < aggregated.Length; i++)
@@ -449,8 +490,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static void Aggregate(double[] aggregated, SingleResult result)
+        private void Aggregate(double[] aggregated, SingleResult result)
         {
+            _details?.Add(result);
             for (var index = 0; index < aggregated.Length; index++)
             {
                 aggregated[index] += result.Values.Span[index];
@@ -459,13 +501,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
         {
-            if (_yieldDuplicateValues)
-                return YieldSegmentRaw(baseline, includeDead);
-
             switch (_currentSegment.Version)
             {
                 case SegmentVersion.V50000:
-                case SegmentVersion.V50001:
+                case SegmentVersion.Baseline:
                     return YieldSegmentRaw(baseline, includeDead);
                 case SegmentVersion.ContainDuplicates:
                 case SegmentVersion.DuplicateLast:
@@ -490,8 +529,10 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
 
                 result.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
-
+                
+                _details?.Add(result);
                 yield return result;
+                _details?.Reset();
             }
         }
 
