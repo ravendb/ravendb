@@ -1255,15 +1255,86 @@ namespace SlowTests.Client.TimeSeries.Issues
                         .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, returnFullResults: true));
 
                     Assert.NotNull(values.TotalResults);
-                    Assert.NotNull(values.SkippedResults);
-
-                    Assert.Equal(200, values.TotalResults);
-                    Assert.Equal(100, values.SkippedResults);
+                    Assert.Equal(100, values.TotalResults);
 
                     foreach (var entry in values.Entries)
                     {
                         Assert.NotEmpty(entry.NodeValues);
                         Assert.Equal(2, entry.NodeValues.Count);
+
+                        foreach (var nodeValue in entry.NodeValues)
+                        {
+                            Assert.Equal(1, nodeValue.Value.Length);
+                            Assert.Equal(1, nodeValue.Value[0]);
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task GetIncrementalTimeSeriesFullResultsShouldWork3()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 0; j < 50; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 50; j < 100; j++)
+                        ts.Increment(baseline.AddMinutes(j), 1);
+
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                var stores = new[] { storeA, storeB };
+
+                foreach (var store in stores)
+                {
+                    var values = store.Operations
+                        .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, returnFullResults: true));
+
+                    Assert.NotNull(values.TotalResults);
+                    Assert.Equal(100, values.TotalResults);
+
+                    foreach (var entry in values.Entries)
+                    {
+                        Assert.NotEmpty(entry.NodeValues);
+                        Assert.Equal(1, entry.NodeValues.Count);
 
                         foreach (var nodeValue in entry.NodeValues)
                         {
@@ -1300,7 +1371,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
 
                     for (int j = 0; j < 100; j++)
-                        ts.Increment(baseline.AddMinutes(j), 1);
+                        ts.Increment(baseline.AddMinutes(j), j);
 
                     session.SaveChanges();
                 }
@@ -1310,7 +1381,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
 
                     for (int j = 0; j < 100; j++)
-                        ts.Increment(baseline.AddMinutes(j), 1);
+                        ts.Increment(baseline.AddMinutes(j), j);
 
                     session.SaveChanges();
                 }
@@ -1329,19 +1400,77 @@ namespace SlowTests.Client.TimeSeries.Issues
                     .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: 0, pageSize: pageSize / 2, returnFullResults: true));
 
                 Assert.Equal(50, values.Entries.Length);
+                Assert.Equal(49 * 2, values.Entries.Last().Value);
 
-                // we get 50 unique entries but we read 100 entries from the segment
-                // so next call we should start from position 101: numberOfUniqueEntries + skippedResults 
-                Assert.Equal(50, values.SkippedResults);
-
-                var nextStart = values.Entries.Length + values.SkippedResults;
-                Assert.NotNull(nextStart);
 
                 values = storeA.Operations
-                    .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: (int)nextStart, pageSize: pageSize / 2, returnFullResults: true));
+                    .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: (int)(pageSize / 2), pageSize: pageSize / 2, returnFullResults: true));
 
                 Assert.Equal(50, values.Entries.Length);
-                Assert.Equal(50, values.SkippedResults);
+                Assert.Equal(99 * 2, values.Entries.Last().Value);
+            }
+        }
+
+        [Fact(Skip = "Waiting for RavenDB-17486")]
+        public async Task CheckSkippedResultsCalculationWithLargeTimeSeries()
+        {
+            var baseline = DateTime.UtcNow;
+            var size = 1000;
+            var pageSize = size / 10;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var random = new Random(357);
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 1; j < size + 1; j++)
+                        ts.Increment(baseline.AddMinutes(j), j % pageSize == 0 ? j : random.Next(-100,100));
+
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+
+                    for (int j = 1; j < size + 1; j++)
+                        ts.Increment(baseline.AddMinutes(j), j % pageSize == 0 ? j : random.Next(-100,100));
+
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                for (int start = 0; start < size; start += pageSize)
+                {
+                    var values = storeA.Operations
+                        .Send(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, start: start, pageSize: pageSize, returnFullResults: true));
+
+                    Assert.Equal(pageSize, values.Entries.Length);
+                    Assert.Equal((start + pageSize - 1) * 2, values.Entries.Last().Value);
+                }
             }
         }
 
