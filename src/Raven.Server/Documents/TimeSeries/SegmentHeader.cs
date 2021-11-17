@@ -27,8 +27,9 @@ namespace Raven.Server.Documents.TimeSeries
     {
         V50000 = 0,
         V50001 = 1,
-        ContainDuplicates = 2, // segment contain duplicates
-        DuplicateLast = 3, // last value in the segment is a duplicate
+
+        ContainDuplicates = byte.MaxValue, // segment contain duplicates
+        DuplicateLast = byte.MaxValue - 1, // last value in the segment is a duplicate
 
         Baseline = V50001
     }
