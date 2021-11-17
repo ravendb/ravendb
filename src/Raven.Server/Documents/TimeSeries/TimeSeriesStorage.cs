@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public DateTime? BaselineOfNextSegment(Slice key, Slice prefix, Table table, DateTime baseline)
+        private DateTime? BaselineOfNextSegment(Slice key, Slice prefix, Table table, DateTime baseline)
         {
             var offset = key.Size - sizeof(long);
             *(long*)(key.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
@@ -695,9 +695,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 var slicer = holder.SliceHolder;
 
-                if (holder.LoadCurrentSegment())
-                    Stats.UpdateCountOfExistingStats(context, slicer, collectionName, -holder.ReadOnlySegment.NumberOfLiveEntries);
-
                 Stats.UpdateStats(context, slicer, collectionName, segment, baseline, segment.NumberOfLiveEntries);
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
@@ -740,6 +737,44 @@ namespace Raven.Server.Documents.TimeSeries
             return true;
         }
 
+        public bool EnsureNoOverlap(
+            DocumentsOperationContext context,
+            Slice key,
+            CollectionName collectionName,
+            TimeSeriesValuesSegment segment,
+            DateTime baseline)
+        {
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            {
+                return (IsOverlapWithHigherSegment(prefix) || IsOverlapWithLowerSegment(prefix)) == false;
+            }
+
+            bool IsOverlapWithHigherSegment(Slice prefix)
+            {
+                var lastTimestamp = segment.GetLastTimestamp(baseline);
+                var nextSegmentBaseline = BaselineOfNextSegment(key, prefix, table, baseline);
+                return lastTimestamp >= nextSegmentBaseline;
+            }
+
+            bool IsOverlapWithLowerSegment(Slice prefix)
+            {
+                TableValueReader tvr;
+                using (Slice.From(context.Allocator, key.Content.Ptr, key.Size, ByteStringType.Immutable, out var lastKey))
+                {
+                    *(long*)(lastKey.Content.Ptr + lastKey.Size - sizeof(long)) = Bits.SwapBytes(baseline.Ticks / 10_000);
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, lastKey, out tvr, excludeValueFromSeek: true) == false)
+                    {
+                        return false;
+                    }
+                }
+
+                var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
+                var last = prevSegment.GetLastTimestamp(prevBaseline);
+                return last >= baseline;
+            }
+        }
+
         public bool IsOverlapping(
             DocumentsOperationContext context,
             Slice key,
@@ -766,8 +801,8 @@ namespace Raven.Server.Documents.TimeSeries
                 TableValueReader tvr;
                 using (Slice.From(context.Allocator, key.Content.Ptr, key.Size, ByteStringType.Immutable, out var lastKey))
                 {
-                    *(long*)(lastKey.Content.Ptr + lastKey.Size - sizeof(long)) = Bits.SwapBytes(baseline.Ticks / 10_000);
-                    if (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, lastKey, out tvr, excludeValueFromSeek: true) == false)
+                    *(long*)(lastKey.Content.Ptr + lastKey.Size - sizeof(long)) = Bits.SwapBytes(myLastTimestamp.Ticks / 10_000);
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, lastKey, out tvr) == false)
                     {
                         return false;
                     }
@@ -2499,9 +2534,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithBaseline(baseline))
                 {
-                    Debug.Assert(tss.IsOverlapping(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline) == false, "Segment is overlapping another segment");
+                    Debug.Assert(tss.EnsureNoOverlap(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline), "Segment is overlapping another segment");
                 }
-
             }
         }
 
