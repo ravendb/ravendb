@@ -528,6 +528,9 @@ namespace Raven.Client.Documents.Changes
                 catch (OperationCanceledException e)
                 {
                     NotifyAboutError(e);
+                    if (wasConnected)
+                        ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+                    _tcs.TrySetCanceled();
                     return;
                 }
                 catch (ChangeProcessingException)
@@ -565,6 +568,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         // we couldn't reconnect
                         NotifyAboutError(e);
+                        _tcs.TrySetException(e);
                         throw;
                     }
                 }
