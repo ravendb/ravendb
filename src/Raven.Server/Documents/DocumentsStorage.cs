@@ -299,7 +299,7 @@ namespace Raven.Server.Documents
                 Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
                 Environment.NewTransactionCreated += SetTransactionCache;
-                Environment.AfterCommitWhenNewReadTransactionsPrevented += UpdateDocumentTransactionCache;
+                Environment.AfterCommitWhenNewTransactionsPrevented += UpdateDocumentTransactionCache;
 
                 using (var tx = Environment.WriteTransaction())
                 {
