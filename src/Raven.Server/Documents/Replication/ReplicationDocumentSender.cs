@@ -394,6 +394,11 @@ namespace Raven.Server.Documents.Replication
             {
                 AssertNotClusterTransactionDocumentForLegacyReplication(item);
             }
+
+            if (_parent.SupportedFeatures.Replication.TimeSeries == false)
+            {
+                AssertNotTimeSeriesForLegacyReplication(item);
+            }
         }
 
         private bool CanContinueBatch(ReplicationState state, ref long next)
@@ -421,10 +426,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (_parent.SupportedFeatures.Replication.TimeSeries == false)
-            {
-                AssertNotTimeSeriesForLegacyReplication(state.Item);
-            }
             // We want to limit batch sizes to reasonable limits.
             var totalSize =
                 state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
