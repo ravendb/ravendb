@@ -26,8 +26,10 @@ namespace Raven.Server.Documents.TimeSeries
     public enum SegmentVersion : byte
     {
         V50000 = 0,
-        Baseline = 1,
+        V50001 = 1,
         ContainDuplicates = 2, // segment contain duplicates
-        DuplicateLast = 3 // last value in the segment is a duplicate
+        DuplicateLast = 3, // last value in the segment is a duplicate
+
+        Baseline = V50001
     }
 }
