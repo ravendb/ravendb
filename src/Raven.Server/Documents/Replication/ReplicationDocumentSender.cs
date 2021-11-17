@@ -246,6 +246,8 @@ namespace Raven.Server.Documents.Replication
 
                             _parent.CancellationToken.ThrowIfCancellationRequested();
 
+                            AssertNoLegacyReplicationViolation(item);
+
                             if (replicationState.LastTransactionMarker != item.TransactionMarker)
                             {
                                 replicationState.Item = item;
@@ -381,6 +383,19 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void AssertNoLegacyReplicationViolation(ReplicationBatchItem item)
+        {
+            if (_parent.SupportedFeatures.Replication.CountersBatch == false)
+            {
+                AssertNotCounterForLegacyReplication(item);
+            }
+
+            if (_parent.SupportedFeatures.Replication.ClusterTransaction == false)
+            {
+                AssertNotClusterTransactionDocumentForLegacyReplication(item);
+            }
+        }
+
         private bool CanContinueBatch(ReplicationState state, ref long next)
         {
             if (MissingAttachmentsInLastBatch)
@@ -410,17 +425,6 @@ namespace Raven.Server.Documents.Replication
             {
                 AssertNotTimeSeriesForLegacyReplication(state.Item);
             }
-
-            if (_parent.SupportedFeatures.Replication.CountersBatch == false)
-            {
-                AssertNotCounterForLegacyReplication(state.Item);
-            }
-
-            if (_parent.SupportedFeatures.Replication.ClusterTransaction == false)
-            {
-                AssertNotClusterTransactionDocumentForLegacyReplication(state.Item);
-            }
-
             // We want to limit batch sizes to reasonable limits.
             var totalSize =
                 state.Size + state.Context.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
