@@ -401,6 +401,11 @@ namespace Raven.Server.Documents.Replication
             {
                 AssertNotClusterTransactionDocumentForLegacyReplication(item);
             }
+
+            if (_parent.SupportedFeatures.Replication.TimeSeries == false)
+            {
+                AssertNotTimeSeriesForLegacyReplication(item);
+            }
         }
 
         private bool CanContinueBatch(ReplicationState state, ref long next)
@@ -428,10 +433,6 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (_parent.SupportedFeatures.Replication.TimeSeries == false)
-            {
-                AssertNotTimeSeriesForLegacyReplication(state.Item);
-            }
             if (_parent.SupportedFeatures.Replication.IncrementalTimeSeries == false)
             {
                 AssertNotIncrementalTimeSeriesForLegacyReplication(state.Item);
