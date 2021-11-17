@@ -135,7 +135,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     users.Add(newUser);
 
-                    await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, RaftIdGenerator.DontCareId, config);
+                    using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                        await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, transactionOperationContext, RaftIdGenerator.DontCareId, config);
                 }
             }
 
@@ -188,7 +189,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Handlers
 
                     users.Remove(userToDelete);
 
-                    await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, RaftIdGenerator.DontCareId, config);
+                    using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+                        await DatabaseConfigurations(ServerStore.ModifyPostgreSqlConfiguration, transactionOperationContext, RaftIdGenerator.DontCareId, config);
                 }
             }
 
