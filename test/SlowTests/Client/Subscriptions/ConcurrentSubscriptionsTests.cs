@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -9,9 +10,11 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
@@ -816,6 +819,134 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Contains("Your current license doesn't include the Concurrent Subscriptions feature", ex.ToString());
                 }
             }
+        }
+
+        [Fact]
+        public async Task ShouldClearOldItemsFromResendListOnBatchProcessing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var collectionSize = 1000;
+                using (var session = store.OpenSession())
+                {
+
+                    for (int i = 0; i < collectionSize; i++)
+                    {
+                        session.Store(new User() { Name = "E" }, $"user/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var mre = new AsyncManualResetEvent();
+                var id = store.Subscriptions.Create(new SubscriptionCreationOptions()
+                {
+                    Query = "from Users where Name != 'R'"
+                });
+
+                var count = 0;
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    MaxDocsPerBatch = 64
+                }))
+                {
+                    var t = subscription.Run(async x =>
+                    {
+                        using var s = x.OpenAsyncSession();
+                        foreach (var item in x.Items)
+                        {
+                            item.Result.Name = "G";
+                        }
+
+                        await s.SaveChangesAsync();
+
+                        foreach (var item in x.Items)
+                        {
+                            item.Result.Name = "R";
+                        }
+
+                        await s.SaveChangesAsync();
+
+                        var res = Interlocked.Add(ref count, x.NumberOfItemsInBatch);
+                        if (res >= collectionSize)
+                        {
+                            mre.Set();
+                        }
+
+                    });
+
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
+
+                    using (var session = store.OpenSession())
+                    {
+                        var u = session.Load<User>("user/1");
+                        Assert.Equal("R", u.Name);
+                    }
+
+                    var executor = store.GetRequestExecutor();
+                    using var _ = executor.ContextPool.AllocateOperationContext(out var ctx);
+                    var cmd = new GetSubscriptionResendListCommand(store.Database, id);
+                    executor.Execute(cmd, ctx);
+                    var res = cmd.Result;
+
+                    // the last batch may still not be cleared
+                    Assert.True(res.Results.Count is 0 or 40, "res.Results.Count is 0 or 40");
+
+                    var finalRes = await WaitForValueAsync(() =>
+                    {
+                        executor.Execute(cmd, ctx);
+                        var res = cmd.Result;
+                        return res.Results.Count;
+                    }, 0);
+
+                    Assert.Equal(0, finalRes);
+                }
+            }
+        }
+
+        private class GetSubscriptionResendListCommand : RavenCommand<ResendListResult>
+        {
+            private readonly string _database;
+            private readonly string _name;
+
+            public GetSubscriptionResendListCommand(string database, string name)
+            {
+                _database = database;
+                _name = name;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{_database}/debug/subscriptions/resend?name={_name}";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                };
+
+                return request;
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                {
+                    Result = null;
+                    return;
+                }
+
+                var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<ResendListResult>();
+                Result = deserialize.Invoke(response);
+            }
+
+            public override bool IsReadRequest => true;
+        }
+
+        private class ResendListResult
+        {
+            public List<SubscriptionStorage.ResendItem> Results;
         }
 
         private class User
