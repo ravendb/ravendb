@@ -1697,7 +1697,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         var segment = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, 0)
                             .Single();
-                        Assert.Equal(SegmentVersion.DuplicateLast, segment.Segment.Version);
+                        Assert.True(segment.Segment.Version.ContainsDuplicates);
+                        Assert.True(segment.Segment.Version.ContainsLastValueDuplicate);
+
                         var values = segment.Segment.SegmentValues.Span[0];
 
                         Assert.Equal(2, values.Count);
@@ -1804,7 +1806,8 @@ select timeseries(
                     {
                         var segment = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(context, 0)
                             .Single();
-                        Assert.Equal(SegmentVersion.ContainDuplicates, segment.Segment.Version);
+                        Assert.True(segment.Segment.Version.ContainsDuplicates);
+                        Assert.True(segment.Segment.Version.ContainsLastValueDuplicate);
                         var values = segment.Segment.SegmentValues.Span[0];
 
                         Assert.Equal(3, values.Count);

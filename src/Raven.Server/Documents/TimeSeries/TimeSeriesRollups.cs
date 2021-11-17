@@ -881,7 +881,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // if the range it cover needs to be broken up to multiple ranges.
                     // For example, if the segment covers 3 days, but we have group by 1 hour,
                     // we still have to deal with the individual values
-                    if (it.Segment.End > rangeSpec.End || it.Segment.Summary.Version == SegmentVersion.DuplicateLast)
+                    if (it.Segment.End > rangeSpec.End || it.Segment.Summary.Version.ContainsLastValueDuplicate)
                     {
                         AggregateIndividualItems(it.Segment.Values);
                     }
