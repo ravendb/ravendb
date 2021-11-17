@@ -775,7 +775,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private static bool IsLastDuplicate(TimeSeriesValuesSegment segment, AggregationHolder aggregationHolder)
         {
-            return segment.Version == SegmentVersion.DuplicateLast && aggregationHolder.Contains(AggregationType.Last);
+            return segment.Version.ContainsLastValueDuplicate && aggregationHolder.Contains(AggregationType.Last);
         }
 
         private (long Count, DateTime Start, DateTime End) GetStatsAndRemoveQuotesIfNeeded(string documentId)

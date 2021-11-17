@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to &&
                         _currentSegment.InvalidLastValue() == false && // legacy issue RavenDB-15645 
-                        _currentSegment.Version != SegmentVersion.DuplicateLast) 
+                        _currentSegment.Version.ContainsLastValueDuplicate == false) 
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment;
@@ -501,17 +501,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
         {
-            switch (_currentSegment.Version)
-            {
-                case SegmentVersion.V50000:
-                case SegmentVersion.Baseline:
-                    return YieldSegmentRaw(baseline, includeDead);
-                case SegmentVersion.ContainDuplicates:
-                case SegmentVersion.DuplicateLast:
-                    return YieldSegmentMergeDuplicates(baseline, includeDead);
-                default:
-                    throw new ArgumentOutOfRangeException($"Unknown version {_currentSegment.Version}");
-            }
+            if(_currentSegment.Version.ContainsDuplicates)
+                return YieldSegmentMergeDuplicates(baseline, includeDead);
+
+            return YieldSegmentRaw(baseline, includeDead);
         }
 
         public IEnumerable<SingleResult> YieldSegmentRaw(DateTime baseline, bool includeDead = false)

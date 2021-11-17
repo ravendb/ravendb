@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
-            Header->Version = SegmentVersion.Baseline; // we might upgrade it later in case of duplicate timestamps
+            Header->Version = SegmentVersion.Create();
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
@@ -246,8 +246,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 Memory.Copy(Header, tempHeader, copiedHeaderSize);
 
-                _recomputeRequired = tempHeader->Version == SegmentVersion.DuplicateLast || 
-                                     tempHeader->Version == SegmentVersion.ContainDuplicates;
+                _recomputeRequired = tempHeader->Version.ContainsDuplicates;
 
                 return true;
             }
@@ -257,13 +256,11 @@ namespace Raven.Server.Documents.TimeSeries
         {
             if (tempHeader->PreviousTimestamp == deltaFromStart)
             {
-                tempHeader->Version = SegmentVersion.DuplicateLast; // last value is a duplicate
+                tempHeader->Version.SetLastValueDuplicate();
             }
             else
             {
-                // contain duplicates but not the last value
-                if (tempHeader->Version == SegmentVersion.DuplicateLast)
-                    tempHeader->Version = SegmentVersion.ContainDuplicates;
+                tempHeader->Version.ClearLastValueDuplicate();
             }
         }
 
@@ -784,7 +781,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (MoveNextInternal(out timestamp, values, state, ref tag, out status) == false)
                         return false;
 
-                    if (_parent.Version == SegmentVersion.V50000 &&  // fix legacy issue RavenDB-15617
+                    if (_parent.Version.Number == TimeSeries.Version.V50000 &&  // fix legacy issue RavenDB-15617
                         previousTimestamp == timestamp)
                         continue;
 
@@ -893,7 +890,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     values[i] = state[i].LastValidValue ^ xorValue;
 
-                    if (_parent.Version == SegmentVersion.V50000 || // backward comp.
+                    if (_parent.Version.Number == TimeSeries.Version.V50000 || // backward comp.
                         IsValid(status, values[i]))
                     {
                         state[i].LastValidValue = values[i];
@@ -961,7 +958,7 @@ namespace Raven.Server.Documents.TimeSeries
         // we will yield all values individually, instead of rely on it. 
         public bool InvalidLastValue()
         {
-            if (Version != SegmentVersion.V50000)
+            if (Version.Number != TimeSeries.Version.V50000)
                 return false;
 
             if (NumberOfLiveEntries == 0)
