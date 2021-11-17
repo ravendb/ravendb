@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
-            Header->Version = SegmentVersion.V50001; // we might upgrade it later in case of duplicate timestamps
+            Header->Version = SegmentVersion.Baseline; // we might upgrade it later in case of duplicate timestamps
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static void MarkDuplicatedIfNeeded(SegmentHeader* tempHeader, int deltaFromStart)
+        private static void UpdateSegmentVersionIfNeeded(SegmentHeader* tempHeader, int deltaFromStart)
         {
             if (tempHeader->PreviousTimestamp == deltaFromStart)
             {
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
             }
 
-            MarkDuplicatedIfNeeded(tempHeader, deltaFromStart);
+            UpdateSegmentVersionIfNeeded(tempHeader, deltaFromStart);
 
             int delta = deltaFromStart - tempHeader->PreviousTimestamp;
             if (delta < 0)
@@ -409,6 +409,7 @@ namespace Raven.Server.Documents.TimeSeries
                 // but will yield wrong result if last value in the entire segment is a duplicate
                 prev.PreviousValue = val; 
 
+            // during recomputation for partial values we pass NaN in the aggregated 
             if (aggregated.HasValue)
             {
                 dblVal = aggregated.Value;
@@ -564,6 +565,16 @@ namespace Raven.Server.Documents.TimeSeries
                     current.CopyTo(prev);
                     for (var index = 0; index < aggregated.Length; index++)
                     {
+                        var aggNaN = double.IsNaN(aggregated[index]);
+                        var valNan = double.IsNaN(current.Values[index]);
+
+                        // in those cases we treat NaN as 0, so NaN + value = value 
+                        if (aggNaN == false && valNan)
+                            continue;
+
+                        if (aggNaN && valNan == false)
+                            aggregated[index] = 0;
+
                         aggregated[index] += current.Values[index];
                     }
                     continue;
