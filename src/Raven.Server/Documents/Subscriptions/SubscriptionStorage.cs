@@ -550,6 +550,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
+            public SubscriptionConnection Connection => Connections?.FirstOrDefault();
             public List<SubscriptionConnection> Connections;
             public IEnumerable<SubscriptionConnection> RecentConnections;
             public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
