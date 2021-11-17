@@ -406,6 +406,11 @@ namespace Raven.Server.Documents.Replication
             {
                 AssertNotTimeSeriesForLegacyReplication(item);
             }
+
+            if (_parent.SupportedFeatures.Replication.IncrementalTimeSeries == false)
+            {
+                AssertNotIncrementalTimeSeriesForLegacyReplication(item);
+            }
         }
 
         private bool CanContinueBatch(ReplicationState state, ref long next)
@@ -431,11 +436,6 @@ namespace Raven.Server.Documents.Replication
                         return false;
                     }
                 }
-            }
-
-            if (_parent.SupportedFeatures.Replication.IncrementalTimeSeries == false)
-            {
-                AssertNotIncrementalTimeSeriesForLegacyReplication(state.Item);
             }
 
             // We want to limit batch sizes to reasonable limits.

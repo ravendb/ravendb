@@ -1,20 +1,15 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
+using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace InterversionTests
 {
-    public class RavenDB_17518 : InterversionTestBase
+    public class RavenDB_17518 : ReplicationTests
     {
         public RavenDB_17518(ITestOutputHelper output) : base(output)
         {
@@ -92,27 +87,44 @@ namespace InterversionTests
             }
         }
 
-        private static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
+        [Fact]
+        public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer2()
         {
-            var csName = $"cs-to-{dst.Database}";
-            var result = await src.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            const string version = "5.2.3";
+            const string incrementalTsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
+            const string docId = "users/1";
+            var baseline = DateTime.UtcNow;
+
+            using (var oldStore = await GetDocumentStoreAsync(version))
+            using (var store = GetDocumentStore())
             {
-                Name = csName,
-                Database = dst.Database,
-                TopologyDiscoveryUrls = new[]
+                using (var session = store.OpenAsyncSession())
                 {
-                    dst.Urls.First()
+                    await session.StoreAsync(new User { Name = "ayende" }, docId);
+                    session.IncrementalTimeSeriesFor(docId, incrementalTsName)
+                        .Increment(baseline, 1);
+                    await session.SaveChangesAsync();
                 }
-            }));
-            Assert.NotNull(result.RaftCommandIndex);
 
-            var op = new UpdateExternalReplicationOperation(new ExternalReplication(dst.Database.ToLowerInvariant(), csName)
-            {
-                Name = $"ExternalReplicationTo{dst.Database}",
-                Url = dst.Urls.First()
-            });
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(docId);
+                    session.IncrementalTimeSeriesFor(u, incrementalTsName)
+                        .Increment(baseline, 1);
 
-            return await src.Maintenance.SendAsync(op);
+                    u.Name = "oren";
+
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplication(store, oldStore);
+
+                var replicationLoader = (await GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
+                Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));
+                Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("IncrementalTimeSeries"))));
+            }
         }
     }
 }
