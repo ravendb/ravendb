@@ -943,23 +943,19 @@ class ongoingTasksStats extends viewModelBase {
 
         this.subscriptionData.forEach(subscriptionTask => {
             const subscriptionName = subscriptionTask.TaskName;
-            let subscription = this.subscriptionToWorkers.get(subscriptionName);
+            const subscription = this.subscriptionToWorkers.get(subscriptionName);
             
             if (subscription) {
                 subscriptionTask.ConnectionPerformance.forEach(connection => {
                     subscription.add(connection.WorkerId);
-                })
+                });
             } else {
                 const workerIds = subscriptionTask.ConnectionPerformance.map(x => x.WorkerId);
-                this.subscriptionToWorkers.set(subscriptionName, new Set<string>());
-                subscription = this.subscriptionToWorkers.get(subscriptionName);
-                workerIds.forEach(x => subscription.add(x));
+                this.subscriptionToWorkers.set(subscriptionName, new Set<string>(workerIds));
             }
             
             const numberOfWorkers = subscription.size;
-            const height = numberOfWorkers === 1 ?
-                ongoingTasksStats.openedSubscriptionTrackHeight :
-                ongoingTasksStats.openedSubscriptionTrackHeight + ((numberOfWorkers-1) * ongoingTasksStats.openedSubscriptionWorkerTrackHeight);
+            const height = ongoingTasksStats.openedSubscriptionTrackHeight + ((numberOfWorkers - 1) * ongoingTasksStats.openedSubscriptionWorkerTrackHeight);
             
             trackInfos.push({
                 name: subscriptionName,
@@ -1281,7 +1277,10 @@ class ongoingTasksStats extends viewModelBase {
             
             let lastErrorPosition = -1000;
 
+            // create map for performance
+            const workerIdToWorkerIndex = new Map<string, number>();
             const workersArray = [...this.subscriptionToWorkers.get(subscriptionItem.TaskName)];
+            workersArray.forEach((workerId, index) => workerIdToWorkerIndex.set(workerId, index));
             
             // Draw connections
             for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
@@ -1295,7 +1294,7 @@ class ongoingTasksStats extends viewModelBase {
                     continue;
                 
                 const workerId = perfWithCache.WorkerId;
-                const workerIndex = workersArray.findIndex(x => x === workerId);
+                const workerIndex = workerIdToWorkerIndex.get(workerId);
                 const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 + (workerIndex * ongoingTasksStats.openedSubscriptionWorkerTrackHeight) : 0;
                 
                 const stripesYStart = yStart + (isOpened ? yOffset : 0);
@@ -1367,6 +1366,11 @@ class ongoingTasksStats extends viewModelBase {
             
             let batchPerfCompleted: string = null;
             
+            // create map for performance
+            const connectionIdToSubscriptionConnectionPerformanceStatsWithCache = new Map<number, SubscriptionConnectionPerformanceStatsWithCache>();
+            connectionPerformance.forEach(item => 
+                connectionIdToSubscriptionConnectionPerformanceStatsWithCache.set((item as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId, item as SubscriptionConnectionPerformanceStatsWithCache));
+            
             // Draw batches
             for (let perfIdx = 0; perfIdx < batchPerfLength; perfIdx++) {
                 const batchPerf = batchPerformance[perfIdx];
@@ -1380,7 +1384,7 @@ class ongoingTasksStats extends viewModelBase {
                 }
                 
                 const workerId = connection.WorkerId;
-                const workerIndex = workersArray.findIndex(x => x === workerId);
+                const workerIndex = workerIdToWorkerIndex.get(workerId);
 
                 const startDate = perfWithCache.StartedAsDate;
                 
@@ -1392,13 +1396,7 @@ class ongoingTasksStats extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding : 0;
-                let stripesYStart;
-                
-                if (workerIndex === 0) {
-                    stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 3 : 0);
-                } else {
-                    stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + (workerIndex * ongoingTasksStats.openedSubscriptionWorkerTrackHeight) + 3 : 0); 
-                }
+                const stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + (workerIndex * ongoingTasksStats.openedSubscriptionWorkerTrackHeight) + 3 : 0);
 
                 context.save();
 
@@ -1417,9 +1415,8 @@ class ongoingTasksStats extends viewModelBase {
                 context.restore();
 
                 batchPerfCompleted = batchPerf.Completed;
-                
-                const parentConnection = connectionPerformance.find(x =>
-                    (x as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId === perfWithCache.ConnectionId) as SubscriptionConnectionPerformanceStatsWithCache;
+
+                const parentConnection = connectionIdToSubscriptionConnectionPerformanceStatsWithCache.get(perfWithCache.ConnectionId);
                 
                 if (!batchPerf.Completed && !parentConnection.Exception) {
                     this.findInProgressAction([batchPerf.Details], extentFunc, x1, stripesYStart, yOffset);
