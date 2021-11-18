@@ -158,6 +158,7 @@ namespace Raven.Client.Documents.Session.Operations
                         HandleCounters(batchResult);
                         break;
                     case CommandType.TimeSeries:
+                    case CommandType.TimeSeriesWithIncrements:
                         //TODO: RavenDB-13474 add to time series cache
                         break;
                     case CommandType.TimeSeriesCopy:
