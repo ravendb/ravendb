@@ -13,7 +13,7 @@ functionStatment
    ;
 
 updateStatement
-   : UPDATE US_OP updateBody* US_CL
+   : UPDATE US_OP updateBody* US_CL EOF
    ;
 
 fromMode
@@ -463,5 +463,6 @@ tsIdentifiers
    ;
 
 updateBody:
-    US_OP US_DATA? US_CL
+   US_OP updateBody* US_CL 
     ;
+
