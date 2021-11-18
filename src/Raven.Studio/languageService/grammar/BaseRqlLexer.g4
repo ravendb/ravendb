@@ -491,17 +491,21 @@ TS_WS
 
 mode UPDATE_STATEMENT;
 US_OP
-   : '{' -> pushMode (UPDATE_STATEMENT)
+   : '{'
    ;
 
 US_CL
    : '}'
    ;
 
+US_WS
+   : [ \n\t\r] -> channel(HIDDEN)
+   ;   
+    
 US_DATA
-   : .+? -> channel (3)
+   : .+? -> channel(3)
    ;
-
+   
 mode JAVASCRIPT_STATEMENT;
 JS_OP
    : '{' -> pushMode (JAVASCRIPT_STATEMENT)
