@@ -136,14 +136,14 @@ namespace Raven.Client.Documents.Session
                 Values = values is double[] doubleValues ? doubleValues : values.ToArray()
             };
 
-            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeriesWithIncrements, Name), out var command))
             {
-                var tsCmd = (TimeSeriesBatchCommandData)command;
+                var tsCmd = (IncrementalTimeSeriesBatchCommandData)command;
                 tsCmd.TimeSeries.Increment(op);
             }
             else
             {
-                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: null, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
+                Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
             }
         }
 
