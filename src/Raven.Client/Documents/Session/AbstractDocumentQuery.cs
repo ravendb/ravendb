@@ -34,7 +34,8 @@ namespace Raven.Client.Documents.Session
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
-
+        private const string DefaultParameterPrefix = "p";
+        private static readonly List<string> _pregeneratedParametersWithDefaultPrefix = Enumerable.Range(0, 128).Select(i => $"{DefaultParameterPrefix}{i.ToInvariantString()}").ToList(); 
         protected QueryOperator DefaultOperator;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -1743,12 +1744,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private string AddQueryParameter(object value)
         {
-            var parameterName = $"{ParameterPrefix}{QueryParameters.Count.ToInvariantString()}";
+            string parameterName;
+            if (ParameterPrefix == DefaultParameterPrefix && QueryParameters.Count < 128)
+                parameterName = _pregeneratedParametersWithDefaultPrefix[QueryParameters.Count];
+            else
+                parameterName = $"{ParameterPrefix}{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
             return parameterName;
         }
 
-        public string ParameterPrefix { get; set; } = "p";
+        public string ParameterPrefix { get; set; } = DefaultParameterPrefix;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private LinkedList<QueryToken> GetCurrentWhereTokens()
