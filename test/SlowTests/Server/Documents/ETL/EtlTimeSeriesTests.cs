@@ -21,6 +21,8 @@ using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -248,6 +250,120 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     }
                 }
             }
+        }
+
+        [Fact(Skip = "RavenDB-17540")]
+        public async Task IncrementalEtlShouldWork()
+        {
+            string[] collections = { "Users" };
+            //The script clone because the same object can't be loaded twice - https://issues.hibernatingrhinos.com/issue/RavenDB-15065
+            string script = @"
+loadToPeople(this);
+var clone = JSON.parse(JSON.stringify(this));
+loadToUsers(clone);
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return true;
+}";
+            var time = new DateTime(2020, 04, 27);
+            const string timeSeriesName = "INC:Heartrate";
+            const double value = 58d;
+            const string documentId = "users/1";
+
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+
+            WaitForUserToContinueTheTest(src);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                var entity = new User { Name = "Joe Doe" };
+                await session.StoreAsync(entity, documentId);
+                session.IncrementalTimeSeriesFor(documentId, timeSeriesName).Increment(time, value);
+
+                await session.SaveChangesAsync();
+            }
+
+            await AssertWaitForNotNullAsync(async () =>
+            {
+                using var session = dest.OpenAsyncSession();
+                return await session.LoadAsync<User>(documentId);
+            }, interval: _waitInterval);
+
+            var timeSeries = await AssertWaitForIncTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+
+            Assert.Equal(time, timeSeries.Timestamp);
+            Assert.Equal(value, timeSeries.Value);
+        }
+
+        [Fact(Skip = "RavenDB-17540")]
+        public async Task RavenEtlWithIncrementalTimeSeries()
+        {
+            const string docId = "users/1";
+            const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
+            var baseline = DateTime.UtcNow;
+
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+
+            var etlDone = WaitForEtl(src, (s, statistics) => statistics.LastProcessedEtag > 21);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User(), docId);
+                await session.SaveChangesAsync();
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                using (var session = src.OpenAsyncSession())
+                {
+                    var tsf = session.IncrementalTimeSeriesFor(docId, tsName);
+                    {
+                        tsf.Increment(baseline.AddMinutes(i), 1);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+            }
+            
+
+            Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+
+            using (var session = dest.OpenAsyncSession())
+            {
+                var result = await session.IncrementalTimeSeriesFor(docId, tsName).GetAsync();
+                Assert.Equal(10, result.Sum(x => x.Value));
+            }
+        }
+
+        [Fact]
+        public async Task BlockRavenEtlWithIncrementalTimeSeries()
+        {
+            const string docId = "users/1";
+            const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
+            var baseline = DateTime.UtcNow;
+
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User(), docId);
+                var tsf = session.IncrementalTimeSeriesFor(docId, tsName);
+                tsf.Increment(baseline, 1);
+
+                await session.SaveChangesAsync();
+            }
+            var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}/ETL : {src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}";
+            var database = await GetDocumentDatabaseInstanceFor(src);
+
+            var err = await AssertWaitForNotNullAsync(() =>
+            {
+                var res = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>("Raven ETL", connectionStringName, AlertType.Etl_LoadError)
+                    .Errors.FirstOrDefault();
+                return Task.FromResult(res);
+            });
+
+            Assert.Contains("System.NotSupportedException: Load isn't support for incremental time series 'INC:HeartRate' at document 'users/1'", err!.Error);
         }
 
         [Fact]
@@ -2041,6 +2157,16 @@ loadToUsers({
             {
                 using var session = store.OpenAsyncSession();
                 var timeSeriesEntries = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(timeDate, timeDate);
+                return timeSeriesEntries?.FirstOrDefault();
+            }, interval: 1000);
+        }
+
+        private async Task<TimeSeriesEntry> AssertWaitForIncTimeSeriesEntry(IDocumentStore store, string documentId, string timeSeriesName, DateTime timeDate)
+        {
+            return await AssertWaitForNotNullAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var timeSeriesEntries = await session.IncrementalTimeSeriesFor(documentId, timeSeriesName).GetAsync(timeDate, timeDate);
                 return timeSeriesEntries?.FirstOrDefault();
             }, interval: 1000);
         }
