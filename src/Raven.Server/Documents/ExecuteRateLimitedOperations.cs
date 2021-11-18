@@ -44,8 +44,8 @@ namespace Raven.Server.Documents
 
         public override long Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
         {
-
-            while (_documentIds.Count > 0)
+            var count = 0;
+            foreach (T id in _documentIds)
             {
                 _cancellationToken.ThrowIfCancellationRequested();
 
@@ -57,13 +57,11 @@ namespace Raven.Server.Documents
                     break;
                 }
 
-                var id = _documentIds.Dequeue();
-
+                count++;
                 var command = _commandToExecute(id);
                 try
                 {
-                    var count = command?.Execute(context, recording) ?? 0;
-                    Processed += count;
+                    Processed += command?.Execute(context, recording) ?? 0;
                 }
                 finally
                 {
@@ -80,6 +78,18 @@ namespace Raven.Server.Documents
                     break;
             }
 
+            var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+            tx.OnDispose += _ =>
+            {
+                if (tx.Committed == false)
+                    return;
+
+                for (int i = 0; i < count; i++)
+                {
+                    _documentIds.Dequeue();
+                }
+            };
+            
             return Processed;
         }
 

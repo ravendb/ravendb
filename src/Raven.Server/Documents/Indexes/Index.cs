@@ -1983,7 +1983,7 @@ namespace Raven.Server.Documents.Indexes
                                 llt.ImmutableExternalState = IndexPersistence.BuildStreamCacheAfterTx(llt.Transaction);
                             };
 
-                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += llt =>
+                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += llt =>
                             {
                                 IndexPersistence.PublishIndexCacheToNewTransactions((IndexTransactionCache)llt.ImmutableExternalState);
 
