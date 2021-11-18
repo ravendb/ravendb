@@ -570,7 +570,7 @@
 
 <script type="text/html" id="name-template">
     <h3>
-        <a href="#" data-bind="click: editTask, attr: { 'title': 'Task name: ' + taskName() }">
+        <a href="#" data-bind="click: editTask, attr: { href: editUrl(), 'title': 'Task name: ' + taskName() }">
             <span data-bind="text: taskName"></span>
         </a>
     </h3>
