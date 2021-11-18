@@ -67,15 +67,22 @@ class queryCriteria {
             hash: genUtils.hashCode(name + (queryText || "")) } as storedQueryDto;
     }
 
-    setSelectedIndex(indexName: string) {
+    setSelectedIndex(indexName: string): void {
         let rql = "from ";
-        if (indexName.startsWith(queryUtil.DynamicPrefix)) {
+
+        if (indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix) && indexName.includes("'")) {
+            rql += `index "${indexName}"`;
+
+        } else  if (indexName.startsWith(queryUtil.DynamicPrefix)) {
             rql += indexName.substring(queryUtil.DynamicPrefix.length);
+
         } else if (indexName === queryUtil.AllDocs) {
             rql += "@all_docs";
+
         } else {
             rql += "index '" + indexName + "'";
         }
+
         this.queryText(rql);
     }
 
