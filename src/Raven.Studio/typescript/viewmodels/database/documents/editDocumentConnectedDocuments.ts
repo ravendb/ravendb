@@ -253,7 +253,7 @@ class connectedDocuments {
                     if (column.header === "Timeseries date range") {
                         onValue(timeSeriesItem.startDate + " - " + timeSeriesItem.endDate);
                     } else if (column.header === "Timeseries items count") {
-                        onValue(timeSeriesItem.numberOfEntries);
+                        onValue(timeSeriesItem.numberOfEntries.toLocaleString());
                     } else {
                         const value = column.getCellValue(item);
                         onValue(value);
