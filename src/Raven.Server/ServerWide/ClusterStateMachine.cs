@@ -1233,7 +1233,7 @@ namespace Raven.Server.ServerWide
 
         private void ExecuteManyOnDispose(ClusterOperationContext context, long index, string type, List<Func<Task>> tasks)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
             {
                 _rachisLogIndexNotifications.AddTask(index);
                 var count = tasks.Count;
@@ -2181,7 +2181,7 @@ namespace Raven.Server.ServerWide
 
         private void NotifyValueChanged(ClusterOperationContext context, string type, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
@@ -2197,7 +2197,7 @@ namespace Raven.Server.ServerWide
         {
             Debug.Assert(changeState.ContainsBlittableObject() == false, "You cannot use a blittable in the command state, since this is handled outside of the transaction");
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
                 _rachisLogIndexNotifications.AddTask(index);
@@ -2738,7 +2738,7 @@ namespace Raven.Server.ServerWide
 
         private void OnTransactionDispose(ClusterOperationContext context, long index)
         {
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
             {
                 _rachisLogIndexNotifications.AddTask(index);
                 NotifyAndSetCompleted(index);
