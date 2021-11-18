@@ -786,7 +786,7 @@ namespace Raven.Server.Rachis
 
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
-            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented +=
+            context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented +=
                 _ => CurrentState = rachisState; //  we need this to happened while we still under the write lock
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
