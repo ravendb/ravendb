@@ -521,6 +521,38 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task RavenDB_17124()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var hubServer = GetNewServer(new ServerCreationOptions() { NodeTag = "A" }))
+            using (var sinkServer1 = GetNewServer(new ServerCreationOptions() { NodeTag = "B" }))
+            using (var sinkServer2 = GetNewServer(new ServerCreationOptions() { NodeTag = "C" }))
+            using (var hub = GetDocumentStore(new Options() { Server = hubServer }))
+            using (var sink1 = GetDocumentStore(new Options() { Server = sinkServer1 }))
+            using (var sink2 = GetDocumentStore(new Options() { Server = sinkServer2 }))
+            {
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupPullReplicationAsync(name, sink1, hub);
+                await SetupPullReplicationAsync(name, sink2, hub);
+
+                var handler = await InstantiateOutgoingTaskHandler(hub.Database, hubServer);
+
+                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink1.Database, StringComparison.OrdinalIgnoreCase) &&
+                    t.DestinationUrl == sink1.Urls.FirstOrDefault())));
+                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink2.Database, StringComparison.OrdinalIgnoreCase) &&
+                    t.DestinationUrl == sink2.Urls.FirstOrDefault())));
+            }
+        }
+
+        [Fact]
         public async Task FailoverOnSinkNodeFail()
         {
             var clusterSize = 3;
