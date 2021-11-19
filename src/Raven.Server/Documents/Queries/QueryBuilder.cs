@@ -516,9 +516,10 @@ namespace Raven.Server.Documents.Queries
 
                     if (TryUseTime(index, fieldName, valueFirst, valueSecond, exact, out var ticksFirst, out var ticksSecond))
                     {
+                        luceneFieldName += Constants.Documents.Indexing.Fields.TimeFieldSuffix;
                         betweenQuery = index.Configuration.QueryClauseCacheDisabled ?
                             LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive) :
-                            TranslateDateTimeBetween(index, be, fieldName, ticksFirst, ticksSecond);
+                            TranslateDateTimeBetween(index, be, new QueryFieldName(luceneFieldName, fieldName.IsQuoted), ticksFirst, ticksSecond);
                     }
                     else
                     {
