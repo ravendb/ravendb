@@ -569,7 +569,7 @@
 
 <script type="text/html" id="name-template">
     <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
-        <a href="#" data-bind="if: !isServerWide(), click: editTask"><span data-bind="text: taskName"></span></a>
+        <a href="#" data-bind="if: !isServerWide(), click: editTask, attr: { href: editUrl() }"><span data-bind="text: taskName"></span></a>
         <span data-bind="if: isServerWide()"><span data-bind="text: taskName"></span></span>
     </h3>
 </script>
