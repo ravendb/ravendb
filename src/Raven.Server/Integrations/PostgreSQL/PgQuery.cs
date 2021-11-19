@@ -51,7 +51,14 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return powerBiQuery;
                 }
 
-                return new HardcodedQuery(queryText, parametersDataTypes);
+                if (HardcodedQuery.TryParse(queryText, parametersDataTypes, out var hardcodedQuery))
+                    return hardcodedQuery;
+
+                throw new PgErrorException(
+                    PgErrorCodes.StatementTooComplex,
+                    "Unhandled query (Are you using ; in your query? " +
+                    "That is likely causing Power BI to split the query and results in partial queries): " +
+                    $"{queryText}");
             }
             catch (Exception e)
             {
