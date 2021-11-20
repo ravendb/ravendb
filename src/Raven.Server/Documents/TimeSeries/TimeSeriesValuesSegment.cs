@@ -182,6 +182,15 @@ namespace Raven.Server.Documents.TimeSeries
 
                 AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
+                if (NumberOfLiveEntries == 0 &&
+                    status == Live)
+                {
+                    for (int i = 0; i < vals.Length; i++)
+                    {
+                        prevs[i].Max = prevs[i].Min = prevs[i].First = double.NaN;
+                    }
+                }
+
                 for (int i = 0; i < vals.Length; i++)
                 {
                     AddValue(ref prevs[i], ref tempBitsBuffer, vals[i], status, aggregated.Length > 0 ? aggregated[i] : null);
