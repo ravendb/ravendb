@@ -179,7 +179,8 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 Debug.Assert(cachedQueries != null, nameof(cachedQueries) + " != null");
                 var queryCacheKey = new QueryCacheKey { Owner = cachedQueries.UniqueId, Query = _parent._query, };
                 DateTime now = DateTime.UtcNow;
-                if (clauseCache.TryGetValue(queryCacheKey, out FastBitArray results) == false)
+                FastBitArray results;
+                if (clauseCache.TryGetValue(queryCacheKey, out ulong[] buffer) == false)
                 {
                     var scorer = _inner.Scorer(reader, scoreDocsInOrder, topScorer, state);
                     // we only add the clause to the cache after if we see it more than once in a 5 minutes period
@@ -221,6 +222,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                             }
                         });
                     cachedQueries.CachedQueries.Add(queryCacheKey.Query);
+                }
+                else
+                {
+                    results = new FastBitArray(buffer);
                 }
 
                 Similarity similarity = _parent.GetSimilarity(_searcher);
