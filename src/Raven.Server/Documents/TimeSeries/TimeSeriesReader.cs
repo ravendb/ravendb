@@ -49,6 +49,15 @@ namespace Raven.Server.Documents.TimeSeries
         public void CopyTo(SingleResult dest)
         {
             dest.Status = Status;
+
+            if (dest.Values.Length < Values.Length)
+                dest.Values = new double[Values.Length];
+
+            for (int i = Values.Length; i < dest.Values.Length; i++)
+            {
+                dest.Values.Span[i] = 0;
+            }
+
             Values.CopyTo(dest.Values);
             dest.Tag = Tag?.CloneOnSameContext();
             dest.Type = Type;

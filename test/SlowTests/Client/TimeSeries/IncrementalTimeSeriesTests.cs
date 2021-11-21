@@ -18,11 +18,11 @@ using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Client.TimeSeries.Issues
+namespace SlowTests.Client.TimeSeries
 {
-    public class RavenDB_15804 : ReplicationTestBase
+    public class IncrementalTimeSeriesTests : ReplicationTestBase
     {
-        public RavenDB_15804(ITestOutputHelper output) : base(output)
+        public IncrementalTimeSeriesTests(ITestOutputHelper output) : base(output)
         {
 
         }
@@ -245,7 +245,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     for (int i = 0; i < tsA.Length; i++)
                     {
-                        Assert.True(Equals(tsA[i], tsB[i]));
+                        Assert.True(Equals(tsA[i], tsB[i]), $"{tsA[i]} vs {tsB[i]}");
                     }
                 }
             }
@@ -303,24 +303,24 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         var incrementOperations = new List<SingleResult>();
 
-                        for (int i = 0; i < 50; i++)
+                        for (int i = 0; i < 25; i++)
                         {
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
 
-                        for (int i = 0; i < 90; i++)
+                        for (int i = 0; i < 45; i++)
                         {
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.AddMinutes(1).EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -340,8 +340,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get();
 
                     Assert.Equal(2, ts.Length);
-                    Assert.Equal(50, ts[0].Value);
-                    Assert.Equal(90, ts[1].Value);
+                    Assert.Equal(25, ts[0].Value);
+                    Assert.Equal(45, ts[1].Value);
                 }
             }
         }
@@ -599,7 +599,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                                 {
                                     Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                     Values = new double[] { i },
-                                    Tag = context.GetLazyString("TC:INC-" + i)
+                                    Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                                 };
                                 incrementOperations.Add(singleResult);
                             }
@@ -650,7 +650,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         {
                             Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                             Values = new double[] { -100 },
-                            Tag = contextA.GetLazyString("TC:DEC-test")
+                            Tag = contextA.GetLazyString("TC:DEC-"+1.ToString("D22"))
                         };
                         incrementOperations.Add(singleResult);
 
@@ -675,7 +675,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         {
                             Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                             Values = new double[] { -2 },
-                            Tag = contextB.GetLazyString("TC:DEC-test")
+                            Tag = contextB.GetLazyString("TC:DEC-"+1.ToString("D22"))
                         };
                         incrementOperations.Add(singleResult);
 
@@ -743,7 +743,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         {
                             Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                             Values = new double[] { 100 },
-                            Tag = contextA.GetLazyString("TC:INC-test")
+                            Tag = contextA.GetLazyString("TC:INC-"+1.ToString("D22"))
                         };
                         incrementOperations.Add(singleResult);
 
@@ -768,7 +768,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         {
                             Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                             Values = new double[] { 2 },
-                            Tag = contextB.GetLazyString("TC:INC-test")
+                            Tag = contextB.GetLazyString("TC:INC-"+1.ToString("D22"))
                         };
                         incrementOperations.Add(singleResult);
 
@@ -805,7 +805,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-17557")]
         public async Task ReplicationShouldNotCollapseWhenSegmentReachedCapacity()
         {
             var baseline = DateTime.Today;
@@ -837,8 +837,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
-                                Values = new double[] { 1 },
-                                Tag = contextA.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Values = new double[] { i },
+                                Tag = contextA.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -860,13 +860,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         var incrementOperations = new List<SingleResult>();
 
-                        for (int i = 0; i < 50; i++)
+                        for (int i = 50; i < 100; i++)
                         {
                             var singleResult = new SingleResult
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
-                                Values = new double[] { 1 },
-                                Tag = contextB.GetLazyString("TC:INC-test-2-" + i.ToString("000"))
+                                Values = new double[] { i },
+                                Tag = contextB.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -882,9 +882,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
 
                 await SetupReplicationAsync(storeA, storeB);
-                await SetupReplicationAsync(storeB, storeA);
-
                 await EnsureReplicatingAsync(storeA, storeB);
+
+                await SetupReplicationAsync(storeB, storeA);
                 await EnsureReplicatingAsync(storeB, storeA);
 
                 await EnsureNoReplicationLoop(Server, storeA.Database);
@@ -898,8 +898,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(tsA.Length, tsB.Length);
                     for (int i = 0; i < tsA.Length; i++)
-                        Assert.True(Equals(tsA[i], tsB[i]));
-
+                        Assert.True(Equals(tsA[i], tsB[i]),$"{tsA[i]} vs {tsB[i]}");
 
                     var dbA = await this.GetDocumentDatabaseInstanceFor(storeA);
                     var count = dbA.NotificationCenter.GetAlertCount();
@@ -949,7 +948,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -998,7 +997,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         {
                             Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                             Values = new double[] { 10 },
-                            Tag = context.GetLazyString("TC:INC-test-1-001")
+                            Tag = context.GetLazyString("TC:INC-"+1.ToString("D22"))
                         };
                         incrementOperations.Add(singleResult);
 
@@ -1008,7 +1007,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             {
                                 Timestamp = baseline.AddMinutes(1).EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1 },
-                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -1060,7 +1059,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                             {
                                 Timestamp = baseline.EnsureUtc().EnsureMilliseconds(),
                                 Values = new double[] { 1, 1, 1 },
-                                Tag = context.GetLazyString("TC:INC-test-1-" + i.ToString("000"))
+                                Tag = context.GetLazyString("TC:INC-" + i.ToString("D22"))
                             };
                             incrementOperations.Add(singleResult);
                         }
@@ -1552,6 +1551,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
+                WaitForUserToContinueTheTest(storeB);
+
                 await EnsureReplicatingAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeB, storeA);
 
@@ -1640,6 +1641,65 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
+
+        [Fact]
+        public async Task IncrementalTimeSeriesQueryShouldWorkInACluster()
+        {
+            var cluster = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Oren"}, "products/77-A");
+                    await session.SaveChangesAsync();
+                }
+
+                await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "products/77-A", predicate: null, timeout: TimeSpan.FromSeconds(30));
+
+                for (int j = 0; j < 10; j++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.IncrementalTimeSeriesFor("products/77-A", $"INC:Views").Increment(1);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                WaitForUserToContinueTheTest(store);
+                var stores = GetDocumentStores(cluster.Nodes, store.Database, disableTopologyUpdates: true);
+                using (var sessionA = stores[0].OpenSession())
+                using (var sessionB = stores[1].OpenSession())
+                using (var sessionC = stores[2].OpenSession())
+                {
+                    await EnsureReplicatingAsync(stores[0], stores[1]);
+                    await EnsureReplicatingAsync(stores[1], stores[2]);
+                    await EnsureReplicatingAsync(stores[2], stores[0]);
+
+                    var tsA = sessionA.IncrementalTimeSeriesFor("products/77-A", $"INC:Views").Get();
+                    var tsB = sessionB.IncrementalTimeSeriesFor("products/77-A", $"INC:Views").Get();
+                    var tsC = sessionC.IncrementalTimeSeriesFor("products/77-A", $"INC:Views").Get();
+
+                    Assert.Equal(tsA.Length, tsB.Length);
+                    Assert.Equal(tsA.Length, tsC.Length);
+                    Assert.Equal(100, tsA.Sum(x => x.Value));
+
+                    for (int i = 0; i < tsA.Length; i++)
+                    {
+                        Assert.True(Equals(tsA[i], tsB[i]),$"{tsA[i]} vs {tsB[i]}");
+                        Assert.True(Equals(tsA[i], tsC[i]),$"{tsA[i]} vs {tsC[i]}");
+                    }
+                }
+            }
+        }
+
         [Fact]
         public async Task CanQueryDuplicateValues()
         {
@@ -1660,14 +1720,14 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
                         Values = new double[] {1},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 1.ToString("D22"))
                     });
 
                     incrementOperations.Add(new SingleResult
                     {
                         Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
                         Values = new double[] {3},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 2.ToString("D22"))
                     });
 
 
@@ -1675,14 +1735,14 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
                         Values = new double[] {-4},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 1.ToString("D22"))
                     });
 
                     incrementOperations.Add(new SingleResult
                     {
                         Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
                         Values = new double[] {4},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 2.ToString("D22"))
                     });
 
                     using (var tx = context.OpenWriteTransaction())
@@ -1762,14 +1822,14 @@ select timeseries(
                     {
                         Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
                         Values = new double[] {1},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 1.ToString("D22"))
                     });
 
                     incrementOperations.Add(new SingleResult
                     {
                         Timestamp = DateTime.Parse("2020-04-04T11:50:00"),
                         Values = new double[] {3},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 2.ToString("D22"))
                     });
 
 
@@ -1777,21 +1837,21 @@ select timeseries(
                     {
                         Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
                         Values = new double[] {-4},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 1.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 1.ToString("D22"))
                     });
 
                     incrementOperations.Add(new SingleResult
                     {
                         Timestamp = DateTime.Parse("2020-04-04T12:00:00"),
                         Values = new double[] {4},
-                        Tag = context.GetLazyString("TC:INC-test-1-" + 2.ToString("000"))
+                        Tag = context.GetLazyString("TC:INC-" + 2.ToString("D22"))
                     });
 
                     incrementOperations.Add(new SingleResult
                     {
                         Timestamp = DateTime.Parse("2020-04-04T12:10:00"),
                         Values = new double[] {-4},
-                        Tag = context.GetLazyString("TC:DEC-test-1-" + 3.ToString("000"))
+                        Tag = context.GetLazyString("TC:DEC-" + 3.ToString("D22"))
                     });
 
                     using (var tx = context.OpenWriteTransaction())
