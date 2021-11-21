@@ -63,6 +63,8 @@ namespace Voron.Debugging
         private readonly LowLevelTransaction _tx;
         private StreamDetails _skippedStreamsDetailsEntry;
 
+        public const string SkippedStreamsDetailsName = "Stream details summary info";
+
         public StorageReportGenerator(LowLevelTransaction tx)
         {
             _tx = tx;
@@ -97,23 +99,23 @@ namespace Voron.Debugging
                 trees.Add(treeReport);
             }
 
-            long fixedTreesAllocatedSpaceInBytes = 0;
+            long _fixedTreesAllocatedSpaceInBytes = 0;
             foreach (var fst in input.FixedSizeTrees)
             {
                 var treeReport = GetReport(fst, input.IncludeDetails);
                 trees.Add(treeReport);
 
-                fixedTreesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                _fixedTreesAllocatedSpaceInBytes  += treeReport.AllocatedSpaceInBytes;
             }
 
-            long tablesAllocatedSpaceInBytes = 0;
+            long _tablesAllocatedSpaceInBytes = 0;
             var tables = new List<TableReport>();
             foreach (var table in input.Tables)
             {
                 var tableReport = table.GetReport(input.IncludeDetails, this);
                 tables.Add(tableReport);
 
-                tablesAllocatedSpaceInBytes += tableReport.AllocatedSpaceInBytes;
+                _tablesAllocatedSpaceInBytes  += tableReport.AllocatedSpaceInBytes;
             }
 
             var journals = new JournalsReport
@@ -133,13 +135,13 @@ namespace Voron.Debugging
                 // so we calculate the original size as if we read the streams by:
                 // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
 
-                var skippedStreamsAllocatedSpaceInBytes = dataFile.AllocatedSpaceInBytes - dataFile.FreeSpaceInBytes - tablesAllocatedSpaceInBytes - preAllocatedBuffers.OriginallyAllocatedSpaceInBytes - fixedTreesAllocatedSpaceInBytes;
+                var skippedStreamsAllocatedSpaceInBytes = dataFile.AllocatedSpaceInBytes - dataFile.FreeSpaceInBytes - _tablesAllocatedSpaceInBytes  - preAllocatedBuffers.OriginallyAllocatedSpaceInBytes - _fixedTreesAllocatedSpaceInBytes ;
                 _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
                 _skippedStreamsDetailsEntry.Length = skippedStreamsAllocatedSpaceInBytes;
 
                 foreach (var tree in trees)
                 {
-                    if (tree.Streams?.Streams != null && tree.Streams.Streams[0].Name == "Stream details summary info")
+                    if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
                     {
                         tree.Streams.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
                         tree.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
@@ -362,7 +364,7 @@ namespace Voron.Debugging
 
                 _skippedStreamsDetailsEntry = new StreamDetails
                 {
-                    Name = "Stream details summary info",
+                    Name = SkippedStreamsDetailsName,
                     AllocatedSpaceInBytes = 0,
                     ChunksTree = new TreeReport(),
                     Length = 0,
