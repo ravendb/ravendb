@@ -1057,13 +1057,12 @@ namespace Raven.Server.Documents.TimeSeries
                     var segmentLastTimestamp = segment.GetLastTimestamp(BaselineDate);
                     if (segmentLastTimestamp == BaselineDate && time == segmentLastTimestamp) // all the entries in the segment has the same timestamp
                     {
-                        if (FromReplication == false)
-                            throw new InvalidDataException(
-                                $"Segment reached to capacity and cannot receive more values with {time} timestamp on time series {_name} for {_docId} . " +
-                                "You may choose a different timestamp.");
+                        if (FromReplication)
+                            RaiseAlertOnMaxCapacityForSingleSegmentReached(values);
 
-                        DiscardsAllEntriesAtSameTimestampToSingleDeadEntry(ref segment, tagSlice, values);
-                        return;
+                        throw new InvalidDataException(
+                            $"Segment reached to capacity and cannot receive more values with {time} timestamp on time series {_name} for {_docId} on database '{_tss._documentDatabase.Name}'. " +
+                            "You may choose a different timestamp.");
                     }
 
                     if (segmentLastTimestamp == time) // special split segment case
@@ -1349,14 +1348,164 @@ namespace Raven.Server.Documents.TimeSeries
             return context.GetLazyString(value);
         }
 
+        private class IncrementalEnumerator : AppendEnumerator
+        {
+            public IncrementalEnumerator(string documentId, string name, IEnumerable<SingleResult> toAppend, bool fromReplication) : base(documentId, name, toAppend, fromReplication)
+            {
+            }
+
+            private readonly int _tagLength = IncrementPrefixBuffer.Length + 22; // TC:XXX-dbid
+
+
+            private bool MoveNextFromReplication()
+            {
+                if (ToAppend.MoveNext() == false)
+                {
+                    if (_current != null) 
+                        Last = _current.Timestamp;
+
+                    _current = null;
+                    return false;
+                }
+
+                var time = EnsureMillisecondsPrecision(ToAppend.Current!.Timestamp);
+                if (_current == null) 
+                    First = time;
+
+                _current = ToAppend.Current;
+                _current!.Timestamp = time;
+                AssertResult(_current);
+                return true;
+            }
+
+            public override bool MoveNext()
+            {
+                if (FromReplication)
+                    return MoveNextFromReplication();
+
+                return MoveNextWithTagMerging();
+            }
+
+            private SingleResult _next;
+
+            private bool MoveNextWithTagMerging()
+            {
+                if (_next == null)
+                {
+                    if (ToAppend.MoveNext() == false)
+                    {
+                        if (_current != null) 
+                            Last = _current.Timestamp;
+
+                        _current = null;
+                        return false;
+                    }
+
+                    var time = EnsureMillisecondsPrecision(ToAppend.Current!.Timestamp);
+                    if (_current == null) 
+                        First = time;
+
+                    _current ??= new SingleResult();
+
+                    ToAppend.Current.CopyTo(_current);
+                    _current!.Timestamp = time;
+                    AssertResult(_current);
+                }
+                else
+                {
+                    _current = _next;
+                    _next = null;
+                }
+
+                while (true)
+                {
+                    if (ToAppend.MoveNext() == false)
+                    {
+                        _next = null;
+                        break;
+                    }
+
+                    _next ??= new SingleResult();
+
+                    ToAppend.Current.CopyTo(_next);
+                    _next!.Timestamp = EnsureMillisecondsPrecision(_next.Timestamp);
+
+                    AssertResult(_next);
+
+                    if (_current.Timestamp > _next.Timestamp)
+                        throw new InvalidDataException($"The entries of '{Name}' incremental time-series for document '{DocumentId}' must be sorted by their timestamps. " +
+                                                       $"Got: current '{_current.Timestamp:O}'.");
+
+                    if (_current.Timestamp == _next.Timestamp)
+                    {
+                        var tagCompare = _current.Tag.CompareTo(_next.Tag);
+                        if (tagCompare > 0)
+                            throw new InvalidDataException(
+                                $"Entries to append are out of tag order for '{Name}' time-series for document '{DocumentId}' at '{_current.Timestamp:O}' (current:{_current.Tag}, next:{_next.Tag})");
+
+                        // note that we can have a situation like Inc(1,-1) followed by Inc(1,1) at the same timestamp
+                        // which will cause out of order that we don't what to handle and will throw
+                        if (tagCompare == 0)
+                        {
+
+                            if (FromReplication)
+                                throw new InvalidDataException(
+                                    $"Got an invalid segment from replication for '{Name}' time-series for document '{DocumentId}', segment contain duplicate timestamp and tag at '{_current.Timestamp:O}'");
+
+                            for (int i = 0; i < _next.Values.Length; i++)
+                            {
+                                _current.Values.Span[i] += _next.Values.Span[i];
+                            }
+
+                            continue;
+                        }
+                    }
+
+                    break;
+                }
+
+                IteratedValues++;
+                return true;
+            }
+
+            private void AssertTag(SingleResult next)
+            {
+                if (FromReplication)
+                {
+                    if (next.Status == TimeSeriesValuesSegment.Dead)
+                        return;
+                }
+
+                if (next.Tag?.Length != _tagLength)
+                    throw new InvalidDataException($"Tag of '{Name}' time-series for document '{DocumentId}' are illegal (Tag:{next.Tag})");
+            }
+
+            private void AssertValues(SingleResult next)
+            {
+                if (next.Values.Length == 0 && // dead values can have 0 length
+                    next.Status == TimeSeriesValuesSegment.Live)
+                    throw new InvalidDataException($"The entries of '{Name}' time-series for document '{DocumentId}' must contain at least one value");
+
+                if (FromReplication)
+                    return;
+             
+                AssertNoNanValue(next);
+            }
+
+            private void AssertResult(SingleResult result)
+            {
+                AssertValues(result);
+                AssertTag(result);
+            }
+        }
+
         private class AppendEnumerator : IEnumerator<SingleResult>
         {
-            private readonly string _documentId;
-            private readonly string _name;
-            private readonly bool _fromReplication;
-            private readonly IEnumerator<SingleResult> _toAppend;
-            private readonly bool _incrementalTimeSeries;
-            private SingleResult _current;
+            protected readonly string DocumentId;
+            protected readonly string Name;
+            protected readonly bool FromReplication;
+            protected readonly IEnumerator<SingleResult> ToAppend;
+            protected SingleResult _current;
 
             public DateTime Last;
             public DateTime First;
@@ -1364,17 +1513,16 @@ namespace Raven.Server.Documents.TimeSeries
 
             public AppendEnumerator(string documentId, string name, IEnumerable<SingleResult> toAppend, bool fromReplication)
             {
-                _documentId = documentId;
-                _name = name;
-                _fromReplication = fromReplication;
-                _toAppend = toAppend.GetEnumerator();
-                _incrementalTimeSeries = TimeSeriesHandler.CheckIfIncrementalTs(name);
+                DocumentId = documentId;
+                Name = name;
+                FromReplication = fromReplication;
+                ToAppend = toAppend.GetEnumerator();
             }
 
-            public bool MoveNext()
+            public virtual bool MoveNext()
             {
                 var currentTimestamp = _current?.Timestamp;
-                if (_toAppend.MoveNext() == false)
+                if (ToAppend.MoveNext() == false)
                 {
                     if (_current != null)
                         Last = _current.Timestamp;
@@ -1383,25 +1531,22 @@ namespace Raven.Server.Documents.TimeSeries
                     return false;
                 }
 
-                var next = _toAppend.Current;
+                var next = ToAppend.Current;
                 next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
 
                 if (_current == null)
                     First = next.Timestamp;
 
-                if (_incrementalTimeSeries == false && currentTimestamp >= next.Timestamp)
-                    throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
-                                                   $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
-
-                if (_incrementalTimeSeries && currentTimestamp > next.Timestamp)
-                    throw new InvalidDataException($"The entries of '{_name}' incremental time-series for document '{_documentId}' must be sorted by their timestamps. " +
-                                                   $"Got: current '{currentTimestamp:O}'.");
+                if (currentTimestamp >= next.Timestamp)
+                    throw new InvalidDataException(
+                        $"The entries of '{Name}' time-series for document '{DocumentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
+                        $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
 
                 if (next.Values.Length == 0 && // dead values can have 0 length
                     next.Status == TimeSeriesValuesSegment.Live)
-                    throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must contain at least one value");
+                    throw new InvalidDataException($"The entries of '{Name}' time-series for document '{DocumentId}' must contain at least one value");
 
-                if (_fromReplication == false)
+                if (FromReplication == false)
                 {
                     AssertNoNanValue(next);
                 }
@@ -1422,7 +1567,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void Dispose()
             {
-                _toAppend.Dispose();
+                ToAppend.Dispose();
             }
         }
 
@@ -1449,7 +1594,11 @@ namespace Raven.Server.Documents.TimeSeries
                 VerifyLegalName(name);
             }
 
-            using (var appendEnumerator = new AppendEnumerator(documentId, name, toAppend, changeVectorFromReplication != null))
+            var appendEnumerator = TimeSeriesHandler.CheckIfIncrementalTs(name)
+                ? new IncrementalEnumerator(documentId, name, toAppend, changeVectorFromReplication != null)
+                : new AppendEnumerator(documentId, name, toAppend, changeVectorFromReplication != null);
+
+            using (appendEnumerator)
             {
                 while (appendEnumerator.MoveNext())
                 {
