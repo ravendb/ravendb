@@ -111,7 +111,7 @@ namespace InterversionTests
             }
         }
 
-        protected static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
+        internal static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
         {
             var csName = $"cs-to-{dst.Database}";
             var result = await src.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString

@@ -2,16 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static InterversionTests.ReplicationTests;
 
 namespace InterversionTests
 {
@@ -131,29 +127,6 @@ namespace InterversionTests
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("IncrementalTimeSeries"))));
             }
-        }
-
-        private static async Task<ModifyOngoingTaskResult> SetupReplication(IDocumentStore src, IDocumentStore dst)
-        {
-            var csName = $"cs-to-{dst.Database}";
-            var result = await src.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
-            {
-                Name = csName,
-                Database = dst.Database,
-                TopologyDiscoveryUrls = new[]
-                {
-                    dst.Urls.First()
-                }
-            }));
-            Assert.NotNull(result.RaftCommandIndex);
-
-            var op = new UpdateExternalReplicationOperation(new ExternalReplication(dst.Database.ToLowerInvariant(), csName)
-            {
-                Name = $"ExternalReplicationTo{dst.Database}",
-                Url = dst.Urls.First()
-            });
-
-            return await src.Maintenance.SendAsync(op);
         }
     }
 }
