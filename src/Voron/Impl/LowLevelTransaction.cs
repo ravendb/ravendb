@@ -113,7 +113,7 @@ namespace Voron.Impl
             }
         }
         public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action<LowLevelTransaction> AfterCommitWhenNewReadTransactionsPrevented;
+        public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -1295,11 +1295,11 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void OnAfterCommitWhenNewReadTransactionsPrevented()
+        internal void OnAfterCommitWhenNewTransactionsPrevented()
         {
             // the event cannot be called outside this class while we need to call it in 
             // StorageEnvironment.TransactionAfterCommit
-            AfterCommitWhenNewReadTransactionsPrevented?.Invoke(this);
+            AfterCommitWhenNewTransactionsPrevented?.Invoke(this);
         }
 
 
