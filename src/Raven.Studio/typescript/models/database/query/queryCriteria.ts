@@ -70,19 +70,14 @@ class queryCriteria {
     setSelectedIndex(indexName: string): void {
         let rql = "from ";
 
-        indexName = indexName.replace(/"/g, '\\"');
-        
-        if (indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix) && indexName.includes("'")) {
-            rql += `index "${indexName}"`;
-
-        } else  if (indexName.startsWith(queryUtil.DynamicPrefix)) {
+        if (indexName.startsWith(queryUtil.DynamicPrefix)) {
             rql += indexName.substring(queryUtil.DynamicPrefix.length);
 
         } else if (indexName === queryUtil.AllDocs) {
             rql += "@all_docs";
 
         } else {
-            rql += "index '" + indexName + "'";
+            rql += `index ${queryUtil.escapeIndexName(indexName)}`;
         }
 
         this.queryText(rql);
