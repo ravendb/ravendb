@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
 using Voron.Data.BTrees;
+using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -429,7 +430,7 @@ namespace SlowTests.Voron.Storage
                 Assert.NotNull(fullTreeReport);
 
                 Assert.Equal(1, treeReport.Streams.Streams.Count);
-                Assert.Equal("Stream details summary info", treeReport?.Streams.Streams[0].Name);
+                Assert.Equal(StorageReportGenerator.SkippedStreamsDetailsName, treeReport?.Streams.Streams[0].Name);
 
                 var streamsSizeInMb = Math.Ceiling(treeReport.Streams.Streams[0].AllocatedSpaceInBytes * 0.000001);
                 var fullStreamsSizeInMb = Math.Ceiling(fullTreeReport.Streams.AllocatedSpaceInBytes * 0.000001);
