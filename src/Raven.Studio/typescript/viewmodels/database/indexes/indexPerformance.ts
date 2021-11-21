@@ -1038,8 +1038,8 @@ class indexPerformance extends viewModelBase {
         }
     }
     
-    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
-                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
+    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats,
+                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>,
                         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
@@ -1057,16 +1057,7 @@ class indexPerformance extends viewModelBase {
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
                 }
        
-                if (dx >= 5 && op.Name.startsWith("Collection_")) {
-                    context.fillStyle = this.colors.stripeTextColor;
-                    const text = op.Name.substr("Collection_".length);
-                    const textWidth = context.measureText(text).width;
-                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
-                    if (truncatedText) {
-                        context.font = "12px Lato";
-                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
-                    }
-                } else if ((op.Name === "Map" || op.Name === "Reduce") && dx >= 6) {
+                if (dx > 30) {
                     context.fillStyle = this.colors.stripeTextColor;
                     const text = op.Name;
                     const textWidth = context.measureText(text).width;
