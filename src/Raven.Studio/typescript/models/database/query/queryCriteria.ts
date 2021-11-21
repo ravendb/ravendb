@@ -70,6 +70,8 @@ class queryCriteria {
     setSelectedIndex(indexName: string): void {
         let rql = "from ";
 
+        indexName = indexName.replace(/"/g, '\\"');
+        
         if (indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix) && indexName.includes("'")) {
             rql += `index "${indexName}"`;
 
