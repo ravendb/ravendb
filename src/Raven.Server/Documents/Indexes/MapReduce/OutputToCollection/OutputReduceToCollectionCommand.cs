@@ -272,6 +272,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                 return _reduceDocumentsForReplayTransaction.Count;
             }
 
+            var skipAdd = new HashSet<string>();
             foreach (var reduceKeyHash in _reduceKeyHashesToDelete)
             {
                 var id = GetOutputDocumentKey(reduceKeyHash);
@@ -286,7 +287,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                         DocumentsBinaryEqual(currentDocument.Data, newReduceDocuments[0].Json))
                     {
                         // same document, nothing to do
-                        _reduceDocuments.Remove(reduceKeyHash);
+                        skipAdd.Add(reduceKeyHash);
                         continue;
                     }
 
@@ -319,6 +320,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             foreach (var output in _reduceDocuments)
             {
+                if (skipAdd.Contains(output.Key))
+                    continue;
+                
                 for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
                 {
                     var id = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
