@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,8 +7,6 @@ using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -37,13 +34,13 @@ namespace SlowTests.Server
             return base.GetDocumentStore(options, caller);
         }
 
-        class TestObj
+        private class TestObj
         {
             public string Id { get; set; }
             public string Prop { get; set; }
         }
 
-        class TestIndex : AbstractIndexCreationTask<TestObj, TestIndex.Result>
+        private class TestIndex : AbstractIndexCreationTask<TestObj, TestIndex.Result>
         {
             public class Result
             {
@@ -170,27 +167,27 @@ from TestObjs as o where o.Prop = null update
                 amre.Set();
             }
         }
-    }
-
-    class TestException : Exception
-    {
         
-    }
-    
-    internal class FailedCommand : TransactionOperationsMerger.MergedTransactionCommand
-    {
-        protected override long ExecuteCmd(DocumentsOperationContext context) => throw new TestException();
-
-        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context) =>
-            throw new NotImplementedException();
-    }
-
-    class AutoCancellationTokenSource : CancellationTokenSource
-    {
-        protected override void Dispose(bool disposing)
+        private class TestException : Exception
         {
-            Cancel();
-            base.Dispose(disposing);
+        
+        }
+    
+        private class FailedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            protected override long ExecuteCmd(DocumentsOperationContext context) => throw new TestException();
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context) =>
+                throw new NotImplementedException();
+        }
+
+        private class AutoCancellationTokenSource : CancellationTokenSource
+        {
+            protected override void Dispose(bool disposing)
+            {
+                Cancel();
+                base.Dispose(disposing);
+            }
         }
     }
 }
