@@ -379,6 +379,32 @@ namespace SlowTests.Client.TimeSeries
         }
 
         [Fact]
+        public void GetTagForIncremental()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                    ts.Increment(baseline, 4);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName).Get(baseline);
+
+                    Assert.Equal(1, ts.Length);
+                    Assert.Equal(4, ts[0].Value);
+                    Assert.StartsWith("TC:INC", ts[0].Tag);
+                }
+            }
+        }
+
+        [Fact]
         public void ShouldIncrementValueOnEditIncrementalEntry2()
         {
             using (var store = GetDocumentStore())

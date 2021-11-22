@@ -434,6 +434,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
+                        Tag = singleResult.Tag,
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
                         NodeValues = returnFullResults ? new Dictionary<string, double[]>(reader.GetDetails.Details) : null
                     };
