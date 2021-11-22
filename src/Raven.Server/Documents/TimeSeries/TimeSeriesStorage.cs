@@ -1450,7 +1450,11 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (FromReplication)
                                 throw new InvalidDataException(
-                                    $"Got an invalid segment from replication for '{Name}' time-series for document '{DocumentId}', segment contain duplicate timestamp and tag at '{_current.Timestamp:O}'");
+                                    $"Got an invalid segment from replication for '{Name}' time-series for document '{DocumentId}', segment contain duplicate timestamp and tag '{_current.Tag}' at '{_current.Timestamp:O}'");
+
+                            if (_next.Values.Length != _current.Values.Length)
+                                throw new InvalidDataException(
+                                    $"Entries for '{Name}' time-series for document '{DocumentId}' with tag '{_current.Tag}' at '{_current.Timestamp:O}' has different number of values ({_next.Values.Length} vs {_current.Values.Length})");
 
                             for (int i = 0; i < _next.Values.Length; i++)
                             {
