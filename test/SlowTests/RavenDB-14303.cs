@@ -67,16 +67,15 @@ namespace SlowTests
 
                 await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
                 dbServer = Servers.First(s => !createRes.NodesAddedTo.Contains(s.WebUrl));
-                dbServer.ServerStore.ForTestingPurposes = new ServerStore.TestingStuff {stopIndex = true};
+                db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
 
-                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
-                WaitForUserToContinueTheTest(store);
-                var res = await WaitForValueAsync(async () =>
-                {
-                    var membersCount = await GetMembersCount(store, db.Name);
-                    return membersCount == 3;
-                }, true, 5000);
-                Assert.True(res);
+                var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
+                await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
+
+                var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
+                Assert.Equal(0, val);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3);
+                Assert.Equal(3, val);
             }
         }
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
@@ -87,6 +86,16 @@ namespace SlowTests
                 return -1;
             }
             return res.Topology.Members.Count;
+        }
+
+        protected static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
+        {
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.Topology.Promotables.Count;
         }
 
 
