@@ -57,7 +57,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 throw new PgErrorException(
                     PgErrorCodes.StatementTooComplex,
                     "Unhandled query (Are you using ; in your query? " +
-                    $"That is likely causing Power BI to split the query and results in partial queries): {Environment.NewLine}" +
+                    $"That is likely causing the postgres client to split the query and results in partial queries): {Environment.NewLine}" +
                     $"{queryText}");
             }
             catch (Exception e)
