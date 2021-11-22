@@ -50,9 +50,11 @@ namespace Raven.Server.Documents.TimeSeries
         {
             dest.Status = Status;
 
+            // destination is shorter
             if (dest.Values.Length < Values.Length)
-                dest.Values = new double[Values.Length];
+                dest.Values = new double[Values.Length]; 
 
+            // destination is larger, so we need to forget values from the previous entry
             for (int i = Values.Length; i < dest.Values.Length; i++)
             {
                 dest.Values.Span[i] = 0;
