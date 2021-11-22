@@ -9,8 +9,9 @@ namespace Raven.Client.Documents.Session
     {
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
-            var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
+            var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
+            
+            return Query<T>(index.IndexName, null, index.IsMapReduce);
         }
 
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
@@ -52,8 +53,8 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
-            var index = new TIndexCreator();
-
+            var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
+            
             return AsyncDocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 

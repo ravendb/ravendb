@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Highlighting;
@@ -16,6 +17,8 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
+        
+        
         /// <summary>
         /// Queries the index specified by <typeparamref name="TIndexCreator"/> using lucene syntax.
         /// </summary>
@@ -24,7 +27,8 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IDocumentQuery<T> DocumentQuery<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
-            var index = new TIndexCreator();
+            var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
+            
             return DocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
@@ -102,8 +106,9 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
-            var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
+            var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
+            
+            return Query<T>(index.IndexName, null, index.IsMapReduce);
         }
 
         /// <summary>
