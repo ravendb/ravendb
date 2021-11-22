@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
 
                 ByteStringContext.InternalScope countersGroupKeyScope = default;
                 using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
-                using (Slice.From(context.Allocator, name, out Slice counterName))
+                using (DocumentIdWorker.GetLower(context.Allocator, name, out Slice counterName))
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + counterName.Size, out var counterKeyBuffer))
                 using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterName, out var counterKeySlice))
                 {
@@ -710,7 +710,7 @@ namespace Raven.Server.Documents
                     {
                         sourceCounters.GetPropertyByIndex(i, ref prop);
 
-                        using (Slice.From(context.Allocator, prop.Name, out Slice counterNameSlice))
+                        using (DocumentIdWorker.GetLower(context.Allocator, prop.Name, out Slice counterNameSlice))
                         using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
                         using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
                         {
@@ -876,7 +876,7 @@ namespace Raven.Server.Documents
 
             if (data.TryGet(Values, out BlittableJsonReaderObject values) == false)
                 return;
-            
+
             _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
 
         }
@@ -1042,8 +1042,8 @@ namespace Raven.Server.Documents
                 if (capOnOverflow == false)
                     CounterOverflowException.ThrowFor(docId, counterName, e);
 
-                return value + localValue > 0 ? 
-                    long.MinValue : 
+                return value + localValue > 0 ?
+                    long.MinValue :
                     long.MaxValue;
             }
 
@@ -1234,7 +1234,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1269,7 +1269,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1350,7 +1350,7 @@ namespace Raven.Server.Documents
             }
 
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
-            using (Slice.From(context.Allocator, counterName, out Slice counterNameSlice))
+            using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
             using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
             {
@@ -1364,7 +1364,7 @@ namespace Raven.Server.Documents
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
 
-                var propIndex = counters.GetPropertyIndex(counterName);
+                var propIndex = counters.GetPropertyIndex(counterName, ignoreCase: true);
                 if (propIndex == -1)
                     return null;
 
@@ -1388,7 +1388,7 @@ namespace Raven.Server.Documents
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                
+
                 using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

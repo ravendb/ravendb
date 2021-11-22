@@ -84,6 +84,58 @@ namespace Sparrow.Json
             }
         }
 
+        public bool EqualsOrdinalIgnoreCase(LazyStringValue other)
+        {
+            return CompareToOrdinalIgnoreCase(this.Buffer, Size, other.Buffer, other.Size) == 0;
+        }
+
+
+        public static int CompareToOrdinalIgnoreCase(byte* strA, int strALen, byte* strB, int strBLen)
+        {
+            int length = Math.Min(strALen, strBLen);
+            {
+                byte* a = strA;
+                byte* b = strB;
+
+                while (length != 0 && (*a <= 0x7F) && (*b <= 0x7F))
+                {
+                    int charA = *a;
+                    int charB = *b;
+
+                    if (charA == charB)
+                    {
+                        a++;
+                        b++;
+                        length--;
+                        continue;
+                    }
+
+                    // uppercase both chars - notice that we need just one compare per char
+                    if ((uint)(charA - 'a') <= 'z' - 'a')
+                        charA -= 0x20;
+                    if ((uint)(charB - 'a') <= 'z' - 'a')
+                        charB -= 0x20;
+
+                    // Return the (case-insensitive) difference between them.
+                    if (charA != charB)
+                        return charA - charB;
+
+                    // Next char
+                    a++;
+                    b++;
+                    length--;
+                }
+
+                if (length == 0)
+                    return strALen - strBLen;
+
+                return string.Compare(
+                    Encoding.UTF8.GetString(strA, strALen),
+                    Encoding.UTF8.GetString(strB, strBLen),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
         public Span<byte> AsSpan()
         {
             return new Span<byte>(_buffer, _size);

@@ -736,24 +736,24 @@ namespace Sparrow.Json
             throw new ArgumentOutOfRangeException("index", indexValue, "Unexpected index argument value: " + indexValue);
         }
 
-        public int GetPropertyIndex(string name)
+        public int GetPropertyIndex(string name, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
-            return GetPropertyIndex(new StringSegment(name));
+            return GetPropertyIndex(new StringSegment(name), ignoreCase);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(StringSegment name)
+        public int GetPropertyIndex(StringSegment name, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
             var comparer = _context.GetLazyStringForFieldWithCaching(name);
-            return GetPropertyIndex(comparer);
+            return GetPropertyIndex(comparer, ignoreCase);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(LazyStringValue comparer)
+        public int GetPropertyIndex(LazyStringValue comparer, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
@@ -777,7 +777,7 @@ namespace Sparrow.Json
 
                 var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
 
-                var cmpResult = ComparePropertyName(propertyId, comparer);
+                var cmpResult = ComparePropertyName(propertyId, comparer, ignoreCase);
                 if (cmpResult == 0)
                 {
                     return mid;
@@ -807,7 +807,7 @@ namespace Sparrow.Json
         /// <param name="ignoreCase">Indicates if the comparassion should be case insensitive</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
+        private int ComparePropertyName(int propertyId, LazyStringValue comparer, bool ignoreCase = false)
         {
             AssertContextNotDisposed();
 
@@ -823,6 +823,9 @@ namespace Sparrow.Json
             var size = ReadVariableSizeInt((int)position, out byte propertyNameLengthDataLength);
 
             // Return result of comparison between property name and received comparer
+            if (ignoreCase)
+                return LazyStringValue.CompareToOrdinalIgnoreCase(propertyNameRelativePosition + propertyNameLengthDataLength, size, comparer.Buffer, comparer.Size);
+
             return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
