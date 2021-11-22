@@ -26,17 +26,18 @@ namespace SlowTests
             var (_, leader) = await CreateRaftCluster(clusterSize);
             var replicationFactor = 2;
             var databaseName = GetDatabaseName();
-            using (var store = new DocumentStore()
+            using (var store = GetDocumentStore(new Options
             {
-                Urls = new[] { leader.WebUrl },
-                Database = databaseName
-            }.Initialize())
+                Server = leader,
+                ReplicationFactor = 2,
+
+            }))
             {
                 var doc = new DatabaseRecord(databaseName);
                 var createRes = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, replicationFactor));
 
                 var dbServer = Servers.First(s => createRes.NodesAddedTo.Contains(s.WebUrl));
-                await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.RaftCommandIndex);
+
                 Random rnd = new Random();
                 for (int i = 0; i < 100; i++)
                 {
