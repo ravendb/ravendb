@@ -34,7 +34,6 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = storeA.OpenSession())
@@ -73,7 +72,7 @@ namespace SlowTests.Issues
                 using (var session = storeA.OpenSession())
                 {
                     var ts = session.IncrementalTimeSeriesFor("users/ayende", "INC:Downloads");
-                    ts.Increment(baseline, 1);
+                    ts.Increment(baseline, -1);
                     session.SaveChanges();
                 }
 
@@ -90,8 +89,8 @@ namespace SlowTests.Issues
                     var tsB = sessionB.IncrementalTimeSeriesFor("users/ayende", "INC:Downloads").Get();
 
                     Assert.Equal(tsA.Length, tsB.Length);
-                    Assert.Equal(21, tsA[0].Value);
-                    Assert.Equal(21, tsB[0].Value);
+                    Assert.Equal(19, tsA[0].Value);
+                    Assert.Equal(19, tsB[0].Value);
 
                     for (int i = 1; i < tsA.Length; i++)
                     {
