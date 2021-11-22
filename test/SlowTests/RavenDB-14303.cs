@@ -23,9 +23,7 @@ namespace SlowTests
         public async Task IgnoreIdleIndexOnPromotable()
         {
             var clusterSize = 3;
-            var (_, leader) = await CreateRaftCluster(clusterSize);
-            var replicationFactor = 2;
-            var databaseName = GetDatabaseName();
+            var (nodes, leader) = await CreateRaftCluster(clusterSize);
             using (var store = GetDocumentStore(new Options
             {
                 Server = leader,
@@ -33,12 +31,7 @@ namespace SlowTests
 
             }))
             {
-                var doc = new DatabaseRecord(databaseName);
-                var createRes = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, replicationFactor));
-
-                var dbServer = Servers.First(s => createRes.NodesAddedTo.Contains(s.WebUrl));
-
-                Random rnd = new Random();
+                Random rnd = new();
                 for (int i = 0; i < 100; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -62,20 +55,19 @@ namespace SlowTests
                 {
                     Name = "Sum",
                 };
-
-                var db = await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                var node = nodes.First(n => n.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database));
+                var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var index = await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString());
 
                 await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
-                dbServer = Servers.First(s => !createRes.NodesAddedTo.Contains(s.WebUrl));
                 db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
 
-                var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
+                var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                 await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
-                var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
+                var val = await WaitForValueAsync(async () => await GetPromotableCount(store, store.Database), 0);
                 Assert.Equal(0, val);
-                val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3);
+                val = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
                 Assert.Equal(3, val);
             }
         }
