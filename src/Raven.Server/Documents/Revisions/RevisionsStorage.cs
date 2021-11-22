@@ -823,7 +823,7 @@ namespace Raven.Server.Documents.Revisions
 
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            flags.Strip(DocumentFlags.HasAttachments);
+            flags = flags.Strip(DocumentFlags.HasAttachments);
             flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
