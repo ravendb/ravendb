@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Queries
                 _initialized = true;
 
                 if (_query.Start == 0)
-                    return 0;
+                    return _query.Offset ?? 0;
 
                 if (_query.SkipDuplicateChecking)
                     return _query.Start;

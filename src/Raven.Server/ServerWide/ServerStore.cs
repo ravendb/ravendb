@@ -3410,6 +3410,7 @@ namespace Raven.Server.ServerWide
         internal class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
+            internal bool StopIndex;
         }
     }
 }
