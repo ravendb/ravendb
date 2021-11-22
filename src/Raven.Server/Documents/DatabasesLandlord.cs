@@ -123,6 +123,8 @@ namespace Raven.Server.Documents
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
                             }
+
+                            await HandleSpecificClusterChangedForShardedDatabase(rawRecord.DatabaseName, index, type, changeType, context, rawRecord);
                         }
                         else
                         {
@@ -243,6 +245,38 @@ namespace Raven.Server.Documents
             }
         }
 
+        private async Task HandleSpecificClusterChangedForShardedDatabase(string databaseName, long index, string type, ClusterDatabaseChangeType changeType,
+            TransactionOperationContext context,
+            RawDatabaseRecord rawRecord)
+        {
+            if (ShouldDeleteShardedContext(context, databaseName, rawRecord))
+                return;
+
+            switch (changeType)
+            {
+                case ClusterDatabaseChangeType.ValueChanged:
+                    if (_shardedDatabases.TryGetValue(databaseName, out var task) == false)
+                    {
+                        // the db may get removed meanwhile
+                        return;
+                    }
+
+                    if (task.IsCanceled || task.IsFaulted)
+                        return;
+
+                    var sharded = await task;
+                    sharded.NotifyFeaturesAboutValueChange(rawRecord, index);
+                    break;
+                case ClusterDatabaseChangeType.RecordChanged:
+                case ClusterDatabaseChangeType.PendingClusterTransactions:
+                case ClusterDatabaseChangeType.ClusterTransactionCompleted:
+                    break;
+                default:
+                    ThrowUnknownClusterDatabaseChangeType(changeType);
+                    break;
+            }
+        }
+
         private bool PreventWakeUpIdleDatabase(string databaseName, string type)
         {
             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
@@ -323,10 +357,79 @@ namespace Raven.Server.Documents
             }
         }
 
+        public bool ShouldDeleteShardedContext(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
+        {
+            // TODO: RavenDB-13106
+            var directDelete = rawRecord.DeletionInProgress?.Any(x => x.Key.StartsWith(_serverStore.NodeTag) && x.Value != DeletionInProgressStatus.No);
+            if (directDelete == false)
+                return false;
+
+            context.CloseTransaction();
+
+            // need to remove the sharded context from _shardedDatabases resource cache, and dispose it
+            RemoveShardedDatabase(dbName);
+
+            return true;
+        }
+
+        private void RemoveShardedDatabase(string name)
+        {
+            IDisposable removeLockAndReturn = null;
+            try
+            {
+                removeLockAndReturn = _shardedDatabases.RemoveLockAndReturn(name, shardedCtx =>
+                {
+                    if (shardedCtx == null)
+                        return;
+
+                    try
+                    {
+                        _shardedDatabases.TryRemove(shardedCtx.DatabaseName, out _);
+                        shardedCtx.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Could not dispose sharded context: " + shardedCtx.DatabaseName, e);
+                    }
+                }, out _);
+            }
+            catch (AggregateException ae) when (nameof(RemoveShardedDatabase).Equals(ae.InnerException?.Data["Source"]))
+            {
+                // this is already in the process of being deleted, we can just exit and let another thread handle it
+                return;
+            }
+            catch (DatabaseConcurrentLoadTimeoutException e)
+            {
+                if (e.Data.Contains(nameof(RemoveShardedDatabase)))
+                {
+                    // This case is when a deletion request was issued during the loading of the database.
+                    // The DB will be deleted after actually finishing the loading process
+                    return;
+                }
+
+                throw;
+            }
+            finally
+            {
+                removeLockAndReturn?.Dispose();
+            }
+        }
+
         public bool ShouldDeleteDatabase(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord, bool fromReplication = false)
         {
             var index = ShardHelper.TryGetShardIndex(dbName);
-            var tag = index == -1 ? _serverStore.NodeTag : $"{_serverStore.NodeTag}${index}";
+            string tag;
+            bool isShard = false;
+            if (index == -1)
+            {
+                tag = _serverStore.NodeTag;
+            }
+            else
+            {
+                tag = $"{_serverStore.NodeTag}${index}";
+                isShard = true;
+            }
 
             var deletionInProgress = DeletionInProgressStatus.No;
             var directDelete = rawRecord.DeletionInProgress?.TryGetValue(tag, out deletionInProgress) == true &&
@@ -342,9 +445,19 @@ namespace Raven.Server.Documents
 
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
-            context.CloseTransaction();
+            if (isShard == false)
+            {
+                context.CloseTransaction();
+            }
 
             DeleteDatabase(dbName, deletionInProgress, record);
+
+            if (isShard)
+            {
+                // need to remove the shard from _shardedDatabases resource cache
+                RemoveShardedDatabase(dbName);
+            }
+
             return true;
         }
 

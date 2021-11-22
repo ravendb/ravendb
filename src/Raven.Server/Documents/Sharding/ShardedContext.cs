@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -7,15 +9,21 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public unsafe class ShardedContext
+    public unsafe class ShardedContext : IDisposable
     {
         public const int NumberOfShards = 1024 * 1024;
-
-        private readonly DatabaseRecord _record;
+        public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
         public RequestExecutor[] RequestExecutors;
+        public int Count => _record.Shards.Length;
+        public DatabaseTopology[] ShardsTopology => _record.Shards;
+
+        private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
+        private readonly Logger _logger;
+        private readonly DatabaseRecord _record;
         private readonly long _lastClientConfigurationIndex;
 
         public ShardedContext(ServerStore server, DatabaseRecord record)
@@ -23,6 +31,7 @@ namespace Raven.Server.Documents.Sharding
             //TODO: reduce the record to the needed fields
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
+            _logger = LoggingSource.Instance.GetLogger<ShardedContext>(DatabaseName);
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
@@ -113,6 +122,70 @@ namespace Raven.Server.Documents.Sharding
             var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
+        }
+
+        public string GetShardedDatabaseName(int index = 0)
+        {
+            if (index >= _record.Shards.Length)
+                throw new InvalidOperationException($"Requested shard '{index}' of database '{DatabaseName}' but shards length '{_record.Shards.Length}'.");
+
+            return _record.DatabaseName + "$" + index;
+        }
+
+        public List<string> GetShardedDatabaseNames()
+        {
+            var list = new List<string>();
+            for (int i = 0; i < Count; i++)
+            {
+                list.Add(GetShardedDatabaseName(i));
+            }
+            return list;
+        }
+
+        private long _lastValueChangeIndex;
+
+        public long LastValueChangeIndex
+        {
+            get => Volatile.Read(ref _lastValueChangeIndex);
+            private set => _lastValueChangeIndex = value; // we write this always under lock
+        }
+
+        private bool CanSkipValueChange(string database, long index)
+        {
+            if (LastValueChangeIndex > index)
+            {
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {database} because it was already precessed.");
+                return true;
+            }
+
+            return false;
+        }
+
+        public void NotifyFeaturesAboutValueChange(RawDatabaseRecord record, long index)
+        {
+            if (CanSkipValueChange(record.DatabaseName, index))
+                return;
+        }
+
+        public void Dispose()
+        {
+            _databaseShutdown.Cancel();
+
+            foreach (var re in RequestExecutors)
+            {
+                try
+                {
+                    re.Dispose();
+                }
+                catch
+                {
+                    // ignored
+                }
+            }
+
+            _databaseShutdown.Dispose();
         }
     }
 }
