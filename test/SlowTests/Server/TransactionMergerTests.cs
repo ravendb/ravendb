@@ -1,15 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,10 +34,82 @@ namespace SlowTests.Server
             return base.GetDocumentStore(options, caller);
         }
 
-        class TestObj
+        private class TestObj
         {
             public string Id { get; set; }
             public string Prop { get; set; }
+        }
+
+        private class TestIndex : AbstractIndexCreationTask<TestObj, TestIndex.Result>
+        {
+            public class Result
+            {
+                public string KeyProp { get; set; }
+            }
+            
+            public TestIndex()
+            {
+                Map = testObjs =>
+                    from testObj in testObjs
+                    select new Result
+                    {
+                        KeyProp = testObj.Prop,
+                    };
+
+                Reduce = results =>
+                    from r in results
+                    group r by r.KeyProp
+                    into g
+                    select new Result
+                    {
+                        KeyProp = g.Key,
+                    };
+
+                OutputReduceToCollection = "OutputReduceCollection";
+                PatternForOutputReduceToCollectionReferences = x => $"someprefix/{x.KeyProp}";
+            }
+        }
+        
+        [Fact]
+        public async Task RerunMergedTransactionCommand_WhenReduceOutputToCollectionResultDidntChange_ShouldKeepOutputCollctionDocuments()
+        {
+            using var store = GetDocumentStore();
+            const string prop = "0";
+            
+            await new TestIndex().ExecuteAsync(store);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestObj { Prop = prop}, $"testObjs/0");
+                await session.SaveChangesAsync();
+            }
+
+            WaitForIndexing(store);
+            
+            using var tokenSource = new AutoCancellationTokenSource();
+            
+            var amre = new AsyncManualResetEvent();
+            var failingTasks = RunFailingTasks(store, amre, tokenSource.Token);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<object>("someprefix/0"));
+                Assert.NotEmpty(await session.Advanced.AsyncRawQuery<object>("from OutputReduceCollection").ToArrayAsync());
+            }
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestObj { Prop = prop}, $"testObjs/1");
+                await session.SaveChangesAsync();
+            }
+            WaitForIndexing(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<object>("someprefix/0"));
+                Assert.NotEmpty(await session.Advanced.AsyncRawQuery<object>("from OutputReduceCollection").ToArrayAsync());
+            }
+            
+            tokenSource.Cancel();
+            await Task.WhenAll(failingTasks);
         }
 
         [Fact]
@@ -58,7 +131,7 @@ namespace SlowTests.Server
                 await session.SaveChangesAsync();
             }
 
-            var tokenSource = new CancellationTokenSource();
+            using var tokenSource = new AutoCancellationTokenSource();
             var amre = new AsyncManualResetEvent();
             var failingTasks = RunFailingTasks(store, amre, tokenSource.Token);
 
@@ -85,35 +158,36 @@ from TestObjs as o where o.Prop = null update
             }
         }
 
-        private static Task RunFailingTasks(IDocumentStore store, AsyncManualResetEvent amre, CancellationToken token)
+        private async Task RunFailingTasks(IDocumentStore store, AsyncManualResetEvent amre, CancellationToken token)
         {
-            const int taskCount = 10;
-            var count = 0;
-            return Task.WhenAll(Enumerable.Range(0, taskCount).Select(async _ =>
+            var database = await GetDatabase(store.Database);
+            while (token.IsCancellationRequested == false)
             {
-                var first = true;
-                while (token.IsCancellationRequested == false)
-                {
-                    try
-                    {
-                        using var session = store.OpenAsyncSession();
-                        await session.StoreAsync(new TestObj(), "FailedChangeVector", "testObjs/something", token);
-                        var task = session.SaveChangesAsync(token);
-                        if (first)
-                        {
-                            first = false;
-                            if (Interlocked.Increment(ref count) == taskCount / 2)
-                                amre.Set();
-                        }
+                await database.TxMerger.Enqueue(new FailedCommand()).ContinueWith(_ => string.Empty);
+                amre.Set();
+            }
+        }
+        
+        private class TestException : Exception
+        {
+        
+        }
+    
+        private class FailedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            protected override long ExecuteCmd(DocumentsOperationContext context) => throw new TestException();
 
-                        await task;
-                    }
-                    catch (Exception e) when (e is ConcurrencyException or TaskCanceledException)
-                    {
-                        //ignore
-                    }
-                }
-            }));
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context) =>
+                throw new NotImplementedException();
+        }
+
+        private class AutoCancellationTokenSource : CancellationTokenSource
+        {
+            protected override void Dispose(bool disposing)
+            {
+                Cancel();
+                base.Dispose(disposing);
+            }
         }
     }
 }
