@@ -62,7 +62,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static async Task<bool> WaitForDatabaseToBeDeleted(RavenServer server, string databaseName, TimeSpan timeout, CancellationToken token)
+        internal static async Task<bool> WaitForDatabaseToBeDeleted(RavenServer server, string databaseName, TimeSpan timeout, CancellationToken token)
         {
             using (var store = new DocumentStore
             {
