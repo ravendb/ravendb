@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
@@ -41,35 +38,9 @@ namespace SlowTests.Issues
                 ReplicationFactor = 3
             }))
             {
-                var connectionStringName = "EtlFailover";
                 var urls = nodes.Select(n => n.WebUrl).ToArray();
-                var config = new RavenEtlConfiguration()
-                {
-                    Name = connectionStringName,
-                    ConnectionStringName = connectionStringName,
-                    LoadRequestTimeoutInSec = 10,
-                    MentorNode = mentorTag,
-                    Transforms = new List<Transformation>
-                    {
-                        new Transformation
-                        {
-                            Name = $"ETL : {connectionStringName}",
-                            ApplyToAllDocuments = true,
-                            IsEmptyScript = true
-                        }
-                    }
-                };
-                var connectionString = new RavenConnectionString
-                {
-                    Name = connectionStringName,
-                    Database = dest.Database,
-                    TopologyDiscoveryUrls = urls,
-                };
+                var addEtl = await RavenDB_17311.AddEtl(src, dest.Database, urls, mentorTag);
 
-                var result = await src.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                Assert.NotNull(result.RaftCommandIndex);
-
-                var addEtl = await src.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(config));
                 using (var session = src.OpenSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
