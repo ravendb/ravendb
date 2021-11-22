@@ -23,12 +23,14 @@ namespace Raven.Server.ServerWide.Commands
         {
             DeletionInProgressStatus deletionStatus = DeletionInProgressStatus.No;
             record.DeletionInProgress?.TryGetValue(NodeTag, out deletionStatus);
+            if (deletionStatus == DeletionInProgressStatus.No)
+                return;
 
             record.Topology.RemoveFromTopology(NodeTag);
             record.DeletionInProgress?.Remove(NodeTag);
 
             if (DatabaseId == null)
-                return ;
+                return;
 
             if (deletionStatus == DeletionInProgressStatus.HardDelete)
             {
