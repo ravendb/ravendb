@@ -623,7 +623,7 @@
 <script type="text/html" id="name-template-admin">
     <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
         <div data-bind="visible: $root.isAdminAccessOrAbove() && !isServerWide()">
-            <a href="#" data-bind="click: editTask"><span data-bind="text: taskName"></span></a>
+            <a href="#" data-bind="click: editTask, attr: { href: editUrl() }"><span data-bind="text: taskName"></span></a>
         </div>
         <div data-bind="visible: !$root.isAdminAccessOrAbove() || isServerWide()">
             <span><span data-bind="text: taskName"></span></span>
