@@ -1614,9 +1614,9 @@ namespace Raven.Server.Documents
                     ((flags & DocumentFlags.Resolved) != DocumentFlags.Resolved))
                     revisionsStorage.DeleteRevisionsFor(context, id);
 
-                if (((flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions) &&
-                    (revisionsStorage.Configuration != null) &&
-                    (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)))
+                if (flags.Contain(DocumentFlags.HasRevisions) &&
+                    revisionsStorage.Configuration != null &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                     revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
                         modifiedTicks, nonPersistentFlags, documentFlags);
 
