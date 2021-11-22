@@ -773,6 +773,9 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.Add(index);
 
+            if (_serverStore.ForTestingPurposes?.stopIndex == true)
+                return;
+
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
                 index.Start();
 
