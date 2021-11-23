@@ -423,6 +423,7 @@ namespace Raven.Server.Documents.TimeSeries
                         }
 
                         yield return previous;
+                        _details?.Reset();
                         yield break;
                     }
 
@@ -477,7 +478,17 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void Add(SingleResult result)
             {
-                Details[FetchNodeDetails(result, _databaseChangeVector)] = result.Values.ToArray();
+                var key = FetchNodeDetails(result, _databaseChangeVector);
+
+                if (Details.TryGetValue(key, out var values) == false)
+                    values = new double[result.Values.Length];
+
+                for (int i = 0; i < result.Values.Length; i++)
+                {
+                    values[i] += result.Values.Span[i];
+                }
+
+                Details[key] = values;
             }
 
             public void Reset()
