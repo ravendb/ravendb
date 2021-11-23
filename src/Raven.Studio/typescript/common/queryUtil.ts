@@ -66,6 +66,16 @@ class queryUtil {
 
         return queryUtil.wrapWithSingleQuotes(name);
     }
+    
+    static escapeIndexName(indexName: string): string {
+        indexName = indexName.replace(/"/g, '\\"');
+        
+        if (indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix) && indexName.includes("'")) {
+            return `"${indexName}"`;
+        }
+
+        return `'${indexName}'`;
+    }
 
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;
 
