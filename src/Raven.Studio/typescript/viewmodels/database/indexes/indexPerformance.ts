@@ -1059,7 +1059,7 @@ class indexPerformance extends viewModelBase {
        
                 if (dx > 30) {
                     context.fillStyle = this.colors.stripeTextColor;
-                    const text = op.Name;
+                    const text = op.Name.startsWith("Collection_") ? `${op.Name.substr("Collection_".length)} (Collection)` : op.Name;
                     const textWidth = context.measureText(text).width;
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
