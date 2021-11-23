@@ -1372,6 +1372,45 @@ namespace SlowTests.Client.TimeSeries
         }
 
         [Fact]
+        public async Task MergeDecAndIncForNodesValues()
+        {
+            using (var storeA = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                var time = DateTime.UtcNow;
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                    ts.Increment(time, 1);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    var ts = session.IncrementalTimeSeriesFor("users/ayende", IncrementalTsName);
+                    ts.Increment(time, -1);
+                    await session.SaveChangesAsync();
+                }
+
+                var values = await storeA.Operations
+                    .SendAsync(new GetTimeSeriesOperation("users/ayende", IncrementalTsName, returnFullResults: true));
+
+                Assert.Equal(1, values.TotalResults);
+                var result = values.Entries.Single();
+                Assert.Equal(0, result.Value);
+
+                Assert.Equal(1, result.NodeValues.Count);
+                Assert.Equal(0, result.NodeValues.Single().Value[0]);
+            }
+        }
+
+        [Fact]
         public async Task CheckSkippedResultsCalculation()
         {
             var baseline = DateTime.UtcNow;
@@ -1652,6 +1691,8 @@ namespace SlowTests.Client.TimeSeries
                     }
                 }
 
+
+                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
