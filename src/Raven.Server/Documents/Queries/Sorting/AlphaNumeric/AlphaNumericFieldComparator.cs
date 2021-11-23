@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Lucene.Net.Index;
@@ -281,16 +282,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             public int Compare(UnmanagedStringArray.UnmanagedString string1, UnmanagedStringArray.UnmanagedString string2)
             {
-                if (string1.IsNull)
-                {
-                    return 0;
-                }
-
-                if (string2.IsNull)
-                {
-                    return 0;
-                }
-
+                Debug.Assert(string1.IsNull == false);
+                Debug.Assert(string2.IsNull == false);
+                
                 var string1State = new AlphanumericStringComparisonState(string1);
                 var string2State = new AlphanumericStringComparisonState(string2);
 
