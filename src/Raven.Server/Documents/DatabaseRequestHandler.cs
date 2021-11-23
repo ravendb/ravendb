@@ -158,12 +158,15 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
+        protected bool ShouldAddPagingPerformanceHint(long numberOfResults)
+        {
+            return numberOfResults > Database.Configuration.PerformanceHints.MaxNumberOfResults;
+        }
+        
         protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
-            if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
-                return;
-
-            Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
+            if(ShouldAddPagingPerformanceHint(numberOfResults))
+                Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }
