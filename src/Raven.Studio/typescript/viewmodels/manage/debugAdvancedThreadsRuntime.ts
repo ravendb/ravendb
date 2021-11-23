@@ -95,7 +95,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         grid.init(fetcher, () => {
                 return [
                     new actionColumn<Raven.Server.Dashboard.ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack",
-                                () => `<i title="Click to view Stack Trace" class="icon-stack-traces"></i>`, "55px"),
+                                () => `<i title="Click to view Stack Trace" class="icon-thread-stack-trace"></i>`, "55px"),
                                 // TODO replace above icon with RavenDB-174430
                     new textColumn<Raven.Server.Dashboard.ThreadInfo>(grid, x => x.Name, "Name", "20%", {
                         sortable: "string"
