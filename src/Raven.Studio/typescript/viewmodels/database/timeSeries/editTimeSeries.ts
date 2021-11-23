@@ -221,7 +221,7 @@ class editTimeSeries extends viewModelBase {
 
             columns.push(...valueColumns);
             
-            if (hasTag) {
+            if (hasTag && !timeSeriesEntryModel.isIncrementalName(this.timeSeriesName())) {
                 columns.push(new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"));
             }
             
