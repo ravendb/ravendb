@@ -68,9 +68,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         public override int CompareBottom(int doc, IState state)
         {
             var str2 = _lookup[_order[doc]];
-            if (_bottom.IsNull)
-                return str2.IsNull ? 0 : -1;
-            if (str2.IsNull)
+            if (IsNull(_bottom))
+                return IsNull(str2) ? 0 : -1;
+            if (IsNull(str2))
                 return 1;
 
             return AlphanumComparer.Instance.Compare(_bottom, str2);
