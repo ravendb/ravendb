@@ -371,11 +371,13 @@ namespace Raven.Server.Documents.Indexes
                     _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
 
                     var indexName = name;
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not update static index {name}", exception);
+                    
 
                     if (exception is OperationCanceledException)
                         return;
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Could not update static index {name}", exception);
 
                     //If we don't have the index in memory this means that it is corrupted when trying to load it
                     //If we do have the index and it is not faulted this means that this is the replacement index that is faulty
@@ -1593,8 +1595,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(message, e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(message, e);
 
                 _documentDatabase.NotificationCenter.Add(AlertRaised.Create(
                     _documentDatabase.Name,
