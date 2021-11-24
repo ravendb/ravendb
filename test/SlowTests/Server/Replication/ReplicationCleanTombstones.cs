@@ -414,7 +414,9 @@ namespace SlowTests.Server.Replication
                     session.SaveChanges();
                 }
 
-                WaitForDocument(dest, "marker2");
+                var res = WaitForDocument(dest, "marker2");
+                Assert.True(res);
+
                 string changeVectorMarker2;
 
                 using (var session = dest.OpenSession())
@@ -430,20 +432,24 @@ namespace SlowTests.Server.Replication
                 await ActionWithLeader((l) => WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
                 Assert.True(await WaitForEtlState(cluster, store, changeVectorMarker2));
 
-                total = 0;
                 foreach (var server in cluster.Nodes)
                 {
                     if (server.Disposed)
                         continue;
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    await storage.TombstoneCleaner.ExecuteCleanup();
+                    var cleanerRes = await storage.TombstoneCleaner.ExecuteCleanup();
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
                     {
-                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                        var val = await WaitForValueAsync(() =>
+                        {
+                            using (context.OpenReadTransaction())
+                            {
+                                return storage.DocumentsStorage.GetNumberOfTombstones(context);
+                            }
+                        }, 0);
+                        Assert.True(0 == val, $"TombstoneCleaner result = {cleanerRes},");
                     }
                 }
-                Assert.Equal(0, total);
             }
         }
 
