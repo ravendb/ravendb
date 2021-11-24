@@ -789,12 +789,28 @@ namespace Raven.Server.Rachis
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {
+            ConvertResultAction action;
             switch (cmd)
             {
                 case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
-                    return new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    action = batchCmpExchangeCommand.ConvertResultAction;
+                    if (action != null)
+                        return action;
+
+                    action = new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    Interlocked.CompareExchange(ref batchCmpExchangeCommand.ConvertResultAction, action, null);
+                    return batchCmpExchangeCommand.ConvertResultAction;
+
                 case CompareExchangeCommandBase cmpExchange:
-                    return new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+
+                    action = cmpExchange.ConvertResultAction;
+                    if (action != null)
+                        return action;
+
+                    action = new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    Interlocked.CompareExchange(ref cmpExchange.ConvertResultAction, action, null);
+                    return cmpExchange.ConvertResultAction;
+
                 default:
                     return null;
             }
