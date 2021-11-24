@@ -103,17 +103,7 @@ namespace SlowTests.Issues
                 var db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
-
-
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
-                    Assert.False(tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions));
-                }
-
-                db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
-                await WaitForValueAsync(() =>
+                var val =await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
@@ -123,6 +113,21 @@ namespace SlowTests.Issues
                         }
                     }, false
                 );
+                Assert.False(val);
+
+                db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                val = await WaitForValueAsync(() =>
+                    {
+                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
+                            return tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions);
+                        }
+                    }, false
+                );
+                WaitForUserToContinueTheTest(store1);
+                Assert.False(val);
             }
         }
 
