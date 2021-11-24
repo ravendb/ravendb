@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 var db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
-                var val =await WaitForValueAsync(() =>
+                var val = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
@@ -114,6 +114,15 @@ namespace SlowTests.Issues
                     }, false
                 );
                 Assert.False(val);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user, "marker");
+                    await session.SaveChangesAsync();
+                }
+
+                var res = WaitForDocument(store2, "marker");
+                Assert.True(res);
 
                 db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 val = await WaitForValueAsync(() =>
@@ -126,7 +135,6 @@ namespace SlowTests.Issues
                         }
                     }, false
                 );
-                WaitForUserToContinueTheTest(store1);
                 Assert.False(val);
             }
         }
