@@ -118,7 +118,14 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="if: !hasConfigurationScript()">
-                        
+                        <div class="row margin-bottom" data-bind="collapse: useCustomS3Host">
+                            <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+                                <div class="toggle margin-left">
+                                    <input id="forcePathStyle" type="checkbox" data-bind="checked: forcePathStyle">
+                                    <label for="forcePathStyle">Force path style</label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
                                 Custom server URL <i class="required"></i>
@@ -147,7 +154,7 @@
                                 <input type="text" class="form-control" data-bind="textInput: selectedAwsRegion">
                             </div>
                         </div>
-                        <div class="row margin-bottom" data-bind="visible: !useCustomS3Host(), validationElement: awsRegionName">                            
+                        <div class="row margin-bottom" data-bind="visible: !useCustomS3Host(), validationElement: awsRegionName">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region <i class="required"></i></label>
                             <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
