@@ -79,6 +79,7 @@ export class amazonS3Credentials extends restoreSettings {
     
     useCustomS3Host = ko.observable<boolean>(false);
     customServerUrl = ko.observable<string>();
+    forcePathStyle = ko.observable<boolean>(true);
     accessKey = ko.observable<string>();
     secretKey = ko.observable<string>();
     regionName = ko.observable<string>();
@@ -103,6 +104,7 @@ export class amazonS3Credentials extends restoreSettings {
             Disabled: false,
             GetBackupConfigurationScript: null,
             CustomServerUrl: this.useCustomS3Host() ? this.customServerUrl() : null,
+            ForcePathStyle: this.useCustomS3Host() ? this.forcePathStyle() : true,
         }
     };
 
@@ -150,6 +152,7 @@ export class amazonS3Credentials extends restoreSettings {
         this.bucketName.throttle(300).subscribe(onChange);
         this.remoteFolder.throttle(300).subscribe(onChange);
         this.customServerUrl.throttle(300).subscribe(onChange);
+        this.forcePathStyle.throttle(300).subscribe(onChange);
     }
     
     static empty(): amazonS3Credentials {
@@ -345,6 +348,7 @@ export class ravenCloudCredentials extends restoreSettings {
             GetBackupConfigurationScript: null,
             //TODO RavenDB-14716
             CustomServerUrl: null,
+            ForcePathStyle: true
         }
     }
     
