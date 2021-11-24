@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
@@ -137,6 +138,7 @@ namespace Raven.Server.Web.System
                 var command = new AddOrUpdateCompareExchangeCommand(Database.Name, key, updateJson, index, context, raftRequestId);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    ServerStore.ForTestingPurposes?.ModifyCompareExchangeTimeout?.Invoke(command);
                     (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
