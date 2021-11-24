@@ -1498,11 +1498,18 @@ namespace Raven.Server.Documents
                 else
                 {
                     flags = localFlags | documentFlags;
+                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                        revisionsStorage.Configuration == null &&
+                        localFlags.Contain(DocumentFlags.HasRevisions) &&
+                        documentFlags.Contain(DocumentFlags.HasRevisions) == false)
+                    {
+                        flags = flags.Strip(DocumentFlags.HasRevisions);
+                    }
                     if (collectionName.IsHiLo == false &&
                         (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                             (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                         {
