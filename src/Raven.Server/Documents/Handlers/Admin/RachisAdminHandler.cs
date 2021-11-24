@@ -60,8 +60,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
                     var (etag, result) = await ServerStore.Engine.PutAsync(command);
-                    await ServerStore.Cluster.WaitForIndexNotification(etag);
-
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     var ms = context.CheckoutMemoryStream();
                     try
