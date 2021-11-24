@@ -201,7 +201,7 @@ class query extends viewModelBase {
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     highlightsCache = ko.observableArray<highlightSection>([]);
-    explanationsCache = new Map<string, explanationItem>();
+    explanationsCache: explanationItem[] = [];
     totalExplanations = ko.observable<number>(0);
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
 
@@ -628,7 +628,7 @@ class query extends viewModelBase {
             }));
         
         this.explanationsFetcher(() => {
-           const allExplanations = Array.from(this.explanationsCache.values());
+           const allExplanations = this.explanationsCache;
            
            return $.when({
                items: allExplanations.map(x => new document(x)),
@@ -862,7 +862,7 @@ class query extends viewModelBase {
         this.currentTab("results");
         this.includesCache.removeAll();
         this.highlightsCache.removeAll();
-        this.explanationsCache.clear();
+        this.explanationsCache.length = 0;
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -1197,14 +1197,21 @@ class query extends viewModelBase {
     }
     
     private onExplanationsLoaded(explanations: dictionary<Array<string>>) {
-        _.forIn(explanations, (doc, id) => {
-            this.explanationsCache.set(id, {
-               id: id,
-                explanations: doc
-            });
-        });
+        for (const id of Object.keys(explanations)) {
+            const docs = explanations[id];
+            const toInsert: explanationItem = {
+                id,
+                explanations: docs
+            };
+            const existingIndex = this.explanationsCache.findIndex(x => x.id === id);
+            if (existingIndex !== -1) {
+                this.explanationsCache.splice(existingIndex, 1, toInsert);
+            } else {
+                this.explanationsCache.push(toInsert);
+            }
+        }
         
-        this.totalExplanations(this.explanationsCache.size);
+        this.totalExplanations(this.explanationsCache.length);
     }
     
     private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings) {
