@@ -42,8 +42,9 @@ import popoverUtils = require("common/popoverUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 import rqlLanguageService = require("common/rqlLanguageService");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
-type queryResultTab = "results" | "explanations" | "timings" | "graph";
+type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -109,9 +110,21 @@ class perCollectionIncludes {
     }
 }
 
+type includedRevisionItem = {
+    changeVector: string;
+    sourceDocument: string;
+    lastModified: string;
+    revision: string;
+}
+
+class includedRevisions {
+    total = ko.observable<number>(0);
+    items: Array<includedRevisionItem> = [];
+}
+
 class query extends viewModelBase {
 
-    static readonly timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static readonly dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
     static readonly recentQueryLimit = 6;
     static readonly recentKeyword = 'Recent Query';
@@ -190,6 +203,7 @@ class query extends viewModelBase {
     queryFetcher = ko.observable<fetcherType>();
     explanationsFetcher = ko.observable<fetcherType>();
     effectiveFetcher = this.queryFetcher;
+    includedRevisionsFetcher = ko.observable<fetcherType>();
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
@@ -202,6 +216,7 @@ class query extends viewModelBase {
     graphTabIsDirty = ko.observable<boolean>(true);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
+    includesRevisionsCache = ko.observable<includedRevisions>(new includedRevisions());
     highlightsCache = ko.observableArray<highlightSection>([]);
     explanationsCache = new Map<string, explanationItem>();
     totalExplanations = ko.observable<number>(0);
@@ -304,7 +319,7 @@ class query extends viewModelBase {
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
             "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
-            "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap");
+            "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap", "goToIncludesRevisionsTab");
     }
 
     private initObservables(): void {
@@ -609,7 +624,7 @@ class query extends viewModelBase {
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
-            detectTimeSeries: true, 
+            detectTimeSeries: true,
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 if (type === "plot") {
                     const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);
@@ -655,6 +670,15 @@ class query extends viewModelBase {
                totalResultCount: allExplanations.length
            });
         });
+
+        this.includedRevisionsFetcher(() => {
+            const revisionItems = this.includesRevisionsCache().items;
+
+            return $.when({
+                items: revisionItems.map(x => new document(x)),
+                totalResultCount: revisionItems.length
+            });
+        });
         
         this.columnsSelector.init(grid,
             (s, t, c) => this.effectiveFetcher()(s, t),
@@ -664,6 +688,8 @@ class query extends viewModelBase {
                     return documentsProvider.findColumns(w, r);
                 } else if (tab === "explanations") {
                     return this.explanationsColumns(grid);
+                } else if (tab === "revisions") {
+                    return this.revisionsColumns(grid);
                 } else if (tab instanceof timeSeriesTableDetails) {
                     return this.getTimeSeriesColumns(grid, tab);
                 } else {
@@ -721,6 +747,11 @@ class query extends viewModelBase {
                 const value = column.getCellValue(doc);
                 showPreview(value);
             }
+            
+            if (this.currentTab() === "revisions" && column.header === "Last Modified") {
+                const rawValue = (doc as any);
+                onValue(moment.utc(rawValue.lastModified), rawValue.lastModified);
+            }
         });
         
         this.queryHasFocus(true);
@@ -774,7 +805,7 @@ class query extends viewModelBase {
 
         const formatTimeSeriesDate = (input: string) => {
             const dateToFormat = moment.utc(input);
-            return dateToFormat.format(query.timeSeriesFormat) + "Z";
+            return dateToFormat.format(query.dateTimeFormat) + "Z";
         };
         
         switch (timeSeriesQueryResult.detectResultType(tab.value)) {
@@ -804,17 +835,37 @@ class query extends viewModelBase {
     
     private explanationsColumns(grid: virtualGridController<any>): virtualColumn[] {
         return [
-            new actionColumn<explanationItem>(grid, doc => this.showExplanationDetails(doc), "Show", `<i class="icon-preview"></i>`, "72px",
-            {
+            new actionColumn<explanationItem>(grid, doc => this.showExplanationDetails(doc), "Show", `<i class="icon-preview"></i>`, "72px", {
                 title: () => 'Show detailed explanation'
             }),
             new textColumn<explanationItem>(grid, x => x.id, "Id", "30%"),
             new textColumn<explanationItem>(grid, x => x.explanations.map(x => x.split("\n")[0]).join(", "), "Explanation", "50%")
         ];
     }
+
+    private revisionsColumns(grid: virtualGridController<any>): virtualColumn[] {
+        return [
+            new actionColumn<includedRevisionItem>(grid, x => this.showRevisionDetails(x.revision), "Show", `<i class="icon-preview"></i>`, "72px", {
+                    title: () => 'Show revision preview'
+                }),
+            new textColumn<includedRevisionItem>(grid, x => x.revision, "Revision", "15%"),
+            new hyperlinkColumn<includedRevisionItem>(grid, x => x.sourceDocument, x => appUrl.forEditDoc(x.sourceDocument, this.activeDatabase()), "Source Document", "25%", {
+                    sortable: "string"
+                }),
+            new textColumn<includedRevisionItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.lastModified, query.dateTimeFormat), "Last Modified", "25%", {
+                    sortable: "string"
+                }),
+            new textColumn<includedRevisionItem>(grid, x => x.changeVector, "Change Vector", "25%") 
+        ];
+    }
     
     private showExplanationDetails(details: explanationItem): void {
         app.showBootstrapDialog(new showDataDialog("Explanation for: " + details.id, details.explanations.join("\r\n"), "plain"));
+    }
+
+    private showRevisionDetails(revisionDocument: string): void {
+        const text = JSON.stringify(revisionDocument, null, 4);
+        app.showBootstrapDialog(new showDataDialog("Revision item", text, "javascript"));
     }
 
     private loadSavedQueries(): void {
@@ -894,6 +945,7 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.removeAll();
+        this.includesRevisionsCache(new includedRevisions());
         this.highlightsCache.removeAll();
         this.explanationsCache.clear();
         this.timings(null);
@@ -1047,6 +1099,7 @@ class query extends viewModelBase {
                             resultsTask.resolve(queryResults);
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
+                            this.onIncludesRevisionsLoaded(queryResults.includesRevisions);
                             this.onHighlightingsLoaded(queryResults.highlightings);
                             this.onExplanationsLoaded(queryResults.explanations);
                             this.onTimingsLoaded(queryResults.timings);
@@ -1246,7 +1299,7 @@ class query extends viewModelBase {
     
     private onIncludesLoaded(includes: dictionary<any>): void {
         _.forIn(includes, (doc, id) => {
-            const metadata = doc['@metadata'];
+            const metadata = doc["@metadata"];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
             
             let perCollectionCache = this.includesCache().find(x => x.name === collection);
@@ -1260,6 +1313,20 @@ class query extends viewModelBase {
         this.includesCache().forEach(cache => {
             cache.total(cache.items.size);
         });
+    }
+
+    private onIncludesRevisionsLoaded(includesRevisionsFromQuery: Array<any>): void {
+        includesRevisionsFromQuery.forEach(x => {
+            
+            const metadata = x.Revision["@metadata"];
+            const lastModified = metadata ? metadata["@last-modified"] : null;
+            
+            const item: includedRevisionItem = { revision: x.Revision, lastModified: lastModified, sourceDocument: x.Id, changeVector: x.ChangeVector };
+            
+            this.includesRevisionsCache().items.push(item);
+        });
+
+        this.includesRevisionsCache().total(this.includesRevisionsCache().items.length);
     }
     
     private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>): void {
@@ -1415,10 +1482,19 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
 
         // since we merge records based on fragments
-        // remove all existing highlights when going back to 
-        // 'results' tab
+        // remove all existing highlights & included revisions when going back to 'results' tab
         this.highlightsCache.removeAll();
+        this.includesRevisionsCache(new includedRevisions());
         
+        this.columnsSelector.reset();
+        this.refresh();
+    }
+    
+    goToIncludesRevisionsTab(): void {
+        this.currentTab("revisions");
+        
+        this.effectiveFetcher = this.includedRevisionsFetcher;
+
         this.columnsSelector.reset();
         this.refresh();
     }
