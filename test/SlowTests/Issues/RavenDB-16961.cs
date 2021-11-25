@@ -97,10 +97,21 @@ namespace SlowTests.Issues
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
-
+                var db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                var val2 = await WaitForValueAsync(() =>
+                    {
+                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
+                            return rev.Count;
+                        }
+                    }, 1
+                );
+                Assert.Equal(1, val2);
                 await RevisionsHelper.SetupRevisions(store1, Server.ServerStore, new RevisionsConfiguration());
 
-                var db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                 db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
                 var val = await WaitForValueAsync(() =>
@@ -125,6 +136,18 @@ namespace SlowTests.Issues
                 Assert.True(res);
 
                 db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                val2 = await WaitForValueAsync(() =>
+                    {
+                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            var rev = db.DocumentsStorage.RevisionsStorage.GetRevisions(ctx, "users/1", 0, 1);
+                            return rev.Count;
+                        }
+                    }, 0
+                );
+                Assert.Equal(0, val2);
+
                 val = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))

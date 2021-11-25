@@ -1501,11 +1501,11 @@ namespace Raven.Server.Documents
                     var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
-                        revisionsStorage.Configuration == null &&
-                        localFlags.Contain(DocumentFlags.HasRevisions) &&
-                        documentFlags.Contain(DocumentFlags.HasRevisions) == false)
+                        localFlags.Contain(DocumentFlags.HasRevisions) != documentFlags.Contain(DocumentFlags.HasRevisions))
                     {
-                        flags = flags.Strip(DocumentFlags.HasRevisions);
+                        var (_, count) = revisionsStorage.GetRevisions(context, id, 0, 1);
+                        if (count == 0)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
                     }
                     if (collectionName.IsHiLo == false &&
                         (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
