@@ -14,11 +14,7 @@
         }
     }
 
-    public struct PerFieldScoreFunction : IQueryScoreFunction
-    {
-    }
-
-    public struct PerDocumentScoreFunction : IQueryScoreFunction
+    public struct TermFrequencyScoreFunction : IQueryScoreFunction
     {
     }
 }

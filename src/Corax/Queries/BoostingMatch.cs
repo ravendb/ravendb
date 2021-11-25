@@ -8,8 +8,6 @@ namespace Corax.Queries
 {
     public struct BoostingComparer : IMatchComparer
     {
-        public const float Epsilon = 0.000001f;
-
         public MatchCompareFieldType FieldType => MatchCompareFieldType.Score;
 
         public int FieldId => throw new NotSupportedException($"{nameof(FieldId)} is not supported for {nameof(BoostingComparer)}");
@@ -41,6 +39,7 @@ namespace Corax.Queries
         internal int _bufferSize;
         internal int _bufferIdx;
         internal int _countOfCalls;
+        internal bool _requiresSort;
         internal IDisposable _bufferHandler;
         private readonly delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, Span<long>, Span<float>, void> _scoreFunc;
         
@@ -52,6 +51,7 @@ namespace Corax.Queries
             _searcher = searcher;
             _bufferIdx = 0;
             _countOfCalls = 0;
+            _requiresSort = false;
 
             ByteString buffer;
             int bufferSize;
@@ -83,6 +83,8 @@ namespace Corax.Queries
         public int AndWith(Span<long> prevMatches)
         {            
             var results = _inner.AndWith(prevMatches);
+            if (results == 0)
+                return results;
 
             // Every time this is called we will store in a growable temporary buffer all the matches for this boosting to be used later.
             var bufferSlice = new Span<long>(_buffer + _bufferIdx, _bufferSize - _bufferIdx);
@@ -96,8 +98,9 @@ namespace Corax.Queries
             _bufferIdx += results;
 
             // We track the amount of times this is called in order to know if we need to sort the buffer when scoring.             
-            // TODO: We can do this more efficiently just checking the latest and using a boolean if we detect unordered.
             _countOfCalls++;
+            if (_countOfCalls > 1)
+                _requiresSort = true;
 
             return results;
         }
@@ -106,6 +109,8 @@ namespace Corax.Queries
         public int Fill(Span<long> matches)
         {
             int results = _inner.Fill(matches);
+            if (results == 0)
+                return results;
 
             // Every time this is called we will store in a growable temporary buffer all the matches for this boosting to be used later.
             var bufferSlice = new Span<long>(_buffer + _bufferIdx, _bufferSize - _bufferIdx);
@@ -119,8 +124,9 @@ namespace Corax.Queries
             _bufferIdx += results;
 
             // We track the amount of times this is called in order to know if we need to sort the buffer when scoring.             
-            // TODO: We can do this more efficiently just checking the latest and using a boolean if we detect unordered.
             _countOfCalls++;
+            if (_countOfCalls > 1)
+                _requiresSort = true;
 
             return results;
         }
@@ -160,11 +166,13 @@ namespace Corax.Queries
                 _inner.Score(matches, scores);
             }   
 
-            if (_countOfCalls > 1)
+            if (_requiresSort)
             {
                 // We know we can get unordered sequences. 
                 Sorter<long, NumericComparer> sorter;
                 sorter.Sort(new Span<long>(_buffer, _bufferIdx));
+
+                _requiresSort = false;
             }
 
             _scoreFunc(ref this, matches, scores);
@@ -224,6 +232,73 @@ namespace Corax.Queries
                     {
                         // When we find a match we apply the score.
                         scores[mIdx] = constValue;
+                        eIdx++;
+                    }
+
+                    mIdx++;
+                    if (mIdx >= matches.Length)
+                        break;
+                    matchValue = matches[mIdx];
+                }
+            }
+        }
+
+        internal static void TermFrequencyScoreFunc(ref BoostingMatch<TInner, TermFrequencyScoreFunction> match, Span<long> matches, Span<float> scores)
+        {
+            if (typeof(TInner) != typeof(TermMatch))
+                throw new NotSupportedException($"The type {nameof(TInner)} is not supported for calculating Term Frequency Score");
+
+            // We need to multiply by a constant.                       
+            Span<long> elements = new Span<long>(match._buffer, match._bufferIdx);
+
+            // Get rid of all the elements that are smaller than the first one.
+            int eIdx = 0;
+            long matchValue = matches[0];
+            while (eIdx < elements.Length && matchValue > elements[eIdx])
+                eIdx++;
+
+            int mIdx = 0;
+            float termCount = 1.0f / match._inner.Count;            
+            if (match._inner.IsBoosting)
+            {
+                while (eIdx < elements.Length)
+                {
+                    long elementValue = elements[eIdx];
+                    if (elementValue < matchValue)
+                    {
+                        // We are gonna try to iterate over this as fast as possible.
+                        eIdx++;
+                        continue;
+                    }
+                    else if (elementValue == matchValue)
+                    {
+                        // When we find a match we apply the score.
+                        scores[mIdx] *= termCount;
+                        eIdx++;
+                    }
+
+                    mIdx++;
+                    if (mIdx >= matches.Length)
+                        break;
+                    matchValue = matches[mIdx];
+                }
+            }
+            else
+            {                
+                // We know it is not boosting, so we assign the constant instead.
+                while (eIdx < elements.Length)
+                {
+                    long elementValue = elements[eIdx];
+                    if (elementValue < matchValue)
+                    {
+                        // We are gonna try to iterate over this as fast as possible.
+                        eIdx++;
+                        continue;
+                    }
+                    else if (elementValue == matchValue)
+                    {
+                        // When we find a match we apply the score.
+                        scores[mIdx] = termCount;
                         eIdx++;
                     }
 

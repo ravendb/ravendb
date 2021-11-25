@@ -128,5 +128,20 @@ namespace Corax.Queries
         {
             return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, new ConstantScoreFunction(value), &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc));
         }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BoostingMatch WithConstant<TInner>(IndexSearcher searcher, in TInner inner, ConstantScoreFunction func)
+            where TInner : IQueryMatch
+        {
+            return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, func, &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BoostingMatch WithTermFrequency<TInner>(IndexSearcher searcher, in TInner inner, TermFrequencyScoreFunction func = default(TermFrequencyScoreFunction))
+            where TInner : IQueryMatch
+        {
+            return Create(new BoostingMatch<TInner, TermFrequencyScoreFunction>(searcher, inner, func, &BoostingMatch<TInner, TermFrequencyScoreFunction>.TermFrequencyScoreFunc));
+        }
     }
 }

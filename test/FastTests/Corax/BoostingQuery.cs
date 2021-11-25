@@ -136,11 +136,47 @@ namespace FastTests.Corax
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var contentMatch2 = searcher.TermQuery("Content1", "2");
                 var orMatch2 = searcher.Or(contentMatch2, boostedOrMatch);
-                var sortedMatch = searcher.OrderBy(orMatch2, default(BoostingComparer), take:4);
+                var sortedMatch = searcher.OrderBy(orMatch2, default(BoostingComparer), take: 4);
 
                 // TODO: Check what happens in OrderBy statements when the buffer is too small. 
                 Span<long> ids = stackalloc long[1024];
 
+                var read = sortedMatch.Fill(ids);
+
+                List<string> sortedByCorax = new();
+                for (int i = 0; i < read; ++i)
+                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+
+                for (int i = 0; i < longList.Count; ++i)
+                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
+            }
+        }
+
+        [Fact]
+        public void OrderByBoostingTermFrequency()
+        {
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 0 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/2", Content1 = 0 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/5", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/6", Content1 = 1 });   // 1/4
+
+
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                var content0Match = searcher.TermQuery("Content1", "0");
+                var boostedContent0 = searcher.Boost(content0Match, default(TermFrequencyScoreFunction));
+
+                var content1Match = searcher.TermQuery("Content1", "1");
+                var boostedContent1 = searcher.Boost(content1Match, default(TermFrequencyScoreFunction));
+
+                var orMatch = searcher.Or(boostedContent0, boostedContent1);
+                var boostedOrMatch = searcher.Boost(orMatch, 10);
+                var sortedMatch = searcher.OrderByScore(boostedOrMatch);
+                
+                Span<long> ids = stackalloc long[1024];
                 var read = sortedMatch.Fill(ids);
 
                 List<string> sortedByCorax = new();

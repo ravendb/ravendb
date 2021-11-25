@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
-using System.Security.Cryptography;
 
 namespace Corax.Queries
 {
@@ -15,6 +14,7 @@ namespace Corax.Queries
     {
         private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
         private readonly delegate*<ref TermMatch, Span<long>, int> _andWithFunc;
+        private readonly delegate*<ref TermMatch, Span<long>, Span<float>, void> _scoreFunc;
 
         private readonly long _totalResults;
         private long _currentIdx;
@@ -24,15 +24,16 @@ namespace Corax.Queries
         private Container.Item _container;
         private Set.Iterator _set;
 
-        public bool IsBoosting => false;
+        public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
 
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
+            long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int> andWithFunc,
-            long totalResults)
+            delegate*<ref TermMatch, Span<long>, Span<float>, void> scoreFunc = null)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
@@ -40,6 +41,7 @@ namespace Corax.Queries
             _baselineIdx = QueryMatch.Start;
             _fillFunc = fillFunc;
             _andWithFunc = andWithFunc;
+            _scoreFunc = scoreFunc;
 
             _container = default;
             _set = default;
@@ -54,7 +56,7 @@ namespace Corax.Queries
                 return 0;
             }
 
-            return new TermMatch(&FillFunc, &FillFunc, 0);
+            return new TermMatch(0, &FillFunc, &FillFunc);
         }
 
         public static TermMatch YieldOnce(long value)
@@ -90,7 +92,7 @@ namespace Corax.Queries
             }
 
 
-            return new TermMatch(&FillFunc, &AndWithFunc, 1)
+            return new TermMatch(1, &FillFunc, &AndWithFunc)
             {
                 _current = value,
                 _currentIdx = QueryMatch.Start
@@ -166,7 +168,7 @@ namespace Corax.Queries
             }
 
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(&FillFunc, &AndWithFunc, itemsCount)
+            return new TermMatch(itemsCount, &FillFunc, &AndWithFunc)
             {
                 _container = containerItem,
                 _currentIdx = len,
@@ -360,7 +362,7 @@ namespace Corax.Queries
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(&FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, set.State.NumberOfEntries)
+            return new TermMatch(set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc)
             {
                 _set = set.Iterate(),
                 _current = long.MinValue
@@ -379,9 +381,13 @@ namespace Corax.Queries
             return _andWithFunc(ref this, matches);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores) 
         {
-            // We ignore. Nothing to do here. 
+            if (_scoreFunc == null)
+                return; // We ignore. Nothing to do here. 
+
+            _scoreFunc(ref this, matches, scores);
         }
     }
 }
