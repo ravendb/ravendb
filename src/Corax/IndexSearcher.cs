@@ -212,6 +212,12 @@ namespace Corax
             throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
         }
 
+        public SortingMatch OrderByScore<TInner>(in TInner set, int take = -1)
+            where TInner : IQueryMatch    
+        {
+            return Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
+        }
+
         public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = -1)
             where TInner : IQueryMatch
             where TComparer : struct, IMatchComparer
@@ -449,9 +455,46 @@ namespace Corax
         }
 
         public BoostingMatch Boost<TInner>(TInner match, float constant)
-            where TInner: IQueryMatch
+            where TInner : IQueryMatch
         {
             return BoostingMatch.WithConstant(this, match, constant);
+        }
+
+        public BoostingMatch Boost<TInner, TScoreFunction>(TInner match, TScoreFunction scoreFunction)
+            where TInner : IQueryMatch
+            where TScoreFunction : IQueryScoreFunction
+        {
+            if (typeof(TScoreFunction) == typeof(TermFrequencyScoreFunction))
+            {
+                return BoostingMatch.WithTermFrequency(this, match, (TermFrequencyScoreFunction)(object)scoreFunction);
+
+            }
+            else if (typeof(TScoreFunction) == typeof(ConstantScoreFunction))
+            {
+                return BoostingMatch.WithConstant(this, match, (ConstantScoreFunction)(object)scoreFunction);
+            }
+            else
+            {
+                throw new NotSupportedException($"Boosting with the score function {nameof(TScoreFunction)} is not supported.");
+            }
+        }
+
+        public BoostingMatch Boost<TInner>(TInner match, IQueryScoreFunction scoreFunction)
+            where TInner : IQueryMatch
+        {
+            if (scoreFunction.GetType() == typeof(TermFrequencyScoreFunction))
+            {
+                return BoostingMatch.WithTermFrequency(this, match, (TermFrequencyScoreFunction)(object)scoreFunction);
+
+            }
+            else if (scoreFunction.GetType() == typeof(ConstantScoreFunction))
+            {
+                return BoostingMatch.WithConstant(this, match, (ConstantScoreFunction)(object)scoreFunction);
+            }
+            else
+            {
+                throw new NotSupportedException($"Boosting with the score function {scoreFunction.GetType().Name} is not supported.");
+            }
         }
 
         public void Dispose()
