@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             try
             {
                 var connection = new ShardedSubscriptionConnection(server, tcpConnectionOptions, tcpConnectionDisposable, buffer);
-                Task.Run(async () => await connection.Run());
+                _ = connection.Run();
             }
             catch (Exception)
             {
@@ -87,13 +87,16 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         private async Task StartShardSubscriptionWorkers()
         {
+            Console.WriteLine("StartShardSubscriptionWorkers statr");
             await ParseSubscriptionOptionsAsync();
-            AddToStatusDescription($"A connection for sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}");
-            SubscriptionState = await TcpConnection.ShardedContext.ShardedSubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
+            AddToStatusDescription($"A connection for sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' was received from client worker with remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}");
+            //TODO: egorcheck if we can remove this
+            //SubscriptionState = await TcpConnection.ShardedContext.ShardedSubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
 
             //TODO: egor parse subscription query and check supported features ? if yes then skip the check on shards ? if no its get checked on shards anyway
 
-            await TryConnectSubscription();
+            //TODO: egorcheck if we can remove this
+            //await TryConnectSubscription();
             try
             {
                 _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
@@ -107,11 +110,8 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     var shard = TcpConnection.ShardedContext.GetShardedDatabaseName(i);
 
                     // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
-                    if (_options.MaxDocsPerBatch == 4096) // this is default value
-                    {
-                        _options.MaxDocsPerBatch = 1024; //TODO: egor add configuration for shard worker MaxDocsPerBatch
-                        _options.MaxErroneousPeriod = TimeSpan.MaxValue; //TODO: egor we have reconnect with timeout now
-                    }
+                    _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.ShardedContext.Count, _options.MaxDocsPerBatch);
+                    _options.MaxDocsPerBatch = Math.Max(1, _options.MaxDocsPerBatch);
 
                     var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, SendConfirmToClientUnderLock, ReportExceptionToAndStopProcessing, WriteBatchToClientAndAck);
 
@@ -125,24 +125,13 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     _shardWorkers.Add(shard, worker);
                 }
 
-                var exceptions = new List<Exception>();
-                foreach (var worker in _shardWorkers)
-                {
-                    if (worker.Value.PullingTask.IsFaulted)
-                    {
-                        exceptions.Add(worker.Value.PullingTask.Exception);
-                        worker.Value.LastErrorDateTime = DateTime.Now;
-                    }
-                }
-
-                if (exceptions.Count == _shardWorkers.Count)
-                    throw new AggregateException($"Cannot start sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' because all shard workers failed.", exceptions);
-
+                
                 await WriteJsonAsync(new DynamicJsonValue
                 {
                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                     [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Accepted)
                 }, TcpConnection);
+            Console.WriteLine("StartShardSubscriptionWorkers done");
             }
             catch
             {
@@ -155,8 +144,15 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         {
             using (DisposeOnDisconnect)
             {
+                var exceptions = new Dictionary<string, Exception>();
+                var shardsToReconnect = new List<string>();
+
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
+                    exceptions.Clear();
+                    shardsToReconnect.Clear();
+                    
+                    //TODO: Remove
                     await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000), CancellationTokenSource.Token);
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -173,8 +169,6 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                         }
                     }
 
-                    Dictionary<string, Exception> exceptions = new Dictionary<string, Exception>();
-                    List<string> shardsToReconnect = new List<string>();
                     var stopping = false;
                     foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
                     {
@@ -183,29 +177,38 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                         if (shardHolder.PullingTask.IsFaulted == false)
                             continue;
 
+                        Console.WriteLine($"{shard} is faulted. "+ shardHolder.PullingTask.Exception);
+
                         exceptions.Add(shard, shardHolder.PullingTask.Exception);
 
                         if (stopping)
                             continue;
 
+                        shardsToReconnect.Add(shard);
+
                         if (shardHolder.LastErrorDateTime.HasValue == false)
                         {
-                            shardHolder.LastErrorDateTime = DateTime.Now;
-                            shardsToReconnect.Add(shard);
+                            shardHolder.LastErrorDateTime = DateTime.UtcNow;
+                            continue;
                         }
-                        else if (DateTime.Now - shardHolder.LastErrorDateTime.Value < _rejectedReconnectTimeout)
-                        {
-                            shardsToReconnect.Add(shard);
-                        }
-                        else
-                        {
-                            // we are stopping this subscription
-                            stopping = true;
-                        }
+
+                        if (DateTime.UtcNow - shardHolder.LastErrorDateTime.Value < _rejectedReconnectTimeout)
+                            continue;
+
+                        // we are stopping this subscription
+                        stopping = true;
+                    }
+
+                    if (exceptions.Count == _shardWorkers.Count)
+                    {
+                        throw new AggregateException("Too many");
                     }
 
                     if (stopping)
+                    {
+                        Console.WriteLine("all faulted stopping");
                         throw new AggregateException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' because shard {string.Join(", ", exceptions.Keys)} workers failed.", exceptions.Values);
+                    }
 
                     // try reconnect faulted workers, this will happen every 3 sec
                     foreach (var shard in shardsToReconnect)

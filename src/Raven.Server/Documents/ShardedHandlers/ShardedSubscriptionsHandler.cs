@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task Delete()
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-            await ShardedContext.ShardedSubscriptionStorage.DeleteSubscription(ShardedContext.DatabaseName, subscriptionName, GetRaftRequestIdFromQuery());
+            await ShardedContext.ShardedSubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
             await NoContent();
         }
 
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
                 if (pageSize > maxPageSize)
                     throw new ArgumentException($"Cannot gather more than {maxPageSize} results during tryouts, but requested number was {pageSize}.");
-
+                var timeLimit = GetIntValueQueryString("timeLimit", false);
                 var disposables = new List<IDisposable>();
                 try
                 {
@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     foreach (var re in ShardedContext.RequestExecutors)
                     {
                         disposables.Add(ContextPool.AllocateOperationContext(out TransactionOperationContext ctx));
-                        var cmd = new SubscriptionTryoutCommand(tryout, pageSize);
+                        var cmd = new SubscriptionTryoutCommand(tryout, pageSize, timeLimit);
                         cmds.Add(cmd);
                         var t = re.ExecuteAsync(cmd, ctx);
                         tasks.Add(t);

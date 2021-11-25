@@ -173,6 +173,9 @@ namespace Raven.Server.ServerWide
 
         public bool IsSharded()
         {
+            if (_materializedRecord != null)
+                return _materializedRecord.Shards != null && _materializedRecord.Shards.Length > 0;
+
             _record.TryGet(nameof(DatabaseRecord.Shards), out BlittableJsonReaderArray array);
             return array != null && array.Length > 0;
         }

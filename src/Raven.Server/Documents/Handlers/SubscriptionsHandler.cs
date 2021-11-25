@@ -177,11 +177,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
 
-            await Database.SubscriptionStorage.DeleteSubscription(Database.Name, subscriptionName, GetRaftRequestIdFromQuery());
-            if (Logger.IsInfoEnabled)
-            {
-                Logger.Info($"Subscription with name {subscriptionName} was deleted");
-            }
+            await Database.SubscriptionStorage.DeleteSubscription(subscriptionName, GetRaftRequestIdFromQuery());
 
             Database.SubscriptionStorage.RaiseNotificationForTaskRemoved(subscriptionName);
 

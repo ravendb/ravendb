@@ -124,11 +124,16 @@ namespace Raven.Server.Documents.Subscriptions
             return true;
         }
 
-        public async Task DeleteSubscription(string database, string name, string raftRequestId)
+        public async Task DeleteSubscription(string name, string raftRequestId)
         {
-            var command = new DeleteSubscriptionCommand(database, name, raftRequestId);
+            var command = new DeleteSubscriptionCommand(DatabaseName, name, raftRequestId);
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _serverStore.Cluster.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+
+            if (_logger.IsInfoEnabled)
+            {
+                _logger.Info($"Subscription with name '{name}' was deleted in database '{DatabaseName}'.");
+            }
         }
 
         public SubscriptionState GetSubscriptionFromServerStoreById(long id)

@@ -394,7 +394,19 @@ namespace FastTests
                         catch (ConcurrencyException)
                         {
                             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
-                            Assert.Equal(options.ReplicationFactor, record.Topology.ReplicationFactor);
+
+                            if (record.IsSharded == false)
+                            {
+                                Assert.Equal(options.ReplicationFactor, record.Topology.ReplicationFactor);
+                            }
+                            else
+                            {
+                                foreach (var kvp in record.Topologies)
+                                {
+                                    Assert.Equal(options.ReplicationFactor, kvp.Topology.ReplicationFactor);
+                                }
+                            }
+
                             raftCommand = record.Etag;
                         }
 

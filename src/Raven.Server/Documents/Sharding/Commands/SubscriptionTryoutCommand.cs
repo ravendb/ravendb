@@ -12,16 +12,22 @@ namespace Raven.Server.Documents.Sharding.Commands
     {
         private readonly SubscriptionTryout _tryout;
         private readonly int _pageSize;
+        private readonly int? _timeLimit;
 
-        public SubscriptionTryoutCommand(SubscriptionTryout tryout, int pageSize)
+        public SubscriptionTryoutCommand(SubscriptionTryout tryout, int pageSize, int? timeLimit)
         {
             _tryout = tryout;
             _pageSize = pageSize;
+            _timeLimit = timeLimit;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions/try?pageSize={_pageSize}";
+            if (_timeLimit.HasValue)
+            {
+                url += $"&timeLimit={_timeLimit}";
+            }
 
             var request = new HttpRequestMessage
             {

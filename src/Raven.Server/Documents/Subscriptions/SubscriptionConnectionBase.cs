@@ -101,7 +101,8 @@ namespace Raven.Server.Documents.Subscriptions
         {
             _connectionScope.RecordException(e is SubscriptionInUseException ? SubscriptionError.ConnectionRejected : SubscriptionError.Error, e.Message);
             var subsType = sharded ? "sharded " : string.Empty;
-            var errorMessage = $"Failed to process {subsType}subscription '{SubscriptionId}' / from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
+            var clientType = sharded ? "'client worker'" : Shard == null ? "'client worker'" : "'sharded subscription worker'";
+            var errorMessage = $"Failed to process {subsType}subscription '{SubscriptionId}' for database '{Database}' on node '{_serverStore.NodeTag}' / from {clientType} '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
             AddToStatusDescription($"{errorMessage}. Sending response to client");
             if (_logger.IsOperationsEnabled)
                 _logger.Info(errorMessage, e);
@@ -339,7 +340,10 @@ namespace Raven.Server.Documents.Subscriptions
                 }
                 else
                 {
-                    AddToStatusDescription("Subscription error");
+                    //TODO: egor finish
+                    var dbNameStr = Shard == null ? $"for database '{Database}'" : $"for shard '{Shard.ShardName}' of database '{Database}'";
+                    AddToStatusDescription($"Subscription error on subscription '{_options.SubscriptionName}' with id '{SubscriptionId}', {dbNameStr}" + this.);
+                    var message = $"A connection for subscription '{_options.SubscriptionName}' with id '{SubscriptionId}', {dbNameStr} was received from {clientType} with remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
 
                     if (_logger.IsInfoEnabled)
                     {
@@ -796,6 +800,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void AddToStatusDescription(string message)
         {
+            Console.WriteLine(this.Database + ": "+message);
             while (RecentSubscriptionStatuses.Count > 50)
             {
                 RecentSubscriptionStatuses.TryDequeue(out _);

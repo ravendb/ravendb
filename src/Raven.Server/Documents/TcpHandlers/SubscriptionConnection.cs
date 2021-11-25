@@ -61,8 +61,8 @@ namespace Raven.Server.Documents.TcpHandlers
         public ParsedSubscription Subscription;
 
         public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy) 
-            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, 
-                tcpConnection.ShardedContext == null ? tcpConnection.DocumentDatabase.Name : tcpConnection.ShardedContext.DatabaseName, 
+            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable,
+                ShardHelper.IsShardedName(tcpConnection.DocumentDatabase.Name) ? ShardHelper.ToDatabaseName(tcpConnection.DocumentDatabase.Name) : tcpConnection.DocumentDatabase.Name, 
                 CancellationTokenSource.CreateLinkedTokenSource(tcpConnection.DocumentDatabase.DatabaseShutdown))
         {
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task InitAsync()
         {
-            if (TcpConnection.ShardedContext == null)
+            if (ShardHelper.IsShardedName(TcpConnection.DocumentDatabase.Name) == false)
             {
                 Shard = null;
             }
@@ -87,7 +87,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
             await ParseSubscriptionOptionsAsync();
             var dbNameStr = Shard == null ? $"for database '{Database}'" : $"for shard '{Shard.ShardName}' of database '{Database}'";
-            var message = $"A connection for subscription ID {SubscriptionId}, {dbNameStr} was received from remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
+            var clientType = Shard == null ? "'client worker'" : "'sharded subscription worker'";
+            var message = $"A connection for subscription '{_options.SubscriptionName}' with id '{SubscriptionId}', {dbNameStr} was received from {clientType} with remote IP {TcpConnection.TcpClient.Client.RemoteEndPoint}";
             AddToStatusDescription(message);
             if (_logger.IsInfoEnabled)
             {

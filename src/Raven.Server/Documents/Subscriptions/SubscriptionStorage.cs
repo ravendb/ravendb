@@ -25,7 +25,7 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionStorage : SubscriptionStorageBase, ILowMemoryHandler
+    public class SubscriptionStorage : SubscriptionStorageBase
     {
         private readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;

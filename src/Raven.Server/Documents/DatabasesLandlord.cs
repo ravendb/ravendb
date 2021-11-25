@@ -124,10 +124,6 @@ namespace Raven.Server.Documents
                             }
 
                             await HandleSpecificClusterChangedForShardedDatabase(rawRecord.DatabaseName, index, type, changeType, context, rawRecord);
-
-                            var dbName = rawRecord.DatabaseName;
-                            OnShardedDatabaseDelete?.Invoke(dbName, context);
-                            OnShardedDatabaseDelete = null;
                         }
                         else
                         {
@@ -252,6 +248,9 @@ namespace Raven.Server.Documents
             TransactionOperationContext context,
             RawDatabaseRecord rawRecord)
         {
+            if (ShouldDeleteShardedContext(context, databaseName, rawRecord))
+                return;
+
             switch (changeType)
             {
                 case ClusterDatabaseChangeType.ValueChanged:
@@ -372,7 +371,7 @@ namespace Raven.Server.Documents
         {
             var index = ShardHelper.TryGetShardIndex(dbName);
             string tag;
-            bool sharded = false;
+            bool isShard = false;
             if (index == -1)
             {
                 tag = _serverStore.NodeTag;
@@ -380,7 +379,7 @@ namespace Raven.Server.Documents
             else
             {
                 tag = $"{_serverStore.NodeTag}${index}";
-                sharded = true;
+                isShard = true;
             }
 
             var deletionInProgress = DeletionInProgressStatus.No;
@@ -398,31 +397,35 @@ namespace Raven.Server.Documents
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
 
-            if (sharded == false)
+            if (isShard == false)
             {
                 context.CloseTransaction();
             }
 
             DeleteDatabase(dbName, deletionInProgress, record);
 
-            if (sharded)
+            if (isShard)
             {
-                // we need to remove the sharded context from resource cache, after we remove all the shards
-                if (OnShardedDatabaseDelete == null)
-                    OnShardedDatabaseDelete += DatabasesLandlord_OnShardedDatabaseDelete;
-
-                // need to remove the database from _shardedDatabases resource cache
+                // need to remove the shard from _shardedDatabases resource cache
                 RemoveShardedDatabase(dbName);
             }
             
             return true;
         }
 
-        private void DatabasesLandlord_OnShardedDatabaseDelete(string name, TransactionOperationContext context)
+        public bool ShouldDeleteShardedContext(TransactionOperationContext context, string dbName, RawDatabaseRecord rawRecord)
         {
+            // TODO: on resharding handle add/remove shards for now we assume that if one shard get deleted then all other also are deleted
+            var directDelete = rawRecord.DeletionInProgress?.Any(x => x.Key.StartsWith(_serverStore.NodeTag) && x.Value != DeletionInProgressStatus.No);
+            if (directDelete == false)
+                return false;
+
             context.CloseTransaction();
 
-            RemoveShardedDatabase(name);
+            // need to remove the sharded context from _shardedDatabases resource cache, and dispose it
+            RemoveShardedDatabase(dbName);
+
+            return true;
         }
 
         private void RemoveShardedDatabase(string name)
@@ -675,7 +678,6 @@ namespace Raven.Server.Documents
         }
 
         public event Action<string> OnDatabaseLoaded = delegate { };
-        public event Action<string, TransactionOperationContext> OnShardedDatabaseDelete;
 
         public bool IsDatabaseLoaded(StringSegment databaseName)
         {
@@ -1294,8 +1296,6 @@ namespace Raven.Server.Documents
 
             try
             {
-                _shardedDatabases.TryRemove(database.Name, out _);
-
                 database.Dispose();
             }
             catch (Exception e)

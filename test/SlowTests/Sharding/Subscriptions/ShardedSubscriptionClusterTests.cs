@@ -14,6 +14,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -262,11 +263,13 @@ namespace SlowTests.Sharding.Subscriptions
                     nodesWithIds.Add(kvp.Key, new List<string>());
                     foreach (var documentDatabase in kvp.Value)
                     {
+                        Console.Write("node: "+kvp.Key + $" db '{documentDatabase.Name}" );
                         using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
                             context.OpenReadTransaction();
                             var ids = documentDatabase.DocumentsStorage.GetAllIds(context).Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList();
                             nodesWithIds[kvp.Key].AddRange(ids);
+                            Console.WriteLine(", ids: "+string.Join(",",ids));
                         }
                     }
                 }
@@ -278,10 +281,12 @@ namespace SlowTests.Sharding.Subscriptions
                     var i = new Random().Next(list.Count);
                     await DisposeServerAndWaitForFinishOfDisposalAsync(list[i]);
                     nodesWithIds.Remove(list[i].ServerStore.NodeTag);
+
+                    Console.WriteLine("Dispose: "+ list[i].ServerStore.NodeTag);
                 }
 
                 int docs = 3;
-
+                Console.WriteLine("Start subscription");
                 var mre = new AsyncManualResetEvent();
                 List<string> results = new List<string>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
@@ -289,9 +294,11 @@ namespace SlowTests.Sharding.Subscriptions
                     var c = 0;
                     var t = subscription.Run(x =>
                     {
+                        
                         foreach (var item in x.Items)
                         {
                             c++;
+                            Console.WriteLine("Process: "+ item.Id + $" by {x._shardWorker.CurrentNodeTag}, {x._shardWorker._dbName}");
                             results.Add(item.Id);
                         }
 
@@ -300,6 +307,14 @@ namespace SlowTests.Sharding.Subscriptions
                     });
 
                     Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+
+                    //while (true)
+                    //{
+                    //    if (mre.IsSet == true)
+                    //        break;
+
+                    //    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000));
+                    //}
 
                     foreach (var item in nodesWithIds.SelectMany(kvp => kvp.Value))
                     {

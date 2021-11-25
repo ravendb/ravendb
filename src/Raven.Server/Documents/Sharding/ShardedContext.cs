@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Sharding
             return list;
         }
 
-        public async Task<string> GetLastDocumentChangeVectorForCollection(string subCollection)
+        public async Task<string> GetLastDocumentChangeVectorForCollection(string collection)
         {
             var disposables = new List<IDisposable>();
             var cvs = new List<string>();
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Sharding
                 {
                     disposables.Add(re.ContextPool.AllocateOperationContext(out JsonOperationContext ctx));
 
-                    var cmd = new LastChangeVectorForCollectionCommand(subCollection);
+                    var cmd = new LastChangeVectorForCollectionCommand(collection);
                     cmds.Add(cmd);
                     tasks.Add(re.ExecuteAsync(cmd, ctx));
 

@@ -2599,6 +2599,100 @@ namespace Raven.Server.ServerWide
             _parent.SetTopology(context, topology);
         }
 
+        //private void SqueezeDatabasesToSingleNodeCluster(ClusterOperationContext context, string oldTag, string newTag)
+        //{
+        //    var toDelete = new List<DatabaseRecord>();
+        //    var toShrink = new List<DatabaseRecord>();
+
+        //    foreach (var name in GetDatabaseNames(context))
+        //    {
+        //        using (var rawRecord = ReadRawDatabaseRecord(context, name))
+        //        {
+        //            if (rawRecord.IsSharded())
+        //            {
+        //                // TODO: egor we skip this for now
+        //                continue;
+        //            }
+
+        //            var topology = rawRecord.Topology;
+        //            if (topology.RelevantFor(oldTag) == false)
+        //            {
+        //                var record = rawRecord.MaterializedRecord;
+        //                toDelete.Add(record);
+        //            }
+        //            else
+        //            {
+        //                if (topology.RelevantFor(newTag) && topology.Count == 1)
+        //                    continue;
+
+        //                var record = rawRecord.MaterializedRecord;
+        //                record.Topology = new DatabaseTopology();
+        //                record.Topology.Members.Add(newTag);
+        //                toShrink.Add(record);
+        //            }
+        //        }
+        //    }
+
+        //    if (toShrink.Count == 0 && toDelete.Count == 0)
+        //        return;
+
+        //    if (_parent.Log.IsOperationsEnabled)
+        //    {
+        //        _parent.Log.Operations($"Squeezing databases, new tag is {newTag}, old tag is {oldTag}.");
+
+        //        if (toShrink.Count > 0)
+        //            _parent.Log.Operations($"Databases to shrink: {string.Join(',', toShrink.Select(r => r.DatabaseName))}");
+
+        //        if (toDelete.Count > 0)
+        //            _parent.Log.Operations($"Databases to delete: {string.Join(',', toDelete)}");
+        //    }
+
+        //    var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        //    var cmd = new DynamicJsonValue
+        //    {
+        //        ["Type"] = "Switch to single leader"
+        //    };
+
+        //    var index = _parent.InsertToLeaderLog(context, _parent.CurrentTerm, context.ReadObject(cmd, "single-leader"), RachisEntryFlags.Noop);
+
+        //    foreach (var record in toDelete)
+        //    {
+        //        var dbKey = "db/" + record.DatabaseName;
+        //        using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+        //        {
+        //            DeleteDatabaseRecord(context, index, items, valueNameLowered, record, null);
+        //        }
+        //    }
+
+        //    if (toShrink.Count == 0)
+        //        return;
+
+        //    var tasks = new List<Func<Task>>();
+        //    var type = "ClusterTopologyChanged";
+
+        //    foreach (var record in toShrink)
+        //    {
+        //        record.Topology.Stamp = new LeaderStamp
+        //        {
+        //            Index = index,
+        //            LeadersTicks = 0,
+        //            Term = _parent.CurrentTerm
+        //        };
+
+        //        var dbKey = "db/" + record.DatabaseName;
+        //        using (Slice.From(context.Allocator, dbKey, out Slice valueName))
+        //        using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
+        //        {
+        //            var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(record, context);
+        //            UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+        //        }
+
+        //        tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
+        //    }
+
+        //    ExecuteManyOnDispose(context, index, type, tasks);
+        //}
+
         private void SqueezeDatabasesToSingleNodeCluster(ClusterOperationContext context, string oldTag, string newTag)
         {
             var toDelete = new List<DatabaseRecord>();
