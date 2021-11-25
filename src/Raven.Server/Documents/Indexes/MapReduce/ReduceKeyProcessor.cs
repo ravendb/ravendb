@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
     public unsafe class ReduceKeyProcessor
     {
         private readonly UnmanagedBuffersPoolWithLowMemoryHandling _buffersPool;
+        private readonly long _indexVersion;
         private Mode _mode;
         private AllocatedMemoryData _buffer;
         private int _bufferPos;
@@ -23,10 +24,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private int _processedFields;
         private bool _hadAnyNotNullValue;
 
-        public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
+        public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, long indexVersion)
         {
             _numberOfReduceFields = numberOfReduceFields;
             _buffersPool = buffersPool;
+            _indexVersion = indexVersion;
             _bufferPos = 0;
 
             if (numberOfReduceFields == 1)
@@ -221,7 +223,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         _singleValueHash = (ulong)dbl;
                         break;
                     case Mode.MultipleValues:
-                        CopyToBuffer((byte*)&d, sizeof(double));
+                        if (_indexVersion < IndexDefinitionBase.IndexVersion.ReduceKeyProcessorHashDoubleFix)
+                        {
+                            // we keep the previous behavior for old indexes, because it will keep the reduce buckets
+                            CopyToBuffer((byte*)&d, sizeof(double));
+                            break;
+                        }
+
+                        CopyToBuffer((byte*)&dbl, sizeof(double));
                         break;
                 }
 

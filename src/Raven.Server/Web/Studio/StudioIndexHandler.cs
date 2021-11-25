@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -73,7 +74,7 @@ namespace Raven.Server.Web.Studio
 
                     try
                     {
-                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration);
+                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                         var outputFields = compiledIndex.OutputFields;
 

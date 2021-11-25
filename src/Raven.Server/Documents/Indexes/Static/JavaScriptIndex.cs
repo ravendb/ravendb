@@ -26,8 +26,8 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class JavaScriptIndex : AbstractJavaScriptIndex
     {
-        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
-            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode())
+        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode(), indexVersion)
         {
         }
 
@@ -196,7 +196,7 @@ function map(name, lambda) {
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
 
-        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode)
+        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
         {
             Definition = definition;
 
@@ -229,7 +229,7 @@ function map(name, lambda) {
 
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
 
-                ProcessReduce(definition, definitions, resolver);
+                ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
             }
@@ -249,18 +249,18 @@ function map(name, lambda) {
             return mappingFunctions;
         }
 
-        internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration)
+        internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
-                    return new JavaScriptIndex(definition, configuration);
+                    return new JavaScriptIndex(definition, configuration, indexVersion);
 
                 case IndexSourceType.TimeSeries:
-                    return new TimeSeriesJavaScriptIndex(definition, configuration);
+                    return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
 
                 case IndexSourceType.Counters:
-                    return new CountersJavaScriptIndex(definition, configuration);
+                    return new CountersJavaScriptIndex(definition, configuration, indexVersion);
 
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
@@ -306,7 +306,7 @@ function map(name, lambda) {
             OutputFields = fields.ToArray();
         }
 
-        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver)
+        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
             var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
             if (reduceObj != null && reduceObj.IsObject())
@@ -314,7 +314,7 @@ function map(name, lambda) {
                 var reduceAsObj = reduceObj.AsObject();
                 var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                 var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver) { ReduceString = definition.Reduce };
+                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver, indexVersion) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
             }
