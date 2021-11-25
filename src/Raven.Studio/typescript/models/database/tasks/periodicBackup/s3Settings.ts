@@ -131,7 +131,7 @@ class s3Settings extends amazonSettings {
         
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
-        dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : true;
+        dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
         
         return dto;
     }
@@ -146,7 +146,7 @@ class s3Settings extends amazonSettings {
             BucketName: null,
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
-            ForcePathStyle: true,
+            ForcePathStyle: false,
             CustomServerUrl: null,
         }, allowedRegions);
     }
