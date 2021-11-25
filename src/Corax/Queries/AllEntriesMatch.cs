@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.Sets;
@@ -29,8 +30,10 @@ namespace Corax.Queries
             _currentPage = new Page(null);
         }
 
+        public bool IsBoosting => false;
         public long Count => _count;
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
+
         public unsafe int Fill(Span<long> matches)
         {
             var results = 0;
@@ -63,10 +66,16 @@ namespace Corax.Queries
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> prevMatches)
         {
             // this match *everything*, so ands with everything 
             return prevMatches.Length;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {            
         }
     }
 }

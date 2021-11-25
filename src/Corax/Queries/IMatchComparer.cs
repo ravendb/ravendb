@@ -7,7 +7,8 @@ namespace Corax.Queries
     {
         Sequence,
         Integer,
-        Floating
+        Floating,
+        Score
     }
 
     public interface IMatchComparer

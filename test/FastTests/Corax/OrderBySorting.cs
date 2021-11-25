@@ -34,7 +34,7 @@ namespace FastTests.Corax
             {
                 var match1 = searcher.StartWithQuery("Id", "l");
                 var match = searcher.OrderByDescending(match1, ContentId, MatchCompareFieldType.Integer);
-                
+
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];
                 int read = 0;
@@ -43,7 +43,7 @@ namespace FastTests.Corax
                     read = match.Fill(ids);
                     for (int i = 0; i < read; ++i)
                         sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
-                } 
+                }
                 while (read != 0);
 
                 for (int i = 0; i < longList.Count; ++i)

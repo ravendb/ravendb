@@ -13,6 +13,7 @@ using Voron.Data.CompactTrees;
 using Sparrow;
 using static Corax.Queries.SortingMatch;
 using System.Runtime.Intrinsics.X86;
+using Sparrow.Server;
 
 namespace Corax
 {
@@ -30,7 +31,11 @@ namespace Corax
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
+        internal ByteStringContext Allocator => _transaction.Allocator;
+
+
         private readonly bool _ownsTransaction;
+
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -441,6 +446,12 @@ namespace Corax
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
+        }
+
+        public BoostingMatch Boost<TInner>(TInner match, float constant)
+            where TInner: IQueryMatch
+        {
+            return BoostingMatch.WithConstant(this, match, constant);
         }
 
         public void Dispose()

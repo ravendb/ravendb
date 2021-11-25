@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-
 
 namespace Corax.Queries
 {
-    public unsafe struct BinaryMatch : IQueryMatch
+    public unsafe struct BoostingMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
-        private IQueryMatch _inner;
+        internal IQueryMatch _inner;
 
-        internal BinaryMatch(IQueryMatch match, FunctionTable functionTable)
+        internal BoostingMatch(IQueryMatch match, FunctionTable functionTable)
         {
             _inner = match;
             _functionTable = functionTable;
@@ -36,21 +36,24 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores)
         {
-            _inner.Score(matches, scores);
+            Debug.Assert(matches.Length == scores.Length);
+
+            _functionTable.ScoreFunc(ref this, matches, scores);
         }
 
         internal class FunctionTable
         {
-            public readonly delegate*<ref BinaryMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref BinaryMatch, Span<long>, int> AndWithFunc;
-            public readonly delegate*<ref BinaryMatch, Span<long>, Span<float>, void> ScoreFunc;
-            public readonly delegate*<ref BinaryMatch, long> CountFunc;
+            public readonly delegate*<ref BoostingMatch, Span<long>, int> FillFunc;
+            public readonly delegate*<ref BoostingMatch, Span<long>, int> AndWithFunc;
+            public readonly delegate*<ref BoostingMatch, Span<long>, Span<float>, void> ScoreFunc;
+            public readonly delegate*<ref BoostingMatch, long> CountFunc;
+
 
             public FunctionTable(
-                delegate*<ref BinaryMatch, Span<long>, int> fillFunc,
-                delegate*<ref BinaryMatch, Span<long>, int> andWithFunc,
-                delegate*<ref BinaryMatch, Span<long>, Span<float>, void> scoreFunc,
-                delegate*<ref BinaryMatch, long> countFunc)
+                delegate*<ref BoostingMatch, Span<long>, int> fillFunc,
+                delegate*<ref BoostingMatch, Span<long>, int> andWithFunc,
+                delegate*<ref BoostingMatch, Span<long>, Span<float>, void> scoreFunc,
+                delegate*<ref BoostingMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
@@ -59,23 +62,23 @@ namespace Corax.Queries
             }
         }
 
-        private static class StaticFunctionCache<TInner, TOuter>
+        private static class StaticFunctionCache<TInner, TQueryScoreFunction>
             where TInner : IQueryMatch
-            where TOuter : IQueryMatch
+            where TQueryScoreFunction : IQueryScoreFunction
         {
             public static readonly FunctionTable FunctionTable;
 
             static StaticFunctionCache()
             {
-                static long CountFunc(ref BinaryMatch match)
+                static long CountFunc(ref BoostingMatch match)
                 {
-                    return ((BinaryMatch<TInner, TOuter>)match._inner).Count;
+                    return ((BoostingMatch<TInner, TQueryScoreFunction>)match._inner).Count;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int FillFunc(ref BinaryMatch match, Span<long> matches)
+                static int FillFunc(ref BoostingMatch match, Span<long> matches)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BoostingMatch<TInner, TQueryScoreFunction> inner)
                     {
                         var result = inner.Fill(matches);
                         match._inner = inner;
@@ -85,9 +88,9 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int AndWithFunc(ref BinaryMatch match, Span<long> matches)
+                static int AndWithFunc(ref BoostingMatch match, Span<long> matches)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BoostingMatch<TInner, TQueryScoreFunction> inner)
                     {
                         var result = inner.AndWith(matches);
                         match._inner = inner;
@@ -97,9 +100,9 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static void ScoreFunc(ref BinaryMatch match, Span<long> matches, Span<float> scores)
+                static void ScoreFunc(ref BoostingMatch match, Span<long> matches, Span<float> scores)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BoostingMatch<TInner, TQueryScoreFunction> inner)
                     {
                         inner.Score(matches, scores);
                         match._inner = inner;
@@ -111,11 +114,19 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch Create<TInner, TOuter>(in BinaryMatch<TInner, TOuter> query)
+        public static BoostingMatch Create<TInner, TQueryScoreFunction>(in BoostingMatch<TInner, TQueryScoreFunction> query)
             where TInner : IQueryMatch
-            where TOuter : IQueryMatch
+            where TQueryScoreFunction : IQueryScoreFunction
         {
-            return new BinaryMatch(query, StaticFunctionCache<TInner, TOuter>.FunctionTable);
+            return new BoostingMatch(query, StaticFunctionCache<TInner, TQueryScoreFunction>.FunctionTable);
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static BoostingMatch WithConstant<TInner>(IndexSearcher searcher, in TInner inner, float value)
+            where TInner : IQueryMatch
+        {
+            return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, new ConstantScoreFunction(value), &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc));
         }
     }
 }

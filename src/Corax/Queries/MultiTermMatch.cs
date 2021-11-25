@@ -19,6 +19,7 @@ namespace Corax.Queries
         private TermMatch _currentTerm;        
         private readonly ByteStringContext _context;
 
+        public bool IsBoosting => false;
         public long Count => _totalResults;
         public long Current => _currentIdx <= QueryMatch.Start ? _currentIdx : _current;
 
@@ -148,6 +149,12 @@ namespace Corax.Queries
 
             QueryContext.MatchesPool.Return(bufferHolder);
             return totalSize;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            // We ignore. Nothing to do here. 
         }
     }
 }

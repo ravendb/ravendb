@@ -33,6 +33,7 @@ namespace Corax.Queries
         private readonly TComparer9 _comparer9;
         private readonly int _totalComparers;
         private readonly int _take;
+        private readonly bool _hasBoostingComparer;
 
         private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[] _compareFuncs;        
 
@@ -41,6 +42,8 @@ namespace Corax.Queries
         public long Count => throw new NotSupportedException();
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
+
+        public bool IsBoosting => _inner.IsBoosting || _hasBoostingComparer;
 
         internal SortingMultiMatch(
             IndexSearcher searcher, in TInner inner,
@@ -68,6 +71,10 @@ namespace Corax.Queries
             Unsafe.SkipInit(out _comparer7);
             Unsafe.SkipInit(out _comparer8);
             Unsafe.SkipInit(out _comparer9);
+
+            _hasBoostingComparer = typeof(TComparer1) == typeof(BoostingComparer) || typeof(TComparer2) == typeof(BoostingComparer) || typeof(TComparer3) == typeof(BoostingComparer) ||
+                                   typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
+                                   typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer) ;
 
             _compareFuncs = new delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[9];
 
@@ -493,6 +500,11 @@ namespace Corax.Queries
             if (read1)
                 return -1;
             return 1;         
+        }
+
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            throw new NotImplementedException();
         }
     }
 }

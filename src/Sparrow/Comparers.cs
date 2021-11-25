@@ -94,7 +94,7 @@ namespace Sparrow
         }
     }
 
-    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
+    public struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>, IComparer<float>, IComparer<double>
     {
         public static readonly IComparer<long> BoxedInstanceInt64 = new NumericDescendingComparer();
 
@@ -108,6 +108,19 @@ namespace Sparrow
         public int Compare(int x, int y)
         {
             return y - x;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(float x, float y)
+        {
+            return x == y ? 0 : x < y ? 1 : -1;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Compare(double x, double y)
+        {
+            return x == y ? 0 : x < y ? 1 : -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
