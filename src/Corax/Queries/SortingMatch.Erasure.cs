@@ -24,6 +24,8 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
+        public bool IsBoosting => _inner.IsBoosting;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
@@ -34,6 +36,12 @@ namespace Corax.Queries
         public int AndWith(Span<long> buffer)
         {
             throw new NotSupportedException($"{nameof(SortingMatch)} does not support the operation of {nameof(AndWith)}.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores)
+        {
+            _inner.Score(matches, scores);
         }
 
         internal class FunctionTable

@@ -15,6 +15,8 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
+        public bool IsBoosting => _inner.IsBoosting;
+
         public long Count => _functionTable.CountFunc(ref this);
 
         public QueryCountConfidence Confidence => _inner.Confidence;
@@ -93,6 +95,12 @@ namespace Corax.Queries
             where TInner : IQueryMatch
         {
             return new UnaryMatch(query, StaticFunctionCache<TInner, TValueType>.FunctionTable);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            _inner.Score(matches, scores); 
         }
     }
 }

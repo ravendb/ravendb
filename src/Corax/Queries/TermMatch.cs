@@ -24,6 +24,7 @@ namespace Corax.Queries
         private Container.Item _container;
         private Set.Iterator _set;
 
+        public bool IsBoosting => false;
         public long Count => _totalResults;
 
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
@@ -376,6 +377,11 @@ namespace Corax.Queries
         public int AndWith(Span<long> matches)
         {
             return _andWithFunc(ref this, matches);
+        }
+
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            // We ignore. Nothing to do here. 
         }
     }
 }

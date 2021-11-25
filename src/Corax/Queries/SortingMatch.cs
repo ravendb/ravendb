@@ -16,6 +16,8 @@ namespace Corax.Queries
         private readonly IQueryMatch _inner;        
         private readonly TComparer _comparer;
         private readonly int _take;
+        private readonly bool _isScoreComparer;
+
         public long TotalResults;
 
         public SortingMatch(IndexSearcher searcher, in TInner inner, in TComparer comparer, int take = -1)
@@ -24,12 +26,16 @@ namespace Corax.Queries
             _inner = inner;
             _take = take;
             _comparer = comparer;
+            _isScoreComparer = typeof(TComparer) == typeof(BoostingComparer);
+
             TotalResults = 0;
         }
 
         public long Count => throw new NotSupportedException();
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
+
+        public bool IsBoosting => _inner.IsBoosting || _isScoreComparer;
 
         public int AndWith(Span<long> prevMatches)
         {
@@ -39,13 +45,19 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches)
         {
-            return _comparer.FieldType switch
+            if (typeof(TComparer) == typeof(BoostingComparer))
+                return FillScore(matches);
+            else
             {
-                MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
-                MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
-                MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
-                _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
-            };
+                return _comparer.FieldType switch
+                {
+                    MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
+                    MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
+                    MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
+                    MatchCompareFieldType.Score => FillScore(matches),
+                    _ => throw new ArgumentOutOfRangeException(_comparer.FieldType.ToString())
+                };
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -73,12 +85,154 @@ namespace Corax.Queries
 
             Unsafe.SkipInit(out key);
             return false;
-        }        
+        }
+
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int FillScore(Span<long> matches)
+        {
+            // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
+            //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
+            //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
+            //            correct. 
+            Debug.Assert(_take <= matches.Length);
+
+            int totalMatches = _inner.Fill(matches);
+            if (totalMatches == 0)
+                return 0;
+
+            int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
+
+            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * sizeof(float) * matches.Length);            
+            var allScoresValues = MemoryMarshal.Cast<byte, float>(matchesKeysHolder);            
+
+            // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
+            var matchesScores = allScoresValues[0..matches.Length];
+            var bScores = allScoresValues[^matches.Length..];           
+
+            TotalResults += totalMatches;
+
+            // TODO: Analyze if it makes sense to have an alternative version aimed at handling smalls sets where we gather
+            //       all the matches and then do the score work instead of doing it batch by batch. 
+
+            // Initializing the scores and retrieve them.
+            matchesScores.Fill(1);  
+            _inner.Score(matches[0..totalMatches], matchesScores[0..totalMatches]);
+
+            // We sort the first batch
+            var sorter = new Sorter<float, long, NumericDescendingComparer>();
+            sorter.Sort(matchesScores[0..totalMatches], matches[0..totalMatches]);
+
+            var searcher = _searcher;
+            Span<long> bValues = stackalloc long[matches.Length];            
+            while (true)
+            {
+                // We get a new batch
+                int bTotalMatches = _inner.Fill(bValues);
+                TotalResults += bTotalMatches;
+
+                // When we don't have any new batch, we are done.
+                if (bTotalMatches == 0)
+                    break;
+
+                // Initialize the scores and retrieve scores from the new batch. 
+                bScores.Fill(1);
+                _inner.Score(bValues[0..bTotalMatches], bScores[0..bTotalMatches]);
+
+                int bIdx = 0;
+                int kIdx = 0;
+
+                // Get rid of all the elements that are bigger than the last one.
+                ref var lastElement = ref matchesScores[take - 1];
+                for (; bIdx < bTotalMatches; bIdx++)
+                {
+                    if (lastElement >= bScores[bIdx])
+                        bScores[kIdx++] = bScores[bIdx];
+                }
+                bTotalMatches = kIdx;
+
+                // We sort the new batch
+                sorter.Sort(bScores[0..bTotalMatches], bValues);
+
+                // We merge both batches. 
+                int aTotalMatches = Math.Min(totalMatches, take);
+
+                int aIdx = aTotalMatches;
+                bIdx = 0;
+                kIdx = 0;
+
+                while (aIdx > 0 && aIdx >= aTotalMatches / 8)
+                {
+                    // If the 'bigger' of what we had is 'bigger than'
+                    if (matchesScores[aIdx - 1] <= bScores[0])
+                        break;
+
+                    aIdx /= 2;
+                }
+
+                // This is the new start location on the matches. 
+                kIdx = aIdx;
+
+                // If we bailed on the first check, nothing to do here. 
+                if (aIdx == aTotalMatches - 1 || kIdx >= take)
+                    goto End;
+
+                // PERF: This can be improved with TimSort like techniques (Galloping) but given the amount of registers and method calls
+                //       involved requires careful timing to understand if we are able to gain vs a more compact code and predictable
+                //       memory access patterns. 
+
+                while (aIdx < aTotalMatches && bIdx < bTotalMatches && kIdx < take)
+                {
+                    var result = matchesScores[aIdx] < bScores[bIdx];
+
+                    if (result)
+                    {
+
+                        matches[kIdx] = matches[aIdx];
+                        aIdx++;
+                    }
+                    else
+                    {
+                        matches[kIdx] = bValues[bIdx];
+                        matchesScores[kIdx] = bScores[bIdx];
+                        bIdx++;
+                    }
+                    kIdx++;
+                }
+
+                // If there is no more space in the buffer, discard everything else.
+                if (kIdx >= take)
+                    goto End;
+
+                // PERF: We could improve this with a CopyTo (won't do that for now). 
+
+                // Copy the rest, given that we have failed on one of the other 2 only a single one will execute.
+                while (aIdx < aTotalMatches && kIdx < take)
+                {
+                    matches[kIdx++] = matches[aIdx++];
+                }
+
+                while (bIdx < bTotalMatches && kIdx < take)
+                {
+                    matches[kIdx] = bValues[bIdx];
+                    matchesScores[kIdx] = bScores[bIdx]; // We are using a new key, therefore we have to update it. 
+                    kIdx++;
+                    bIdx++;
+                }
+
+            End:
+                totalMatches = kIdx;
+            }
+
+            QueryContext.MatchesPool.Return(matchesKeysHolder);
+            return totalMatches;
+        }
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Fill<W>(Span<long> matches) where W : struct
-        {             
+        {
             // Important: If you are going to request a massive take like 20K you need to pass at least a 20K size buffer to work with.
             //            The rationale for such behavior is that sorting has to find among the candidates the order between elements,
             //            and it can't do so without checking every single element found. If you fail to do so, your results may not be
@@ -217,6 +371,11 @@ namespace Corax.Queries
                 End:
                 totalMatches = kIdx;
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
         }
     }
 }

@@ -19,6 +19,7 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
+        public bool IsBoosting => false;
         public long Count => _functionTable.CountFunc(ref this);
 
         public QueryCountConfidence Confidence => _inner.Confidence;
@@ -156,6 +157,12 @@ namespace Corax.Queries
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
             return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<EmptyTermProvider>.FunctionTable);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            // We ignore. Nothing to do here. 
         }
     }
 }

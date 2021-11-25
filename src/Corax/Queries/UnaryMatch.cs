@@ -33,6 +33,7 @@ namespace Corax.Queries
         private long _current;
         private QueryCountConfidence _confidence;
 
+        public bool IsBoosting => _inner.IsBoosting;
         public long Count => _totalResults;
         public long Current => _current;
 
@@ -97,6 +98,12 @@ namespace Corax.Queries
         public int AndWith(Span<long> buffer)
         {
             return _andWith(ref this, buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores) 
+        {
+            _inner.Score(matches, scores);
         }
     }
 }

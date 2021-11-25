@@ -20,10 +20,18 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => throw new NotSupportedException();
 
+        public bool IsBoosting => _inner.IsBoosting;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> buffer)
         {
             return _functionTable.FillFunc(ref this, buffer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores)
+        {
+            _inner.Score(matches, scores);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
