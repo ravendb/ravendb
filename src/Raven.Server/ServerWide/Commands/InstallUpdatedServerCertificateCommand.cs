@@ -40,15 +40,17 @@ namespace Raven.Server.ServerWide.Commands
     public class ConfirmReceiptServerCertificateCommand : CommandBase
     {
         public string Thumbprint { get; set; }
+        public string NodeTag { get; set; }
 
         public ConfirmReceiptServerCertificateCommand()
         {
             // for deserialization
         }
 
-        public ConfirmReceiptServerCertificateCommand(string thumbprint) : base(RaftIdGenerator.DontCareId)
+        public ConfirmReceiptServerCertificateCommand(string thumbprint, string nodeTag) : base(RaftIdGenerator.DontCareId)
         {
             Thumbprint = thumbprint;
+            NodeTag = nodeTag;
         }
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
@@ -60,6 +62,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Thumbprint)] = Thumbprint;
+            json[nameof(NodeTag)] = NodeTag;
             return json;
         }
     }
@@ -81,16 +84,18 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Thumbprint { get; set; }
         public string OldThumbprint { get; set; }
+        public string NodeTag { get; set; }
 
         public ConfirmServerCertificateReplacedCommand()
         {
             // for deserialization
         }
 
-        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint) : base(RaftIdGenerator.DontCareId)
+        public ConfirmServerCertificateReplacedCommand(string thumbprint, string oldThumbprint, string nodeTag) : base(RaftIdGenerator.DontCareId)
         {
             Thumbprint = thumbprint;
             OldThumbprint = oldThumbprint;
+            NodeTag = nodeTag;
         }
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
@@ -103,6 +108,7 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(Thumbprint)] = Thumbprint;
             json[nameof(OldThumbprint)] = OldThumbprint;
+            json[nameof(NodeTag)] = NodeTag;
             return json;
         }
     }

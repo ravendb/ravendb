@@ -21,7 +21,7 @@ namespace SlowTests.Authentication
 {
     public partial class AuthenticationLetsEncryptTests
     {
-        private class ClaimDomainCommand : RavenCommand<ClaimDomainResult>
+        internal class ClaimDomainCommand : RavenCommand<ClaimDomainResult>
         {
             private readonly BlittableJsonReaderObject _payload;
 
@@ -83,7 +83,7 @@ namespace SlowTests.Authentication
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
-        private class SetupLetsEncryptCommand : RavenCommand<byte[]>, IRaftCommand
+        internal class SetupLetsEncryptCommand : RavenCommand<byte[]>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _payload;
 
