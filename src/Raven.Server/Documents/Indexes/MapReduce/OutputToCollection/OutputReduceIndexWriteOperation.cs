@@ -9,6 +9,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server.Exceptions;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
@@ -50,6 +51,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             catch (ObjectDisposedException e) when (DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
             {
                 throw new TaskCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
+            }
+            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
+            {
+                throw;
             }
             catch (Exception e)
             {
