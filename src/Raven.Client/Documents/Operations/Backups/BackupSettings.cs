@@ -145,7 +145,7 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string CustomServerUrl { get; set; }
 
-        public bool ForcePathStyle { get; set; } = true;
+        public bool ForcePathStyle { get; set; }
 
         public S3Settings()
         {
