@@ -1503,7 +1503,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
                         localFlags.Contain(DocumentFlags.HasRevisions) != documentFlags.Contain(DocumentFlags.HasRevisions))
                     {
-                        var (_, count) = revisionsStorage.GetRevisions(context, id, 0, 1);
+                        var count = revisionsStorage.GetRevisionsCount(context, id);
                         if (count == 0)
                             flags = flags.Strip(DocumentFlags.HasRevisions);
                     }
