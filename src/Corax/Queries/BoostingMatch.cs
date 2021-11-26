@@ -247,8 +247,7 @@ namespace Corax.Queries
         {
             if (typeof(TInner) != typeof(TermMatch))
                 throw new NotSupportedException($"The type {nameof(TInner)} is not supported for calculating Term Frequency Score");
-
-            // We need to multiply by a constant.                       
+                      
             Span<long> elements = new Span<long>(match._buffer, match._bufferIdx);
 
             // Get rid of all the elements that are smaller than the first one.
@@ -258,7 +257,7 @@ namespace Corax.Queries
                 eIdx++;
 
             int mIdx = 0;
-            float termCount = 1.0f / match._inner.Count;            
+            float termCount = 1.0f / match._inner.Count;
             if (match._inner.IsBoosting)
             {
                 while (eIdx < elements.Length)

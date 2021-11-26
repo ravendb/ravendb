@@ -382,7 +382,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores) 
+        public void Score(Span<long> matches, Span<float> scores)
         {
             if (_scoreFunc == null)
                 return; // We ignore. Nothing to do here. 

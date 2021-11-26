@@ -168,7 +168,7 @@ namespace Corax
 
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, 0, inTerms)));
         }
-        
+
         public MultiTermMatch StartWithQuery(string field, string startWith)
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
@@ -479,13 +479,73 @@ namespace Corax
             }
         }
 
+        public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
+        {            
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+            if (inTerms.Count is > 1 and <= 16)
+            {
+                var stack = new BinaryMatch[inTerms.Count / 2];
+                for (int i = 0; i < inTerms.Count / 2; i++)
+                {
+                    var term1 = Boost(TermQuery(terms, inTerms[i * 2]), scoreFunction);
+                    var term2 = Boost(TermQuery(terms, inTerms[i * 2 + 1]), scoreFunction);
+                    stack[i] = Or(term1, term2);
+                }                    
+
+                if (inTerms.Count % 2 == 1)
+                {
+                    // We need even values to make the last work. 
+                    var term = Boost(TermQuery(terms, inTerms[^1]), scoreFunction);
+                    stack[^1] = Or(stack[^1], term);
+                }
+
+                int currentTerms = stack.Length;
+                while (currentTerms > 1)
+                {
+                    int termsToProcess = currentTerms / 2;
+                    int excessTerms = currentTerms % 2;
+
+                    for (int i = 0; i < termsToProcess; i++)
+                        stack[i] = Or(stack[i * 2], stack[i * 2 + 1]);
+
+                    if (excessTerms != 0)
+                        stack[termsToProcess - 1] = Or(stack[termsToProcess - 1], stack[currentTerms - 1]);
+
+                    currentTerms = termsToProcess;
+                }
+                return MultiTermMatch.Create(stack[0]);
+            }
+            
+            return MultiTermMatch.Create(
+                MultiTermBoostingMatch<InTermProvider>.Create(
+                    this, new InTermProvider(this, field, 0, inTerms), scoreFunction));
+        }
+
+        public MultiTermMatch StartWithQuery<TScoreFunction>(string field, string startWith, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
+        {
+            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+            return MultiTermMatch.Create(
+                MultiTermBoostingMatch<StartWithTermProvider>.Create(
+                    this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith), scoreFunction));
+        }
+
         public BoostingMatch Boost<TInner>(TInner match, IQueryScoreFunction scoreFunction)
             where TInner : IQueryMatch
         {
             if (scoreFunction.GetType() == typeof(TermFrequencyScoreFunction))
             {
                 return BoostingMatch.WithTermFrequency(this, match, (TermFrequencyScoreFunction)(object)scoreFunction);
-
             }
             else if (scoreFunction.GetType() == typeof(ConstantScoreFunction))
             {
