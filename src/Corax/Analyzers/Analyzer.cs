@@ -10,9 +10,13 @@ namespace Corax
 {
     public unsafe class Analyzer : IDisposable
     {
+        public const int MaximumSingleTokenLength = 512;
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
-
+        public readonly int MaximumOutputSize;
+        public readonly int MaximumTokenSize;
+        
+        
         private readonly delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> _funcUtf8;
         private readonly delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> _funcUtf16;
         private readonly Analyzer _inner;
@@ -26,7 +30,8 @@ namespace Corax
             delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
             delegate*<Analyzer, ReadOnlySpan<char>, ref Span<char>, ref Span<Token>, void> functionUtf16,
             in ITokenizer tokenizer, ITransformer[] transformers) : this(null, functionUtf8, functionUtf16, tokenizer, transformers)
-        {}
+        {
+        }
 
         protected Analyzer(Analyzer inner,
             delegate*<Analyzer, ReadOnlySpan<byte>, ref Span<byte>, ref Span<Token>, void> functionUtf8,
@@ -38,7 +43,7 @@ namespace Corax
             _funcUtf16 = functionUtf16;
             _tokenizer = tokenizer;
             _transformers = transformers;
-
+            
             float sourceBufferMultiplier = 1;
             float tokenBufferMultiplier = 1;
             foreach( var transformer in transformers)
@@ -58,9 +63,11 @@ namespace Corax
 
             _sourceBufferMultiplier = sourceBufferMultiplier;
             _tokenBufferMultiplier = tokenBufferMultiplier;
+            
+            GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out MaximumOutputSize, out MaximumTokenSize);
         }
 
-        public void GetOutputBuffersSize( int inputSize, out int outputSize, out int tokenSize )
+        public void GetOutputBuffersSize(int inputSize, out int outputSize, out int tokenSize )
         {
             float bufferSize = _sourceBufferMultiplier * inputSize;
             outputSize = (int)bufferSize;
@@ -72,7 +79,7 @@ namespace Corax
             if (bufferSize > tokenSize)
                 tokenSize += 1;
         }
-
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int RunTransformer<TTransformer>(in TTransformer transformer, ReadOnlySpan<char> source, ReadOnlySpan<Token> tokens, ref Span<char> output, ref Span<Token> outputTokens)
             where TTransformer : ITransformer

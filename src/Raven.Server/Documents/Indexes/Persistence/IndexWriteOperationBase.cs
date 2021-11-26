@@ -1,5 +1,8 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Logging;
 

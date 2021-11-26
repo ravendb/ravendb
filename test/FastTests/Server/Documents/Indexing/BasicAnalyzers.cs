@@ -183,9 +183,9 @@ namespace FastTests.Server.Documents.Indexing
             {
             }
 
-            public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
+            public LuceneRavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return CreateAnalyzer(_index, new TestIndexDefinitions
+                return CreateLuceneAnalyzer(_index, new TestIndexDefinitions
                 {
                     IndexFields = fields
                 }, forQuerying);
