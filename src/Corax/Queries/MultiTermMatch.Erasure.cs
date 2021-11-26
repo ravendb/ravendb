@@ -19,7 +19,7 @@ namespace Corax.Queries
             _functionTable = functionTable;
         }
 
-        public bool IsBoosting => false;
+        public bool IsBoosting => _inner.IsBoosting;
         public long Count => _functionTable.CountFunc(ref this);
 
         public QueryCountConfidence Confidence => _inner.Confidence;
@@ -36,25 +36,35 @@ namespace Corax.Queries
             return _functionTable.AndWithFunc(ref this, buffer);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Score(Span<long> matches, Span<float> scores)
+        {
+            // We ignore. Nothing to do here. 
+            _functionTable.ScoreFunc(ref this, matches, scores);
+        }
+
         internal class FunctionTable
         {
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> FillFunc;
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> AndWithFunc;
+            public readonly delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> ScoreFunc;
             public readonly delegate*<ref MultiTermMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref MultiTermMatch, Span<long>, int> fillFunc,
                 delegate*<ref MultiTermMatch, Span<long>, int> andWithFunc,
+                delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> scoreFunc,
                 delegate*<ref MultiTermMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
                 AndWithFunc = andWithFunc;
+                ScoreFunc = scoreFunc;
                 CountFunc = countFunc;
             }
         }
 
-        private static class StaticFunctionCache<TInner>
-            where TInner : ITermProvider
+        private static class StaticFunctionCache<TTermMatch>
+            where TTermMatch : IQueryMatch
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -62,11 +72,11 @@ namespace Corax.Queries
             {
                 static long CountFunc(ref MultiTermMatch match)
                 {
-                    return ((MultiTermMatch<TInner>)match._inner).Count;
+                    return ((TTermMatch)match._inner).Count;
                 }
                 static int FillFunc(ref MultiTermMatch match, Span<long> matches)
                 {
-                    if (match._inner is MultiTermMatch<TInner> inner)
+                    if (match._inner is TTermMatch inner)
                     {
                         var result = inner.Fill(matches);
                         match._inner = inner;
@@ -77,7 +87,7 @@ namespace Corax.Queries
 
                 static int AndWithFunc(ref MultiTermMatch match, Span<long> matches)
                 {
-                    if (match._inner is MultiTermMatch<TInner> inner)
+                    if (match._inner is TTermMatch inner)
                     {
                         var result = inner.AndWith(matches);
                         match._inner = inner;
@@ -86,7 +96,16 @@ namespace Corax.Queries
                     return 0;
                 }
 
-                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc);
+                static void ScoreFunc(ref MultiTermMatch match, Span<long> matches, Span<float> scores)
+                {
+                    if (match._inner is TTermMatch inner)
+                    {
+                        inner.Score(matches, scores);
+                        match._inner = inner;
+                    }
+                }
+
+                FunctionTable = new FunctionTable(&FillFunc, &AndWithFunc, &ScoreFunc, &CountFunc);
             }
         }
 
@@ -94,44 +113,20 @@ namespace Corax.Queries
         public static MultiTermMatch Create<TInner>(in MultiTermMatch<TInner> query)
              where TInner : ITermProvider
         {
-            return new MultiTermMatch(query, StaticFunctionCache<TInner>.FunctionTable);
+            return new MultiTermMatch(query, StaticFunctionCache<MultiTermMatch<TInner>>.FunctionTable);
         }
 
-        private static FunctionTable _binaryFunctions;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static MultiTermMatch Create<TInner>(in MultiTermBoostingMatch<TInner> query)
+            where TInner : ITermProvider
+        {
+            return new MultiTermMatch(query, StaticFunctionCache<MultiTermBoostingMatch<TInner>>.FunctionTable);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch Create(in BinaryMatch query)
-        {
-            static long CountFunc(ref MultiTermMatch match)
-            {
-                return ((BinaryMatch)match._inner).Count;
-            }
-            static int FillFunc(ref MultiTermMatch match, Span<long> matches)
-            {
-                if (match._inner is BinaryMatch inner)
-                {
-                    var result = inner.Fill(matches);
-                    match._inner = inner;
-                    return result;
-                }
-                return 0;
-            }
-
-            static int AndWithFunc(ref MultiTermMatch match, Span<long> matches)
-            {
-                if (match._inner is BinaryMatch inner)
-                {
-                    var result = inner.AndWith(matches);
-                    match._inner = inner;
-                    return result;
-                }
-                return 0;
-            }
-
-            if (_binaryFunctions == null)
-                _binaryFunctions = new FunctionTable(&FillFunc, &AndWithFunc, &CountFunc);
-
-            return new MultiTermMatch(query, _binaryFunctions);
+        { 
+            return new MultiTermMatch(query, StaticFunctionCache<BinaryMatch>.FunctionTable);
         }
 
         private struct EmptyTermProvider : ITermProvider
@@ -156,13 +151,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static MultiTermMatch CreateEmpty(ByteStringContext context)
         {
-            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<EmptyTermProvider>.FunctionTable);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores) 
-        {
-            // We ignore. Nothing to do here. 
+            return new MultiTermMatch(new MultiTermMatch<EmptyTermProvider>(context, new EmptyTermProvider()), StaticFunctionCache<MultiTermMatch<EmptyTermProvider>>.FunctionTable);
         }
     }
 }

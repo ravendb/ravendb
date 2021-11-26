@@ -152,6 +152,11 @@ namespace FastTests.Corax
             }
         }
 
+        private static int CompareAscending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
+        {
+            return value1.Content1.CompareTo(value2.Content1);
+        }
+
         [Fact]
         public void OrderByBoostingTermFrequency()
         {
@@ -160,8 +165,7 @@ namespace FastTests.Corax
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 1 });   // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 1 });   // 1/4
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/5", Content1 = 1 });   // 1/4
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/6", Content1 = 1 });   // 1/4
-
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/6", Content1 = 1 });   // 1/4            
 
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
@@ -175,7 +179,7 @@ namespace FastTests.Corax
                 var orMatch = searcher.Or(boostedContent0, boostedContent1);
                 var boostedOrMatch = searcher.Boost(orMatch, 10);
                 var sortedMatch = searcher.OrderByScore(boostedOrMatch);
-                
+
                 Span<long> ids = stackalloc long[1024];
                 var read = sortedMatch.Fill(ids);
 
@@ -185,6 +189,74 @@ namespace FastTests.Corax
 
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
+            }
+        }
+
+        [Fact]
+        public void OrderByBoostingOrBasedInQuery()
+        {
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 0 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/2", Content1 = 0 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/5", Content1 = 1 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/6", Content1 = 1 });   // 1/4
+
+
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                var query = searcher.InQuery("Content1", new List<string>() { "0", "1" }, default(TermFrequencyScoreFunction));
+
+                Span<long> ids = stackalloc long[1024];
+                var read = query.Fill(ids);
+
+                List<string> sortedByCorax = new();
+                for (int i = 0; i < read; ++i)
+                    sortedByCorax.Add(searcher.GetIdentityFor(ids[i]));
+
+                for (int i = 0; i < longList.Count; ++i)
+                    Assert.Equal(longList[i].Id, sortedByCorax[i]);
+            }
+        }
+
+        [Fact]
+        public void OrderByBoostingMultiTermFrequency()
+        {
+
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 0 });   // 1            
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 2 });   // 1/3
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 3 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/2", Content1 = 1 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/22", Content1 = 1 });   // 1/2
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/33", Content1 = 2 });   // 1/3
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/44", Content1 = 3 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/333", Content1 = 2 });   // 1/3
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/444", Content1 = 3 });   // 1/4
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4444", Content1 = 3 });   // 1/4
+
+            IndexEntries();
+
+            longList.Sort(CompareAscending);
+            using var searcher = new IndexSearcher(Env);
+            {                
+                var query = MultiTermBoostingMatch<InTermProvider>.Create(searcher, 
+                    new InTermProvider(searcher, "Content1", Content1, new List<string>() { "0", "1", "2", "3" }), 
+                    default(TermFrequencyScoreFunction));
+                var sortedMatch = searcher.OrderByScore(query);
+
+                Span<long> ids = stackalloc long[1024];
+                var read = sortedMatch.Fill(ids);
+
+                List<long> sortedByCorax = new();
+                for (int i = 0; i < read; ++i)
+                {
+                    searcher.GetReaderFor(ids[i]).Read(Content1, out long value);
+                    sortedByCorax.Add(value);
+                }                    
+
+                for (int i = 0; i < longList.Count; ++i)
+                    Assert.Equal(longList[i].Content1, sortedByCorax[i]);
             }
         }
 
