@@ -15,7 +15,7 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
-    public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
+    public sealed class LuceneRavenPerFieldAnalyzerWrapper : Analyzer
     {
         private readonly Analyzer _defaultAnalyzer;
         private Analyzer _defaultExactAnalyzer;
@@ -68,12 +68,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             }
         }
 
-        public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer)
+        public LuceneRavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer)
         {
             _defaultAnalyzer = defaultAnalyzer;
         }
 
-        public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, Func<string, Analyzer> defaultSearchAnalyzerFactory, Func<string, Analyzer> defaultExactAnalyzerFactory)
+        public LuceneRavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, Func<string, Analyzer> defaultSearchAnalyzerFactory, Func<string, Analyzer> defaultExactAnalyzerFactory)
             : this(defaultAnalyzer)
         {
             _hasDynamicFields = true;

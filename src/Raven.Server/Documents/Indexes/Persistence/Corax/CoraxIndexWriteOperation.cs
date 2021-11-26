@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Corax;
+using Corax.Pipeline;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Exceptions;
@@ -19,14 +20,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly CoraxDocumentConverter _converter;
         private readonly Dictionary<Slice, int> _knownFields;
         private int _entriesCount = 0;
-
+        private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverter converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
             _knownFields = _converter.GetKnownFields();
             try
             {
-                _indexWriter = new IndexWriter(writeTransaction);
+                _analyzers = CreateCoraxAnalyzers(index, index.Definition);
+                _indexWriter = new IndexWriter(writeTransaction, _analyzers.Analyzers);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
             catch (Exception e) when (e.IsOutOfMemory())
@@ -38,12 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 throw new IndexWriteException(e);
             }
         }
-
-        public override void Dispose()
-        {
-            _indexWriter?.Dispose();
-        }
-
+        
         public override void Commit(IndexingStatsScope stats)
         {
             if (_indexWriter != null)
@@ -121,6 +118,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Stats.DeleteStats = stats.For(IndexingOperation.Corax.Delete, start: false);
             Stats.AddStats = stats.For(IndexingOperation.Corax.AddDocument, start: false);
             Stats.ConvertStats = stats.For(IndexingOperation.Corax.Convert, start: false);
+        }
+        
+        public override void Dispose()
+        {
+            _indexWriter?.Dispose();
+            _analyzers?.Dispose();
         }
     }
 }

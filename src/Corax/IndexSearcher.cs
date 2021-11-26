@@ -14,15 +14,16 @@ using Sparrow;
 using static Corax.Queries.SortingMatch;
 using System.Runtime.Intrinsics.X86;
 using Sparrow.Server;
+using Corax.Pipeline;
 
 namespace Corax
 {
     public sealed unsafe class IndexSearcher : IDisposable
     {
+        private const int NonAnalyzer = -1;
         private readonly Transaction _transaction;
-
+        private readonly Dictionary<int, Analyzer> _analyzers;
         private Page _lastPage = default;
-
         /// <summary>
         /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
         /// way than reference algorithms. 
@@ -39,15 +40,17 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexSearcher(StorageEnvironment environment)
+        public IndexSearcher(StorageEnvironment environment, Dictionary<int, Analyzer> analyzers = null)
         {
             _transaction = environment.ReadTransaction();
+            _analyzers = analyzers;
             _ownsTransaction = true;
         }
 
-        public IndexSearcher(Transaction tx)
+        public IndexSearcher(Transaction tx, Dictionary<int, Analyzer> analyzers = null)
         {
             _ownsTransaction = false;
+            _analyzers = analyzers;
             _transaction = tx;
         }
         
@@ -89,7 +92,7 @@ namespace Corax
         // foo = bar and published = true
 
         // foo = bar
-        public TermMatch TermQuery(string field, string term)
+        public TermMatch TermQuery(string field, string term, int fieldId = NonAnalyzer)
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             if (fields == null)
@@ -97,13 +100,13 @@ namespace Corax
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return TermMatch.CreateEmpty();
-
-            return TermQuery(terms, term);
+            
+            return TermQuery(terms, term, fieldId);
         }
 
-        private TermMatch TermQuery(CompactTree tree, string term)
+        private TermMatch TermQuery(CompactTree tree, string term, int fieldId = NonAnalyzer)
         {
-            if (tree.TryGetValue(term, out var value) == false)
+            if (tree.TryGetValue(EncodeTerm(term, fieldId), out var value) == false)
                 return TermMatch.CreateEmpty();
 
             TermMatch matches;
@@ -166,10 +169,11 @@ namespace Corax
                 return MultiTermMatch.Create(stack[0]);
             }
 
+            
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, 0, inTerms)));
         }
-
-        public MultiTermMatch StartWithQuery(string field, string startWith)
+        
+        public MultiTermMatch StartWithQuery(string field, string startWith, int fieldId = NonAnalyzer)
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
@@ -177,7 +181,7 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith)));
+            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, startWith)));
         }
 
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
@@ -453,6 +457,13 @@ namespace Corax
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<byte> EncodeTerm(string term, int fieldId)
+        {
+            var encodedTerm = Encoding.UTF8.GetBytes(term).AsSpan();
+            return fieldId == NonAnalyzer ? encodedTerm : KeywordEncodeTerm(encodedTerm, fieldId);
+        }
 
         public BoostingMatch Boost<TInner>(TInner match, float constant)
             where TInner : IQueryMatch
@@ -557,10 +568,39 @@ namespace Corax
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<byte> EncodeTerm(Slice term, int fieldId)
+        {
+            return fieldId == NonAnalyzer ? term.AsReadOnlySpan() : KeywordEncodeTerm(term.AsSpan(), fieldId);
+        }
+        
+        //todo maciej: notice this is very inefficient. We need to improve it in future. 
+        // Only for KeywordTokenizer
+        [SkipLocalsInit]
+        private unsafe ReadOnlySpan<byte> KeywordEncodeTerm(Span<byte> originalTerm, int fieldId)
+        {
+            if (_analyzers?[fieldId] is null)
+                return originalTerm;
+            
+            _analyzers[fieldId].GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
+            Span<byte> encoded = new byte[outputSize];
+            Token* tokensPtr = stackalloc Token[tokenSize];
+            var tokens = new Span<Token>(tokensPtr, tokenSize);
+            _analyzers[fieldId].Execute(originalTerm, ref encoded, ref tokens);
+            return encoded;
+        }
+        
         public void Dispose()
         {
             if (_ownsTransaction)
                 _transaction?.Dispose();
+            if (_analyzers is not null)
+            {
+                foreach (var analyzer in _analyzers.Values)
+                {
+                    analyzer?.Dispose();
+                }
+            }
         }
     }
 }

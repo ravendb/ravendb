@@ -35,10 +35,10 @@ namespace Corax.Queries
         private static int FillFuncSequence<TComparer>(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
             where TComparer : struct, IUnaryMatchComparer
         {
-            var currentType = ((Slice)(object)match._value).AsReadOnlySpan();
+            var searcher = match._searcher;
+            var currentType = searcher.EncodeTerm(((Slice)(object)match._value), match._fieldId);
 
             var comparer = default(TComparer);
-            var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;
             int results = 0;

@@ -24,8 +24,8 @@ namespace Corax.Queries
             _field = field;
             _fieldId = fieldId;
             _iterator = tree.Iterate();
-
-            Slice.From(context, startWith, out _startWith);
+            
+            Slice.From(context, _searcher.EncodeTerm(startWith, fieldId), out _startWith);
             _iterator.Seek(_startWith);
         }
 

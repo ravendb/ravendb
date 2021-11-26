@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static MoreLikeThisQuery BuildMoreLikeThisQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, QueryBuilderFactories factories)
+        public static MoreLikeThisQuery BuildMoreLikeThisQuery(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, LuceneRavenPerFieldAnalyzerWrapper analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {

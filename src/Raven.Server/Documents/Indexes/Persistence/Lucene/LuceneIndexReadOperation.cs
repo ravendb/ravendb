@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly bool _indexHasBoostedFields;
 
         private readonly IndexSearcher _searcher;
-        private readonly RavenPerFieldAnalyzerWrapper _analyzer;
+        private readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
         private readonly IDisposable _releaseSearcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly int _maxNumberOfOutputsPerDocument;
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateAnalyzer(index, index.Definition, forQuerying: true);
+                _analyzer = CreateLuceneAnalyzer(index, index.Definition, forQuerying: true);
             }
             catch (Exception e)
             {

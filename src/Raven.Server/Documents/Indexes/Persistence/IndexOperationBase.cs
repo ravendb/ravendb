@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Corax.Pipeline;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
@@ -16,8 +19,12 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using KeywordTokenizer = Corax.Pipeline.KeywordTokenizer;
 using Query = Lucene.Net.Search.Query;
 using Version = Lucene.Net.Util.Version;
+using WhitespaceTokenizer = Corax.Pipeline.WhitespaceTokenizer;
+using LuceneAnalyzer = Lucene.Net.Analysis.Analyzer;
+using CoraxAnalyzer = Corax.Analyzer;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
@@ -36,17 +43,17 @@ namespace Raven.Server.Documents.Indexes.Persistence
             _indexName = index.Name;
             _logger = logger;
         }
-
-        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+        
+        protected static LuceneRavenPerFieldAnalyzerWrapper CreateLuceneAnalyzer(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
         {
             if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
                 throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
-            var analyzers = new Dictionary<Type, Analyzer>();
+            var analyzers = new Dictionary<Type, LuceneAnalyzer>();
 
             var hasDefaultFieldOptions = false;
-            Analyzer defaultAnalyzerToUse = null;
-            Analyzer defaultAnalyzer = null;
+            LuceneAnalyzer defaultAnalyzerToUse = null;
+            LuceneAnalyzer defaultAnalyzer = null;
             if (indexDefinition is MapIndexDefinition mid)
             {
                 if (mid.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out var value))
@@ -61,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
                         case FieldIndexing.Search:
                             if (value.Analyzer != null)
-                                defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
+                                defaultAnalyzerToUse = GetLuceneAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
 
                             if (defaultAnalyzerToUse == null)
                                 defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
@@ -81,11 +88,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
             }
 
             var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
-                ? new RavenPerFieldAnalyzerWrapper(
+                ? new LuceneRavenPerFieldAnalyzerWrapper(
                         defaultAnalyzerToUse,
                         fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
                         fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer))
-                : new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
+                : new LuceneRavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
 
             foreach (var field in indexDefinition.IndexFields)
             {
@@ -100,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                         break;
 
                     case FieldIndexing.Search:
-                        var analyzer = GetAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
+                        var analyzer = GetLuceneAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                         if (analyzer != null)
                         {
                             perFieldAnalyzerWrapper.AddAnalyzer(fieldName, analyzer);
@@ -133,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
             }
 
-            Analyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<string, Type, Analyzer> createAnalyzer)
+            LuceneAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<string, Type, LuceneAnalyzer> createAnalyzer)
             {
                 if (analyzers.TryGetValue(analyzerType, out var analyzer) == false)
                     analyzers[analyzerType] = analyzer = createAnalyzer(fieldName, analyzerType);
@@ -141,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return analyzer;
             }
 
-            Analyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)
+            LuceneAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)
             {
                 if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
                     return new LowerCaseKeywordAnalyzer();
@@ -149,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
             }
 
-            Analyzer CreateKeywordAnalyzer(string fieldName, Type analyzerType)
+            LuceneAnalyzer CreateKeywordAnalyzer(string fieldName, Type analyzerType)
             {
                 if (analyzerType == typeof(KeywordAnalyzer))
                     return new KeywordAnalyzer();
@@ -157,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
             }
 
-            Analyzer CreateStandardAnalyzer(string fieldName, Type analyzerType)
+            LuceneAnalyzer CreateStandardAnalyzer(string fieldName, Type analyzerType)
             {
                 if (analyzerType == typeof(RavenStandardAnalyzer))
                     return new RavenStandardAnalyzer(Version.LUCENE_29);
@@ -168,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Dispose();
 
-        private static Analyzer GetAnalyzer(string fieldName, string analyzer, Dictionary<Type, Analyzer> analyzers, bool forQuerying, string databaseName)
+        private static LuceneAnalyzer GetLuceneAnalyzer(string fieldName, string analyzer, Dictionary<Type, LuceneAnalyzer> analyzers, bool forQuerying, string databaseName)
         {
             if (string.IsNullOrWhiteSpace(analyzer))
                 return null;
@@ -190,6 +197,142 @@ namespace Raven.Server.Documents.Indexes.Persistence
             return analyzerInstance;
         }
 
+        private static CoraxAnalyzer GetCoraxAnalyzer(string fieldName, string analyzer, Dictionary<Type, CoraxAnalyzer> analyzers, bool forQuerying, string databaseName)
+        {
+            throw new NotImplementedException("Custom analyzers are not implemented now. If you need to use custom analyzer you need to use Lucene.");
+        }
+        
+        protected static CoraxRavenPerFieldAnalyzerWrapper CreateCoraxAnalyzers(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+        {
+            if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
+                throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
+        
+            var analyzers = new Dictionary<Type, CoraxAnalyzer>();
+            var hasDefaultFieldOptions = false;
+            CoraxAnalyzer defaultAnalyzerToUse = null;
+            CoraxAnalyzer defaultAnalyzer = null;
+            if (indexDefinition is MapIndexDefinition mid)
+            {
+                if (mid.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out var value))
+                {
+                    hasDefaultFieldOptions = true;
+        
+                    switch (value.Indexing)
+                    {
+                        case FieldIndexing.Exact:
+                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
+                            break;
+        
+                        case FieldIndexing.Search:
+                            defaultAnalyzerToUse = GetOrCreateAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
+                            break;
+
+                        case null:
+                        case FieldIndexing.No:
+                        case FieldIndexing.Default:
+                        default:
+                            // explicitly ignore all other values
+                            break;
+                    }
+                }
+            }
+            
+            if (defaultAnalyzerToUse == null)
+            {
+                defaultAnalyzerToUse = defaultAnalyzer = CreateDefaultAnalyzer(Constants.Documents.Indexing.Fields.AllFields, index.Configuration.DefaultAnalyzerType.Value.Type);
+                analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
+            }
+            
+            var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
+                ? new CoraxRavenPerFieldAnalyzerWrapper(
+                    defaultAnalyzerToUse,
+                    fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
+                    fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer), indexDefinition.IndexFields.Count + 1)
+                : new CoraxRavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse, indexDefinition.IndexFields.Count + 1);
+            
+            foreach (var field in indexDefinition.IndexFields)
+            {
+                var fieldName = field.Value.Name;
+                var fieldId = field.Value.Id;
+                
+                switch (field.Value.Indexing)
+                {
+                    case FieldIndexing.Exact:
+                        var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
+
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, keywordAnalyzer);
+                        break;
+
+                    case FieldIndexing.Search:
+                        var analyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
+                        
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, analyzer);
+                        break;
+
+                    case FieldIndexing.Default:
+                        if (hasDefaultFieldOptions)
+                        {
+                            defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
+
+                            perFieldAnalyzerWrapper.AddAnalyzer(fieldId, defaultAnalyzer);
+                        }
+                        break;
+                }
+            }
+            
+            return perFieldAnalyzerWrapper;
+
+            CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType,  Func<string, Type, CoraxAnalyzer> createAnalyzer)
+            {
+                if (analyzers.TryGetValue(analyzerType, out var analyzer) == false)
+                {
+                    analyzers[analyzerType] = analyzer = createAnalyzer(fieldName, analyzerType);
+                }
+
+                return analyzer;
+            }
+
+            void AddStandardAnalyzer(string fieldName, int fieldId)
+            {
+                var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
+
+                perFieldAnalyzerWrapper.AddAnalyzer(fieldId, standardAnalyzer);
+            }
+            
+            CoraxAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)
+            {
+                if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
+                    return CoraxAnalyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+
+                if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+                    throw new InvalidQueryException($"Analyzer {nameof(analyzerType)} is made for Lucene. Corax doesn't support custom analyzers.");
+                
+                return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            }
+            
+            CoraxAnalyzer CreateKeywordAnalyzer(string fieldName, Type analyzerType)
+            {
+                if (analyzerType == typeof(KeywordAnalyzer))
+                    return CoraxAnalyzer.Create(default(KeywordTokenizer), default(ExactTransformer));
+
+                if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+                    throw new InvalidOperationException($"Analyzer {nameof(analyzerType)} is made for Lucene. Corax doesn't support custom analyzers.");
+
+                return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            }
+            
+            CoraxAnalyzer CreateStandardAnalyzer(string fieldName, Type analyzerType)
+            {
+                if (analyzerType == typeof(RavenStandardAnalyzer))
+                    return CoraxAnalyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer));
+
+                if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+                    throw new InvalidOperationException($"Analyzer {nameof(analyzerType)} is made for Lucene. Corax doesn't support custom analyzers.");
+
+                return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
+            }
+        }
+        
         protected Query GetLuceneQuery(DocumentsOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, factories);
