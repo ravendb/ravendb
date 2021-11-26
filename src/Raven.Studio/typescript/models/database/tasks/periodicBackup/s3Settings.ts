@@ -6,6 +6,7 @@ class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();
+    forcePathStyle = ko.observable<boolean>();
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
 
@@ -14,6 +15,7 @@ class s3Settings extends amazonSettings {
 
         this.bucketName(dto.BucketName);
         this.customServerUrl(dto.CustomServerUrl);
+        this.forcePathStyle(dto.ForcePathStyle);
         this.useCustomS3Host(!!dto.CustomServerUrl);
         
         this.initValidation();
@@ -27,6 +29,7 @@ class s3Settings extends amazonSettings {
             this.remoteFolderName,
             this.selectedAwsRegion,
             this.customServerUrl,
+            this.forcePathStyle,
             this.useCustomS3Host,
             
             this.configurationScriptDirtyFlag().isDirty
@@ -129,6 +132,7 @@ class s3Settings extends amazonSettings {
         
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
+        dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
         
         return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
     }
@@ -143,6 +147,7 @@ class s3Settings extends amazonSettings {
             BucketName: null,
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
+            ForcePathStyle: false,
             CustomServerUrl: null,
         }, allowedRegions);
     }

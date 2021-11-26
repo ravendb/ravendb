@@ -11,12 +11,19 @@ namespace Raven.Server.ServerWide.Commands
     {
         public virtual DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 ["Type"] = GetType().Name,
-                [nameof(UniqueRequestId)] = UniqueRequestId
+                [nameof(UniqueRequestId)] = UniqueRequestId,
             };
+
+            if (Timeout.HasValue)
+                json[nameof(Timeout)] = Timeout;
+
+            return json;
         }
+
+        public TimeSpan? Timeout;
 
         public long? RaftCommandIndex;
 

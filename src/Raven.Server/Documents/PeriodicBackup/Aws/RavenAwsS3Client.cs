@@ -65,6 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             else
             {
                 config.UseHttp = true;
+                config.ForcePathStyle = s3Settings.ForcePathStyle;
                 config.ServiceURL = s3Settings.CustomServerUrl;
             }
             

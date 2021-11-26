@@ -136,10 +136,14 @@ class columnPreviewPlugin<T> {
         if (left + computedWidth < parentWidth) {
             this.$tooltip
                 .css('left', left + 'px')
-                .css('right', '');
+                .css('right', '')
+                .css("max-width", '');
         } else {
-            const right = parentWidth - left - $cell.outerWidth();
+            const outerWidth = $cell.outerWidth();
+            const right = parentWidth - left - outerWidth;
+            
             this.$tooltip
+                .css("max-width", (left + outerWidth) + "px")
                 .css('left', '')
                 .css('right', right + 'px');
         }
