@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -21,6 +20,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
     {
         private readonly bool _isCustom;
         private readonly string _remoteFolderName;
+
         protected RestoreFromS3(ITestOutputHelper output, bool isCustom = false) : base(output)
         {
             _isCustom = isCustom;
@@ -448,7 +448,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             };
 
             if (_isCustom)
+            {
                 settings.CustomServerUrl = s3Settings.CustomServerUrl;
+                settings.ForcePathStyle = s3Settings.ForcePathStyle;
+            }
 
             return settings;
         }
