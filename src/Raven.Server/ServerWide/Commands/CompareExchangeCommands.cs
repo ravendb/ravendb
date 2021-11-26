@@ -27,6 +27,10 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
 
+        [JsonDeserializationIgnore]
+        public Leader.ConvertResultAction ConvertResultAction;
+
+
         protected CompareExchangeCommandBase() { }
 
         protected CompareExchangeCommandBase(string database, string key, long index, JsonOperationContext context, string uniqueRequestId, bool fromBackup) : base(uniqueRequestId)
@@ -164,7 +168,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            return JsonDeserializationCluster.CompareExchangeResult((BlittableJsonReaderObject)remoteResult);
+            return JsonDeserializationCluster.CompareExchangeResult(((BlittableJsonReaderObject)remoteResult).Clone(ContextToWriteResult));
         }
 
         public class CompareExchangeResult : IDynamicJsonValueConvertible

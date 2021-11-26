@@ -939,7 +939,7 @@ namespace Raven.Server.Rachis
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             Validator.AssertPutCommandToLeader(cmd);
-            return leader.PutAsync(cmd, OperationTimeout);
+            return leader.PutAsync(cmd, cmd.Timeout ?? OperationTimeout);
         }
 
         public void SwitchToCandidateStateOnTimeout()
