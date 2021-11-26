@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -573,8 +574,11 @@ namespace Raven.Server.ServerWide
             Exception exception = null;
             var actionsByDatabase = new Dictionary<string, List<Func<Task>>>();
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            
             try
             {
+                var subscriptionIdsPerDatabase = new Dictionary<string, HashSet<long>>();
+
                 foreach (BlittableJsonReaderObject command in subscriptionCommands)
                 {
                     if (command.TryGet("Type", out string putSubscriptionType) == false && putSubscriptionType != nameof(PutSubscriptionCommand))
@@ -591,8 +595,25 @@ namespace Raven.Server.ServerWide
                             $"Cannot set typed value of type {type} for database {database}, because it does not exist");
                     }
 
-                    var id = updateCommand.FindFreeId(context, index);
-                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
+                    if (subscriptionIdsPerDatabase.TryGetValue(database, out var existingSubscriptionIds) == false)
+                    {
+                        existingSubscriptionIds = new HashSet<long>();
+
+                        foreach (var keyValue in ReadValuesStartingWith(context,
+                            SubscriptionState.SubscriptionPrefix(database)))
+                        {
+                            if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                                continue;
+
+                            existingSubscriptionIds.Add(id);
+                        }
+
+                        subscriptionIdsPerDatabase[database] = existingSubscriptionIds;
+                    }
+
+                    var freeId = updateCommand.FindFreeId(existingSubscriptionIds, index);
+                    existingSubscriptionIds.Add(freeId);
+                    updateCommand.Execute(context, items, freeId, record: null, _parent.CurrentState, out _);
 
                     if (actionsByDatabase.ContainsKey(database) == false)
                     {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -112,29 +113,16 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        public long FindFreeId(TransactionOperationContext context, long subscriptionId)
+        public long FindFreeId(HashSet<long> existingSubscriptionIds, long subscriptionId)
         {
             if (SubscriptionId.HasValue)
                 return SubscriptionId.Value;
 
-            bool idTaken;
-            do
+            while (existingSubscriptionIds.Contains(subscriptionId))
             {
-                idTaken = false;
-                foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
-                    SubscriptionState.SubscriptionPrefix(DatabaseName)))
-                {
-                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
-                        continue;
-
-                    if (id == subscriptionId)
-                    {
-                        subscriptionId--; //  we don't care if this end up as a negative value, we need only to be unique
-                        idTaken = true;
-                        break;
-                    }
-                }
-            } while (idTaken);
+                //  we don't care if this end up as a negative value, we need only to be unique
+                subscriptionId--;
+            }
 
             return subscriptionId;
         }
