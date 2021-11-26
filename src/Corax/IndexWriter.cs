@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -30,7 +31,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        private readonly Analyzer _analyzer;
+        private readonly Dictionary<int, Analyzer> _analyzers;
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
         private readonly bool _ownsTransaction;
@@ -67,7 +68,7 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexWriter([NotNull] StorageEnvironment environment, Analyzer analyzer = null)
+        public IndexWriter([NotNull] StorageEnvironment environment, Dictionary<int, Analyzer> analyzers = null)
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
@@ -75,18 +76,19 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
-            _analyzer = analyzer;
+            _analyzers = analyzers;
         }
 
-        public IndexWriter([NotNull] Transaction tx, Analyzer analyzer = null)
+        public IndexWriter([NotNull] Transaction tx, Dictionary<int, Analyzer> analyzers = null)
         {
             Transaction = tx;
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
-            _analyzer = analyzer;
+            _analyzers = analyzers;
         }
 
+        
         public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
@@ -113,31 +115,21 @@ namespace Corax
 
             var entryReader = new IndexEntryReader(data);
 
-            if (_analyzer == null)
+            
+            foreach (var (key, tokenField) in knownFields)
             {
-                foreach (var (key, tokenField) in knownFields)
+                if (_buffer.TryGetValue(key, out var field) == false)
                 {
-                    if (_buffer.TryGetValue(key, out var field) == false)
-                    {
-                        _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
-                    }
-
-                    InsertToken(context, ref entryReader, tokenField, field, entryId);
+                    _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
-            }
-            else
-            {
-                foreach (var (key, tokenField) in knownFields)
-                {
-                    if (_buffer.TryGetValue(key, out var field) == false)
-                    {
-                        _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
-                    }
 
+                if (_analyzers is not null && _analyzers.ContainsKey(tokenField))
                     InsertAnalyzedToken(context, ref entryReader, tokenField, field, entryId);
-                }
-            }
+                else
+                    InsertToken(context, ref entryReader, tokenField, field, entryId);
 
+            }
+            
             return entryId;
         }
 
@@ -149,11 +141,13 @@ namespace Corax
         [SkipLocalsInit]
         private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
         {
-            _analyzer.GetOutputBuffersSize(512, out int bufferSize, out int tokenSize);
+            var analyzer = _analyzers[tokenField];
+            
+            analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
 
             byte* tempWordsSpace = stackalloc byte[bufferSize];
             Token* tempTokenSpace = stackalloc Token[tokenSize];
-
+            
             var fieldType = entryReader.GetFieldType(tokenField);
             if (fieldType.HasFlag(IndexEntryFieldType.List))
             {                                
@@ -167,7 +161,7 @@ namespace Corax
 
                     var words = new Span<byte>(tempWordsSpace, bufferSize);
                     var tokens = new Span<Token>(tempTokenSpace, tokenSize);
-                    _analyzer.Execute(value, ref words, ref tokens);
+                    analyzer.Execute(value, ref words, ref tokens);
 
                     for (int i = 0; i < tokens.Length; i++)
                     {
@@ -190,7 +184,7 @@ namespace Corax
 
                 var words = new Span<byte>(tempWordsSpace, bufferSize);
                 var tokens = new Span<Token>(tempTokenSpace, tokenSize);
-                _analyzer.Execute(value, ref words, ref tokens);
+                analyzer.Execute(value, ref words, ref tokens);
 
                 for (int i = 0; i < tokens.Length; i++)
                 {
@@ -260,17 +254,30 @@ namespace Corax
             
             Page page = default;
             var llt = Transaction.LowLevelTransaction;
-            List<long> ids = null;            
-
-            int bufferSize = 0;
-            int tokenSize = 0;
+            List<long> ids = null;
             
-            var analyzer = _analyzer;
-            if ( analyzer != null)
-                _analyzer.GetOutputBuffersSize(512, out bufferSize, out tokenSize);
-    
-            byte* tempWordsSpace = stackalloc byte[bufferSize];
-            Token* tempTokenSpace = stackalloc Token[tokenSize];
+            
+            //Support for having multiple analyzers inside one index. We want avoid allocating memory per analyzer so we calculated
+            //all needed values an
+            Span<int> buffersLength = stackalloc int [_analyzers?.Count*2 ?? 0]; 
+            int maxWordsSpaceLength = 0;
+            int maxTokensSpaceLength = 0;
+            if (_analyzers is not null)
+            {
+                foreach (var (fieldId, analyzer) in _analyzers)
+                {
+                    if (analyzer is null)
+                        continue;
+
+                    analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out buffersLength[fieldId * 2], out buffersLength[fieldId * 2 + 1]);
+                    maxWordsSpaceLength = Math.Max(maxWordsSpaceLength, buffersLength[fieldId * 2]);
+                    maxTokensSpaceLength = Math.Max(maxTokensSpaceLength, buffersLength[fieldId * 2 + 1]);
+                }
+            }
+
+            Span<byte> tempWordsSpace = stackalloc byte[maxWordsSpaceLength];
+            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];
+            
 
             foreach (var id in _entriesToDelete)
             {
@@ -278,6 +285,10 @@ namespace Corax
 
                 foreach (var (fieldName, fieldId) in knownFields) // TODO maciej: this is wrong, need to get all the fields from the entry
                 {
+                    Analyzer analyzer = null;
+                    if (_analyzers?.TryGetValue(fieldId, out analyzer) == false)
+                        analyzer = null;
+                    
                     var fieldType = entryReader.GetFieldType(fieldId);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
@@ -285,7 +296,7 @@ namespace Corax
                         
                         while (it.ReadNext())
                         {
-                            if (analyzer == null)
+                            if (analyzer is null)
                             {
                                 DeleteField(id, fieldName, tmpBuf, it.Sequence);
                             }
@@ -293,9 +304,10 @@ namespace Corax
                             {
                                 // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
                                 var value = it.Sequence;
-
-                                var words = new Span<byte>(tempWordsSpace, bufferSize);
-                                var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                                var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
+                                var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
+                                
+                                
                                 analyzer.Execute(value, ref words, ref tokens);
 
                                 for (int i = 0; i < tokens.Length; i++)
@@ -310,14 +322,14 @@ namespace Corax
                     else
                     {
                         entryReader.Read(fieldId, out Span<byte> termValue);
-                        if (analyzer == null)
+                        if (analyzer is null)
                         {
                             DeleteField(id, fieldName, tmpBuf, termValue);
                         }
                         else
                         {
-                            var words = new Span<byte>(tempWordsSpace, bufferSize);
-                            var tokens = new Span<Token>(tempTokenSpace, tokenSize);
+                            var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
+                            var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
                             analyzer.Execute(termValue, ref words, ref tokens);
 
                             for (int i = 0; i < tokens.Length; i++)
@@ -340,7 +352,6 @@ namespace Corax
             void DeleteField(long id, Slice fieldName, Span<byte> tmpBuffer, ReadOnlySpan<byte> termValue)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(fieldName);
-                //todo maciej: got some issue here after refactoring
                 if (fieldTree.TryGetValue(termValue, out var containerId) == false)
                     return;
 
@@ -390,6 +401,9 @@ namespace Corax
         public bool TryDeleteEntry(string key, string term)
         {
             var fieldsTree = Transaction.ReadTree(FieldsSlice);
+            if (fieldsTree == null)
+                return false;
+
             var fieldTree = fieldsTree.CompactTreeFor(key);
             var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 1);

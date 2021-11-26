@@ -24,13 +24,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Term _sourceDocumentIdHash = new Term(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, "Dummy");
         protected byte[] _buffer;
 
+        protected readonly LuceneRavenPerFieldAnalyzerWrapper _analyzer;
         protected readonly LuceneIndexWriter _writer;
         protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;
         private readonly bool _hasSuggestions;
 
         private readonly LuceneDocumentConverterBase _converter;
         protected readonly DocumentDatabase DocumentDatabase;
-        private readonly RavenPerFieldAnalyzerWrapper _analyzer;
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _analyzer = CreateAnalyzer(index, index.Definition);
+                _analyzer = CreateLuceneAnalyzer(index, index.Definition);
             }
             catch (Exception e)
             {

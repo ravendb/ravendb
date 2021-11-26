@@ -2,17 +2,16 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
+using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -23,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
+        private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
         private long _entriesCount = 0;
@@ -30,13 +30,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _indexSearcher = new IndexSearcher(readTransaction);
+            _analyzers = CreateCoraxAnalyzers(index, index.Definition, true);
+            _indexSearcher = new IndexSearcher(readTransaction, _analyzers.Analyzers);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
-        }
-
-        public override void Dispose()
-        {
-            _indexSearcher?.Dispose();
         }
 
         public override long EntriesCount() => _entriesCount;
@@ -61,29 +57,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 int read = 0;
                 int docsToLoad = pageSize;
                 Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
-                
+
                 while (read != 0)
                 {
                     for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
                     {
                         RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
-                        var r = retriever.Get(ref retrieverInput);
+                        var fetchedDocument = retriever.Get(ref retrieverInput);
 
-                        if (r.Document != null)
+                        if (fetchedDocument.Document != null)
                         {
-                            yield return new QueryResult
-                            {
-                                Result = r.Document
-                            };
+                            yield return new QueryResult { Result = fetchedDocument.Document };
                         }
-                        else if (r.List != null)
+                        else if (fetchedDocument.List != null)
                         {
-                            foreach (Document item in r.List)
+                            foreach (Document item in fetchedDocument.List)
                             {
-                                yield return new QueryResult
-                                {
-                                    Result = item
-                                };
+                                yield return new QueryResult { Result = item };
                             }
                         }
                     }
@@ -94,8 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     read = result.Fill(ids);
                     readCounter += read;
                 }
-
-
+                
                 if (result is SortingMatch sm)
                     totalResults.Value = Convert.ToInt32(sm.TotalResults);
                 else
@@ -137,6 +126,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         fieldId = indexField.Id;
                     }
                 }
+
                 if (fieldId == -1)
                     throw new InvalidDataException($"Cannot find {field} field in {_index.Name}'s terms.");
             }
@@ -197,7 +187,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-
         private void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
             CancellationToken token) where TQueryMatch : IQueryMatch
         {
@@ -230,6 +219,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 read = result.Fill(ids);
                 readCounter += read;
             }
+        }
+
+        public override void Dispose()
+        {
+            _indexSearcher?.Dispose();
+            _analyzers?.Dispose();
         }
     }
 }

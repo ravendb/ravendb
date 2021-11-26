@@ -5,6 +5,7 @@ using System.Text;
 using Corax;
 using Corax.Pipeline;
 using FastTests.Voron;
+using Raven.Client.Documents.Linq;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -82,7 +83,7 @@ namespace FastTests.Corax
         }
 
 
-        private void IndexEntries(IEnumerable<IndexEntry> list, Analyzer analyzer = null)
+        private void IndexEntries(IEnumerable<IndexEntry> list, Dictionary<int, Analyzer> analyzers = null)
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
@@ -91,7 +92,7 @@ namespace FastTests.Corax
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env, analyzer);
+                using var indexWriter = new IndexWriter(Env, analyzers);
                 foreach (var entry in list)
                 {
                     var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
@@ -1091,9 +1092,13 @@ namespace FastTests.Corax
         public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
         {
             var analyzer = Analyzer.Create<KeywordTokenizer, LowerCaseTransformer>();
-
+            var analyzers = new Dictionary<int, Analyzer>()
+            {
+                {IdIndex, analyzer},
+                {ContentIndex, analyzer}
+            };
             setSize = setSize - (setSize % 3);
-
+            var entries = new List<IndexEntry>();
             var entriesToIndex = new IndexEntry[setSize];
             for (int i = 0; i < setSize; i++)
             {
@@ -1107,18 +1112,18 @@ namespace FastTests.Corax
                         2 => new string[] { "sky", "space", "laKe" },
                     }
                 };
-
+                entries.Add(entry);
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex, analyzer);
+            IndexEntries(entriesToIndex, analyzers);
 
             using var searcher = new IndexSearcher(Env);
             {
                 var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var match2 = searcher.TermQuery("Content", "sky");
                 var andMatch = searcher.And(in match1, in match2);
-
+                var results = new List<string>();
                 Span<long> ids = stackalloc long[stackSize];
                 int read;
                 int count = 0;
@@ -1126,8 +1131,12 @@ namespace FastTests.Corax
                 {
                     read = andMatch.Fill(ids);
                     count += read;
+                    for (int i = 0; i < read; ++i)
+                    {
+                        results.Add(searcher.GetIdentityFor(ids[i]));
+                    }
                 } while (read != 0);
-
+                
                 Assert.Equal((setSize / 3), count);
             }
 
@@ -1178,7 +1187,11 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex, analyzer);
+            IndexEntries(entriesToIndex, new Dictionary<int, Analyzer>()
+            {
+                {0, analyzer},
+                {1, analyzer}
+            });
 
             using var searcher = new IndexSearcher(Env);
             {

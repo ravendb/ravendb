@@ -58,13 +58,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return EvaluateBetween(betweenExpression, isNegated);
                 case MethodExpression methodExpression:
                     var expressionType = QueryMethod.GetMethodType(methodExpression.Name.Value);
+                    var fieldName = GetField((FieldExpression)methodExpression.Arguments[0]);
+                    var fieldId = GetFieldIdInIndex(fieldName);
                     switch (expressionType)
                     {
                         case MethodType.StartsWith:
-                            return _searcher.StartWithQuery(GetField((FieldExpression)methodExpression.Arguments[0]),
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value);
+                            return _searcher.StartWithQuery(fieldName,
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
                         default:
-                            throw new NotImplementedException($"Method {nameof(methodExpression.Type)} is not implemented.");
+                            throw new NotImplementedException($"Method {nameof(methodExpression)} is not implemented.");
                     }
 
                 case InExpression inExpression:
@@ -94,7 +96,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     var value = (ValueExpression)expression.Right;
                     var field = (FieldExpression)expression.Left;
-                    return _searcher.TermQuery(GetField(field), value.GetValue(_query.QueryParameters).ToString());
+                    var fieldName = GetField(field);
+                    return _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName));
                 }
             }
 
@@ -113,13 +116,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isLeftUnary && isRightUnary)
                 return EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated), right, isNegated);
 
-            if (isLeftUnary && isRightUnary == false)
+            if (isLeftUnary && isRightUnary is false)
                 return EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated), left, isNegated);
             
             return EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated), right, isNegated);
         }
-
-        
         
         private IQueryMatch EvaluateUnary(OperatorType type, in IQueryMatch previousMatch, BinaryExpression value, bool isNegated)
         {
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 if (order.Expression is not FieldExpression fe) continue;
                 var id = GetFieldIdInIndex(GetField(fe));
-                var orderTypeField = OrderTypeFieldConventer(order.FieldType);
+                var orderTypeField = OrderTypeFieldConverter(order.FieldType);
                 
                 match = order.Ascending 
                     ? _searcher.OrderByAscending(match, id, orderTypeField)
@@ -227,33 +228,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
         {
-            var valueExpr = expr;
-            var valueType = valueExpr.Value;
-            object fieldValue = GetFieldValue(valueExpr);
-            if (valueType == ValueTokenType.Parameter)
+            var valueType = expr.Value;
+            object fieldValue = GetFieldValue(expr);
+            if (valueType != ValueTokenType.Parameter) 
+                return (valueType, fieldValue);
+            
+            
+            switch (fieldValue)
             {
-                if (fieldValue is LazyNumberValue fV)
-                {
+                case LazyNumberValue fV:
                     valueType = ValueTokenType.Double;
                     fieldValue = fV.ToDouble(CultureInfo.InvariantCulture);
-                }
-                else if (fieldValue is long)
+                    break;
+                case long:
                     valueType = ValueTokenType.Long;
-                else if (fieldValue is decimal)
-                {
+                    break;
+                case decimal value:
                     valueType = ValueTokenType.Double;
-                    fieldValue = Convert.ToDouble((decimal)fieldValue);
-                }
-                else if (fieldValue is double)
+                    fieldValue = Convert.ToDouble(value);
+                    break;
+                case double:
                     valueType = ValueTokenType.Double;
-                else
+                    break;
+                default:
                     throw new NotSupportedException($"Unsupported type: ${fieldValue}.");
             }
 
             return (valueType, fieldValue);
         }
         
-        private OperatorType GetNegated(OperatorType current) =>
+        private static OperatorType GetNegated(OperatorType current) =>
             current switch
             {
                 OperatorType.LessThan => OperatorType.GreaterThanEqual,
@@ -267,7 +271,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
             };
         
-        private MatchCompareFieldType OrderTypeFieldConventer(OrderByFieldType original) =>
+        private static MatchCompareFieldType OrderTypeFieldConverter(OrderByFieldType original) =>
             original switch
             {
                 OrderByFieldType.Double => MatchCompareFieldType.Floating,
