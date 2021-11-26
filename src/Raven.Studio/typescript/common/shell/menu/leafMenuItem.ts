@@ -27,7 +27,7 @@ class leafMenuItem implements menuItem {
     constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, badgeData, alias, requiredAccess }: {
         title: string,
         route: string | Array<string>,
-        moduleId: Function | string,
+        moduleId: Function,
         nav: boolean | KnockoutObservable<boolean>,
         tooltip?: string,
         hash?: string,

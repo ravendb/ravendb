@@ -64,13 +64,6 @@ class debugAdvanced {
                 }
             ])
             .buildNavigationModel();
-
-        this.router.on("router:navigation:attached", (viewModel: viewModelBase) => {
-            if (viewModel) {
-                const preventGrow = !!(viewModel.constructor as any).preventParentGrow;
-                this.growContainer(!preventGrow);
-            }
-        });
     }
 }
 

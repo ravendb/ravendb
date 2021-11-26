@@ -8,7 +8,9 @@ import saveIntegrationsPostgreSqlCredentialsCommand = require("commands/database
 import deleteIntegrationsPostgreSqlCredentialsCommand = require("commands/database/settings/deleteIntegrationsPostgreSqlCredentialsCommand");
 
 class integrations extends viewModelBase {
-   
+
+    view = require("views/database/settings/integrations.html");
+    
     postgreSqlCredentials = ko.observableArray<string>([]);
     
     editedPostgreSqlCredentials = ko.observable<postgreSqlCredentialsModel>(null);

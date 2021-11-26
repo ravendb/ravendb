@@ -211,6 +211,7 @@ module.exports = (env, args) => {
                 
                 Favico: path.resolve(__dirname, 'node_modules/favico.js/favico'),
                 durandal: path.resolve(__dirname, 'node_modules/durandal/js'),
+                jquery: path.resolve(__dirname, 'node_modules/jquery/dist/jquery'),
                 plugins: path.resolve(__dirname, 'node_modules/durandal/js/plugins'),
                 jwerty: path.resolve(__dirname, 'node_modules/jwerty-globals-fixed/jwerty')
             }
