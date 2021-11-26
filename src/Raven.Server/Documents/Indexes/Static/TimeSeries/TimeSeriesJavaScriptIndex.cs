@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private const string MapPrefix = "timeSeries.";
 
-        public TimeSeriesJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
-            : base(definition, configuration, MapPrefix, Constants.TimeSeries.All)
+        public TimeSeriesJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+            : base(definition, configuration, MapPrefix, Constants.TimeSeries.All, indexVersion)
         {
         }
     }

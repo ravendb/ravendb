@@ -45,9 +45,9 @@ namespace SlowTests.MailingList
                     Lines = new List<OrderLine>
                     {
                         new OrderLine {Quantity = 7, Discount = 4},
-                        new OrderLine {Quantity = 50, Discount = 4},
-                        new OrderLine {Quantity = 20, Discount = 4},
-                        new OrderLine {Quantity = 3, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 3},
+                        new OrderLine {Quantity = 20, Discount = 3},
+                        new OrderLine {Quantity = 3, Discount = 5},
                         new OrderLine {Quantity = 7, Discount = 4}
                     }
                 };
@@ -83,10 +83,10 @@ namespace SlowTests.MailingList
                     Lines = new List<OrderLine>
                     {
                         new OrderLine {Quantity = 7, Discount = 4},
-                        new OrderLine {Quantity = 50, Discount = 4},
-                        new OrderLine {Quantity = 20, Discount = 4},
+                        new OrderLine {Quantity = 50, Discount = 3},
+                        new OrderLine {Quantity = 20, Discount = 3},
                         new OrderLine {Quantity = 3, Discount = 4},
-                        new OrderLine {Quantity = 7, Discount = 4}
+                        new OrderLine {Quantity = 7, Discount = 5}
                     }
                 };
 
