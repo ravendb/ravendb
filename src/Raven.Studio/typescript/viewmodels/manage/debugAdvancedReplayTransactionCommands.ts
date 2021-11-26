@@ -22,9 +22,6 @@ class debugAdvancedReplayTransactionCommands extends viewModelBase {
 
     validationGroup: KnockoutValidationGroup;
     
-    // marker for parent router
-    static preventParentGrow = true;
-
     constructor() {
         super();
 

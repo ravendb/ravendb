@@ -140,7 +140,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/integrations',
-            moduleId: 'viewmodels/database/settings/integrations',
+            moduleId: require('viewmodels/database/settings/integrations'),
             title: 'Integrations',
             nav: true,
             css: 'icon-integrations',

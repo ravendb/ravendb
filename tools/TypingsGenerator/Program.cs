@@ -111,11 +111,17 @@ namespace TypingsGenerator
 {
     public class Program
     {
-        public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
+        public static readonly string[] TargetDirectory = { "../../src/Raven.Studio/", "../../../src/Raven.Studio/", "../../../../src/Raven.Studio/" };
+        public const string TypingsDirectory = "typings/server";
 
         public static void Main(string[] args)
         {
-            Directory.CreateDirectory(TargetDirectory);
+            string studioDir = FindStudioDirectory();
+
+            string targetDir = Path.Combine(studioDir, TypingsDirectory);
+            
+            Console.WriteLine("Using directory: " + Path.GetFullPath(targetDir));
+            Directory.CreateDirectory(targetDir);
 
             var scripter = new CustomScripter()
                 .UsingFormatter(new TsFormatter
@@ -153,16 +159,16 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
-            Directory.Delete(TargetDirectory, true);
-            Directory.CreateDirectory(TargetDirectory);
+            Directory.Delete(targetDir, true);
+            Directory.CreateDirectory(targetDir);
             scripter
-                .SaveToDirectory(TargetDirectory);
+                .SaveToDirectory(targetDir);
             
             var endpoints = new EndpointsExporter();
-            endpoints.Create(TargetDirectory);
+            endpoints.Create(targetDir);
             
             var configuration = new ConfigurationExporter();
-            configuration.Create(TargetDirectory);
+            configuration.Create(targetDir);
         }
 
         private static Scripter ConfigureTypes(Scripter scripter)
@@ -599,6 +605,18 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
 
             return scripter;
+        }
+
+        private static string FindStudioDirectory()
+        {
+            foreach (string dir in TargetDirectory)
+            {
+                var fullPath = Path.GetFullPath(dir);
+                if (Directory.Exists(fullPath))
+                    return fullPath;
+            }
+
+            throw new FileNotFoundException("Unable to find Studio directory");
         }
     }
 }
