@@ -113,16 +113,39 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        public long FindFreeId(HashSet<long> existingSubscriptionIds, long subscriptionId)
+        public long FindFreeId(Dictionary<string, long> minimumSubscriptionIdPerDatabase, long subscriptionId, TransactionOperationContext context)
         {
-            if (SubscriptionId.HasValue)
-                return SubscriptionId.Value;
-
-            while (existingSubscriptionIds.Contains(subscriptionId))
+            if (minimumSubscriptionIdPerDatabase.TryGetValue(DatabaseName, out var minimumSubscriptionId) == false)
             {
-                //  we don't care if this end up as a negative value, we need only to be unique
-                subscriptionId--;
+                minimumSubscriptionId = int.MaxValue;
+
+                foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
+                    SubscriptionState.SubscriptionPrefix(DatabaseName)))
+                {
+                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                        continue;
+
+                    if (id < minimumSubscriptionId)
+                        minimumSubscriptionId = id;
+                }
+
+                minimumSubscriptionIdPerDatabase[DatabaseName] = minimumSubscriptionId;
             }
+
+            if (SubscriptionId.HasValue)
+            {
+                if (SubscriptionId.Value < minimumSubscriptionId)
+                    minimumSubscriptionIdPerDatabase[DatabaseName] = minimumSubscriptionId;
+
+                return SubscriptionId.Value;
+            }
+
+            if (subscriptionId >= minimumSubscriptionId)
+            {
+                subscriptionId = --minimumSubscriptionId;
+            }
+
+            minimumSubscriptionIdPerDatabase[DatabaseName] = subscriptionId;
 
             return subscriptionId;
         }

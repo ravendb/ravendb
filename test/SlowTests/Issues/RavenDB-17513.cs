@@ -35,7 +35,9 @@ namespace SlowTests.Issues
                 }, store2.Smuggler);
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
-                WaitForUserToContinueTheTest(store2);
+                var newSubscriptions = await store2.Subscriptions.GetSubscriptionsAsync(0, 1024);
+                var subscriptionIdsDistinctCount = newSubscriptions.Select(x => x.SubscriptionId).Distinct().Count();
+                Assert.Equal(newSubscriptions.Count, subscriptionIdsDistinctCount);
             }
         }
     }
