@@ -1,5 +1,13 @@
 <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+        Force path style
+    </label>
+    <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: customServerUrl">
+        <input type="checkbox" data-bind="checked: forcePathStyle" type="text" class="form-control" />
+    </div>
+</div>
+<div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">
         Custom server URL <i class="required"></i>
     </label>
     <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: customServerUrl">
