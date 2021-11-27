@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Util;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
@@ -23,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {
-                var sut = new ReduceKeyProcessor(9, bufferPool);
+                var sut = new ReduceKeyProcessor(9, bufferPool, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                 sut.Reset();
 

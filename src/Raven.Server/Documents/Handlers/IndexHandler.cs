@@ -1036,7 +1036,7 @@ namespace Raven.Server.Documents.Handlers
                 if (indexDefinition.Type.IsJavaScript() == false)
                     throw new UnauthorizedAccessException("Testing indexes is only allowed for JavaScript indexes.");
 
-                var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration);
+                var compiledIndex = new JavaScriptIndex(indexDefinition, Database.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                 var inputSize = GetIntValueQueryString("inputSize", false) ?? DefaultInputSizeForTestingJavaScriptIndex;
                 var collections = new HashSet<string>(compiledIndex.Maps.Keys);

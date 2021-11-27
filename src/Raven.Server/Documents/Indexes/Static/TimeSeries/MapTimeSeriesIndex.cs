@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private static MapTimeSeriesIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration, indexVersion);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);

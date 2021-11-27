@@ -1024,7 +1024,7 @@ namespace Raven.Server.Documents.Indexes
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
-            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion); // pre-compile it and validate
 
             if (definition.Type == IndexType.MapReduce)
             {
