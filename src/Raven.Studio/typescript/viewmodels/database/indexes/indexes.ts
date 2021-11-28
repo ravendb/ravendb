@@ -264,7 +264,7 @@ class indexes extends viewModelBase {
         }
         
         if (args && args.indexName) {
-            this.indexNameToHighlight(args.indexName);
+            this.indexNameToHighlight(args.indexName.toLowerCase());
         }
 
         return this.fetchIndexes();
@@ -445,10 +445,13 @@ class indexes extends viewModelBase {
         }
     }
 
-    createIndexesUrlObservableForNode(nodeTag: string) {
+    createIndexesUrlObservableForNode(nodeTag: string, index: index) {
         return ko.pureComputed(() => {
+            const indexName = index.name.startsWith("replacementof/") ? index.name.replace("replacementof/", "") : index.name;
+            
+            const link = appUrl.forIndexes(this.activeDatabase(), indexName);
             const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
-            const link = appUrl.forIndexes(this.activeDatabase());
+            
             return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
         });
     }
