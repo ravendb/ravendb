@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
                 // here path is either a new file -or- an existing directory
                 if (Directory.Exists(outputFilePath))
                 { 
-                    throw new InvalidOperationException("Please enter a path including the file name");
+                    throw new InvalidOperationException(outputFilePath + " is a directory. Please enter a path to a file.");
                 }
 
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously); 
