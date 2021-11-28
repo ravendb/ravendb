@@ -1107,6 +1107,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private static readonly TimeSeriesStorage.AppendOptions AppendOptionsForSmuggler = new TimeSeriesStorage.AppendOptions
+        {
+            VerifyName = false, 
+            FromSmuggler = true
+        };
+
         internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -1144,7 +1150,7 @@ namespace Raven.Server.Documents.Handlers
                         }
 
                         var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, verifyName: false);
+                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
                     }
 
                     changes += items.Count;

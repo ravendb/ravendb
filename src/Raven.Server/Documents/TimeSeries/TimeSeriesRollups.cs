@@ -493,6 +493,11 @@ namespace Raven.Server.Documents.TimeSeries
                 return RolledUp;
             }
 
+            private readonly TimeSeriesStorage.AppendOptions _appendOptionsForRollups = new TimeSeriesStorage.AppendOptions
+            {
+                VerifyName = false
+            };
+
             private void RollupOne(DocumentsOperationContext context, Table table, RollupState item, TimeSeriesPolicy policy, TimeSeriesCollectionConfiguration config)
             {
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
@@ -589,7 +594,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var before = context.LastDatabaseChangeVector;
-                var after = tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);
+                var after = tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, _appendOptionsForRollups);
                 if (before != after)
                     RolledUp++;
                 MarkForNextPolicyAfterRollup(context, table, item, policy, tss, rollupEnd);

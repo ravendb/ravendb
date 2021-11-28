@@ -1236,9 +1236,15 @@ namespace Raven.Server.Documents.Replication
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
                                 }
+                                
+                                var options = new TimeSeriesStorage.AppendOptions
+                                {
+                                    VerifyName = false,
+                                    ChangeVectorFromReplication = segment.ChangeVector
+                                };
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, segment.ChangeVector, verifyName: false);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
