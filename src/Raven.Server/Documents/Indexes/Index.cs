@@ -250,6 +250,9 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void DisposeIndex()
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Start to dispose");
+            
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)
                 _currentlyRunningQueriesLock.EnterWriteLock();
@@ -293,6 +296,9 @@ namespace Raven.Server.Documents.Indexes
                 if (needToLock)
                     _currentlyRunningQueriesLock.ExitWriteLock();
             }
+            
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Finish to dispose");
         }
 
         public static Index Open(string path, DocumentDatabase documentDatabase, bool generateNewDatabaseId)
@@ -464,6 +470,9 @@ namespace Raven.Server.Documents.Indexes
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+            
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Start initialize");
             using (DrainRunningQueries())
             {
                 if (_initialized)
@@ -486,6 +495,8 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Finish initialize");
         }
 
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)

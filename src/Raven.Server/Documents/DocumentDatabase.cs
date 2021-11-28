@@ -625,6 +625,8 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Starting dispose");
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
             _databaseShutdown.Cancel();
@@ -648,8 +650,8 @@ namespace Raven.Server.Documents
                 _forTestingPurposes?.DisposeLog?.Invoke(Name, $"Generating offline database info failed: {e}");
                 // if we encountered a catastrophic failure we might not be able to retrieve database info
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Failed to generate and store database info", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Failed to generate and store database info", e);
             }
 
             if (_forTestingPurposes == null || _forTestingPurposes.SkipDrainAllRequests == false)
@@ -842,7 +844,11 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"{Name}: Unlock {_writeLockFile.Name}");
                         _writeLockFile.Unlock(0, 1);
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"{Name}: Finished to unlock {_writeLockFile.Name}");
                     }
                     catch (PlatformNotSupportedException)
                     {
@@ -871,6 +877,8 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(_hasClusterTransaction);
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _hasClusterTransaction");
 
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"{Name}: Finished dispose");
             _forTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
             exceptionAggregator.ThrowIfNeeded();

@@ -205,8 +205,8 @@ namespace Raven.Server.Documents
                 catch (Exception e)
                 {
                     var title = $"Failed to digest change of type '{changeType}' for database '{databaseName}' at index {index}";
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info(title, e);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(title, e);
                     _serverStore.NotificationCenter.Add(AlertRaised.Create(databaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
                         details: new ExceptionDetails(e)));
                     throw;
@@ -733,8 +733,8 @@ namespace Raven.Server.Documents
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
                 if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(msg);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(msg);
             }
 
             DocumentDatabase documentDatabase = null;
@@ -758,8 +758,8 @@ namespace Raven.Server.Documents
 
                 AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
                 OnDatabaseLoaded(config.ResourceName);
 
@@ -772,8 +772,8 @@ namespace Raven.Server.Documents
             {
                 documentDatabase?.Dispose();
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to start database {config.ResourceName}", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to start database {config.ResourceName}", e);
 
                 if (e is SchemaErrorException)
                 {

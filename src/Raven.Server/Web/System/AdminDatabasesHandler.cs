@@ -324,8 +324,8 @@ namespace Raven.Server.Web.System
             var addToInitLog = new Action<string>(txt =>
             {
                 var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(msg);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
             });
 
             using (var documentDatabase = new DocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))

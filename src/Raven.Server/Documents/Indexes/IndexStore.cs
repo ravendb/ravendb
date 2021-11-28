@@ -1269,8 +1269,8 @@ namespace Raven.Server.Documents.Indexes
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info("Starting to load indexes from record");
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations("Starting to load indexes from record");
 
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexCannotBeOpened)
@@ -1295,8 +1295,8 @@ namespace Raven.Server.Documents.Indexes
                     addToInitLog($"Initializing static index: `{name}`");
                     OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
 
@@ -1362,6 +1362,9 @@ namespace Raven.Server.Documents.Indexes
 
         private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition)
         {
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"OpenIndex {indexPath}");
+            
             Index index = null;
 
             try
@@ -1410,13 +1413,16 @@ namespace Raven.Server.Documents.Indexes
                 if (startIndex)
                     index.Start();
 
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Started {index.Name} from {indexPath}");
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Started {index.Name} from {indexPath}");
 
                 _indexes.Add(index);
             }
             catch (Exception e)
             {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"OpenIndex failed {indexPath}", e);
+                
                 var alreadyFaulted = _indexes.TryGetByName(name, out var i) &&
                                      i is FaultyInMemoryIndex;
 
