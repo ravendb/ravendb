@@ -185,7 +185,7 @@
 </div>
 
 <script type="text/html" id="index-template">
-    <div class="padding padding-sm js-index-template" data-bind="attr: { id: 'index_' + name }">
+    <div class="padding padding-sm js-index-template" data-bind="attr: { id: 'index_' + name.toLowerCase() }">
         <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
         <div class="row">
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
@@ -457,8 +457,8 @@
                         <span class="margin-right">Indexing duration: <strong data-bind="text: elapsedText"></strong></span> Completed: <strong data-bind="text: finishedText"></strong> ago
                     </div>
                     <div data-bind="visible: state() === 'Running' && $root.localNodeTag() !== nodeTag">
-                        Indexing duration: <strong data-bind="text: elapsedText"></strong> 
-                        <a target="_blank" class="margin-left" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag)}">
+                        Indexing duration: <strong data-bind="text: elapsedText"></strong>
+                        <a target="_blank" class="margin-left" data-bind="attr: { href: $root.createIndexesUrlObservableForNode(nodeTag, $parent) }">
                             show details <i class="icon-newtab"></i>
                         </a>
                     </div>
