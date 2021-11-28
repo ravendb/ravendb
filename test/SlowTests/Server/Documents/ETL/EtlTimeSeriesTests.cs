@@ -1828,7 +1828,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                         Values = new Memory<double>(new []{value})
                     },
                 };
-                tsStorage.AppendTimestamp(context, documentId, "Users", timeSeriesName.ToLower(), toAppend, null, verifyName: false);
+                tsStorage.AppendTimestamp(context, documentId, "Users", timeSeriesName.ToLower(), toAppend, AppendOptionsForEtlTest);
                 tr.Commit();
             }
 
@@ -1888,7 +1888,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                             Values = new Memory<double>(new []{value})
                         },
                     };
-                    tsStorage.AppendTimestamp(context, users[0].Id, "Users", timeSeriesName.ToLower(), toAppend, null, verifyName: false);
+                    tsStorage.AppendTimestamp(context, users[0].Id, "Users", timeSeriesName.ToLower(), toAppend, AppendOptionsForEtlTest);
                     tr.Commit();
                 }
 
@@ -2170,5 +2170,10 @@ loadToUsers({
                 return timeSeriesEntries?.FirstOrDefault();
             }, interval: 1000);
         }
+
+        public static TimeSeriesStorage.AppendOptions AppendOptionsForEtlTest = new TimeSeriesStorage.AppendOptions
+        {
+            VerifyName = false
+        };
     }
 }

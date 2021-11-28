@@ -845,6 +845,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly DocumentsOperationContext _context;
             public readonly TimeSeriesSliceHolder SliceHolder;
             public readonly bool FromReplication;
+            public readonly bool FromSmuggler;
             private readonly string _docId;
             private readonly CollectionName _collection;
             private readonly string _name;
@@ -863,6 +864,25 @@ namespace Raven.Server.Documents.TimeSeries
 
             private AllocatedMemoryData _clonedReadonlySegment;
 
+            private TimeSeriesSegmentHolder(
+                TimeSeriesStorage tss,
+                DocumentsOperationContext context,
+                string docId,
+                string name,
+                CollectionName collection,
+                string fromReplicationChangeVector
+            )
+            {
+                _tss = tss;
+                _context = context;
+                _collection = collection;
+                _docId = docId;
+                _name = name;
+
+                FromReplication = fromReplicationChangeVector != null;
+                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
+            }
+
             public TimeSeriesSegmentHolder(
                 TimeSeriesStorage tss,
                 DocumentsOperationContext context,
@@ -871,19 +891,10 @@ namespace Raven.Server.Documents.TimeSeries
                 CollectionName collection,
                 DateTime timeStamp,
                 string fromReplicationChangeVector = null
-                )
+                ) : this(tss, context, docId, name, collection, fromReplicationChangeVector)
             {
-                _tss = tss;
-                _context = context;
-                _collection = collection;
-                _docId = docId;
-                _name = name;
-
                 SliceHolder = new TimeSeriesSliceHolder(_context, docId, name, _collection.Name).WithBaseline(timeStamp);
                 SliceHolder.CreateSegmentBuffer();
-
-                FromReplication = fromReplicationChangeVector != null;
-                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
             }
 
             public TimeSeriesSegmentHolder(
@@ -893,20 +904,13 @@ namespace Raven.Server.Documents.TimeSeries
                 string docId,
                 string name,
                 CollectionName collection,
-                string fromReplicationChangeVector)
+                AppendOptions options
+                ) : this(tss, context, docId, name, collection, options.ChangeVectorFromReplication)
             {
-                _tss = tss;
-                _context = context;
+                FromSmuggler = options.FromSmuggler;
                 SliceHolder = allocator;
-                _collection = collection;
-                _docId = docId;
-                _name = name;
-
-                FromReplication = fromReplicationChangeVector != null;
-
                 BaselineDate = allocator.CurrentBaseline;
                 allocator.CreateSegmentBuffer();
-                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
             }
 
             private void Initialize()
@@ -1225,7 +1229,12 @@ namespace Raven.Server.Documents.TimeSeries
 
             var holder = new SingleResult();
 
-            return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), changeVectorFromReplication);
+            var options = new AppendOptions
+            {
+                ChangeVectorFromReplication = changeVectorFromReplication
+            };
+
+            return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), options);
 
             SingleResult ToResult(TimeSeriesOperation.AppendOperation element)
             {
@@ -1575,16 +1584,26 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public class AppendOptions
+        {
+            public string ChangeVectorFromReplication = null;
+            public bool VerifyName = true;
+            public bool AddNewNameToMetadata = true;
+            public bool FromSmuggler = false;
+        }
+
+        private static readonly AppendOptions DefaultAppendOptions = new AppendOptions();
+
         public string AppendTimestamp(
             DocumentsOperationContext context,
             string documentId,
             string collection,
             string name,
             IEnumerable<SingleResult> toAppend,
-            string changeVectorFromReplication = null,
-            bool verifyName = true,
-            bool addNewNameToMetadata = true)
+            AppendOptions options = null)
         {
+            options ??= DefaultAppendOptions;
+
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -1593,14 +1612,14 @@ namespace Raven.Server.Documents.TimeSeries
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var newSeries = Stats.GetStats(context, documentId, name).Count == 0;
-            if (newSeries && verifyName)
+            if (newSeries && options.VerifyName)
             {
                 VerifyLegalName(name);
             }
 
             var appendEnumerator = TimeSeriesHandler.CheckIfIncrementalTs(name)
-                ? new IncrementalEnumerator(documentId, name, toAppend, changeVectorFromReplication != null)
-                : new AppendEnumerator(documentId, name, toAppend, changeVectorFromReplication != null);
+                ? new IncrementalEnumerator(documentId, name, toAppend, options.ChangeVectorFromReplication != null)
+                : new AppendEnumerator(documentId, name, toAppend, options.ChangeVectorFromReplication != null);
 
             using (appendEnumerator)
             {
@@ -1613,7 +1632,7 @@ namespace Raven.Server.Documents.TimeSeries
                         var current = appendEnumerator.Current;
                         Debug.Assert(current != null);
 
-                        if (changeVectorFromReplication == null)
+                        if (options.ChangeVectorFromReplication == null)
                         {
                             // not from replication
                             AssertNoNanValue(current);
@@ -1621,7 +1640,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
-                            var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, changeVectorFromReplication);
+                            var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, options);
                             if (segmentHolder.LoadCurrentSegment() == false)
                             {
                                 // no matches for this series at all, need to create new segment
@@ -1667,7 +1686,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            if (newSeries && addNewNameToMetadata)
+            if (newSeries && options.AddNewNameToMetadata)
             {
                 AddTimeSeriesNameToMetadata(context, documentId, name);
             }
@@ -1946,7 +1965,7 @@ namespace Raven.Server.Documents.TimeSeries
                     int compareTags = localTag.SequenceCompareTo(remote.Tag.AsSpan());
                     if (compareTags == 0)
                     {
-                        if (holder.FromReplication == false)
+                        if (holder.FromReplication == false && holder.FromSmuggler == false)
                             return CompareResult.Addition;
 
                         bool isIncrement = localTag.StartsWith(IncrementPrefixBuffer);
