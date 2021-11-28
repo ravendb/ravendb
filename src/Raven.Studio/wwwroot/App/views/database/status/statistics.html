@@ -1,6 +1,9 @@
 <section data-bind="if: stats" class="stats content-margin">
     <h2 class="on-base-background">General Database Stats
         <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
+        <button class="btn btn-primary pull-right" data-bind="click: refreshStats" title="Click to refresh stats">
+            <i class="icon-refresh"></i><span>Refresh</span>
+        </button>
     </h2>
     <hr />
     <div id="storage-report" title="Base path for database data files">
