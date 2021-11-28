@@ -47,6 +47,8 @@ namespace Sparrow.Json
         {
             DisposeInternal();
             await FlushAsync().ConfigureAwait(false);
+            await _outputStream.FlushAsync().ConfigureAwait(false); // flush the output stream underlying stream as well
+            
             _context.ReturnMemoryStream((MemoryStream)_stream);
         }
 
