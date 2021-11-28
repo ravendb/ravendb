@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -75,7 +76,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             Aggregated
         }
 
-        public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType resultType)
+        public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType resultType, CancellationToken token = default)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
@@ -107,9 +108,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 rangeSpec.InitializeFullRange(from, to);
             }
 
-            var reader = groupByTimePeriod == null
-                ? new TimeSeriesReader(_context, documentId, _source, from, to, offset)
-                : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
+            ITimeSeriesReader reader = groupByTimePeriod == null
+                ? new TimeSeriesReader(_context, documentId, _source, from, to, offset, token)
+                : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue(), token);
 
             _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
 

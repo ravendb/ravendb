@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -34,6 +35,9 @@ namespace Raven.Server.Documents.Queries
 
         [JsonDeserializationIgnore]
         public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
+
+        [JsonDeserializationIgnore]
+        public CancellationToken Token;
 
         public new int Start
         {

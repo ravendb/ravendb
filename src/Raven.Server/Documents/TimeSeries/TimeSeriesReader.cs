@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -98,10 +99,11 @@ namespace Raven.Server.Documents.TimeSeries
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
+        private readonly CancellationToken _token;
 
         public bool IsRaw { get; }
 
-        public TimeSeriesReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset)
+        public TimeSeriesReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset, CancellationToken token = default)
         {
             _context = context;
             _documentId = documentId;
@@ -109,6 +111,7 @@ namespace Raven.Server.Documents.TimeSeries
             _table = new Table(TimeSeriesStorage.TimeSeriesSchema, context.Transaction.InnerTransaction);
             _tag = new LazyStringValue(null, null, 0, context);
             _offset = offset;
+            _token = token;
 
             _from = from;
             _to = to;
@@ -268,6 +271,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             while (true)
             {
+                _token.ThrowIfCancellationRequested();
+
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
                 if (baseline > _to)
@@ -317,6 +322,8 @@ namespace Raven.Server.Documents.TimeSeries
             InitializeSegment(out var baselineMilliseconds, out _currentSegment);
             while (true)
             {
+                _token.ThrowIfCancellationRequested();
+
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
                 if (baseline > _to)
@@ -339,6 +346,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     foreach (var val in YieldSegment(baseline, includeDead))
                     {
+                        _token.ThrowIfCancellationRequested();
                         yield return val;
                     }
                 }
@@ -442,13 +450,14 @@ namespace Raven.Server.Documents.TimeSeries
         private readonly string _collection;
         private readonly TimeSpan? _offset;
         private readonly TimeValue _groupBy;
+        private readonly CancellationToken _token;
         private readonly DateTime _from, _to;
         private Stack<(DateTime Start, string Name)> _timeseriesStack;
 
         public bool IsRaw => _reader.IsRaw;
 
         public TimeSeriesMultiReader(DocumentsOperationContext context, string documentId,
-            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy)
+            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy, CancellationToken token = default)
         {
             if (string.IsNullOrEmpty(source))
                 throw new ArgumentNullException(nameof(source));
@@ -460,6 +469,7 @@ namespace Raven.Server.Documents.TimeSeries
             _to = to;
             _offset = offset;
             _groupBy = groupBy;
+            _token = token;
 
             Initialize();
         }
@@ -610,7 +620,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (_timeseriesStack.Count == 0)
                 {
-                    _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, _to, _offset);
+                    _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, _to, _offset, _token);
                     return true;
                 }
 
@@ -622,7 +632,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_to < to)
                     to = _to;
 
-                _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, to, _offset);
+                _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, to, _offset, _token);
                 return true;
             }
         }
