@@ -1316,16 +1316,19 @@ class query extends viewModelBase {
     }
 
     private onIncludesRevisionsLoaded(includesRevisionsFromQuery: Array<any>): void {
-        includesRevisionsFromQuery.forEach(x => {
-            
+        const mappedItems = includesRevisionsFromQuery.map(x => {
             const metadata = x.Revision["@metadata"];
             const lastModified = metadata ? metadata["@last-modified"] : null;
-            
-            const item: includedRevisionItem = { revision: x.Revision, lastModified: lastModified, sourceDocument: x.Id, changeVector: x.ChangeVector };
-            
-            this.includesRevisionsCache().items.push(item);
+
+            return {
+                revision: x.Revision,
+                lastModified: lastModified,
+                sourceDocument: x.Id,
+                changeVector: x.ChangeVector
+            };
         });
 
+        this.includesRevisionsCache().items.push(...mappedItems);
         this.includesRevisionsCache().total(this.includesRevisionsCache().items.length);
     }
     
