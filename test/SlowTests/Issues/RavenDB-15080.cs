@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
@@ -185,9 +186,10 @@ namespace SlowTests.Issues
                     }
                 });
                 await Task.WhenAll(t1, t2);
+                
+                Assert.True(EnsureReplicating(storeA, storeB, out var errMsg), errMsg);
+                Assert.True(EnsureReplicating(storeB, storeA, out errMsg), errMsg);
 
-                EnsureReplicating(storeA, storeB);
-                EnsureReplicating(storeB, storeA);
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
             }
@@ -630,6 +632,30 @@ namespace SlowTests.Issues
                 builder.Append(ch);
             }
             return builder.ToString();
+        }
+
+        private bool EnsureReplicating(IDocumentStore src, IDocumentStore dst, out string errorMsg)
+        {
+            errorMsg = string.Empty;
+
+            var id = "marker/" + Guid.NewGuid();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new { }, id);
+                s.SaveChanges();
+            }
+
+            if (WaitForDocumentToReplicate<object>(dst, id, 15 * 1000) != null)
+                return true;
+
+            errorMsg = $"Failed to replicate from '{src.Database}' to '{dst.Database}' : ";
+            var replicationLoader = GetDocumentDatabaseInstanceFor(src).Result.ReplicationLoader;
+            foreach (var e in replicationLoader.OutgoingFailureInfo)
+            {
+                errorMsg += string.Join(", ", e.Value.Errors.Select(x => x.Message));
+            }
+
+            return false;
         }
     }
 }
