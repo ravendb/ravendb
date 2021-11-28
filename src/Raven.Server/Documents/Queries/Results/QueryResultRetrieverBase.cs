@@ -838,7 +838,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
                 _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
-                var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
+                var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type, _query.Token);
                 if (_query.IsStream)
                     return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
                 return _timeSeriesRetriever.MaterializeResults(result, type, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
