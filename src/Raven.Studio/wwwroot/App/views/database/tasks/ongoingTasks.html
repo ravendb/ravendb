@@ -588,7 +588,8 @@
 </script>
 
 <script type="text/html" id="responsible-node-template">
-    <div data-bind="with: responsibleNode().NodeTag, visible: !usingNotPreferredNode()" title="Cluster node that is responsible for this task">
+    <div data-bind="with: responsibleNode().NodeTag, visible: !usingNotPreferredNode(),
+                    attr: { title: taskType() === 'PullReplicationAsHub' ? 'Hub node that is serving this Sink task' : 'Cluster node that is responsible for this task' }">
         <i class="icon-cluster-node"></i>
         <span data-bind="text: $data"></span>
     </div>
