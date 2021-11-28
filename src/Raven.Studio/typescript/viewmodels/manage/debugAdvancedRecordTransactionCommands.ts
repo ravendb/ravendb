@@ -42,7 +42,7 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
     // marker for parent router
     static preventParentGrow = true;
 
-    outputFilePathOptions = ko.observableArray<string>(["aaa"]);
+    outputFilePathOptions = ko.observableArray<string>([]);
     
     constructor() {
         super();
@@ -55,7 +55,7 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
     }
     
     private initObservables(): void {
-        this.outputFile.throttle(300).subscribe((newPathValue) => {
+        this.outputFile.throttle(300).subscribe(newPathValue => {
             this.updateOutputFilePathOptions(newPathValue);
         });
     }
