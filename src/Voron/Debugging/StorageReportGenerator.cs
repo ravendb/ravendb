@@ -92,20 +92,29 @@ namespace Voron.Debugging
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
+            long _streamsAllocatedSpaceInBytes = 0;
+            long _treesAllocatedSpaceInBytes = 0;
             var trees = new List<TreeReport>();
             foreach (var tree in input.Trees)
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
+
+                if(input.IncludeDetails)
+                    continue;
+
+                if (treeReport.Streams == null)
+                    _treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                else
+                    _streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
             }
 
-            long _fixedTreesAllocatedSpaceInBytes = 0;
             foreach (var fst in input.FixedSizeTrees)
             {
                 var treeReport = GetReport(fst, input.IncludeDetails);
                 trees.Add(treeReport);
 
-                _fixedTreesAllocatedSpaceInBytes  += treeReport.AllocatedSpaceInBytes;
+                _treesAllocatedSpaceInBytes  += treeReport.AllocatedSpaceInBytes;
             }
 
             long _tablesAllocatedSpaceInBytes = 0;
@@ -135,16 +144,15 @@ namespace Voron.Debugging
                 // so we calculate the original size as if we read the streams by:
                 // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
 
-                var skippedStreamsAllocatedSpaceInBytes = dataFile.AllocatedSpaceInBytes - dataFile.FreeSpaceInBytes - _tablesAllocatedSpaceInBytes  - preAllocatedBuffers.OriginallyAllocatedSpaceInBytes - _fixedTreesAllocatedSpaceInBytes ;
-                _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
-                _skippedStreamsDetailsEntry.Length = skippedStreamsAllocatedSpaceInBytes;
-
+                var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - _treesAllocatedSpaceInBytes;
+               
                 foreach (var tree in trees)
                 {
                     if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
                     {
-                        tree.Streams.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
-                        tree.AllocatedSpaceInBytes = skippedStreamsAllocatedSpaceInBytes;
+                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes;
+                        _skippedStreamsDetailsEntry.Length = treesCalculatedSpaceInBytes;
+                        tree.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes - _streamsAllocatedSpaceInBytes;
                         break;
                     }
                 }
