@@ -1632,50 +1632,65 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var timeSeriesEntriesToAppend = timeSeriesEntries.ToList();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
-
-            using (var session = src.OpenAsyncSession())
+            using (var src = GetDocumentStore(_options))
+            using (var dest = GetDocumentStore())
             {
-                var entity = new User { Name = "Joe Doe" };
-                await session.StoreAsync(entity, documentId);
-                await session.SaveChangesAsync();
-            }
-
-            random = new Random(0);
-            var j = 0;
-            while (timeSeriesEntriesToAppend.Count > 0)
-            {
-                using var session = src.OpenAsyncSession();
-
-                while (timeSeriesEntriesToAppend.Count > 0)
+                using (var session = src.OpenAsyncSession())
                 {
-                    int index = random.Next(0, timeSeriesEntriesToAppend.Count - 1);
-                    var entry = timeSeriesEntriesToAppend[index];
-                    session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
-                    timeSeriesEntriesToAppend.RemoveAt(index);
-                    if (j++ % (toAppendCount / 10) == 0)
-                        break;
+                    var entity = new User { Name = "Joe Doe" };
+                    await session.StoreAsync(entity, documentId);
+                    await session.SaveChangesAsync();
                 }
 
-                await session.SaveChangesAsync();
-            }
+                random = new Random(0);
+                var j = 0;
+                while (timeSeriesEntriesToAppend.Count > 0)
+                {
+                    using var session = src.OpenAsyncSession();
 
-            TimeSeriesEntry[] actual = null;
-            await AssertWaitForValueAsync(async () =>
-            {
-                using IAsyncDocumentSession session = dest.OpenAsyncSession();
-                var result = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
-                if (result == null)
-                    return 0;
-                actual = result.ToArray();
-                return actual.Count();
-            }, timeSeriesEntries.Length, interval: 1000);
+                    while (timeSeriesEntriesToAppend.Count > 0)
+                    {
+                        int index = random.Next(0, timeSeriesEntriesToAppend.Count - 1);
+                        var entry = timeSeriesEntriesToAppend[index];
+                        session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
+                        timeSeriesEntriesToAppend.RemoveAt(index);
+                        if (j++ % (toAppendCount / 10) == 0)
+                            break;
+                    }
 
-            for (int i = 0; i < timeSeriesEntries.Length; i++)
-            {
-                Assert.Equal(timeSeriesEntries[i].Timestamp, actual[i].Timestamp);
-                Assert.Equal(timeSeriesEntries[i].Tag, actual[i].Tag);
-                Assert.Equal(timeSeriesEntries[i].Value, actual[i].Value);
+                    await session.SaveChangesAsync();
+                }
+
+                var db = await GetDocumentDatabaseInstanceFor(src);
+                long lastEtag;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    lastEtag = db.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesEtag(context);
+                }
+
+                var etlDone = WaitForEtl(src, (_, statistics) => statistics.LastProcessedEtag >= lastEtag);
+                AddEtl(src, dest, collections, script, applyToAllDocuments : collections.Length == 0);
+                
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(30)));
+
+                TimeSeriesEntry[] actual = null;
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using IAsyncDocumentSession session = dest.OpenAsyncSession();
+                    var result = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                    if (result == null)
+                        return 0;
+                    actual = result.ToArray();
+                    return actual.Count();
+                }, timeSeriesEntries.Length, interval: 1000);
+
+                for (int i = 0; i < timeSeriesEntries.Length; i++)
+                {
+                    Assert.Equal(timeSeriesEntries[i].Timestamp, actual[i].Timestamp);
+                    Assert.Equal(timeSeriesEntries[i].Tag, actual[i].Tag);
+                    Assert.Equal(timeSeriesEntries[i].Value, actual[i].Value);
+                }
             }
         }
 
