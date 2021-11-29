@@ -20,8 +20,6 @@ namespace BenchmarkTests
 {
     public abstract class BenchmarkTestBase : RavenTestBase
     {
-        private TestCertificatesHolder _certificatesHolder;
-
         protected BenchmarkTestBase(ITestOutputHelper output) : base(output)
         {
         }
@@ -39,7 +37,7 @@ namespace BenchmarkTests
             if (Encrypted)
             {
                 var serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                _certificatesHolder = SetupServerAuthentication(customSettings, serverUrl);
+                SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
@@ -137,7 +135,7 @@ namespace BenchmarkTests
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
             if (Encrypted)
-                options.ClientCertificate = _certificatesHolder.ServerCertificate.Value;
+                options.ClientCertificate = _selfSignedCertificates.ServerCertificate.Value;
 
             return base.GetDocumentStore(options, caller);
         }
