@@ -127,14 +127,14 @@ namespace Corax.Queries
             {                
                 buffer.CopyTo(tmp);
                 var read = current.AndWith(tmp);
-                if (read == 0)
-                    continue;
-
-                results[0..totalSize].CopyTo(tmp2);
-                totalSize = MergeHelper.Or(results, tmp2[0..totalSize], tmp[0..read]);
+                if (read != 0)
+                {
+                    results[0..totalSize].CopyTo(tmp2);
+                    totalSize = MergeHelper.Or(results, tmp2[0..totalSize], tmp[0..read]);
+                    totalRead += current.Count;
+                }
 
                 hasData = _inner.Next(out current);
-                totalRead += current.Count;
             }
 
             // We will check if we can make a better decision next time. 
