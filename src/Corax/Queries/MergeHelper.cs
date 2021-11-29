@@ -205,8 +205,8 @@ namespace Corax.Queries
             long* leftPtr = left;
             long* leftEndPtr = left + leftLength;
 
-            long* rightPtr = left;
-            long* rightEndPtr = left + leftLength;
+            long* rightPtr = right;
+            long* rightEndPtr = right + rightLength;
 
             while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
             {
@@ -265,8 +265,8 @@ namespace Corax.Queries
             long* leftPtr = left;
             long* leftEndPtr = left + leftLength;
 
-            long* rightPtr = left;
-            long* rightEndPtr = left + leftLength;
+            long* rightPtr = right;
+            long* rightEndPtr = right + rightLength;
 
             while (leftPtr < leftEndPtr && rightPtr < rightEndPtr)
             {

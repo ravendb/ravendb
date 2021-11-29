@@ -61,7 +61,47 @@ namespace FastTests.Corax
             for (int i = 0; i < expectedList.Count; ++i) 
                 Assert.Equal(expectedList[i], outputList[i]);
         }
-        
+
+        [Fact]
+        public void MultiTermMatchWithTermMatch()
+        {
+            PrepareData();
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            
+            var match0 = searcher.TermQuery("Content", "1");
+            var match1 = searcher.StartWithQuery("Id", "ent");
+            var multiTermTerm = searcher.And(match1, match0);
+            var first = FetchFromCorax(ref multiTermTerm);
+            Assert.Equal(1, first.Count);
+
+            match0 = searcher.TermQuery("Content", "1");
+            match1 = searcher.StartWithQuery("Id", "ent");
+            var termMultiTerm = searcher.And(match0, match1);
+            var second = FetchFromCorax(ref termMultiTerm);
+            Assert.Equal(1, second.Count);
+
+
+            Assert.True(first.SequenceEqual(second));
+        }
+
+        private List<string> FetchFromCorax(ref BinaryMatch match)
+        {
+            using var indexSearcher = new IndexSearcher(Env);
+            List<string> list = new();
+            Span<long> ids = stackalloc long[256];
+            int read = match.Fill(ids);
+            while (read != 0)
+            {
+                for (int i = 0; i < read; ++i)
+                    list.Add(indexSearcher.GetIdentityFor(ids[i]));
+                read = match.Fill(ids);
+            }
+
+            return list;
+        }
+
         private void IndexEntries()
         {
             using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
