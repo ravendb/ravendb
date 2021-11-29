@@ -264,7 +264,7 @@ class indexes extends viewModelBase {
         }
         
         if (args && args.indexName) {
-            this.indexNameToHighlight(args.indexName.toLowerCase());
+            this.indexNameToHighlight(args.indexName);
         }
 
         return this.fetchIndexes();
@@ -288,7 +288,7 @@ class indexes extends viewModelBase {
         const indexToHighlight = this.indexNameToHighlight();
 
         if (indexToHighlight) {
-            const indexId = `index_${indexToHighlight}`;
+            const indexId = index.getUniqueId(indexToHighlight);
             
             const indexElement = document.getElementById(indexId);
 
@@ -300,7 +300,7 @@ class indexes extends viewModelBase {
     }
     
     private highlightIndex(indexName: string, highlight: boolean = true): void {
-        const indexId = "index_" + indexName;
+        const indexId = index.getUniqueId(indexName);
         const indexElement = document.getElementById(indexId);
         this.highlightIndexElement(indexElement, highlight);
     }
@@ -445,10 +445,10 @@ class indexes extends viewModelBase {
         }
     }
 
-    createIndexesUrlObservableForNode(nodeTag: string, index: index) {
+    createIndexesUrlObservableForNode(nodeTag: string, indexProgress: indexProgress) {
         return ko.pureComputed(() => {
-            const indexName = index.name.startsWith("replacementof/") ? index.name.replace("replacementof/", "") : index.name;
-            
+            const name = indexProgress.name;
+            const indexName = name.startsWith("replacementof/") ? name.replace("replacementof/", "") : name;
             const link = appUrl.forIndexes(this.activeDatabase(), indexName);
             const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
             

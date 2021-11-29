@@ -185,7 +185,7 @@
 </div>
 
 <script type="text/html" id="index-template">
-    <div class="padding padding-sm js-index-template" data-bind="attr: { id: 'index_' + name.toLowerCase() }">
+    <div class="padding padding-sm js-index-template" data-bind="attr: { id: $data.constructor.getUniqueId($data.name) }">
         <div data-bind="attr: { class: 'state ' + badgeClass(), 'data-state-text' : badgeText() }"></div>
         <div class="row">
             <div class="col-xs-12 col-sm-6 col-xl-4 info-container">
