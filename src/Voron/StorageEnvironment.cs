@@ -126,6 +126,9 @@ namespace Voron
             {
                 SelfReference.Owner = this;
                 _log = LoggingSource.Instance.GetLogger<StorageEnvironment>(options.BasePath.FullPath);
+                
+                if(_log.IsOperationsEnabled)
+                    _log.Operations($"{options.BasePath.FullPath}: Starting constructor");
                 _options = options;
                 _dataPager = options.DataPager;
                 _freeSpaceHandling = new FreeSpaceHandling();
@@ -173,6 +176,8 @@ namespace Voron
                 Dispose();
                 throw;
             }
+            if(_log.IsOperationsEnabled)
+                _log.Operations($"{options.BasePath.FullPath}: Finishing constructor");
         }
         private async Task IdleFlushTimer()
         {
@@ -444,7 +449,8 @@ namespace Voron
 
         public void Dispose()
         {
-
+            if (_log.IsOperationsEnabled)
+                _log.Operations($"{Options.BasePath.FullPath}: Starting Dispose - _envDispose.IsSet:{_envDispose.IsSet} _journal:{_journal != null}");
             if (_envDispose.IsSet)
                 return; // already disposed
 
@@ -492,6 +498,11 @@ namespace Voron
                     MoveEnvironmentToDisposeState();
                 }
             }
+            catch (Exception e)
+            {
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"{Options.BasePath.FullPath}: Failed on dispose", e);
+            }
             finally
             {
                 var errors = new List<Exception>();
@@ -519,6 +530,9 @@ namespace Voron
                     }
                 }
 
+                if (_log.IsOperationsEnabled)
+                    _log.Operations($"{Options.BasePath.FullPath}: Finished dispose - errors.Count:{errors.Count}");
+                
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
             }
