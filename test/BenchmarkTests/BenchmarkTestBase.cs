@@ -20,6 +20,8 @@ namespace BenchmarkTests
 {
     public abstract class BenchmarkTestBase : RavenTestBase
     {
+        private TestCertificatesHolder _certificatesHolder;
+
         protected BenchmarkTestBase(ITestOutputHelper output) : base(output)
         {
         }
@@ -37,7 +39,7 @@ namespace BenchmarkTests
             if (Encrypted)
             {
                 var serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                SetupServerAuthentication(customSettings, serverUrl);
+                _certificatesHolder = SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
@@ -66,6 +68,9 @@ namespace BenchmarkTests
                 return bool.TryParse(Environment.GetEnvironmentVariable("TEST_FORCE_ENCRYPTED_STORAGE"), out var value) && value;
             }
         }
+
+        protected TimeSpan DefaultTestOperationTimeout => Encrypted == false ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(30);
+
 
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
         {
@@ -130,6 +135,9 @@ namespace BenchmarkTests
                 options = new Options();
 
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
+
+            if (Encrypted)
+                options.ClientCertificate = _certificatesHolder.ServerCertificate.Value;
 
             return base.GetDocumentStore(options, caller);
         }

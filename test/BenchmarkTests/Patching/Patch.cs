@@ -41,7 +41,7 @@ update
     });
 }"));
 
-                await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromMinutes(10));
+                await operation.WaitForCompletionAsync<BulkOperationResult>(DefaultTestOperationTimeout);
 
                 using (var session = store.OpenSession())
                 {
@@ -73,7 +73,7 @@ update
     put('companies/', this);
 }"));
 
-                await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromMinutes(10));
+                await operation.WaitForCompletionAsync<BulkOperationResult>(DefaultTestOperationTimeout);
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2_000_001, stats.CountOfDocuments); // + hilo
@@ -97,7 +97,7 @@ update
     del(id(c));
 }"));
 
-                await operation.WaitForCompletionAsync<BulkOperationResult>(TimeSpan.FromMinutes(10));
+                await operation.WaitForCompletionAsync<BulkOperationResult>(DefaultTestOperationTimeout);
 
                 stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments); // + hilo
