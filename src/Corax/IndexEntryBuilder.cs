@@ -730,7 +730,17 @@ namespace Corax
                 return false;
             }
 
-            iterator = new IndexEntryFieldIterator(_buffer, intOffset);
+            //todo federico: please look into this. I assume it's not efficient enough ;) When field isn't a list, constructor of IndexEntryFieldIterator throws exception. 
+            try
+            {
+                iterator = new IndexEntryFieldIterator(_buffer, intOffset);
+            }
+            catch (FormatException e)
+            {
+                iterator = default(IndexEntryFieldIterator);
+                return false;
+            }
+            
             return true;
         }
 

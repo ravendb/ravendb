@@ -256,9 +256,6 @@ namespace Corax
             var llt = Transaction.LowLevelTransaction;
             List<long> ids = null;
             
-            
-            //Support for having multiple analyzers inside one index. We want avoid allocating memory per analyzer so we calculated
-            //all needed values an
             Span<int> buffersLength = stackalloc int [_analyzers?.Count*2 ?? 0]; 
             int maxWordsSpaceLength = 0;
             int maxTokensSpaceLength = 0;
@@ -302,7 +299,6 @@ namespace Corax
                             }
                             else
                             {
-                                // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
                                 var value = it.Sequence;
                                 var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
                                 var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
