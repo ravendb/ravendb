@@ -1,9 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Sparrow.Global;
 using Sparrow.Platform;
 using Sparrow.Server.LowMemory;
 using Sparrow.Server.Platform.Posix;
@@ -38,28 +36,21 @@ namespace Sparrow.Server.Platform
 
                 if (PlatformDetails.RunningOnPosix)
                 {
-                    // we pass NULL (IntPtr.Zero) as the first parameter (address / start) so the kernel chooses the(page-aligned) address at which to create the mapping
+                    byte* ptr;
+                    var rc = Syscall.posix_memalign(&ptr, (IntPtr)4096, (IntPtr)size);
+                    if (rc != 0)
+                        Syscall.ThrowLastError(rc, "Could not allocate memory");
 
-                    var pageAlignedMemory = Syscall.mmap64(IntPtr.Zero, (UIntPtr)size, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                        MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, 0L);
-
-                    if (pageAlignedMemory.ToInt64() == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err,
-                            $"Could not allocate memory (allocation size: {size / Constants.Size.Kilobyte:#,#0} kb)");
-                    }
-
-                    return (byte*)pageAlignedMemory;
+                    return ptr;
                 }
 
-                var allocate4KbAlignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
+                var allocate4KbAllignedMemory = Win32MemoryProtectMethods.VirtualAlloc(null, (UIntPtr)size, Win32MemoryProtectMethods.AllocationType.COMMIT,
                     Win32MemoryProtectMethods.MemoryProtection.READWRITE);
 
-                if (allocate4KbAlignedMemory == null)
+                if (allocate4KbAllignedMemory == null)
                     ThrowFailedToAllocate();
 
-                return allocate4KbAlignedMemory;
+                return allocate4KbAllignedMemory;
             }
 
             public static void Free4KbAlignedMemory(byte* ptr, long size, Sparrow.Utils.NativeMemory.ThreadStats stats)
@@ -70,16 +61,11 @@ namespace Sparrow.Server.Platform
                     Sparrow.Utils.NativeMemory.UpdateMemoryStatsForThread(stats, size);
 
                 Interlocked.Add(ref Sparrow.Utils.NativeMemory._totalAllocatedMemory, -size);
-                
+
+                var p = new IntPtr(ptr);
                 if (PlatformDetails.RunningOnPosix)
                 {
-                    var result = Syscall.munmap((IntPtr)ptr, (UIntPtr)(uint)size);
-                    if (result == -1)
-                    {
-                        var err = Marshal.GetLastWin32Error();
-                        Syscall.ThrowLastError(err, "Failed to munmap ");
-                    }
-
+                    Syscall.free(p);
                     return;
                 }
 
