@@ -44,6 +44,21 @@ namespace FastTests.Corax
         }
         
         [Fact]
+        public void LexicographicalLessThan()
+        {
+            PrepareData(1);
+            IndexEntries();
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            Slice.From(ctx, "entries/0", out var id);
+            var match0 = searcher.AllEntries();
+            var match1 = searcher.LessThan(match0, IndexId, id);
+            var ids = new long[16];
+            int read = match1.Fill(ids);
+            Assert.Equal(0, read);
+        }
+        
+        [Fact]
         public void UnaryMatchWithNumerical()
         {
             PrepareData();

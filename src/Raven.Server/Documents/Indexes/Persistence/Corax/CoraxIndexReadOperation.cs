@@ -2,11 +2,13 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Corax;
 using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
@@ -14,7 +16,9 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Impl;
 
@@ -22,6 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
+        private JsonOperationContext _jsonAllocator;
         private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
@@ -84,7 +89,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     read = result.Fill(ids);
                     readCounter += read;
                 }
-                
+
                 if (result is SortingMatch sm)
                     totalResults.Value = Convert.ToInt32(sm.TotalResults);
                 else
@@ -174,7 +179,77 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
-            throw new NotImplementedException();
+            var pageSize = query.PageSize;
+            var skip = query.Start;
+            
+            var allDocsInIndex = _indexSearcher.AllEntries();
+            totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
+            var names = MapIndexIdentifiers();
+            var ids = ArrayPool<long>.Shared.Rent(2048);
+
+            var read = 0;
+            Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
+            int returnedCounter = 0;
+            List<string> listItemInIndex = null;
+
+            while (read != 0 && returnedCounter < pageSize)
+            {
+                token.ThrowIfCancellationRequested();
+                for (int i = 0; i < read && returnedCounter < pageSize; ++i)
+                {
+                    token.ThrowIfCancellationRequested();
+                    var doc = new DynamicJsonValue();
+
+                    for (int fieldId = 0; fieldId < names.Count; ++fieldId)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        var name = names[fieldId];
+                        var reader = _indexSearcher.GetReaderFor(ids[i]);
+
+                        if (reader.Read(fieldId, out var value))
+                        {
+                            doc[name] = Encodings.Utf8.GetString(value);
+                        }
+                        else if (reader.TryReadMany(fieldId, out var iterator))
+                        {
+                            listItemInIndex ??= new(32);
+                            listItemInIndex.Clear();
+
+                            while (iterator.ReadNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                listItemInIndex.Add(Encodings.Utf8.GetString(iterator.Sequence));
+                            }
+
+                            doc[name] = listItemInIndex;
+                        }
+                    }
+
+                    returnedCounter++;
+                    yield return documentsContext.ReadObject(doc, "index/entries");
+                }
+
+                read = allDocsInIndex.Fill(ids);
+            }
+
+
+            ArrayPool<long>.Shared.Return(ids);
+
+            Dictionary<int, string> MapIndexIdentifiers()
+            {
+                var dict = new Dictionary<int, string>();
+                var firstName = _index.Type.IsMapReduce()
+                    ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                    : Constants.Documents.Indexing.Fields.DocumentIdFieldName;
+                dict.Add(0, firstName);
+                foreach (var field in _index.Definition.IndexFields.Values)
+                {
+                    dict.Add(field.Id, field.Name);
+                }
+
+                return dict;
+            }
         }
 
         public override IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
@@ -187,8 +262,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        private void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
-            CancellationToken token) where TQueryMatch : IQueryMatch
+        private static void Skip<TQueryMatch>(ref TQueryMatch result, int position, ref int read, Reference<int> skippedResults, out long readCounter, ref long[] ids,
+            CancellationToken token)
+            where TQueryMatch : IQueryMatch
         {
             readCounter = 0;
             if (position != 0)
@@ -213,7 +289,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     skippedResults.Value = Convert.ToInt32(readCounter);
             }
 
-            // first Fill operation would be done outside loop because we need to check if there is already some data read.
+            // first Fill operation needs to be done outside loop because we need to check if there is some data
             if (read == 0)
             {
                 read = result.Fill(ids);
@@ -225,6 +301,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _indexSearcher?.Dispose();
             _analyzers?.Dispose();
+            _jsonAllocator?.Dispose();
         }
     }
 }
