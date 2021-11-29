@@ -215,7 +215,7 @@ namespace BenchmarkTests.Indexing
                 }
             }
 
-            WaitForIndexing(store, ReIndexDatabaseName, timeout: DefaultTestOperationTimeout);
+            WaitForIndexing(store, ReIndexDatabaseName, timeout: 2 * DefaultTestOperationTimeout);
 
             await store.Maintenance.ForDatabase(ReIndexDatabaseName).SendAsync(new StopIndexingOperation());
 
