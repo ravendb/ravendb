@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client;
 using Orders;
 using Parquet;
 using Parquet.Data;
@@ -72,16 +71,12 @@ var key = new Date(year, month);
 loadToOrders(partitionBy(key), o);
 ";
 
-                var frequency = DateTime.UtcNow.Minute % 2 == 1
-                    ? "1-59/2 * * * *" // every uneven minute
-                    : "*/2 * * * *"; // every 2nd minute (even minutes)
-
                 var path = NewDataPath(forceCreateDir: true);
-                SetupLocalOlapEtl(store, script, path, frequency: frequency);
-                etlDone.Wait(TimeSpan.FromMinutes(1));
-                var sw = new Stopwatch();
-                sw.Start();
-
+                SetupLocalOlapEtl(store, script, path, frequency: DefaultFrequency);
+                var firstBatchTime = DateTime.UtcNow;
+                var firstBatchTimeMinutes = firstBatchTime.Minute;
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
+                
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(1, files.Length);
 
@@ -123,7 +118,7 @@ loadToOrders(partitionBy(key), o);
                     }
                 }
 
-                await Task.Delay(1000);
+                await Task.Delay(100);
 
                 baseline = new DateTime(2021, 1, 1);
 
@@ -145,11 +140,14 @@ loadToOrders(partitionBy(key), o);
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                etlDone.Wait(TimeSpan.FromSeconds(120));
-                var timeWaited = sw.Elapsed.TotalMilliseconds;
-                sw.Stop();
+                Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
 
-                Assert.True(timeWaited > TimeSpan.FromSeconds(60).TotalMilliseconds);
+                var secondBatchTime = DateTime.UtcNow;
+                var secondBatchTimeMinutes = secondBatchTime.Minute;
+                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0;
+                
+                Assert.True(oneMinuteApart, 
+                    $"First batch time : {firstBatchTime}, second batch time : {secondBatchTime}. Files : {string.Join(", ", Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories))}");
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories);
                 Assert.Equal(2, files.Length);
