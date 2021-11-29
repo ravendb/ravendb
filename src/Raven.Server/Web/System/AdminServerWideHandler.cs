@@ -62,7 +62,7 @@ namespace Raven.Server.Web.System
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
