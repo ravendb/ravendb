@@ -14,21 +14,35 @@ class queryUtil {
     static readonly AutoPrefix = "auto/";
     static readonly DynamicPrefix = "collection/";
     static readonly AllDocs = "AllDocs";
+    static readonly MinDateUTC = "0001-01-01T00:00:00.000Z"; // TODO - replace w/ syntax from RavenDB-17618 when done
+    static readonly MaxDateUTC = "9999-01-01T00:00:00.000Z";
 
-    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
+    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, startDate?: string, endDate?: string) {
         const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const dates = queryUtil.formatDates(startDate, endDate);
         
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates})`;
     }
 
-    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
+    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: string, endDate?: string) {
         const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const dates = queryUtil.formatDates(startDate, endDate);
 
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select avg())`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates} group by ${group} select avg())`;
+    }
+    
+    private static formatDates(startDate?: string, endDate?: string): string {
+        if (startDate && !endDate) {
+            endDate = queryUtil.MaxDateUTC;
+        } else if (endDate && !startDate) {
+            startDate = queryUtil.MinDateUTC;
+        }
+        
+        return startDate && endDate ? `between "${startDate}" and "${endDate}"` : "";
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {

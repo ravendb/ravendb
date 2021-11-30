@@ -1,5 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-
 import composition = require("durandal/composition");
 import moment = require("moment");
 
@@ -18,6 +17,7 @@ class datePickerBindingHandler {
 
     // Called by Knockout a single time when the binding handler is setup.
     init(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor, viewModel: any, bindingContext: any) {
+        
         const options = allBindings().datepickerOptions || {};
         const endDateElement = options.endDateElement;
         const startDateElement = options.startDateElement;
@@ -35,13 +35,24 @@ class datePickerBindingHandler {
 
             const newDate = moment(ev.date);
             const value = valueAccessor();
+            
             value(newDate);
         });
     }
 
     // Called by Knockout each time the dependent observable value changes.
     update(element: HTMLElement, valueAccessor: any, allBindings: KnockoutAllBindingsAccessor, viewModel: any, bindingContext: any) {
-        const date : moment.Moment = ko.unwrap(valueAccessor());
+        
+        const dateToUse = allBindings().datepickerDateToUse && allBindings().datepickerDateToUse() || null;
+        
+        let date;
+        
+        if (dateToUse) {
+            date = moment.utc(dateToUse);
+        } else {
+            date = ko.unwrap(valueAccessor());
+        }
+        
         if (date) {
             $(element).data("DateTimePicker").date(date);
         }
