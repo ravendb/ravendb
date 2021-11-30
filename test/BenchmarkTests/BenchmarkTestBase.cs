@@ -67,6 +67,9 @@ namespace BenchmarkTests
             }
         }
 
+        protected TimeSpan DefaultTestOperationTimeout => Encrypted == false ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(30);
+
+
         protected DocumentStore GetSimpleDocumentStore(string databaseName, bool deleteDatabaseOnDispose = true)
         {
             X509Certificate2 adminCert = null;
@@ -130,6 +133,9 @@ namespace BenchmarkTests
                 options = new Options();
 
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
+
+            if (Encrypted)
+                options.ClientCertificate = _selfSignedCertificates.ServerCertificate.Value;
 
             return base.GetDocumentStore(options, caller);
         }

@@ -82,6 +82,7 @@ namespace Raven.Server.Documents
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
+            internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object _)
@@ -782,6 +783,8 @@ namespace Raven.Server.Documents
 
                 if (ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     Thread.Sleep(ForTestingPurposes.HoldDocumentDatabaseCreation.Value);
+
+                ForTestingPurposes?.OnBeforeDocumentDatabaseInitialization?.Invoke(documentDatabase);
 
                 documentDatabase.Initialize(InitializeOptions.None, wakeup);
 
