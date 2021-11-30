@@ -104,6 +104,11 @@
                     </li>
                 </ul>
             </div>
+            <button data-bind="click: openFilterDialog, attr: { class: 'btn btn-default' + (hasFilter() ? ' active' : '') }">
+                <i class="glyphicon glyphicon-filter"></i>
+                <span class="margin-left margin-left-xs">Filter</span>
+            </button>
+            <small class="btn-group margin-left" data-bind="html: filterText"></small>
         </div>
     </div>
     <div class="flex-grow utc-info-container">
