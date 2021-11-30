@@ -100,7 +100,7 @@ namespace BenchmarkTests.Indexing
 
                 new Simple_MapReduce_Index().Execute(store);
 
-                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, DefaultTestOperationTimeout);
+                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, 2 * DefaultTestOperationTimeout);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -122,7 +122,7 @@ namespace BenchmarkTests.Indexing
 
                 await store.Maintenance.SendAsync(new StartIndexOperation(new Simple_MapReduce_Index().IndexName));
 
-                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, DefaultTestOperationTimeout);
+                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, 2 * DefaultTestOperationTimeout);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
