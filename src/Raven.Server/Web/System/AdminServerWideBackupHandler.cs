@@ -65,7 +65,7 @@ namespace Raven.Server.Web.System
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(configuration, ServerStore);
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
@@ -95,7 +95,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var (newIndex, _) = await ServerStore.DeleteServerWideBackupConfigurationAsync(name, GetRaftRequestIdFromQuery());
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
                
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
@@ -165,7 +165,7 @@ namespace Raven.Server.Web.System
             
                 // Save task
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(serverWideBackup, GetRaftRequestIdFromQuery());
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

@@ -471,7 +471,7 @@ namespace Raven.Server.Web.System
                 };
 
                 var res = await ServerStore.SendToLeaderAsync(reorder);
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
             }
