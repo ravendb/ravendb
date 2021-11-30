@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -594,8 +595,29 @@ namespace Raven.Server.ServerWide
                             $"Cannot set typed value of type {type} for database {database}, because it does not exist");
                     }
 
-                    var id = updateCommand.FindFreeId(minimumSubscriptionIdPerDatabase, index, context);
-                    updateCommand.Execute(context, items, id, record: null, _parent.CurrentState, out _);
+                    long minimumSubscriptionId = GetMinimumSubscriptionIdFor(database);
+
+                    long subscriptionId;
+
+                    if (updateCommand.SubscriptionId.HasValue)
+                    {
+                        if (updateCommand.SubscriptionId.Value < minimumSubscriptionId)
+                            minimumSubscriptionIdPerDatabase[database] = minimumSubscriptionId;
+
+                        subscriptionId = updateCommand.SubscriptionId.Value;
+                    }
+                    else
+                    {
+                        subscriptionId = index;
+                        if (subscriptionId >= minimumSubscriptionId)
+                        {
+                            subscriptionId = --minimumSubscriptionId;
+                        }
+
+                        minimumSubscriptionIdPerDatabase[database] = subscriptionId;
+                    }
+
+                    updateCommand.Execute(context, items, subscriptionId, record: null, _parent.CurrentState, out _);
 
                     if (actionsByDatabase.ContainsKey(database) == false)
                     {
@@ -609,6 +631,27 @@ namespace Raven.Server.ServerWide
                 foreach (var action in actionsByDatabase)
                 {
                     ExecuteManyOnDispose(context, index, type, action.Value);
+                }
+
+                long GetMinimumSubscriptionIdFor(string database)
+                {
+                    if (minimumSubscriptionIdPerDatabase.TryGetValue(database, out var minimumSubscriptionId))
+                        return minimumSubscriptionId;
+
+                    minimumSubscriptionId = int.MaxValue;
+
+                    foreach (var keyValue in ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database)))
+                    {
+                        if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                            continue;
+
+                        if (id < minimumSubscriptionId)
+                            minimumSubscriptionId = id;
+                    }
+
+                    minimumSubscriptionIdPerDatabase[database] = minimumSubscriptionId;
+
+                    return minimumSubscriptionId;
                 }
             }
             catch (Exception e)

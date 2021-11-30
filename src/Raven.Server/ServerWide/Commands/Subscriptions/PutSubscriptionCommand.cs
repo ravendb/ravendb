@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -14,7 +13,6 @@ using Voron;
 using Voron.Data.Tables;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
-using Voron.Impl.Paging;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -111,43 +109,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     tryToSetName = false;
                 }
             }
-        }
-
-        public long FindFreeId(Dictionary<string, long> minimumSubscriptionIdPerDatabase, long subscriptionId, TransactionOperationContext context)
-        {
-            if (minimumSubscriptionIdPerDatabase.TryGetValue(DatabaseName, out var minimumSubscriptionId) == false)
-            {
-                minimumSubscriptionId = int.MaxValue;
-
-                foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
-                    SubscriptionState.SubscriptionPrefix(DatabaseName)))
-                {
-                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
-                        continue;
-
-                    if (id < minimumSubscriptionId)
-                        minimumSubscriptionId = id;
-                }
-
-                minimumSubscriptionIdPerDatabase[DatabaseName] = minimumSubscriptionId;
-            }
-
-            if (SubscriptionId.HasValue)
-            {
-                if (SubscriptionId.Value < minimumSubscriptionId)
-                    minimumSubscriptionIdPerDatabase[DatabaseName] = minimumSubscriptionId;
-
-                return SubscriptionId.Value;
-            }
-
-            if (subscriptionId >= minimumSubscriptionId)
-            {
-                subscriptionId = --minimumSubscriptionId;
-            }
-
-            minimumSubscriptionIdPerDatabase[DatabaseName] = subscriptionId;
-
-            return subscriptionId;
         }
 
         private void AssertValidChangeVector()
