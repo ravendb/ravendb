@@ -146,9 +146,22 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var parameters = JsonDeserializationServer.StartTransactionsRecordingOperationParameters(json);
-                if (parameters.File == null)
+                var outputFilePath = parameters.File;
+                
+                if (outputFilePath == null)
                 {
                     ThrowRequiredPropertyNameInRequest(nameof(parameters.File));
+                }
+
+                if (File.Exists(outputFilePath))
+                {
+                    throw new InvalidOperationException("File " + outputFilePath + " already exists");
+                }
+
+                // here path is either a new file -or- an existing directory
+                if (Directory.Exists(outputFilePath))
+                { 
+                    throw new InvalidOperationException(outputFilePath + " is a directory. Please enter a path to a file.");
                 }
 
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
