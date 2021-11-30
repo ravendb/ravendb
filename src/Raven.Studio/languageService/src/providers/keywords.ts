@@ -168,6 +168,18 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
                 caption: "==",
                 score: AUTOCOMPLETE_SCORING.operator,
                 meta: AUTOCOMPLETE_META.operator
+            },
+            {
+                value: "!=",
+                caption: "!=",
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
+            },
+            {
+                value: "<>",
+                caption: "<>",
+                score: AUTOCOMPLETE_SCORING.operator,
+                meta: AUTOCOMPLETE_META.operator
             }
         ] 
     }
