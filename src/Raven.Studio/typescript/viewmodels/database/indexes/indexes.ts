@@ -448,7 +448,8 @@ class indexes extends viewModelBase {
     createIndexesUrlObservableForNode(nodeTag: string, indexProgress: indexProgress) {
         return ko.pureComputed(() => {
             const name = indexProgress.name;
-            const indexName = name.startsWith("replacementof/") ? name.replace("replacementof/", "") : name;
+            const indexName = name.startsWith(index.SideBySideIndexPrefix) ? name.replace(index.SideBySideIndexPrefix, "") : name;
+            
             const link = appUrl.forIndexes(this.activeDatabase(), indexName);
             const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
             
