@@ -1,5 +1,6 @@
 import { autocomplete } from "../autocompleteUtils";
 import { AUTOCOMPLETE_META } from "../../src/providers/common";
+import { FakeMetadataProvider } from "./FakeMetadataProvider";
 
 describe("can complete from", function () {
 
@@ -105,6 +106,24 @@ describe("can complete from", function () {
             const search = suggestions.find(x => x.value.includes("search"));
             expect(search)
                 .toBeFalsy();
+        });
+        
+        it('can complete collection with double quotes', async function () {
+            const providers = new FakeMetadataProvider({
+                collections: {
+                    'a"aaa"a': {
+                        "": {
+                            "Field1": "string"
+                        }
+                    }
+                }
+            });
+            const suggestions = await autocomplete("from |", providers);
+            const collectionSuggestion = suggestions.find(x => x.caption === 'a"aaa"a');
+            expect(collectionSuggestion)
+                .toBeTruthy();
+            expect(collectionSuggestion.value)
+                .toEqual('"a\\"aaa\\"a" ');
         })
     });
     
