@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Replication
             public static OutgoingPerformanceStats ForPushReplication(string id, ReplicationInitialRequest.ReplicationType replicationType, string description, OutgoingReplicationPerformanceStats[] performance)
             {
                 return new OutgoingPerformanceStats(id, description, 
-                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.OutgoingInternal : ReplicationPerformanceType.OutgoingPush, performance);
+                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.OutgoingInternal : ReplicationPerformanceType.OutgoingExternal, performance);
             }
         }
 
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Replication
             public static IncomingPerformanceStats ForPushReplication(string id, ReplicationInitialRequest.ReplicationType replicationType, string description, IncomingReplicationPerformanceStats[] performance)
             {
                 return new IncomingPerformanceStats(id, description, 
-                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.IncomingInternal : ReplicationPerformanceType.IncomingPush, performance);
+                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.IncomingInternal : ReplicationPerformanceType.IncomingExternal, performance);
             }
         }
 
@@ -350,9 +350,9 @@ namespace Raven.Server.Documents.Replication
 
         public enum ReplicationPerformanceType
         {
-            IncomingPush,
+            IncomingExternal,
+            OutgoingExternal,
             IncomingPull,
-            OutgoingPush,
             OutgoingPull,
             IncomingInternal,
             OutgoingInternal
