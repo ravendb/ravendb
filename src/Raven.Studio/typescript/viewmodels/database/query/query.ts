@@ -1015,7 +1015,7 @@ class query extends viewModelBase {
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
                             this.onHighlightingsLoaded(queryResults.highlightings);
-                            this.onExplanationsLoaded(queryResults.explanations);
+                            this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
@@ -1196,20 +1196,41 @@ class query extends viewModelBase {
             });
     }
     
-    private onExplanationsLoaded(explanations: dictionary<Array<string>>) {
-        for (const id of Object.keys(explanations)) {
-            const docs = explanations[id];
-            const toInsert: explanationItem = {
-                id,
-                explanations: docs
-            };
-            const existingIndex = this.explanationsCache.findIndex(x => x.id === id);
-            if (existingIndex !== -1) {
-                this.explanationsCache.splice(existingIndex, 1, toInsert);
-            } else {
-                this.explanationsCache.push(toInsert);
+    /*
+    The rules are:
+    - scan through results and pick matching explanations - remove from map after pushing to results
+    - if key wasn't found in explanations - ignore and skip
+    - iterate through remaining items - push them in any order - we already did our best to sort that
+     */
+    private onExplanationsLoaded(explanations: dictionary<Array<string>>, results: document[]) {
+        const remainingItems = new Map(Object.keys(explanations).map(x => [x, explanations[x]]));
+        
+        const itemsToCache: explanationItem[] = [];
+        results.forEach(result => {
+            const id = result.getId();
+            const list = remainingItems.get(id);
+            if (list) {
+                itemsToCache.push({
+                    id,
+                    explanations: list
+                });
+                remainingItems.delete(id);
             }
-        }
+        });
+
+        remainingItems.forEach((value, id) => {
+            itemsToCache.push({
+                id,
+                explanations: value
+            });
+        });
+        
+        // scan existing cache for duplicates
+        const newIds = new Set<string>(itemsToCache.map(x => x.id));
+        this.explanationsCache = this.explanationsCache.filter(x => !newIds.has(x.id));
+        
+        // and push new cached items
+        this.explanationsCache.push(...itemsToCache);
         
         this.totalExplanations(this.explanationsCache.length);
     }
@@ -1442,6 +1463,9 @@ class query extends viewModelBase {
         // remove all existing highlights when going back to 
         // 'results' tab
         this.highlightsCache.removeAll();
+        
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
         
         this.columnsSelector.reset();
         this.refresh();
