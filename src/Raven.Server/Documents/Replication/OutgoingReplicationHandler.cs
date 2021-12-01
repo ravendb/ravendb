@@ -82,6 +82,9 @@ namespace Raven.Server.Documents.Replication
         public readonly ReplicationNode Destination;
         private readonly bool _external;
 
+        public ReplicationInitialRequest.ReplicationType ReplicationType =>
+            _external ? ReplicationInitialRequest.ReplicationType.External : ReplicationInitialRequest.ReplicationType.Internal;
+
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
         private readonly TcpConnectionInfo _connectionInfo;
@@ -278,6 +281,7 @@ namespace Raven.Server.Documents.Replication
             var request = new DynamicJsonValue
             {
                 ["Type"] = nameof(ReplicationInitialRequest),
+                [nameof(ReplicationInitialRequest.ReplicationsType)] = ReplicationType
             };
 
             if (Destination is PullReplicationAsSink destination)

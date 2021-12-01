@@ -78,11 +78,14 @@ namespace Raven.Server.Documents.Replication
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
+        public readonly ReplicationInitialRequest.ReplicationType ReplicationType;
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
+            ReplicationInitialRequest.ReplicationType replicationType,
             ReplicationLoader.PullReplicationParams pullReplicationParams = null)
         {
             if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
@@ -102,7 +105,9 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
-            
+
+            ReplicationType = replicationType;
+
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
                 AllowedPaths = pullReplicationParams?.AllowedPaths,
