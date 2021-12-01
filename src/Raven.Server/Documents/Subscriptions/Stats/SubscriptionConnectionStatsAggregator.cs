@@ -46,6 +46,7 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 
                 ConnectionId = Id,
+                WorkerId = Stats.WorkerId, 
                 
                 BatchCount = Stats.BatchCount,
                 TotalBatchSizeInBytes = Stats.TotalBatchSizeInBytes,

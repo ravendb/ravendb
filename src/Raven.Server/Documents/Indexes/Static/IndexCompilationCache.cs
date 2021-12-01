@@ -18,33 +18,33 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private static readonly ConcurrentDictionary<CacheKey, Lazy<AbstractStaticIndexBase>> _indexCache = new ConcurrentDictionary<CacheKey, Lazy<AbstractStaticIndexBase>>();
 
-        public static AbstractStaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        public static AbstractStaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
             var type = definition.DetectStaticIndexType();
             if (type.IsJavaScript())
-                return GenerateIndex(definition, configuration, type);
+                return GenerateIndex(definition, configuration, type, indexVersion);
 
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
-                    return GetDocumentsIndexInstance(definition, configuration, type);
+                    return GetDocumentsIndexInstance(definition, configuration, type, indexVersion);
 
                 case IndexSourceType.TimeSeries:
-                    return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration, type);
+                    return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration, type, indexVersion);
 
                 case IndexSourceType.Counters:
-                    return GetIndexInstance<StaticCountersIndexBase>(definition, configuration, type);
+                    return GetIndexInstance<StaticCountersIndexBase>(definition, configuration, type, indexVersion);
 
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 
-        private static StaticIndexBase GetDocumentsIndexInstance(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
+        private static StaticIndexBase GetDocumentsIndexInstance(IndexDefinition definition, RavenConfiguration configuration, IndexType type, long indexVersion)
         {
             var key = GetCacheKey(definition);
 
-            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
+            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type, indexVersion)));
 
             try
             {
@@ -57,12 +57,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static TIndexBase GetIndexInstance<TIndexBase>(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
+        private static TIndexBase GetIndexInstance<TIndexBase>(IndexDefinition definition, RavenConfiguration configuration, IndexType type, long indexVersion)
             where TIndexBase : AbstractStaticIndexBase
         {
             var key = GetCacheKey(definition);
 
-            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
+            Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type, indexVersion)));
 
             try
             {
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return new CacheKey(list);
         }
 
-        internal static AbstractStaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
+        internal static AbstractStaticIndexBase GenerateIndex(IndexDefinition definition, RavenConfiguration configuration, IndexType type, long indexVersion)
         {
             switch (type)
             {
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return AbstractJavaScriptIndex.Create(definition, configuration);
+                    return AbstractJavaScriptIndex.Create(definition, configuration, indexVersion);
 
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");

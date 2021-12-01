@@ -30,7 +30,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
         [Fact]
         public async Task OlapTaskShouldBeHighlyAvailable()
         {
-            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            var cluster = await CreateRaftCluster(3);
             var leader = cluster.Leader;
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);

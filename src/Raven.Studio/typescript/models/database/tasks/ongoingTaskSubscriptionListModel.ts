@@ -7,7 +7,6 @@ import subscriptionConnectionDetailsCommand = require("commands/database/tasks/g
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-
 type PerConnectionStats = {
     clientUri: string;
     workerId: string;

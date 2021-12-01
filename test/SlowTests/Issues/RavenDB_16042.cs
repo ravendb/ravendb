@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = r =>
                 {
                     r.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "false";
-                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.IndexStartupBehavior.ResetAndStart.ToString();
+                    r.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.ErrorIndexStartupBehaviorType.ResetAndStart.ToString();
                 }
             };
 

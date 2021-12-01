@@ -2730,13 +2730,10 @@ namespace Raven.Server.ServerWide
             var response = await SendToLeaderAsyncInternal(cmd);
 
 #if DEBUG
-
-            if (Leader.GetConvertResult(cmd) == null && // if cmd specifies a convert, it explicitly handles this
-                response.Result.ContainsBlittableObject())
+            if (response.Result.ContainsBlittableObject())
             {
                 throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}({response.Result}) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
             }
-
 #endif
 
             return response;
@@ -2744,9 +2741,9 @@ namespace Raven.Server.ServerWide
 
         //this is needed for cases where Result or any of its fields are blittable json.
         //(for example, this is needed for use with AddOrUpdateCompareExchangeCommand, since it returns BlittableJsonReaderObject as result)
-        public Task<(long Index, object Result)> SendToLeaderAsync(TransactionOperationContext context, CommandBase cmd)
+        public Task<(long Index, object Result)> SendToLeaderAsync(JsonOperationContext context, CommandBase cmd)
         {
-            return SendToLeaderAsyncInternal(context, cmd);
+            return SendToLeaderAsyncInternal(cmd);
         }
 
         public DynamicJsonArray GetClusterErrors()
@@ -3410,6 +3407,8 @@ namespace Raven.Server.ServerWide
         internal class TestingStuff
         {
             internal Action BeforePutLicenseCommandHandledInOnValueChanged;
+            internal bool StopIndex;
+            internal Action<CompareExchangeCommandBase> ModifyCompareExchangeTimeout;
         }
     }
 }

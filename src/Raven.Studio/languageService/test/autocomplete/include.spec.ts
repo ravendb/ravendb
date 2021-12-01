@@ -1,7 +1,7 @@
 import { autocomplete } from "../autocompleteUtils";
 import { AUTOCOMPLETE_META } from "../../src/providers/common";
 
-const specialIncludeFunctions = ["counters(", "timeseries(", "cmpxchg(", "highlight(", "timings(", "explanations("];
+const specialIncludeFunctions = ["counters(", "timeseries(", "cmpxchg(", "revisions(", "highlight(", "timings(", "explanations("];
 
 describe("can complete include", function () {
     it("doesn't complete keywords as field name", async () => {

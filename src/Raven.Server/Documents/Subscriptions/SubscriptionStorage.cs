@@ -356,7 +356,14 @@ namespace Raven.Server.Documents.Subscriptions
                     yield break;
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState);
+                var subscriptionConnectionsState = GetSubscriptionConnectionsState(serverStoreContext, subscriptionState.SubscriptionName);
+
+                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState)
+                {
+                    Connections = subscriptionConnectionsState?.GetConnections(),
+                    RecentConnections = subscriptionConnectionsState?.RecentConnections,
+                    RecentRejectedConnections = subscriptionConnectionsState?.RecentRejectedConnections
+                };
                 GetSubscriptionInternal(subscriptionGeneralData, history);
                 yield return subscriptionGeneralData;
             }
@@ -474,7 +481,14 @@ namespace Raven.Server.Documents.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
+            var subscriptionConnectionsState = GetSubscriptionConnectionsState(context, subscriptionState.SubscriptionName);
+
+            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState)
+            {
+                Connections = subscriptionConnectionsState?.GetConnections(),
+                RecentConnections = subscriptionConnectionsState?.RecentConnections,
+                RecentRejectedConnections = subscriptionConnectionsState?.RecentRejectedConnections
+            };
             return subscriptionJsonValue;
         }
 
@@ -536,8 +550,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
-            public List<SubscriptionConnection> Connections;
             public SubscriptionConnection Connection => Connections?.FirstOrDefault();
+            public List<SubscriptionConnection> Connections;
             public IEnumerable<SubscriptionConnection> RecentConnections;
             public IEnumerable<SubscriptionConnection> RecentRejectedConnections;
 

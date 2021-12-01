@@ -12,26 +12,68 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override void VisitCallExpression(CallExpression callExpression)
         {
-            if (callExpression.Callee is Identifier id)
+            if (TryGetIdentifier(callExpression, out var id, out bool noTracking))
             {
-                if (id.Name.Equals("load"))
+                switch (id.Name)
                 {
-                    if (callExpression.Arguments.Count != 2)
-                    {
-                        throw new ArgumentException("load method is expecting two arguments, the first should be the document and the second should be the collection. e.g. load(u.Product,'Products') but was invoked with " +
-                            $"{callExpression.Arguments.Count} arguments.");
-                    }
-                    var collection = callExpression.Arguments[1];
-                    if (collection is Literal l && l.Value is string s)
-                    {
-                        ReferencedCollection.Add(new CollectionName(s));
-                    }
+                    case JavaScriptIndex.Load:
+                        {
+                            if (callExpression.Arguments.Count != 2)
+                            {
+                                throw new ArgumentException("load method is expecting two arguments, the first should be the document and the second should be the collection. e.g. load(u.Product,'Products') but was invoked with " +
+                                                            $"{callExpression.Arguments.Count} arguments.");
+                            }
+
+                            if (noTracking == false)
+                            {
+                                var collection = callExpression.Arguments[1];
+                                if (collection is Literal { Value: string s })
+                                {
+                                    ReferencedCollection.Add(new CollectionName(s));
+                                }
+                            }
+                        }
+                        break;
+
+                    case JavaScriptIndex.CmpXchg:
+                        HasCompareExchangeReferences = true;
+                        break;
                 }
-                else if (id.Name.Equals("cmpxchg"))
-                    HasCompareExchangeReferences = true;
             }
 
             base.VisitCallExpression(callExpression);
+
+            static bool TryGetIdentifier(CallExpression callExpression, out Identifier identifier, out bool noTracking)
+            {
+                switch (callExpression.Callee)
+                {
+                    case Identifier i:
+                        identifier = i;
+                        noTracking = false;
+
+                        return true;
+                    case StaticMemberExpression sme:
+                        {
+                            if (sme.Object is Identifier { Name: JavaScriptIndex.NoTracking })
+                            {
+                                noTracking = true;
+
+                                if (sme.Property is Identifier propertyIdentifier)
+                                {
+                                    identifier = propertyIdentifier;
+                                    return true;
+                                }
+                            }
+
+                            break;
+                        }
+                }
+
+                identifier = null;
+                noTracking = false;
+
+                return false;
+            }
         }
     }
 }

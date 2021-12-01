@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Handlers
 
             var incrementalValues = new Dictionary<long, TimeSeriesEntry>();
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
-            var dbCv = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+            reader.IncludeDetails();
 
             // init hash
             var size = Sodium.crypto_generichash_bytes();
@@ -400,7 +400,6 @@ namespace Raven.Server.Documents.Handlers
             var initialStart = start;
             var hasMore = false;
             DateTime lastSeenEntry = from;
-            var skippedResults = 0;
 
             includesCommand?.InitializeNewRangeResult(state);
 
@@ -425,19 +424,6 @@ namespace Raven.Server.Documents.Handlers
 
                     includesCommand?.Fill(singleResult.Tag);
 
-                    var dbId = singleResult.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
-                    var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId) ?? "?";
-                    nodeTag = nodeTag + "-" + dbId;
-                    var values = singleResult.Values.ToArray();
-
-                    if (incrementalValues.TryGetValue(singleResult.Timestamp.Ticks, out var entry))
-                    {
-                        // an entry with this timestamp already exists --> sum values
-                        skippedResults++;
-                        MergeIncrementalTimeSeriesValues(singleResult, nodeTag, values, ref entry, returnFullResults);
-                        continue;
-                    }
-
                     if (pageSize-- <= 0)
                     {
                         hasMore = true;
@@ -448,8 +434,9 @@ namespace Raven.Server.Documents.Handlers
                     {
                         Timestamp = singleResult.Timestamp,
                         Values = singleResult.Values.ToArray(),
+                        Tag = singleResult.Tag,
                         IsRollup = singleResult.Type == SingleResultType.RolledUp,
-                        NodeValues = returnFullResults ? new Dictionary<string, double[]>() { [nodeTag] = values } : null
+                        NodeValues = returnFullResults ? new Dictionary<string, double[]>(reader.GetDetails.Details) : null
                     };
                 }
 
@@ -472,7 +459,6 @@ namespace Raven.Server.Documents.Handlers
                     To = to,
                     Entries = Array.Empty<TimeSeriesEntry>(),
                     Hash = hash,
-                    SkippedResults = skippedResults
                 };
             }
             else
@@ -483,7 +469,6 @@ namespace Raven.Server.Documents.Handlers
                     To = hasMore ? incrementalValues.Values.Last().Timestamp : to,
                     Entries = incrementalValues.Values.ToArray(),
                     Hash = hash,
-                    SkippedResults = skippedResults
                 };
             }
 
@@ -717,13 +702,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.Includes));
                     writer.WriteObject(rangeResult.Includes);
-                }
-
-                if (rangeResult.SkippedResults.HasValue)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.SkippedResults));
-                    writer.WriteInteger(Math.Abs(rangeResult.SkippedResults.Value));
                 }
             }
             writer.WriteEndObject();
@@ -1129,6 +1107,12 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private static readonly TimeSeriesStorage.AppendOptions AppendOptionsForSmuggler = new TimeSeriesStorage.AppendOptions
+        {
+            VerifyName = false, 
+            FromSmuggler = true
+        };
+
         internal class SmugglerTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
@@ -1166,7 +1150,7 @@ namespace Raven.Server.Documents.Handlers
                         }
 
                         var values = item.Segment.YieldAllValues(context, context.Allocator, item.Baseline);
-                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, verifyName: false);
+                        tss.AppendTimestamp(context, docId, item.Collection, item.Name, values, AppendOptionsForSmuggler);
                     }
 
                     changes += items.Count;

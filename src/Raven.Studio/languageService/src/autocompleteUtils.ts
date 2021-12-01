@@ -3,14 +3,20 @@
 
 export class AutocompleteUtils {
 
-    static quote(input: string, quoteType: QuoteType): string {
-        switch (quoteType) {
+    static quote(input: string, preferredQuoteType: QuoteType): string {
+        switch (preferredQuoteType) {
             case "None":
+                if (input.includes('"')) {
+                    return AutocompleteUtils.quote(input, "Double");
+                }
+                if (input.includes("'")) {
+                    return AutocompleteUtils.quote(input, "Single");
+                }
                 return input;
             case "Double":
-                return `"${input.replace(/"/g, '\"')}"`;
+                return `"${input.replace(/"/g, '\\"')}"`;
             case "Single":
-                return `'${input.replace(/'/g, "\'")}'`;
+                return `'${input.replace(/'/g, "\\'")}'`;
         }
     }
     

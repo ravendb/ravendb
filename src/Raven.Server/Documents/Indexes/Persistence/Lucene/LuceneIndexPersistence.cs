@@ -21,6 +21,7 @@ using Raven.Server.Indexing;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Exceptions;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.BTrees;
@@ -487,7 +488,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
                     IndexWriter.MaxFieldLength.UNLIMITED, null, _index, state);
             }
-            catch (Exception e) when (e.IsOutOfMemory())
+            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
             {
                 throw;
             }
@@ -520,7 +521,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     _suggestionsIndexWriters[field] = writer;
                 }
-                catch (Exception e) when (e.IsOutOfMemory())
+                catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
                 {
                     throw;
                 }

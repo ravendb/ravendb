@@ -295,6 +295,11 @@ class ongoingTasksStats extends viewModelBase {
         + ongoingTasksStats.openedTrackPadding
         + ongoingTasksStats.stackPadding;
 
+    private static readonly openedSubscriptionWorkerTrackHeight = 
+        ongoingTasksStats.trackHeight * 3
+        + ongoingTasksStats.openedTrackPadding
+        + ongoingTasksStats.stackPadding;
+
     private static readonly closedSubscriptionTrackHeight = ongoingTasksStats.openedTrackPadding
         + ongoingTasksStats.trackHeight * 2
         + ongoingTasksStats.openedTrackPadding * 2;
@@ -335,6 +340,8 @@ class ongoingTasksStats extends viewModelBase {
     
     private etlDefinitionsCache: etlScriptDefinitionCache;
     private subscriptionDefinitionCache: subscriptionQueryDefinitionCache;
+
+    private subscriptionToWorkers = new Map<string, Set<string>>();
 
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
@@ -417,6 +424,7 @@ class ongoingTasksStats extends viewModelBase {
             "BatchWaitForAcknowledge": undefined as string,
             "ConnectionAborted": undefined as string,
             "ConnectionRejected": undefined as string,
+            "ConnectionErrorBackground": undefined as string,
             "AggregatedBatchesInfo": undefined as string,
             "UnknownOperation": undefined as string
         }
@@ -880,7 +888,7 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private prepareMainSection(resetFilter: boolean) {
+    private prepareMainSection(resetFilter: boolean): void {
         this.findAndSetTaskNames();
 
         if (resetFilter) {
@@ -889,7 +897,7 @@ class ongoingTasksStats extends viewModelBase {
         this.filterTracks();
     }
 
-    private findAndSetTaskNames() {
+    private findAndSetTaskNames(): void {
         this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
         this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
         this.subscriptionData = _.orderBy(this.subscriptionData, [x => x.TaskName]);
@@ -934,10 +942,25 @@ class ongoingTasksStats extends viewModelBase {
         });
 
         this.subscriptionData.forEach(subscriptionTask => {
+            const subscriptionName = subscriptionTask.TaskName;
+            const subscription = this.subscriptionToWorkers.get(subscriptionName);
+            
+            if (subscription) {
+                subscriptionTask.ConnectionPerformance.forEach(connection => {
+                    subscription.add(connection.WorkerId);
+                });
+            } else {
+                const workerIds = subscriptionTask.ConnectionPerformance.map(x => x.WorkerId);
+                this.subscriptionToWorkers.set(subscriptionName, new Set<string>(workerIds));
+            }
+            
+            const numberOfWorkers = subscription.size;
+            const height = ongoingTasksStats.openedSubscriptionTrackHeight + ((numberOfWorkers - 1) * ongoingTasksStats.openedSubscriptionWorkerTrackHeight);
+            
             trackInfos.push({
-                name: subscriptionTask.TaskName,
+                name: subscriptionName,
                 type: "SubscriptionConnection",
-                openedHeight: ongoingTasksStats.openedSubscriptionTrackHeight,
+                openedHeight: height,
                 closedHeight: ongoingTasksStats.closedSubscriptionTrackHeight
             })
         });
@@ -945,11 +968,11 @@ class ongoingTasksStats extends viewModelBase {
         this.tracksInfo(trackInfos);
     }
     
-    private fixCurrentOffset() {
+    private fixCurrentOffset(): void {
         this.currentYOffset = Math.min(Math.max(0, this.currentYOffset), this.maxYOffset);
     }
 
-    private constructYScale() {
+    private constructYScale(): void {
         let currentOffset = ongoingTasksStats.axisHeight - this.currentYOffset;
         const domain: string[] = [];
         const range: number[] = [];
@@ -974,7 +997,7 @@ class ongoingTasksStats extends viewModelBase {
             .range(range);
     }
     
-    private calcMaxYOffset() {
+    private calcMaxYOffset(): void {
         const heightSum = _.sumBy(this.filteredTrackNames(), track => {
             const isOpened = _.includes(this.expandedTracks(), track);
             const trackInfo = this.tracksInfo().find(x => x.name === track);
@@ -997,7 +1020,7 @@ class ongoingTasksStats extends viewModelBase {
             .map(y => scale.invert(y));
     }
 
-    private drawXaxisTimeLines(context: CanvasRenderingContext2D, ticks: Date[], yStart: number, yEnd: number) {
+    private drawXaxisTimeLines(context: CanvasRenderingContext2D, ticks: Date[], yStart: number, yEnd: number): void {
         try {
             context.save();
             context.beginPath();
@@ -1017,7 +1040,7 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number) {
+    private drawXaxisTimeLabels(context: CanvasRenderingContext2D, ticks: Date[], timePaddingLeft: number, timePaddingTop: number): void {
         try {
             context.save();
             context.beginPath();
@@ -1253,6 +1276,11 @@ class ongoingTasksStats extends viewModelBase {
             const batchPerfLength = batchPerformance.length;
             
             let lastErrorPosition = -1000;
+
+            // create map for performance
+            const workerIdToWorkerIndex = new Map<string, number>();
+            const workersArray = [...this.subscriptionToWorkers.get(subscriptionItem.TaskName)];
+            workersArray.forEach((workerId, index) => workerIdToWorkerIndex.set(workerId, index));
             
             // Draw connections
             for (let perfIdx = 0; perfIdx < connectionPerfLength; perfIdx++) {
@@ -1265,7 +1293,10 @@ class ongoingTasksStats extends viewModelBase {
                 if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
                     continue;
                 
-                const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 : 0;
+                const workerId = perfWithCache.WorkerId;
+                const workerIndex = workerIdToWorkerIndex.get(workerId);
+                const yOffset = isOpened ? ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 2 + (workerIndex * ongoingTasksStats.openedSubscriptionWorkerTrackHeight) : 0;
+                
                 const stripesYStart = yStart + (isOpened ? yOffset : 0);
                 
                 context.save();
@@ -1291,10 +1322,10 @@ class ongoingTasksStats extends viewModelBase {
                     const xForCompleted = xScale(perfWithCache.CompletedAsDate);
                     // don't draw errors more often than every 5 pixels
                     if (Math.abs(lastErrorPosition - xForCompleted) > 5) {
-                        this.drawConnectionError(context, xForCompleted, stripesYStart - ongoingTasksStats.trackHeight + 10, perfWithCache.ErrorType);
+                        this.drawConnectionError(context, xForCompleted, stripesYStart + 10, perfWithCache.ErrorType);
 
                         const iconWidth = 16;
-                        this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart - ongoingTasksStats.trackHeight, iconWidth, ongoingTasksStats.trackHeight,
+                        this.hitTest.registerSubscriptionExceptionItem(xForCompleted - iconWidth/2, stripesYStart, iconWidth, ongoingTasksStats.trackHeight,
                             {
                                 title: perfWithCache.ErrorType === "ConnectionRejected" ? "Connection rejected" : "Connection aborted",
                                 exceptionText: perfWithCache.Exception,
@@ -1306,7 +1337,7 @@ class ongoingTasksStats extends viewModelBase {
                     }
                 }
                 
-                // Draw pending duration on top of connection stripe - but only when strategy is 'WaitForFree'
+                // Draw pending duration - but only when strategy is 'WaitForFree'
                 if (perfWithCache.Strategy === "WaitForFree") {
                     const pendingInfo = perfWithCache.Details.Operations[0];
                     const dxForPending = extentFunc(pendingInfo.DurationInMs);
@@ -1314,7 +1345,7 @@ class ongoingTasksStats extends viewModelBase {
                     context.strokeStyle = this.colors.tracks.ConnectionPending;
                     context.fillStyle = context.strokeStyle;
                     const x1ForPending = xScale(perfWithCache.StartedAsDate);
-                    const yForPending = stripesYStart - ongoingTasksStats.trackHeight + 12;
+                    const yForPending = stripesYStart + 10;
 
                     context.beginPath();
                     context.arc(x1ForPending, yForPending, 3, 0, 2 * Math.PI);
@@ -1322,7 +1353,7 @@ class ongoingTasksStats extends viewModelBase {
 
                     if (dxForPending >= 4) {
                         graphHelper.drawDashLine(context, x1ForPending, yForPending + 0.5, dxForPending);
-                        this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart - ongoingTasksStats.trackHeight, dxForPending, ongoingTasksStats.trackHeight,
+                        this.hitTest.registerSubscriptionPendingItem(x1ForPending, stripesYStart, dxForPending, ongoingTasksStats.trackHeight,
                             {
                                 title: "Pending Connection",
                                 clientUri: perfWithCache.ClientUri,
@@ -1335,12 +1366,26 @@ class ongoingTasksStats extends viewModelBase {
             
             let batchPerfCompleted: string = null;
             
+            // create map for performance
+            const connectionIdToSubscriptionConnectionPerformanceStatsWithCache = new Map<number, SubscriptionConnectionPerformanceStatsWithCache>();
+            connectionPerformance.forEach(item => 
+                connectionIdToSubscriptionConnectionPerformanceStatsWithCache.set((item as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId, item as SubscriptionConnectionPerformanceStatsWithCache));
+            
             // Draw batches
             for (let perfIdx = 0; perfIdx < batchPerfLength; perfIdx++) {
                 const batchPerf = batchPerformance[perfIdx];
 
                 const perfWithCache = batchPerf as SubscriptionBatchPerformanceStatsWithCache;
+
+                const connection = subscriptionItem.ConnectionPerformance.find(x => x.ConnectionId === perfWithCache.ConnectionId);
                 
+                if (!connection) {
+                    continue;
+                }
+                
+                const workerId = connection.WorkerId;
+                const workerIndex = workerIdToWorkerIndex.get(workerId);
+
                 const startDate = perfWithCache.StartedAsDate;
                 
                 const x1 = xScale(startDate);
@@ -1351,8 +1396,8 @@ class ongoingTasksStats extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding : 0;
-                const stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + ongoingTasksStats.stackPadding * 3 : 0);
-                
+                const stripesYStart = yStart + (isOpened ? yOffset + ongoingTasksStats.trackHeight * 2 + (workerIndex * ongoingTasksStats.openedSubscriptionWorkerTrackHeight) + 3 : 0);
+
                 context.save();
 
                 // Draw batch items
@@ -1370,9 +1415,8 @@ class ongoingTasksStats extends viewModelBase {
                 context.restore();
 
                 batchPerfCompleted = batchPerf.Completed;
-                
-                const parentConnection = connectionPerformance.find(x => 
-                    (x as SubscriptionConnectionPerformanceStatsWithCache).ConnectionId === perfWithCache.ConnectionId) as SubscriptionConnectionPerformanceStatsWithCache;
+
+                const parentConnection = connectionIdToSubscriptionConnectionPerformanceStatsWithCache.get(perfWithCache.ConnectionId);
                 
                 if (!batchPerf.Completed && !parentConnection.Exception) {
                     this.findInProgressAction([batchPerf.Details], extentFunc, x1, stripesYStart, yOffset);
@@ -1402,7 +1446,7 @@ class ongoingTasksStats extends viewModelBase {
                     const yStartLine = yStart + (isOpened ? yOffset : 0);
                     
                     // draw the 'start connection line'
-                    context.fillStyle = this.colors.tracks.ConnectionPending; 
+                    context.fillStyle = this.colors.tracks.ConnectionPending;
                     context.fillRect(x1ForActive, yStartLine - ongoingTasksStats.startConnectionLineExtraHeight, 1, ongoingTasksStats.trackHeight + ongoingTasksStats.startConnectionLineExtraHeight);
                 }
 
@@ -1568,26 +1612,34 @@ class ongoingTasksStats extends viewModelBase {
 
     private drawConnectionError(context: CanvasRenderingContext2D, x: number, y: number,
                                 errorType: Raven.Server.Documents.TcpHandlers.SubscriptionError) {
-        let dyForLine: number = 8;
-       
         let errorIcon: string;
         let iconStyle: string;
         
         if (errorType === "ConnectionRejected") {
             errorIcon = "\uea45";
             iconStyle = this.colors.tracks.ConnectionRejected;
-            dyForLine = 5;
+            this.drawErrorBackgound(context, iconStyle, x, y - 1);
         } else {
             errorIcon = "\uea44";
             iconStyle = this.colors.tracks.ConnectionAborted;
+            this.drawErrorBackgound(context, iconStyle, x, y - 1);
         }
-
-        context.strokeStyle = this.colors.tracks.ConnectionAborted;
-        graphHelper.drawLine(context, Math.round(x) + 0.5, y, dyForLine);
         
         context.fillStyle = iconStyle;
         context.font = "16px icomoon";
-        context.fillText(errorIcon, x - 8, y);
+        context.fillText(errorIcon, x - 8, y + 6);
+    }
+    
+    private drawErrorBackgound(context: CanvasRenderingContext2D, outlineColor: string, x: number, y: number): void {
+        // draw background
+        context.beginPath();
+        context.arc(x, y, 9, 0, 2 * Math.PI);
+        context.fillStyle = this.colors.tracks.ConnectionErrorBackground;
+        context.fill();
+        // draw outline
+        context.lineWidth = 0.8;
+        context.strokeStyle = outlineColor;
+        context.stroke();
     }
 
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,

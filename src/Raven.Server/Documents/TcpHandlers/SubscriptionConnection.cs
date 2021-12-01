@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             var random = new Random();
 
-            _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy);
+            _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy, WorkerId);
 
             _subscriptionConnectionsState.PendingConnections.Add(this);
 
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.TcpHandlers
             using (subscriptionConnectionInProgress)
             using (this)
             {
-                _lastConnectionStats = new SubscriptionConnectionStatsAggregator(_connectionStatsId, null);
+                _lastConnectionStats = new SubscriptionConnectionStatsAggregator(_connectionStatsIdForConnection, null);
                 _connectionScope = _lastConnectionStats.CreateScope();
 
                 _pendingConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionPending);

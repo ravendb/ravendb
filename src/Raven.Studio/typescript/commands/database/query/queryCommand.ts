@@ -23,7 +23,9 @@ class queryCommand extends commandBase {
                 highlightings: results.Highlightings,
                 explanations: results.Explanations,
                 timings: results.Timings,
-                includes: results.Includes });
+                includes: results.Includes,
+                includesRevisions: results.RevisionIncludes,
+            });
         
         return this.post<pagedResultExtended<document>>(this.getUrl(), this.getPayload(), this.db)
             .then((results) => selector(results))

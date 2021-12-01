@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.IndexStartupBehavior.ResetAndStart.ToString();
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ErrorIndexStartupBehavior)] = IndexingConfiguration.ErrorIndexStartupBehaviorType.ResetAndStart.ToString();
 
                 await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, record.Etag));
 

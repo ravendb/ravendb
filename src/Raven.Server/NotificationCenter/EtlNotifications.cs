@@ -90,6 +90,20 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
+        public T GetAlert<T>(string processTag, string processName, AlertType etlAlertType) where T : INotificationDetails, new()
+        {
+            Debug.Assert(etlAlertType == AlertType.Etl_LoadError || etlAlertType == AlertType.Etl_TransformationError);
+
+            var key = $"{processTag}/{processName}";
+
+            var id = AlertRaised.GetKey(etlAlertType, key);
+
+            using (_notificationsStorage.Read(id, out NotificationTableValue ntv))
+            {
+                return GetDetails<T>(ntv);
+            }
+        }
+
         private PerformanceHint GetOrCreatePerformanceHint<T>(string processTag, string processName, PerformanceHintType etlHintType, string message, out T details) where T : INotificationDetails, new()
         {
             Debug.Assert(etlHintType == PerformanceHintType.SqlEtl_SlowSql);

@@ -140,7 +140,7 @@ namespace Tryouts
         public static void Main()
         {
 
-            new SimplePipelineTest(new ConsoleTestOutputHelper()).BasicInnerAnalyzer();
+            //new SimplePipelineTest(new ConsoleTestOutputHelper()).BasicInnerAnalyzer();
 
 
             //var parser = new QueryParser();

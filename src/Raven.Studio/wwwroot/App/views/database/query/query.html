@@ -248,6 +248,9 @@
                                                css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }">
                 </span>
             </button>
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesRevisionsTab, css: { active: currentTab() ===  'revisions' }, visible: includesRevisionsCache().total()">
+                <span>Includes (Revisions)</span> &nbsp; <span class="label label-primary" data-bind="text: includesRevisionsCache().total().toLocaleString()"></span>
+            </button>
             <!-- ko foreach: includesCache -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
                 <span data-bind="text: 'Includes (' + name + ')'"></span> &nbsp; <span class="label label-primary" data-bind="text: total().toLocaleString()"></span>

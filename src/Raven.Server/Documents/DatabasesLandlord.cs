@@ -82,6 +82,7 @@ namespace Raven.Server.Documents
             internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
             internal int? HoldDocumentDatabaseCreation = null;
             internal bool PreventedRehabOfIdleDatabase = false;
+            internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object _)
@@ -410,30 +411,46 @@ namespace Raven.Server.Documents
             _serverStore.SendToLeaderAsync(cmd)
                 .ContinueWith(async t =>
                 {
-                    var message = $"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.";
                     if (t.IsFaulted)
                     {
                         var ex = t.Exception.ExtractSingleInnerException();
                         if (ex is DatabaseDoesNotExistException)
                             return;
-
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info(message, t.Exception);
-                        }
                     }
 
-                    if (t.IsCanceled)
+                    if (_logger.IsInfoEnabled)
                     {
-                        if (_logger.IsInfoEnabled)
+                        try
                         {
-                            _logger.Info(message, t.Exception);
+                            await t; // throw immediately
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.Info($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}', will retry again in 15 seconds.", e);
                         }
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(15));
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(15), _serverStore.ServerShutdown);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
 
-                    NotifyLeaderAboutRemoval(dbName, databaseId);
+                    try
+                    {
+                        NotifyLeaderAboutRemoval(dbName, databaseId);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                        {
+                            _logger.Operations($"Failed to notify leader about removal of node {_serverStore.NodeTag} from database '{dbName}'", e);
+                        }
+                    }
+
                 }, TaskContinuationOptions.NotOnRanToCompletion);
         }
 
@@ -767,6 +784,8 @@ namespace Raven.Server.Documents
 
                 if (ForTestingPurposes?.HoldDocumentDatabaseCreation != null)
                     Thread.Sleep(ForTestingPurposes.HoldDocumentDatabaseCreation.Value);
+
+                ForTestingPurposes?.OnBeforeDocumentDatabaseInitialization?.Invoke(documentDatabase);
 
                 documentDatabase.Initialize(InitializeOptions.None, wakeup);
 

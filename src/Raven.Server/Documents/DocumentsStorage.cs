@@ -298,7 +298,7 @@ namespace Raven.Server.Documents
                 Environment = StorageLoader.OpenEnvironment(options, StorageEnvironmentWithType.StorageEnvironmentType.Documents);
 
                 Environment.NewTransactionCreated += SetTransactionCache;
-                Environment.AfterCommitWhenNewReadTransactionsPrevented += UpdateDocumentTransactionCache;
+                Environment.AfterCommitWhenNewTransactionsPrevented += UpdateDocumentTransactionCache;
 
                 using (var tx = Environment.WriteTransaction())
                 {
@@ -1628,11 +1628,18 @@ namespace Raven.Server.Documents
                 else
                 {
                     flags = localFlags | documentFlags;
+                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
 
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                        localFlags.Contain(DocumentFlags.HasRevisions) != documentFlags.Contain(DocumentFlags.HasRevisions))
+                    {
+                        var count = revisionsStorage.GetRevisionsCount(context, id);
+                        if (count == 0)
+                            flags = flags.Strip(DocumentFlags.HasRevisions);
+                    }
                     if (collectionName.IsHiLo == false &&
                         (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                     {
-                        var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
                         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                             (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                         {
@@ -1743,6 +1750,12 @@ namespace Raven.Server.Documents
                     (revisionsStorage.Configuration == null) &&
                     ((flags & DocumentFlags.Resolved) != DocumentFlags.Resolved))
                     revisionsStorage.DeleteRevisionsFor(context, id);
+
+                if (flags.Contain(DocumentFlags.HasRevisions) &&
+                    revisionsStorage.Configuration != null &&
+                    nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                    revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
+                        modifiedTicks, nonPersistentFlags, documentFlags);
 
                 table.Delete(doc.StorageId);
 

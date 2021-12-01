@@ -13,7 +13,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSeriesEntry[] Entries;
         public long? TotalResults;
         internal string Hash;
-        public int? SkippedResults;
 
         public BlittableJsonReaderObject Includes;
 

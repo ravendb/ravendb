@@ -253,6 +253,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool ClusterTransaction;
                 public bool PullReplication;
                 public bool TimeSeries;
+                public bool IncrementalTimeSeries;
             }
         }
 
@@ -381,7 +382,8 @@ namespace Raven.Client.ServerWide.Tcp
                             PullReplication = true,
                             TimeSeries = true,
                             CaseInsensitiveCounters = true,
-                            ClusterTransaction = true
+                            ClusterTransaction = true,
+                            IncrementalTimeSeries = true
                         }
                     },
                     [ReplicationWithTimeSeries] = new SupportedFeatures(ReplicationWithTimeSeries)

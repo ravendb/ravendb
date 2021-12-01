@@ -91,7 +91,7 @@ namespace SlowTests.Server.Documents.ETL
                         Values = new Memory<double>(new []{value})
                     }, 
                 };
-                tsStorage.AppendTimestamp(context, tsOwnerId, "Users", timeSeriesName.ToLower(), toAppend, null, verifyName: false);
+                tsStorage.AppendTimestamp(context, tsOwnerId, "Users", timeSeriesName.ToLower(), toAppend, EtlTimeSeriesTests.AppendOptionsForEtlTest);
                 tr.Commit();
             }
 

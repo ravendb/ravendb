@@ -1578,7 +1578,7 @@ select timeseries(
             }
         }
 
-        private static double GetExpectedPercentile(List<double> values, double percentile)
+        internal static double GetExpectedPercentile(List<double> values, double percentile)
         {
             values.Sort();
 
@@ -1613,7 +1613,7 @@ select timeseries(
             return f;
         }
 
-        private static bool AlmostEquals(double x, double y)
+        internal static bool AlmostEquals(double x, double y)
         {
             var tolerance = Math.Pow(10, -12);
             var diff = Math.Abs(x - y);
