@@ -103,8 +103,16 @@ namespace SlowTests.Issues
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
 
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentorTag));
-                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
-                await WaitAndAssertForValueAsync(() => GetMembersCount(src), 3);
+                Assert.Equal(2, addResult.Topology.Members.Count);
+                Assert.Equal(1, addResult.Topology.Promotables.Count);
+
+                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer
+                var membersCount = await WaitForValueAsync(() => GetMembersCount(src), 3);
+                
+                Assert.True(membersCount == 3,
+                    $"Expected 3 members in database topology but got {membersCount}. Re-added node {mentorTag} was not added as a member to the database topology : " +
+                    src.Maintenance.Server.Send(new GetDatabaseRecordOperation(src.Database)).Topology);
 
                 using (var session = src.OpenSession())
                 {
