@@ -29,5 +29,13 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceUrl { get; set; }
 
         public string DatabaseGroupId { get; set; }
+
+        public ReplicationType ReplicationsType { get; set; }
+
+        public enum ReplicationType
+        {
+            External,
+            Internal
+        }
     }
 }
