@@ -4,14 +4,15 @@ import database = require("models/resources/database");
 
 class getEnvironmentStorageReportCommand extends commandBase {
 
-    constructor(private db: database, private name: string, private type: string) {
+    constructor(private db: database, private name: string, private type: string, private detailed = false) {
         super();
     }
 
     execute(): JQueryPromise<detailedStorageReportItemDto> {
         const args = {
             name: this.name,
-            type: this.type
+            type: this.type,
+            details: this.detailed
         };
         const url = endpoints.databases.storage.debugStorageEnvironmentReport + this.urlEncodeArgs(args);
         

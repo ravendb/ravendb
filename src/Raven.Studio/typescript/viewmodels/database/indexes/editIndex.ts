@@ -34,6 +34,7 @@ import additionalSourceSyntax = require("viewmodels/database/indexes/additionalS
 import additionalAssemblySyntax = require("viewmodels/database/indexes/additionalAssemblySyntax");
 import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
+import dumpDialog = require("viewmodels/database/indexes/dumpDialog");
 import generalUtils = require("common/generalUtils");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
@@ -825,6 +826,11 @@ class editIndex extends viewModelBase {
         new getCSharpIndexDefinitionCommand(this.editedIndex().name(), this.activeDatabase())
             .execute()
             .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, "csharp")));
+    }
+
+    openDumpDialog() {
+        eventsCollector.default.reportEvent("index", "dump-index");
+        app.showBootstrapDialog(new dumpDialog(this.editedIndex().name()));
     }
 
     formatIndex(mapIndex: number) {
