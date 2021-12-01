@@ -26,6 +26,12 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class JavaScriptIndex : AbstractJavaScriptIndex
     {
+        public const string NoTracking = "noTracking";
+
+        public const string Load = "load";
+
+        public const string CmpXchg = "cmpxchg";
+
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
             : base(definition, configuration, modifyMappingFunctions: null, GetMapCode(), indexVersion)
         {
@@ -111,13 +117,18 @@ function map(name, lambda) {
                 }
 
                 operation.Analyze(_engine);
-                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
-                {
-                    collectionNames = new HashSet<CollectionName>();
-                    ReferencedCollections.Add(mapCollection, collectionNames);
-                }
 
-                collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
+                var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
+                if (referencedCollections.Count > 0)
+                {
+                    if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                    {
+                        collectionNames = new HashSet<CollectionName>();
+                        ReferencedCollections.Add(mapCollection, collectionNames);
+                    }
+
+                    collectionNames.UnionWith(referencedCollections);
+                }
 
                 if (mapReferencedCollections[i].HasCompareExchangeReferences)
                     CollectionsWithCompareExchangeReferences.Add(mapCollection);
@@ -361,8 +372,14 @@ function map(name, lambda) {
         {
             OnInitializeEngine(_engine);
 
-            _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
-            _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
+            var loadFunc = new ClrFunctionInstance(_engine, JavaScriptIndex.Load, LoadDocument);
+
+            ObjectInstance noTrackingObject = new ObjectInstance(_engine);
+            noTrackingObject.FastAddProperty(JavaScriptIndex.Load, loadFunc, false, false, false);
+            _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
+
+            _engine.SetValue(JavaScriptIndex.Load, loadFunc);
+            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunctionInstance(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
             _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
             _engine.SetValue("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
 

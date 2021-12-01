@@ -23,7 +23,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : PlatformDetails.Is32Bits ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(6);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : PlatformDetails.Is32Bits ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15);
         [Fact]
         public async Task Run()
         {
@@ -44,7 +44,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     var curMre = new AsyncManualResetEvent();
                     mres.Add(curMre);
-                    subscriptionTasks.Add(OpenAndRunSubscription(store, curMre.Set));
+                    subscriptionTasks.Add(OpenAndRunSubscription(store, curMre.Set, run: true));
                 }
 
                 for (var i = 0; i < 4; i++)
@@ -53,8 +53,20 @@ namespace SlowTests.Client.Subscriptions
                     Assert.True(await curMre.WaitAsync(_reasonableWaitTime));
                 }
 
-                var subscriptionTask = OpenAndRunSubscription(store, () => { }).RunTask;
-                Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
+                var errors = new List<Exception>();
+                using var subscription = OpenAndRunSubscription(store, () => { }, run: false).SubscriptionObject;
+                subscription.OnSubscriptionConnectionRetry += ex =>
+                {
+                    errors.Add(ex);
+                };
+                var subscriptionTask = subscription.Run(_ => {});
+
+                var completed = await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime));
+                if (completed.Equals(subscriptionTask) == false)
+                {
+                    var msg = errors.Count == 0 ? "None" : string.Join($"{Environment.NewLine}--------{Environment.NewLine}", errors);
+                    Assert.True(false, $"Could not connect subscription on time, task status: {subscriptionTask.Status} but excepted {nameof(TaskStatus.Faulted)}, connection retry errors:{Environment.NewLine}{msg}");
+                }
                 await Assert.ThrowsAsync(typeof(SubscriptionClosedException), () => subscriptionTask);
 
 
@@ -77,14 +89,14 @@ namespace SlowTests.Client.Subscriptions
                 }
                 var nowItConnectsMre = new AsyncManualResetEvent();
 
-                OpenAndRunSubscription(store, nowItConnectsMre.Set);
+                OpenAndRunSubscription(store, nowItConnectsMre.Set, run: true);
 
                 Assert.True(await nowItConnectsMre.WaitAsync(_reasonableWaitTime));
 
             }
         }
 
-        private (Task RunTask, SubscriptionWorker<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction)
+        private (Task RunTask, SubscriptionWorker<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction, bool run)
         {
             var subscriptionId = store.Subscriptions.Create<User>();
 
@@ -99,12 +111,16 @@ namespace SlowTests.Client.Subscriptions
                 return Task.CompletedTask;
             };
 
-
-            return (subscription.Run(x =>
+            if (run)
             {
-                //noop
-            }), subscription);
+                return (subscription.Run(x =>
+                {
+                    //noop
+                }), subscription);
 
+            }
+
+            return (Task.CompletedTask, subscription);
         }
     }
 }

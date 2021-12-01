@@ -11,7 +11,9 @@ namespace Voron.Data.Tables
 {
     public class TableReport
     {
-        public TableReport(long allocatedSpaceInBytes, long usedSizeInBytes, bool calculateExactSizes)
+        private StorageReportGenerator _storageGenerator;
+
+        public TableReport(long allocatedSpaceInBytes, long usedSizeInBytes, bool calculateExactSizes, StorageReportGenerator generator = null)
         {
             AllocatedSpaceInBytes = DataSizeInBytes = allocatedSpaceInBytes;
             UsedSizeInBytes = usedSizeInBytes;
@@ -21,6 +23,8 @@ namespace Voron.Data.Tables
 
             Indexes = new List<TreeReport>();
             Structure = new List<TreeReport>();
+
+            _storageGenerator = generator;
         }
 
         public void AddStructure(FixedSizeTree fst, bool includeDetails)
@@ -31,7 +35,7 @@ namespace Voron.Data.Tables
 
         public void AddStructure(Tree tree, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(tree, includeDetails);
+            var report = _storageGenerator.GetReport(tree, includeDetails);
             AddStructure(report, Constants.Storage.PageSize, includeDetails);
         }
 
@@ -54,7 +58,7 @@ namespace Voron.Data.Tables
 
         public void AddIndex(Tree tree, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(tree, includeDetails);
+            var report = _storageGenerator.GetReport(tree, includeDetails);
             AddIndex(report, Constants.Storage.PageSize, includeDetails);
         }
 
