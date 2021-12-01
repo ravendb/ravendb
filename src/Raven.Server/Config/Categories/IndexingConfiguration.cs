@@ -279,10 +279,16 @@ namespace Raven.Server.Config.Categories
         public bool IndexEmptyEntries { get; set; }
 
         [Description("Indicates how error indexes should behave on database startup when they are loaded. By default they are not started.")]
-        [DefaultValue(IndexStartupBehavior.Default)]
+        [DefaultValue(ErrorIndexStartupBehaviorType.Default)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
+        public ErrorIndexStartupBehaviorType ErrorIndexStartupBehavior { get; set; }
+
+        [Description("Indicates how indexes should behave on database startup when they are loaded. By default they are started immediately.")]
+        [DefaultValue(IndexStartupBehaviorType.Default)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.IndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public IndexStartupBehaviorType IndexStartupBehavior { get; set; }
 
         [Description("Limits the number of concurrently running and processing indexes on the server. Default: null (no limit)")]
         [DefaultValue(null)]
@@ -369,11 +375,19 @@ namespace Raven.Server.Config.Categories
             DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
-        public enum IndexStartupBehavior
+        public enum ErrorIndexStartupBehaviorType
         {
             Default,
             Start,
             ResetAndStart
         }
+
+        public enum IndexStartupBehaviorType
+        {
+            Default,
+            Immediate,
+            Pause,
+            Delay
     }
+}
 }
