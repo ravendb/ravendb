@@ -74,9 +74,9 @@ namespace SlowTests.Issues
             public class PingResult
             {
                 public string Url;
-                public int TcpInfoTime;
-                public int SendTime;
-                public int RceiveTime;
+                public long TcpInfoTime;
+                public long SendTime;
+                public long ReceiveTime;
                 public string Error;
                 public string[] Log;
             }
