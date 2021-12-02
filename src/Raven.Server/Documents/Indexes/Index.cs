@@ -4383,7 +4383,22 @@ namespace Raven.Server.Documents.Indexes
                     parameters.QueryContext.Documents.DoNotReuse = true;
                     parameters.IndexingContext.DoNotReuse = true;
 
-                    if (parameters.Stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                    switch (parameters.WorkType)
+                    {
+                        case IndexingWorkType.Map:
+                            if (parameters.Stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                                canContinue = false;
+                            break;
+                        case IndexingWorkType.References:
+                            if (parameters.Count >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                                canContinue = false;
+                            break;
+                        default:
+                            canContinue = false;
+                            break;
+                    }
+
+                    if (canContinue == false)
                     {
                         if (_logger.IsInfoEnabled)
                         {
@@ -4405,7 +4420,6 @@ namespace Raven.Server.Documents.Indexes
                             reason: "cannot budget additional memory");
 
                         parameters.Stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
-                        canContinue = false;
                     }
                 }
 
