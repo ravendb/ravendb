@@ -1574,7 +1574,7 @@ namespace Raven.Server.Documents.Indexes
                                         $"Got {nameof(OperationCanceledException)} while the index was not canceled");
 
                                     // We are here only in the case of indexing process cancellation.
-                                    scope.RecordMapCompletedReason("Operation canceled.");
+                                    scope.RecordBatchCompletedReason(IndexingWorkType.Map, "Operation canceled.");
                                     return;
                                 }
                                 catch (Exception e) when (e.IsOutOfMemory())
@@ -4169,7 +4169,7 @@ namespace Raven.Server.Documents.Indexes
 
         private DateTime _lastCheckedFlushLock;
 
-        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
+        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats, IndexingWorkType type)
         {
             if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
                 return false;
@@ -4185,7 +4185,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (gotLock == false)
                 {
-                    stats.RecordMapCompletedReason("Environment flush was waiting for us and global flusher was about to use all free flushing resources");
+                    stats.RecordBatchCompletedReason(type, "Environment flush was waiting for us and global flusher was about to use all free flushing resources");
                     return true;
                 }
             }
@@ -4210,13 +4210,13 @@ namespace Raven.Server.Documents.Indexes
         {
             if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
-                parameters.Stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({Configuration.MapBatchSize.Value:#,#;;0}).");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached maximum configured map batch size ({Configuration.MapBatchSize.Value:#,#;;0}).");
                 return CanContinueBatchResult.False;
             }
 
             if (parameters.CurrentEtag >= parameters.MaxEtag && parameters.Stats.Duration >= Configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
             {
-                parameters.Stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({parameters.MaxEtag:#,#;;0}) and map duration ({parameters.Stats.Duration}) exceeded configured limit ({Configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached maximum etag that was seen when batch started ({parameters.MaxEtag:#,#;;0}) and map duration ({parameters.Stats.Duration}) exceeded configured limit ({Configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
                 return CanContinueBatchResult.False;
             }
 
@@ -4241,13 +4241,13 @@ namespace Raven.Server.Documents.Indexes
 
             if (parameters.Stats.Duration >= Configuration.MapTimeout.AsTimeSpan)
             {
-                parameters.Stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({Configuration.MapTimeout.AsTimeSpan}). Was {parameters.Stats.Duration}");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Exceeded maximum configured map duration ({Configuration.MapTimeout.AsTimeSpan}). Was {parameters.Stats.Duration}");
                 return CanContinueBatchResult.False;
             }
 
-            if (ShouldReleaseTransactionBecauseFlushIsWaiting(parameters.Stats))
+            if (ShouldReleaseTransactionBecauseFlushIsWaiting(parameters.Stats, parameters.WorkType))
             {
-                parameters.Stats.RecordMapCompletedReason("Releasing the transaction because we have a pending flush");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, "Releasing the transaction because we have a pending flush");
                 return CanContinueBatchResult.False;
             }
 
@@ -4258,7 +4258,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (_indexDisabled)
             {
-                parameters.Stats.RecordMapCompletedReason("Index was disabled");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, "Index was disabled");
                 return CanContinueBatchResult.False;
             }
 
@@ -4267,9 +4267,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                    canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
-                   reason: "CPU credits balance is low");
+                   reason: "CPU credits balance is low", parameters.WorkType);
 
-                parameters.Stats.RecordMapCompletedReason($"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");
                 return CanContinueBatchResult.False;
             }
 
@@ -4277,15 +4277,15 @@ namespace Raven.Server.Documents.Indexes
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                     canContinue: () => _lowMemoryFlag.IsRaised() == false,
-                    reason: "low memory");
+                    reason: "low memory", parameters.WorkType);
 
-                parameters.Stats.RecordMapCompletedReason($"The batch was stopped after processing {parameters.Count:#,#;;0} documents because of low memory");
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because of low memory");
                 return CanContinueBatchResult.False;
             }
 
             if (_firstBatchTimeout.HasValue && parameters.Stats.Duration > _firstBatchTimeout)
             {
-                parameters.Stats.RecordMapCompletedReason(
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
                     $"Stopping the first batch after {_firstBatchTimeout} to ensure just created index has some results");
 
                 _firstBatchTimeout = null;
@@ -4295,7 +4295,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (parameters.Stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
-                parameters.Stats.RecordMapCompletedReason(
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
                     $"Number of errors ({parameters.Stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return CanContinueBatchResult.False;
             }
@@ -4306,7 +4306,7 @@ namespace Raven.Server.Documents.Indexes
                 var total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    parameters.Stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
+                    parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Running in 32 bits and have {total32BitsMappedSize} mapped in docs ctx");
                     return CanContinueBatchResult.False;
                 }
 
@@ -4314,7 +4314,7 @@ namespace Raven.Server.Documents.Indexes
                 total32BitsMappedSize = pagerLevelTransactionState?.GetTotal32BitsMappedSize();
                 if (total32BitsMappedSize > MappedSizeLimitOn32Bits)
                 {
-                    parameters.Stats.RecordMapCompletedReason($"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
+                    parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Running in 32 bits and have {total32BitsMappedSize} mapped in index ctx");
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4324,7 +4324,7 @@ namespace Raven.Server.Documents.Indexes
                 var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
                 if (txAllocations > TransactionSizeLimit.Value)
                 {
-                    parameters.Stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4337,7 +4337,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
-                    parameters.Stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
+                    parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
                     return CanContinueBatchResult.False;
                 }
             }
@@ -4347,7 +4347,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 _scratchSpaceLimitExceeded = true;
 
-                parameters.Stats.RecordMapCompletedReason(
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
                     $"Reached scratch space limit ({Configuration.ScratchSpaceLimit.Value}). Current scratch space is {new Size(_environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes, SizeUnit.Bytes)}");
 
                 return CanContinueBatchResult.False;
@@ -4359,7 +4359,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 _scratchSpaceLimitExceeded = true;
 
-                parameters.Stats.RecordMapCompletedReason(
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
                     $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
 
                 return CanContinueBatchResult.False;
@@ -4393,8 +4393,9 @@ namespace Raven.Server.Documents.Indexes
                             if (parameters.Count >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                                 canContinue = false;
                             break;
-                        default:
-                            canContinue = false;
+                        case IndexingWorkType.Cleanup:
+                            if (parameters.Stats.TombstoneDeleteSuccesses >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                                canContinue = false;
                             break;
                     }
 
@@ -4417,9 +4418,9 @@ namespace Raven.Server.Documents.Indexes
 
                         HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
                             canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread,
-                            reason: "cannot budget additional memory");
+                            reason: "cannot budget additional memory", parameters.WorkType);
 
-                        parameters.Stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                        parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, "Cannot budget additional memory for batch");
                     }
                 }
 
@@ -4496,7 +4497,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleStoppedBatchesConcurrently(
             IndexingStatsScope stats, long count,
-            Func<bool> canContinue, string reason)
+            Func<bool> canContinue, string reason, IndexingWorkType type)
         {
             if (_batchStopped)
             {
@@ -4510,7 +4511,7 @@ namespace Raven.Server.Documents.Indexes
 
             var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of {reason}, " +
                           $"other indexes are currently completing and index {Name} will wait for them to complete";
-            stats.RecordMapCompletedReason(message);
+            stats.RecordBatchCompletedReason(type, message);
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
             var timeout = _indexStorage.DocumentDatabase.Configuration.Indexing.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan;
