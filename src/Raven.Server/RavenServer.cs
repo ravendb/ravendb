@@ -1554,6 +1554,20 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
+            else if (certificate.Equals(Certificate.Certificate))
+            {
+                // here we explicitly trusting *our own certificate* even if it is expired, this is to
+                // ensure that the system at least can keep working if the certificate expired, the various
+                // nodes will still trust each other.
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
+            else if(RequestExecutor.IsExplicitlyTrustedCertificate(certificate))
+            {
+                // If we have a certificate that was registered using Raven_ExplicitlyTrustedServerCertificateThumbprints environment 
+                // variable, we will trust it *even if it is expired*. This is to allow the admin a quick way to allow a certificate
+                // to be trusted even if it expired (useful for emergency operations)
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
             else if (certificate.NotAfter.ToUniversalTime() < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
@@ -1562,12 +1576,9 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
-            else if (certificate.Equals(Certificate.Certificate))
-            {
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
-            }
             else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
             {
+                // Even though we have well known certificate registered. We only trust them in their validity period
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
             else
