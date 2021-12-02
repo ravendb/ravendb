@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 await RavenDB_7912.WaitForDatabaseToBeDeleted(leader, src.Database, TimeSpan.FromSeconds(15), CancellationToken.None);
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 2);
 
-                var newResponsibleTag = WaitForNewResponsibleNode(src, addEtl.TaskId, mentorTag);
+                var newResponsibleTag = WaitForNewResponsibleNode(src, addEtl.TaskId, OngoingTaskType.RavenEtl, mentorTag);
                 Assert.NotNull(newResponsibleTag);
 
                 var newResponsible = nodes.Single(s => s.ServerStore.NodeTag == newResponsibleTag);
@@ -121,7 +121,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static string WaitForNewResponsibleNode(IDocumentStore store, long taskId, string oldTag, int timeout = 10_000)
+        internal static string WaitForNewResponsibleNode(IDocumentStore store, long taskId, OngoingTaskType type, string oldTag, int timeout = 10_000)
         {
             var sw = Stopwatch.StartNew();
             while (true)
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
                 if (sw.ElapsedMilliseconds > timeout)
                     return null;
 
-                var taskInfo = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.RavenEtl));
+                var taskInfo = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, type));
                 if (taskInfo.ResponsibleNode.NodeTag != oldTag)
                     return taskInfo.ResponsibleNode.NodeTag;
 
