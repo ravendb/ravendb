@@ -171,9 +171,9 @@
                 </div>
                 <div class="flex-header">
                     <div class="flex-row margin-top margin-top-lg">
-                        <h3>Transform Scripts:</h3>
-                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation" title="Add a new transformation script for this ETL task" class="btn btn-info pull-right">
-                            <i class="icon-plus"></i><span>Add New Script</span>
+                        <h3>Transform Scripts</h3>
+                        <button type="button" id="addNewScript" data-bind="click: addNewTransformation, disable: editedRavenEtl().showEditTransformationArea" class="btn btn-info pull-right">
+                            <i class="icon-plus"></i><span>Add Transformation Script</span>
                         </button>
                     </div>
                 </div>

@@ -91,4 +91,25 @@ describe("can complete where", function () {
 
         });
     });
+    
+    describe("operators", function () {
+        it("can complete math operators", async () => {
+            const suggestions = await autocomplete("from Orders where Name |");
+            
+            expect(suggestions.find(x => x.value === "=="))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === "!="))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === "<>"))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === "<"))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === "<="))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === ">"))
+                .toBeTruthy();
+            expect(suggestions.find(x => x.value === ">="))
+                .toBeTruthy();
+        })
+    })
 });

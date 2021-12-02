@@ -1,5 +1,6 @@
 import { autocomplete } from "../autocompleteUtils";
 import { AUTOCOMPLETE_META } from "../../src/providers/common";
+import { FakeMetadataProvider } from "./FakeMetadataProvider";
 
 describe("can complete fields", function () {
     
@@ -92,6 +93,18 @@ describe("can complete fields", function () {
                     .toBeTruthy();
             }
         });
+        
+        it("can complete filed inside include revisions", async () => {
+            const suggestions = await autocomplete("from Orders include revisions(|");
+
+            const fields = ["Company", "Lines"];
+
+            for (const field of fields) {
+                const matchingItem = suggestions.find(x => x.value.startsWith(field));
+                expect(matchingItem)
+                    .toBeTruthy();
+            }
+        });
     });
     
     describe("from index", function () {
@@ -164,6 +177,76 @@ describe("can complete fields", function () {
 
             expect(suggestions.find(x => x.value.startsWith("id()")))
                 .toBeFalsy();
+        });
+    });
+    
+    describe("escaping", function () {
+        const provider = new FakeMetadataProvider({
+            collections: {
+                "Things": {
+                    "": {
+                        "Single'Quoted": "Object",
+                        "Double\"Quoted": "Object"
+                    },
+                    "Single'Quoted": {
+                        "SingleNested1": "String"
+                    },
+                    "Double\"Quoted": {
+                        "DoubleNested1": "String"
+                    }
+                }
+            }
+        });
+        
+        it("can escape field with single quote", async function () {
+            const suggestions = await autocomplete("from Things select |", provider);
+            
+            const singleQuoted = suggestions.find(x => x.caption === "Single'Quoted"); 
+                
+            expect(singleQuoted)
+                .toBeTruthy();
+            expect(singleQuoted.value)
+                .toEqual("'Single\\'Quoted'");
+            
+            const doubleQuoted = suggestions.find(x => x.caption === 'Double"Quoted');
+            expect(doubleQuoted)
+                .toBeTruthy();
+            expect(doubleQuoted.value)
+                .toEqual('"Double\\"Quoted"');
+        });
+        
+        it("can retain existing quotation - single", async function () {
+            const suggestions = await autocomplete("from Things select '|", provider);
+
+            const singleQuoted = suggestions.find(x => x.caption === "Single'Quoted");
+
+            expect(singleQuoted)
+                .toBeTruthy();
+            expect(singleQuoted.value)
+                .toEqual("'Single\\'Quoted'");
+
+            const doubleQuoted = suggestions.find(x => x.caption === 'Double"Quoted');
+            expect(doubleQuoted)
+                .toBeTruthy();
+            expect(doubleQuoted.value)
+                .toEqual("'Double\"Quoted'");
+        });
+
+        it("can retain existing quotation - double", async function () {
+            const suggestions = await autocomplete("from Things select \"|", provider);
+
+            const singleQuoted = suggestions.find(x => x.caption === "Single'Quoted");
+
+            expect(singleQuoted)
+                .toBeTruthy();
+            expect(singleQuoted.value)
+                .toEqual('"Single\'Quoted"');
+
+            const doubleQuoted = suggestions.find(x => x.caption === 'Double"Quoted');
+            expect(doubleQuoted)
+                .toBeTruthy();
+            expect(doubleQuoted.value)
+                .toEqual('"Double\\"Quoted"');
         });
     });
 });

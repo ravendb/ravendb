@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -12,10 +13,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var expression = node.Expression.ToString();
+            if (NoTrackingRewriter.TryRemoveNoTracking(expression, out var newExpression))
+                expression = newExpression;
+
             switch (expression)
             {
                 case "this.LoadDocument":
-                case "LoadDocument":
+                case nameof(AbstractCommonApiForIndexes.LoadDocument):
                     Methods.HasLoadDocument = true;
                     break;
                 case "this.TransformWith":

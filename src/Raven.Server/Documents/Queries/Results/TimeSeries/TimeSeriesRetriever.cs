@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly)
+                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly || IsLastDuplicate(it.Segment.Summary, aggregationHolder))
                         {
                             foreach (var value in AggregateIndividualItems(it.Segment.Values))
                             {
@@ -773,6 +773,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
+        private static bool IsLastDuplicate(TimeSeriesValuesSegment segment, AggregationHolder aggregationHolder)
+        {
+            return segment.Version.ContainsLastValueDuplicate && aggregationHolder.Contains(AggregationType.Last);
+        }
+
         private (long Count, DateTime Start, DateTime End) GetStatsAndRemoveQuotesIfNeeded(string documentId)
         {
             var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
@@ -905,15 +910,15 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        public class TimeSeriesRetrieverResult
+        public class TimeSeriesStreamingRetrieverResult
         {
             public IEnumerable<DynamicJsonValue> Stream;
             public DynamicJsonValue Metadata;
         }
 
-        public TimeSeriesRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
+        public TimeSeriesStreamingRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
         {
-            var result = new TimeSeriesRetrieverResult
+            var result = new TimeSeriesStreamingRetrieverResult
             {
                 Stream = array,
                 Metadata = new DynamicJsonValue()

@@ -230,7 +230,9 @@
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
-                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
+                        <i class="icon-plus"></i><span>Add Transformation Script</span>
+                    </button>
                 </div> 
             </div>
             <!-- The transformation scripts -->

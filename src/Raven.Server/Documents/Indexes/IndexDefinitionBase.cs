@@ -136,11 +136,13 @@ namespace Raven.Server.Documents.Indexes
 
             public const long Analyzers = 52_000;
             
+            public const long ReduceKeyProcessorHashDoubleFix = 52_001; // RavenDB-17572
+
             public const long Corax = 60_000;
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = Corax;
+            public const long CurrentVersion = ReduceKeyProcessorHashDoubleFix;
         }
     }
 

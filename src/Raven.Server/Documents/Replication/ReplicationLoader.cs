@@ -1674,6 +1674,22 @@ namespace Raven.Server.Documents.Replication
             return (null, OngoingTaskConnectionStatus.NotActive);
         }
 
+        public (string Url, OngoingTaskConnectionStatus Status) GetPullReplicationDestination(long taskId, string db)
+        {
+            //outgoing connections have the same task id per pull replication
+            foreach (var outgoing in OutgoingConnections)
+            {
+                if (outgoing is ExternalReplication ex && ex.TaskId == taskId && db.Equals(outgoing.Database, StringComparison.OrdinalIgnoreCase))
+                    return (ex.Url, OngoingTaskConnectionStatus.Active);
+            }
+            foreach (var reconnect in ReconnectQueue)
+            {
+                if (reconnect is ExternalReplication ex && ex.TaskId == taskId && db.Equals(reconnect.Database, StringComparison.OrdinalIgnoreCase))
+                    return (ex.Url, OngoingTaskConnectionStatus.Reconnect);
+            }
+            return (null, OngoingTaskConnectionStatus.NotActive);
+        }
+
         private void OnIncomingReceiveFailed(IncomingReplicationHandler instance, Exception e)
         {
             using (instance)

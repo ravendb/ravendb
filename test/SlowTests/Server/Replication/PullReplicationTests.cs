@@ -7,9 +7,11 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -221,10 +223,19 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
 
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
+                var res= await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
                 {
                     TaskId = saveResult.TaskId
                 }));
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    await hub.GetRequestExecutor().ExecuteAsync(new WaitForRaftIndexCommand(res.RaftCommandIndex), context);
+                }
+                var hubResult = await hub.Maintenance.SendAsync(new GetPullReplicationTasksInfoOperation(saveResult.TaskId));
+                Assert.Equal(hubResult.Definition.Name, definitionName);
+                Assert.Equal(hubResult.Definition.DelayReplicationFor, new TimeSpan());
+                Assert.Equal(hubResult.Definition.Disabled, false);
+
                 Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
             }
         }
@@ -517,6 +528,38 @@ namespace SlowTests.Server.Replication
 
                 connections = await WaitForValueAsync(() => mentorDatabase.ReplicationLoader.OutgoingConnections.Count(), 3);
                 Assert.Equal(3, connections);
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_17124()
+        {
+            var name = $"pull-replication {GetDatabaseName()}";
+            using (var hubServer = GetNewServer(new ServerCreationOptions() { NodeTag = "A" }))
+            using (var sinkServer1 = GetNewServer(new ServerCreationOptions() { NodeTag = "B" }))
+            using (var sinkServer2 = GetNewServer(new ServerCreationOptions() { NodeTag = "C" }))
+            using (var hub = GetDocumentStore(new Options() { Server = hubServer }))
+            using (var sink1 = GetDocumentStore(new Options() { Server = sinkServer1 }))
+            using (var sink2 = GetDocumentStore(new Options() { Server = sinkServer2 }))
+            {
+                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
+                using (var session = hub.OpenSession())
+                {
+                    session.Store(new User(), "foo/bar");
+                    session.SaveChanges();
+                }
+
+                await SetupPullReplicationAsync(name, sink1, hub);
+                await SetupPullReplicationAsync(name, sink2, hub);
+
+                var handler = await InstantiateOutgoingTaskHandler(hub.Database, hubServer);
+
+                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink1.Database, StringComparison.OrdinalIgnoreCase) &&
+                    t.DestinationUrl == sink1.Urls.FirstOrDefault())));
+                await AssertWaitForTrueAsync(() => Task.FromResult(handler.GetOngoingTasksInternal().OngoingTasksList.Exists(x =>
+                    x is OngoingTaskPullReplicationAsHub t && t.DestinationDatabase.Equals(sink2.Database, StringComparison.OrdinalIgnoreCase) &&
+                    t.DestinationUrl == sink2.Urls.FirstOrDefault())));
             }
         }
 

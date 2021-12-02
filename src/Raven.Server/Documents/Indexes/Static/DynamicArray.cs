@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
+using Raven.Client.Exceptions;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -371,11 +372,34 @@ namespace Raven.Server.Documents.Indexes.Static
             return new DynamicArray(_inner.Cast<DynamicGrouping>().OrderByDescending(comparable));
         }
 
+        private IOrderedEnumerable<object> CreateOrderedEnumerable<TKey>(Func<object, TKey> keySelector, IComparer<TKey> comparer, bool descending, int depth)
+        {
+            if (_inner is not DynamicArray && _inner is IOrderedEnumerable<object> orderedEnumerable)
+            {
+                return descending
+                    ? new DynamicArray(Enumerable.ThenByDescending(orderedEnumerable, keySelector, comparer))
+                    : new DynamicArray(Enumerable.ThenBy(orderedEnumerable, keySelector, comparer));
+            }
+            
+            if (_inner is not DynamicArray dynamicArray)
+            {
+                return descending
+                    ? new DynamicArray(Enumerable.OrderByDescending(_inner, keySelector, comparer))
+                    : new DynamicArray(Enumerable.OrderBy(_inner, keySelector, comparer));
+            }
+
+            if (depth == 0)
+            {
+                throw new InvalidQueryException($"Cannot create {nameof(IOrderedEnumerable<object>)} because your query is too complex. Please rewrite your ordering query.");
+            }
+
+            return dynamicArray.CreateOrderedEnumerable(keySelector, comparer, descending, depth - 1);
+        }
+        
+        
         public IOrderedEnumerable<object> CreateOrderedEnumerable<TKey>(Func<object, TKey> keySelector, IComparer<TKey> comparer, bool descending)
         {
-            return descending ?
-                new DynamicArray(_inner.OrderByDescending(keySelector, comparer)) :
-                new DynamicArray(_inner.OrderBy(keySelector, comparer));
+            return CreateOrderedEnumerable(keySelector, comparer, descending, 32);
         }
 
         public IEnumerable<dynamic> ThenBy(Func<dynamic, dynamic> comparable)

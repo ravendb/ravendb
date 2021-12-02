@@ -342,6 +342,7 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
                         ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
+                        ["Connections"] = GetSubscriptionConnectionsJson(x.Connections),
                         ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
                         {
                             ["State"] = new DynamicJsonValue()
@@ -393,6 +394,14 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
+        }
+
+        private static DynamicJsonArray GetSubscriptionConnectionsJson(List<SubscriptionConnection> subscriptionList)
+        {
+            if (subscriptionList == null)
+                return new DynamicJsonArray();
+
+            return new DynamicJsonArray(subscriptionList.Select(s => GetSubscriptionConnectionJson(s)));
         }
 
         private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)

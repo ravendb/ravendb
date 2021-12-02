@@ -8,11 +8,11 @@ namespace Raven.Client.Documents.Indexes
 {
     internal static class IndexingOperation
     {
-        public const string LoadDocument = nameof(AbstractIndexCreationTask.LoadDocument);
+        public const string LoadDocument = nameof(ILoadCommonApiForIndexes.LoadDocument);
 
         public const string LoadAttachment = nameof(AbstractIndexCreationTask.LoadAttachment);
 
-        public const string LoadCompareExchangeValue = nameof(AbstractIndexCreationTask.LoadCompareExchangeValue);
+        public const string LoadCompareExchangeValue = nameof(ILoadCompareExchangeApiForIndexes.LoadCompareExchangeValue);
 
         internal static class Map
         {

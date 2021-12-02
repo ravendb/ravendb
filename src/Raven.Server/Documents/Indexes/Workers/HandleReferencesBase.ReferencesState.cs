@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 var referencedItemId = (string)reference.Key;
                 var referenceEtag = reference.Etag;
 
-                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
                 {
                     // we update this only after the transaction was committed
                     dictionary[collection] = new ReferenceState(referencedItemId, referenceEtag, itemId, lastIndexedParentEtag);
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (dictionary.Count == 0)
                     return;
 
-                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += _ =>
                 {
                     // we update this only after the transaction was committed
                     dictionary.Remove(collection);

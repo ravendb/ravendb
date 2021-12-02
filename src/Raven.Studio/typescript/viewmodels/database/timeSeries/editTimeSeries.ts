@@ -25,8 +25,6 @@ import popoverUtils = require("common/popoverUtils");
 class timeSeriesInfo {
     name = ko.observable<string>();
     numberOfEntries = ko.observable<number>();
-    hasMoreResults = ko.observable<boolean>(false);
-    
     nameAndNumberFormatted: KnockoutComputed<string>;
     
     constructor(name: string, numberOfEntries: number) {
@@ -39,9 +37,8 @@ class timeSeriesInfo {
     private initObservables(): void {
         this.nameAndNumberFormatted = ko.pureComputed(() => {
             const numberPart = this.numberOfEntries().toLocaleString();
-            const moreResultsPart = this.hasMoreResults() ? "+" : "";
             
-            return `${this.name()} (${numberPart}${moreResultsPart})`;
+            return `${this.name()} (${numberPart})`;
         });
     }
 }
@@ -70,8 +67,6 @@ class editTimeSeries extends viewModelBase {
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
 
-    private nextItemToFetchIndex = 0 as number;
-    
     private columnsCacheInfo = {
         hasTag: false,
         valuesCount: 0
@@ -226,7 +221,7 @@ class editTimeSeries extends viewModelBase {
 
             columns.push(...valueColumns);
             
-            if (hasTag) {
+            if (hasTag && !timeSeriesEntryModel.isIncrementalName(this.timeSeriesName())) {
                 columns.push(new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"));
             }
             
@@ -271,33 +266,20 @@ class editTimeSeries extends viewModelBase {
         const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, this.nextItemToFetchIndex, 100, true)
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, 100, true)
                 .execute()
                 .done(result => {
-                    const totalCount = skip + result.Entries.length;
-                    const skipped = result.SkippedResults || 0;
-
-                    const hasMore = this.nextItemToFetchIndex + result.Entries.length + skipped < result.TotalResults;
-                    
-                    if (hasMore) {
-                        this.nextItemToFetchIndex += result.Entries.length + skipped;
-                    } else {
-                        this.nextItemToFetchIndex = 0;
-                    }
                     
                     const items = result.Entries;
-                    const totalResultCount = totalCount || 0;
                     
                     const series = this.getSeriesFromList(timeSeriesName);
                     if (series) {
-                        const countForUI = hasMore ? totalCount - 1 : totalCount;
-                        series.numberOfEntries(countForUI);
-                        series.hasMoreResults(hasMore);
+                        series.numberOfEntries(result.TotalResults);
                     }
 
                     fetchTask.resolve({
                         items,
-                        totalResultCount: hasMore ? totalResultCount + 1 : totalResultCount
+                        totalResultCount: result.TotalResults
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -410,7 +392,6 @@ class editTimeSeries extends viewModelBase {
         this.cleanColumnsCache();
         
         this.timeSeriesName(name);
-        this.nextItemToFetchIndex = 0;
         
         router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
         
@@ -436,9 +417,6 @@ class editTimeSeries extends viewModelBase {
                     case "reloadCurrent":
                         this.refresh();
                 }
-            })
-            .always(() => {
-                this.nextItemToFetchIndex = 0;
             });
     }
     

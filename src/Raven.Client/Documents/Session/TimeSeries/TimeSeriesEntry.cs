@@ -47,6 +47,11 @@ namespace Raven.Client.Documents.Session.TimeSeries
                 throw new InvalidOperationException("Entry has more than one value.");
             }
         }
+
+        public override string ToString()
+        {
+            return $"[{Timestamp}] {string.Join(", ", Values)} {Tag}";
+        }
     }
 
     public class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new()

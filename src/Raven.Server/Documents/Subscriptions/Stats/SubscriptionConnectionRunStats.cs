@@ -11,6 +11,8 @@ namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public class SubscriptionConnectionRunStats
     {
+        public string WorkerId { get; set; }
+        
         public long TaskId { get; set; }
         public string TaskName { get; set; }
         

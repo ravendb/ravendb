@@ -1156,7 +1156,11 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 8318823012450529091)
                         return CommandType.Counters;
                     break;
-
+                case 9:
+                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
+                        state.StringBuffer[8] == (byte)'h')
+                        return CommandType.JsonPatch;
+                    break;
                 case 10:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
                     *(short*)(state.StringBuffer + sizeof(long)) == 29541)
@@ -1225,10 +1229,12 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
                         return CommandType.ForceRevisionCreation;
                     break;
-                case 9:
-                    if (*(long*)state.StringBuffer == 7166459905131377482 &&
-                        state.StringBuffer[8] == (byte)'h')
-                        return CommandType.JsonPatch;
+
+                case 24:
+                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 7946997866664784741 && 
+                        *(long*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 8319395793566265955)
+                        return CommandType.TimeSeriesWithIncrements;
                     break;
             }
 

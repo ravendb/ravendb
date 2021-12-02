@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptReduceOperation
     {
-        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
+        public JavaScriptReduceOperation(ScriptFunctionInstance reduce, ScriptFunctionInstance key, Engine engine, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
             Reduce = reduce ?? throw new ArgumentNullException(nameof(reduce));
             Key = key ?? throw new ArgumentNullException(nameof(key));
@@ -32,7 +32,10 @@ namespace Raven.Server.Documents.Indexes.Static
             GetReduceFieldsNames();
 
             _groupedItems = null;
+            _indexVersion = indexVersion;
         }
+
+        private readonly long _indexVersion;
 
         private readonly JsValue[] _oneItemArray = new JsValue[1];
 
@@ -49,12 +52,12 @@ namespace Raven.Server.Documents.Indexes.Static
             private BlittableJsonReaderObject _lastUsedBucket;
             private readonly ByteStringContext _allocator;
 
-            public GroupByKeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator)
+            public GroupByKeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator, long indexVersion)
             {
                 _parent = parent;
                 _allocator = allocator;
-                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool);
-                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool);
+                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool, indexVersion);
+                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool, indexVersion);
                 _xKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _yKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _lastUsedBlittable = null;
@@ -202,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     _byteStringContext = CurrentIndexingScope.Current.IndexContext.Allocator;
                 }
 
-                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupByKeyComparer(this, _bufferPool, _byteStringContext));
+                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupByKeyComparer(this, _bufferPool, _byteStringContext, _indexVersion));
             }
         }
 

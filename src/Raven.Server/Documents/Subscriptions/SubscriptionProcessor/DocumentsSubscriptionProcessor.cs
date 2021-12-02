@@ -201,8 +201,16 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             {
                 case ConflictStatus.Update:
                     // If document was updated, but the subscription went too far.
+                    var resendStatus = Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent);
+                    if (resendStatus == ConflictStatus.Update)
+                    {
+                        // we can clear it from resend list, and it will processed as regular document
+                        ItemsToRemoveFromResend.Add(id);
+                        return false;
+                    }
+
                     // We need to resend it
-                    return Database.DocumentsStorage.GetConflictStatus(item.Document.ChangeVector, SubscriptionConnectionsState.LastChangeVectorSent) == ConflictStatus.AlreadyMerged;
+                    return resendStatus == ConflictStatus.AlreadyMerged;
 
                 case ConflictStatus.AlreadyMerged:
                     return true;

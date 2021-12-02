@@ -1,0 +1,45 @@
+<div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h3 class="modal-title">Dump Index</h3>
+        </div>
+        <div class="modal-body">
+            <form class="flex-form" data-bind="submit: dumpIndex" autocomplete="off">
+                <div class="form-group margin-top word-break">
+                    <label class="control-label">Index Name</label>
+                    <strong class="form-control-static" data-bind="text: indexName"></strong>
+                </div>
+                <div class="form-group margin-top margin-top-lg margin-bottom margin-bottom-lg" data-bind="validationElement: directoryPath">
+                    <label class="control-label">Directory Path<i class="required"></i></label>
+                    <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }">
+                        <div class="dropdown btn-block">
+                            <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" id="directoryPath"
+                                   placeholder="Enter folder path for dumping the raw index files" data-bind="textInput: directoryPath, hasFocus: directoryPathHasFocus" />
+                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            <ul class="dropdown-menu max-height" data-bind="foreach: directoryPathOptions, autoComplete: '#directoryPath'">
+                                <li data-bind="click: $parent.directoryPathChanged">
+                                    <a href="#" data-bind="text: $data"></a>
+                                </li>
+                            </ul>
+                        </div>
+                        <span class="help-block" data-bind="validationMessage: directoryPath"></span>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <div class="margin-top margin-top-lg margin-bottom">
+                <button class="btn btn-default" data-bind="click: close" title="Close this dialog">
+                    <i class="icon-cancel"></i><span>Close</span>
+                </button>
+                <button type="submit" class="btn btn-primary" data-bind="click: dumpIndex" title="Dump the raw Lucene index files">
+                    <!-- TODO replace icon when RavenDB-17594 is done-->
+                    <i class="icon-arrow-down"></i><span>Dump index files</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

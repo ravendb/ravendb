@@ -422,6 +422,11 @@ namespace Raven.Server.Documents.Patch
                 return tsStats;
             }
 
+            private static readonly TimeSeriesStorage.AppendOptions AppendOptionsForScript = new TimeSeriesStorage.AppendOptions
+            {
+                AddNewNameToMetadata = false
+            };
+
             private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("timeseries(doc, name).append");
@@ -500,7 +505,7 @@ namespace Raven.Server.Documents.Patch
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
                         new[] { toAppend }, 
-                        addNewNameToMetadata: false);
+                        AppendOptionsForScript);
 
                     if (DebugMode)
                     {

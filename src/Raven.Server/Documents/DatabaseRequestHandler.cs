@@ -60,7 +60,7 @@ namespace Raven.Server.Documents
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                var result = await DatabaseConfigurations(setupConfigurationFunc, raftRequestId, configurationJson, beforeSetupConfiguration);
+                var result = await DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, configurationJson, beforeSetupConfiguration);
 
                 if (result.Configuration == null)
                     return;
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
         }
 
 
-        protected async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
+        protected async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context,  string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
         {
             if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true, requireWrite: true) == false)
                 return (-1, default);
@@ -90,15 +90,12 @@ namespace Raven.Server.Documents
 
             await ServerStore.EnsureNotPassiveAsync();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
+            beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
 
-                var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                await WaitForIndexToBeApplied(context, index);
+            var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
+            await WaitForIndexToBeApplied(context, index);
 
-                return (index, configurationJson);
-            }
+            return (index, configurationJson);
         }
 
         protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
@@ -161,12 +158,15 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
         }
 
+        protected bool ShouldAddPagingPerformanceHint(long numberOfResults)
+        {
+            return numberOfResults > Database.Configuration.PerformanceHints.MaxNumberOfResults;
+        }
+        
         protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
-            if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
-                return;
-
-            Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
+            if(ShouldAddPagingPerformanceHint(numberOfResults))
+                Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
 }

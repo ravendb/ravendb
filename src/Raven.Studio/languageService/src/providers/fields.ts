@@ -105,6 +105,12 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
                 score: AUTOCOMPLETE_SCORING.function
             },
             {
+                value: "revisions(",
+                caption: "revisions(field)",
+                meta: AUTOCOMPLETE_META.function,
+                score: AUTOCOMPLETE_SCORING.function
+            },
+            {
                 value: "highlight() ",
                 caption: "highlight(field, fragmentLength, fragmentCount)",
                 meta: AUTOCOMPLETE_META.function,
@@ -254,12 +260,20 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             const effectivePrefixToUse = prefix || queryMetaInfo.fromAlias || "";
             const shouldAddPrefix = !writtenText && !fieldPrefix && effectivePrefixToUse;
 
-            const filteredFields = filterTokens(writtenText, fields).map(field => ({
-                meta: AUTOCOMPLETE_META.field,
-                score: AUTOCOMPLETE_SCORING.field,
-                caption: shouldAddPrefix ? effectivePrefixToUse + "." + field : field,
-                value: shouldAddPrefix ? effectivePrefixToUse + "." + field : field
-            }));
+            const preferredQuote = AutoCompleteFields.detectQuoteType(writtenText);
+
+            // remove leading ' or "
+            const clearWrittenText = writtenText.startsWith('"') || writtenText.startsWith("'") ? writtenText.substring(1) : writtenText;
+            
+            const filteredFields = filterTokens(clearWrittenText, fields).map(field => {
+                const escapedField = AutocompleteUtils.quote(field, preferredQuote);
+                return {
+                    meta: AUTOCOMPLETE_META.field,
+                    score: AUTOCOMPLETE_SCORING.field,
+                    caption: shouldAddPrefix ? effectivePrefixToUse + "." + field : field,
+                    value: shouldAddPrefix ? effectivePrefixToUse + "." + escapedField : escapedField
+                };
+            });
             
             const groupByFunctions = this.collectGroupByFields(rule, fieldPrefix, ctx);
             const includeFunctions = this.collectIncludeFields(rule, fieldPrefix, ctx);

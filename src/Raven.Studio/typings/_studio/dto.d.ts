@@ -428,6 +428,7 @@ interface testSubscriptionPagedResult<T> extends pagedResult<T> {
 
 interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
+    includesRevisions?: Array<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
     explanations?: dictionary<Array<string>>;
     timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;

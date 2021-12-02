@@ -15,8 +15,6 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -308,11 +306,12 @@ namespace Raven.Client.Documents.Indexes
         protected Expression<Func<IEnumerable<TDocument>, IEnumerable>> Map { get; set; }
     }
 
-    public abstract class AbstractCommonApiForIndexes
+    public abstract class AbstractCommonApiForIndexes : ILoadCommonApiForIndexes, ILoadCompareExchangeApiForIndexes
     {
         protected AbstractCommonApiForIndexes()
         {
             Configuration = new IndexConfiguration();
+            NoTracking = new NoTrackingCommonApiForIndexes();
         }
 
         /// <summary>
@@ -378,47 +377,7 @@ namespace Raven.Client.Documents.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
-        /// <summary>
-        /// Loads the specified document during the indexing process
-        /// </summary>
-        public T LoadDocument<T>(string id)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        /// <summary>
-        /// Loads the specified document during the indexing process
-        /// </summary>
-        public T LoadDocument<T>(string id, string collectionName)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        /// <summary>
-        /// Loads the specified document during the indexing process
-        /// </summary>
-        public T[] LoadDocument<T>(IEnumerable<string> ids)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        public T LoadCompareExchangeValue<T>(string key)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        public T[] LoadCompareExchangeValue<T>(IEnumerable<string> keys)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
-
-        /// <summary>
-        /// Loads the specified document during the indexing process
-        /// </summary>
-        public T[] LoadDocument<T>(IEnumerable<string> ids, string collectionName)
-        {
-            throw new NotSupportedException("This can only be run on the server side");
-        }
+        public NoTrackingCommonApiForIndexes NoTracking { get; }
 
         /// <summary>
         /// Allows to use lambdas recursively
@@ -457,5 +416,94 @@ namespace Raven.Client.Documents.Indexes
         public HashSet<AdditionalAssembly> AdditionalAssemblies { get; set; }
 
         public IndexConfiguration Configuration { get; set; }
+
+        public T LoadDocument<T>(string id)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T LoadDocument<T>(string id, string collectionName)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadDocument<T>(IEnumerable<string> ids)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadDocument<T>(IEnumerable<string> ids, string collectionName)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T LoadCompareExchangeValue<T>(string key)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadCompareExchangeValue<T>(IEnumerable<string> keys)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+    }
+
+    public class NoTrackingCommonApiForIndexes : ILoadCommonApiForIndexes
+    {
+        public T LoadDocument<T>(string id)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T LoadDocument<T>(string id, string collectionName)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadDocument<T>(IEnumerable<string> ids)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        public T[] LoadDocument<T>(IEnumerable<string> ids, string collectionName)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+    }
+
+    public interface ILoadCompareExchangeApiForIndexes
+    {
+        /// <summary>
+        /// Loads the specified compare exchange value during the indexing process
+        /// </summary>
+        public T LoadCompareExchangeValue<T>(string key);
+
+        /// <summary>
+        /// Loads the specified compare exchange values during the indexing process
+        /// </summary>
+        public T[] LoadCompareExchangeValue<T>(IEnumerable<string> keys);
+    }
+
+    public interface ILoadCommonApiForIndexes
+    {
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
+        public T LoadDocument<T>(string id);
+
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
+        public T LoadDocument<T>(string id, string collectionName);
+
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
+        public T[] LoadDocument<T>(IEnumerable<string> ids);
+
+        /// <summary>
+        /// Loads the specified document during the indexing process
+        /// </summary>
+        public T[] LoadDocument<T>(IEnumerable<string> ids, string collectionName);
     }
 }

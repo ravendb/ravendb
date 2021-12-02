@@ -27,6 +27,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using MethodCallExpression = System.Linq.Expressions.MethodCallExpression;
@@ -43,6 +44,9 @@ namespace Raven.Client.Documents.Linq
         /// The query generator
         /// </summary>
         protected readonly IDocumentQueryGenerator QueryGenerator;
+
+        internal const string WholeDocumentComparisonExceptionMessage =
+            "You cannot compare the whole document in Where closure. Please write a conditional statement using fields from the document. A query such as session.Query<User>().Where(u => u == null) is not meaningful, you are asserting that the document itself is not null, which it can never be. Did you intend to assert that a property isn't set to null?";
         internal IAbstractDocumentQuery<T> DocumentQuery;
         internal string FromAlias;
         internal readonly LinqPathProvider LinqPathProvider;
@@ -478,6 +482,12 @@ namespace Raven.Client.Documents.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
+            
+            if (memberInfo.Path == string.Empty)
+            {
+                throw new InvalidQueryException(WholeDocumentComparisonExceptionMessage);
+            }
+            
             DocumentQuery.WhereEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
@@ -532,6 +542,10 @@ namespace Raven.Client.Documents.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
+            if (memberInfo.Path == string.Empty)
+            {
+                throw new InvalidQueryException(WholeDocumentComparisonExceptionMessage);
+            }
 
             DocumentQuery.WhereNotEquals(new WhereParams
             {
