@@ -3686,7 +3686,8 @@ namespace Raven.Server.Documents.Indexes
                     documentsOperationContext.DoNotReuse = true;
                     indexingContext.DoNotReuse = true;
 
-                    if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
+                    if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory ||
+                        (stats.MapAttempts == 0 && stats.MapReferenceAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory))
                     {
                         if (_logger.IsInfoEnabled)
                         {
@@ -3707,7 +3708,8 @@ namespace Raven.Server.Documents.Indexes
                             canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread,
                             reason: "cannot budget additional memory");
 
-                        stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
+                        var completeMsg = stats.MapAttempts == 0 ? "Cannot budget additional memory for references batch" : "Cannot budget additional memory for batch";
+                        stats.RecordMapCompletedReason(completeMsg);
                         canContinue = false;
                     }
                 }
