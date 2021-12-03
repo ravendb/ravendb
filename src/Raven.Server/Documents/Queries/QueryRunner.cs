@@ -456,8 +456,6 @@ namespace Raven.Server.Documents.Queries
 
             _currentlyRunningQueries.TryAdd(executingQueryInfo);
             
-            query.Token = token.Token;
-
             return new QueryMarker(this, executingQueryInfo);
         }
 

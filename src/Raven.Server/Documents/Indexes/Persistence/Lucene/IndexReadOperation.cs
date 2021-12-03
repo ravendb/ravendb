@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     totalResults.Value = search.TotalHits;
 
-                    scope.RecordAlreadyPagedItemsInPreviousPage(search);
+                    scope.RecordAlreadyPagedItemsInPreviousPage(search, token);
 
                     for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
                     {
@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
 
-                        var result = retriever.Get(document, scoreDoc, _state);
+                        var result = retriever.Get(document, scoreDoc, _state, token);
                         if (scope.TryIncludeInResults(result) == false)
                         {
                             result?.Dispose();
@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
 
-                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
+                    var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state, token);
                     if (scope.TryIncludeInResults(result) == false)
                     {
                         result?.Dispose();
@@ -786,7 +786,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 yield return new QueryResult
                 {
-                    Result = retriever.Get(doc, hit, _state)
+                    Result = retriever.Get(doc, hit, _state, token)
                 };
             }
         }
