@@ -31,6 +31,8 @@ namespace Corax
         public bool ForceNonAccelerated { get; set; }
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
+        
+        public long CountItemsInIndex => _transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
 
         internal ByteStringContext Allocator => _transaction.Allocator;
 

@@ -69,15 +69,15 @@ namespace Corax.Queries
 
         private static class StaticFunctionCache<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
-            where TComparer7 : struct, IMatchComparer
-            where TComparer8 : struct, IMatchComparer
-            where TComparer9 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
+            where TComparer7 : IMatchComparer
+            where TComparer8 : IMatchComparer
+            where TComparer9 : IMatchComparer
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -106,15 +106,15 @@ namespace Corax.Queries
         private static SortingMultiMatch Create<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>(
             in SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> query)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
-            where TComparer7 : struct, IMatchComparer
-            where TComparer8 : struct, IMatchComparer
-            where TComparer9 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
+            where TComparer7 : IMatchComparer
+            where TComparer8 : IMatchComparer
+            where TComparer9 : IMatchComparer
         {
             return new SortingMultiMatch(query,
                 StaticFunctionCache<TInner,
@@ -130,15 +130,15 @@ namespace Corax.Queries
             TComparer7 comparer7, TComparer8 comparer8, TComparer9 comparer9
             )
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
-            where TComparer7 : struct, IMatchComparer
-            where TComparer8 : struct, IMatchComparer
-            where TComparer9 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
+            where TComparer7 : IMatchComparer
+            where TComparer8 : IMatchComparer
+            where TComparer9 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>(
@@ -154,14 +154,14 @@ namespace Corax.Queries
             TComparer4 comparer4, TComparer5 comparer5, TComparer6 comparer6,
             TComparer7 comparer7, TComparer8 comparer8)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
-            where TComparer7 : struct, IMatchComparer
-            where TComparer8 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
+            where TComparer7 : IMatchComparer
+            where TComparer8 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, NullComparer>(
@@ -177,13 +177,13 @@ namespace Corax.Queries
             TComparer4 comparer4, TComparer5 comparer5, TComparer6 comparer6,
             TComparer7 comparer7)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
-            where TComparer7 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
+            where TComparer7 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, NullComparer, NullComparer>(
@@ -198,12 +198,12 @@ namespace Corax.Queries
             TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3,
             TComparer4 comparer4, TComparer5 comparer5, TComparer6 comparer6)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
-            where TComparer6 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
+            where TComparer6 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, NullComparer, NullComparer, NullComparer>(
@@ -217,11 +217,11 @@ namespace Corax.Queries
             TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3,
             TComparer4 comparer4, TComparer5 comparer5)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
-            where TComparer5 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
+            where TComparer5 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, NullComparer, NullComparer, NullComparer, NullComparer>(
@@ -235,10 +235,10 @@ namespace Corax.Queries
             TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3,
             TComparer4 comparer4)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
-            where TComparer4 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
+            where TComparer4 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer>(
@@ -251,9 +251,9 @@ namespace Corax.Queries
             IndexSearcher searcher, TInner inner,
             TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
-            where TComparer3 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
+            where TComparer3 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer>(
@@ -265,8 +265,8 @@ namespace Corax.Queries
             IndexSearcher searcher, TInner inner,
             TComparer1 comparer1, TComparer2 comparer2)
             where TInner : IQueryMatch
-            where TComparer1 : struct, IMatchComparer
-            where TComparer2 : struct, IMatchComparer
+            where TComparer1 : IMatchComparer
+            where TComparer2 : IMatchComparer
         {
             return Create(
                 new SortingMultiMatch<TInner, TComparer1, TComparer2, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer, NullComparer>(

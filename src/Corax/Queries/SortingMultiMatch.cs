@@ -10,15 +10,15 @@ namespace Corax.Queries
 {
     public unsafe struct SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> : IQueryMatch
         where TInner : IQueryMatch
-        where TComparer1 : struct, IMatchComparer
-        where TComparer2 : struct, IMatchComparer
-        where TComparer3 : struct, IMatchComparer
-        where TComparer4 : struct, IMatchComparer
-        where TComparer5 : struct, IMatchComparer
-        where TComparer6 : struct, IMatchComparer
-        where TComparer7 : struct, IMatchComparer
-        where TComparer8 : struct, IMatchComparer
-        where TComparer9 : struct, IMatchComparer
+        where TComparer1 : IMatchComparer
+        where TComparer2 : IMatchComparer
+        where TComparer3 : IMatchComparer
+        where TComparer4 : IMatchComparer
+        where TComparer5 : IMatchComparer
+        where TComparer6 : IMatchComparer
+        where TComparer7 : IMatchComparer
+        where TComparer8 : IMatchComparer
+        where TComparer9 : IMatchComparer
     {
         private readonly IndexSearcher _searcher;
         private readonly IQueryMatch _inner;
@@ -39,9 +39,9 @@ namespace Corax.Queries
 
         public long TotalResults;
 
-        public long Count => throw new NotSupportedException();
+        public long Count => _inner.Count;
 
-        public QueryCountConfidence Confidence => throw new NotSupportedException();
+        public QueryCountConfidence Confidence => _inner.Confidence;
 
         public bool IsBoosting => _inner.IsBoosting || _hasBoostingComparer;
 
@@ -136,7 +136,7 @@ namespace Corax.Queries
             TComparer1, TComparer2, TComparer3, 
             TComparer4, TComparer5, TComparer6, 
             TComparer7, TComparer8, TComparer9>, 
-            int, UnmanagedSpan, UnmanagedSpan, int> GetFunctionCall<TComparer>(MatchCompareFieldType fieldType) where TComparer : struct, IMatchComparer
+            int, UnmanagedSpan, UnmanagedSpan, int> GetFunctionCall<TComparer>(MatchCompareFieldType fieldType) where TComparer : IMatchComparer
         {
             return fieldType switch
             {
@@ -432,7 +432,7 @@ namespace Corax.Queries
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static int CompareSequence<TComparer>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
-            where TComparer : struct, IMatchComparer
+            where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
             var comp1Reader = new IndexEntryReader(item1);
@@ -458,7 +458,7 @@ namespace Corax.Queries
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static int CompareNumerical<TComparer, T>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
-            where TComparer : struct, IMatchComparer
+            where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
             var comp1Reader = new IndexEntryReader(item1);
