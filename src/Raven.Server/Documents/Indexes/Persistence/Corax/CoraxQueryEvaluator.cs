@@ -29,33 +29,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxQueryEvaluator(IndexSearcher searcher)
         {
-            _allocator = new (SharedMultipleUseFlag.None);
+            _allocator = new(SharedMultipleUseFlag.None);
             _searcher = searcher;
         }
 
-        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch)
+        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = -1)
         {
             _fieldsToFetch = fieldsToFetch;
             _query = query;
-            var match = Evaluate(query.Metadata.Query.Where, false);
+            var match = Evaluate(query.Metadata.Query.Where, false, take);
 
             if (query.Metadata.OrderBy != null)
-                match = OrderBy(match, query.Metadata.Query.OrderBy);
+                match = OrderBy(match, query.Metadata.Query.OrderBy, take);
             return match;
         }
-        
-        private IQueryMatch Evaluate(QueryExpression condition, bool isNegated)
+
+        private IQueryMatch Evaluate(QueryExpression condition, bool isNegated, int take)
         {
             switch (condition)
             {
                 case NegatedExpression negatedExpression:
-                    isNegated  = !isNegated;
-                    return Evaluate(negatedExpression.Expression, isNegated);
+                    isNegated = !isNegated;
+                    return Evaluate(negatedExpression.Expression, isNegated, take);
                 case TrueExpression:
                 case null:
                     return _searcher.AllEntries();
                 case BetweenExpression betweenExpression:
-                    return EvaluateBetween(betweenExpression, isNegated);
+                    return EvaluateBetween(betweenExpression, isNegated, take);
                 case MethodExpression methodExpression:
                     var expressionType = QueryMethod.GetMethodType(methodExpression.Name.Value);
                     string fieldName = string.Empty;
@@ -81,21 +81,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     };
 
                 case BinaryExpression be:
-                    return BinaryEvaluator(be, isNegated);
+                    return BinaryEvaluator(be, isNegated, take);
             }
 
             throw new EvaluateException($"Evaluation failed in {nameof(CoraxQueryEvaluator)}.");
         }
-        
-        private IQueryMatch BinaryEvaluator(BinaryExpression expression, bool isNegated)
+
+        private IQueryMatch BinaryEvaluator(BinaryExpression expression, bool isNegated, int take)
         {
             if (isNegated == true)
                 expression.Operator = GetNegated(expression.Operator);
-            
+
             switch (expression.Operator)
             {
                 case OperatorType.Or:
-                    return _searcher.Or(Evaluate(expression.Left, isNegated), Evaluate(expression.Right, isNegated));
+                    return _searcher.Or(Evaluate(expression.Left, isNegated, take), Evaluate(expression.Right, isNegated, take));
                 case OperatorType.Equal:
                 {
                     var value = (ValueExpression)expression.Right;
@@ -106,95 +106,95 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             if (expression.IsRangeOperation)
-                return EvaluateUnary(expression.Operator, _searcher.AllEntries(), expression, isNegated);
+                return EvaluateUnary(expression.Operator, _searcher.AllEntries(), expression, isNegated, take);
 
             var left = expression.Left as BinaryExpression;
             var isLeftUnary = IsUnary(left);
             var right = expression.Right as BinaryExpression;
             var isRightUnary = IsUnary(right);
-            
+
             //After those conditions we are in AND clause
             if (isLeftUnary == false && isRightUnary == false)
-                return _searcher.And(Evaluate(expression.Left, isNegated), Evaluate(expression.Right, isNegated));
+                return _searcher.And(Evaluate(expression.Left, isNegated, take), Evaluate(expression.Right, isNegated, take));
 
             if (isLeftUnary && isRightUnary)
-                return EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated), right, isNegated);
+                return EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated, take), right, isNegated, take);
 
             if (isLeftUnary && isRightUnary is false)
-                return EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated), left, isNegated);
-            
-            return EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated), right, isNegated);
+                return EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated, take), left, isNegated, take);
+
+            return EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated, take), right, isNegated, take);
         }
-        
-        private IQueryMatch EvaluateUnary(OperatorType type, in IQueryMatch previousMatch, BinaryExpression value, bool isNegated)
+
+        private IQueryMatch EvaluateUnary(OperatorType type, in IQueryMatch previousMatch, BinaryExpression value, bool isNegated, int take)
         {
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)value.Left));
             var field = GetValue((ValueExpression)value.Right);
             var fieldValue = field.FieldValue;
-            
+
             switch (type, field.ValueType)
             {
                 case (OperatorType.LessThan, ValueTokenType.Double):
-                    return _searcher.LessThan(previousMatch, fieldId, (double)fieldValue);
+                    return _searcher.LessThan(previousMatch, fieldId, (double)fieldValue, take);
                 case (OperatorType.LessThan, ValueTokenType.Long):
-                    return _searcher.LessThan(previousMatch, fieldId, (long)fieldValue);
+                    return _searcher.LessThan(previousMatch, fieldId, (long)fieldValue, take);
                 case (OperatorType.LessThan, ValueTokenType.String):
                     Slice.From(_allocator, fieldValue.ToString(), out var sliceValue);
-                    return _searcher.LessThan(previousMatch, fieldId, sliceValue);
-                
+                    return _searcher.LessThan(previousMatch, fieldId, sliceValue, take);
+
                 case (OperatorType.LessThanEqual, ValueTokenType.Double):
-                    return _searcher.LessThanOrEqual(previousMatch, fieldId, (double)fieldValue);
+                    return _searcher.LessThanOrEqual(previousMatch, fieldId, (double)fieldValue, take);
                 case (OperatorType.LessThanEqual, ValueTokenType.Long):
-                    return _searcher.LessThanOrEqual(previousMatch, fieldId, (long)fieldValue);
+                    return _searcher.LessThanOrEqual(previousMatch, fieldId, (long)fieldValue, take);
                 case (OperatorType.LessThanEqual, ValueTokenType.String):
                     Slice.From(_allocator, fieldValue.ToString(), out sliceValue);
-                    return _searcher.LessThanOrEqual(previousMatch, fieldId, sliceValue);
-                
+                    return _searcher.LessThanOrEqual(previousMatch, fieldId, sliceValue, take);
+
                 case (OperatorType.GreaterThan, ValueTokenType.Double):
-                    return _searcher.GreaterThan(previousMatch, fieldId, (double)fieldValue);
+                    return _searcher.GreaterThan(previousMatch, fieldId, (double)fieldValue, take);
                 case (OperatorType.GreaterThan, ValueTokenType.Long):
-                    return _searcher.GreaterThan(previousMatch, fieldId, (long)fieldValue);
+                    return _searcher.GreaterThan(previousMatch, fieldId, (long)fieldValue, take);
                 case (OperatorType.GreaterThan, ValueTokenType.String):
                     Slice.From(_allocator, fieldValue.ToString(), out sliceValue);
-                    return _searcher.GreaterThan(previousMatch, fieldId, sliceValue);
-                
+                    return _searcher.GreaterThan(previousMatch, fieldId, sliceValue, take);
+
                 case (OperatorType.GreaterThanEqual, ValueTokenType.Double):
-                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, (double)fieldValue);
+                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, (double)fieldValue, take);
                 case (OperatorType.GreaterThanEqual, ValueTokenType.Long):
-                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, (long)fieldValue);
+                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, (long)fieldValue, take);
                 case (OperatorType.GreaterThanEqual, ValueTokenType.String):
                     Slice.From(_allocator, fieldValue.ToString(), out sliceValue);
-                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, sliceValue);
-                
+                    return _searcher.GreaterThanOrEqual(previousMatch, fieldId, sliceValue, take);
+
                 default:
                     throw new Exception($"Got {type} and the value: {field.ValueType} at UnaryMatch.");
             }
         }
 
-        private IQueryMatch EvaluateBetween(BetweenExpression betweenExpression, bool negated)
+        private IQueryMatch EvaluateBetween(BetweenExpression betweenExpression, bool negated, int take)
         {
             var exprMin = GetValue(betweenExpression.Min);
             var exprMax = GetValue(betweenExpression.Max);
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)betweenExpression.Source));
-            
+
             switch (exprMin.ValueType, exprMax.ValueType, negated)
             {
                 case (ValueTokenType.Long, ValueTokenType.Long, false):
-                    return _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue);
+                    return _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue, take);
                 case (ValueTokenType.Long, ValueTokenType.Long, true):
-                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue);
-                
+                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue, take);
+
                 case (ValueTokenType.Double, ValueTokenType.Double, false):
-                    return _searcher.Between(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue, (double)exprMax.FieldValue);
+                    return _searcher.Between(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue, (double)exprMax.FieldValue, take);
                 case (ValueTokenType.Double, ValueTokenType.Double, true):
-                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue, (double)exprMax.FieldValue);
-                
+                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue, (double)exprMax.FieldValue, take);
+
                 case (ValueTokenType.String, ValueTokenType.String, false):
-                    return _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue);
+                    return _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue, take);
                 case (ValueTokenType.String, ValueTokenType.String, true):
-                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue);
-                
-                
+                    return _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue, (long)exprMax.FieldValue, take);
+
+
                 default:
                     var unsupportedType = exprMin.ValueType is ValueTokenType.Double or ValueTokenType.Long or ValueTokenType.String
                         ? exprMax.ValueType
@@ -212,32 +212,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return _searcher.InQuery(f.FieldValue, values);
         }
 
-        private IQueryMatch OrderBy(IQueryMatch match, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders)
-        {
-            //todo maciej: add support for function in orderby. Also need to implement this as corax method.
-            // e.g. _searcher.OrderBy([fields], [as_], [asc_desc]);
-            foreach (var order in orders)
-            {
-                if (order.Expression is not FieldExpression fe) continue;
-                var id = GetFieldIdInIndex(GetField(fe));
-                var orderTypeField = OrderTypeFieldConverter(order.FieldType);
-                
-                match = order.Ascending 
-                    ? _searcher.OrderByAscending(match, id, orderTypeField)
-                    : _searcher.OrderByDescending(match, id, orderTypeField);
-            }
-
-            return match;
-        }
-        
         private (ValueTokenType ValueType, object FieldValue) GetValue(ValueExpression expr)
         {
             var valueType = expr.Value;
             object fieldValue = GetFieldValue(expr);
-            if (valueType != ValueTokenType.Parameter) 
+            if (valueType != ValueTokenType.Parameter)
                 return (valueType, fieldValue);
-            
-            
+
+
             switch (fieldValue)
             {
                 case LazyNumberValue fV:
@@ -260,7 +242,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             return (valueType, fieldValue);
         }
-        
+
         private static OperatorType GetNegated(OperatorType current) =>
             current switch
             {
@@ -274,7 +256,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 OperatorType.Or => OperatorType.And,
                 _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
             };
-        
+
         private static MatchCompareFieldType OrderTypeFieldConverter(OrderByFieldType original) =>
             original switch
             {
@@ -283,21 +265,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 OrderByFieldType.AlphaNumeric => MatchCompareFieldType.Integer,
                 _ => MatchCompareFieldType.Sequence
             };
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetFieldIdInIndex(string fieldName)
         {
             if (_fieldsToFetch is null)
                 throw new InvalidQueryException("Field doesn't found in Index.");
-            
+
             if (_fieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField))
             {
                 return indexField.Id;
             }
-            
+
             throw new InvalidDataException($"Field {fieldName} does not found in current index.");
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private object GetFieldValue(ValueExpression f) => f.GetValue(_query.QueryParameters);
 
@@ -309,6 +291,151 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             return _query.Metadata.GetIndexFieldName(f, _query.QueryParameters).Value;
         }
+        
+        private IQueryMatch OrderBy(IQueryMatch match, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders, int take)
+        {
+            switch (orders.Count)
+            {
+                //Note: we want use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
+                case 1:
+                {
+                    if (orders[0].Expression is not FieldExpression fe) throw new Exception();
+                    var id = GetFieldIdInIndex(GetField(fe));
+                    var orderTypeField = OrderTypeFieldConverter(orders[0].FieldType);
+
+                    match = orders[0].Ascending
+                        ? _searcher.OrderByAscending(match, id, orderTypeField, take)
+                        : _searcher.OrderByDescending(match, id, orderTypeField, take);
+
+
+                    return match;
+                }
+                case 2:
+                {
+                    var firstOrder = orders[0];
+                    var secondOrder = orders[1];
+                    if (firstOrder.Expression is not FieldExpression first || secondOrder.Expression is not FieldExpression second)
+                    {
+                        throw new Exception();
+                    }
+                    var firstId = GetFieldIdInIndex(GetField(first));
+                    var firstTypeField = OrderTypeFieldConverter(firstOrder.FieldType);
+                    var secondId = GetFieldIdInIndex(GetField(second));
+                    var secondTypeField = OrderTypeFieldConverter(secondOrder.FieldType);
+
+                    return (firstOrder.Ascending, secondOrder.Ascending) switch
+                    {
+                        (true, true) => SortingMultiMatch.Create(_searcher, match, 
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField)),
+                    
+                        (false, true) => SortingMultiMatch.Create(_searcher, match, 
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField)),
+                    
+                        (true, false) => SortingMultiMatch.Create(_searcher, match, 
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField)),
+                    
+                        (false, false) => SortingMultiMatch.Create(_searcher, match, 
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField))
+                    };
+                }
+                case 3:
+                {
+                    var firstOrder = orders[0];
+                    var secondOrder = orders[1];
+                    var thirdOrder = orders[2];
+
+                    if (firstOrder.Expression is not FieldExpression first || secondOrder.Expression is not FieldExpression second ||
+                        thirdOrder.Expression is not FieldExpression third)
+                    {
+                        throw new Exception();
+                    }
+
+                    var firstId = GetFieldIdInIndex(GetField(first));
+                    var firstTypeField = OrderTypeFieldConverter(firstOrder.FieldType);
+                    var secondId = GetFieldIdInIndex(GetField(second));
+                    var secondTypeField = OrderTypeFieldConverter(secondOrder.FieldType);
+                    var thirdId = GetFieldIdInIndex(GetField(third));
+                    var thirdTypeField = OrderTypeFieldConverter(thirdOrder.FieldType);
+
+
+                    return (firstOrder.Ascending, secondOrder.Ascending, thirdOrder.Ascending) switch
+                    {
+                        (true, true, true) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (true, true, false) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (true, false, true) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (false, true, true) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (false, false, true) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (false, true, false) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (true, false, false) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+
+                        (false, false, false) => SortingMultiMatch.Create(_searcher, match,
+                            new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField),
+                            new SortingMatch.DescendingMatchComparer(_searcher, thirdId, thirdTypeField)),
+                    };
+                }
+            }
+
+            var comparers = new IMatchComparer[orders.Count];
+            for (int i = 0; i < orders.Count; ++i)
+            {
+                if (orders[i].Expression is not FieldExpression fe)
+                {
+                    comparers[i] = default(SortingMultiMatch.NullComparer);
+                    break;
+                }
+
+                var id = GetFieldIdInIndex(GetField(fe));
+                var orderTypeField = OrderTypeFieldConverter(orders[i].FieldType);
+                comparers[i] = orders[i].Ascending
+                    ? new SortingMatch.AscendingMatchComparer(_searcher, id, orderTypeField)
+                    : new SortingMatch.DescendingMatchComparer(_searcher, id, orderTypeField);
+            }
+
+            return orders.Count switch
+            {
+                2 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1]),
+                3 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2]),
+                4 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3]),
+                5 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4]),
+                6 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5]),
+                7 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5], comparers[6]),
+                8 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5], comparers[6],
+                    comparers[7])
+            };
+        }
+
 
         public void Dispose()
         {

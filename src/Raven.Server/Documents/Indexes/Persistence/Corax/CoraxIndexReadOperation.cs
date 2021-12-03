@@ -2,10 +2,8 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Corax;
-using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -13,7 +11,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -50,8 +47,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isDistinctCount)
                 pageSize = int.MaxValue;
             var position = query.Start;
-
-            IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch);
+            var take = Math.Min(pageSize, Convert.ToInt32(_indexSearcher.CountItemsInIndex)) + position;
+            IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch, take);
             if (result == null)
                 yield break;
 
@@ -98,7 +95,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     readCounter += read;
                 }
 
-                totalResults.Value = Convert.ToInt32(readCounter);
+                if (result is SortingMatch or SortingMultiMatch == false)
+                {
+                    while (read != 0)
+                    {
+                        read = result.Fill(ids);
+                        readCounter += read;
+                    }
+                }
+                else
+                {
+                    totalResults.Value = Convert.ToInt32(readCounter);
+                }
+                
+                skippedResults.Value = 0;
+            }
+            finally
+            {
+                ArrayPool<long>.Shared.Return(ids);
             }
             
             ArrayPool<long>.Shared.Return(ids);
@@ -335,35 +349,54 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             CancellationToken token)
             where TQueryMatch : IQueryMatch
         {
+            if (ids.Length is 0)
+                throw new OutOfMemoryException("Corax buffer has no memory.");
             readCounter = 0;
             if (position != 0)
             {
-                int emptyRead = position / BufferSize;
-                do
+                int emptyRead = position / ids.Length;
+                while (emptyRead > 0)
                 {
                     token.ThrowIfCancellationRequested();
                     read = result.Fill(ids);
                     readCounter += read;
                     emptyRead--;
-                } while (emptyRead > 0);
+                }
 
-                position %= BufferSize; // move into <0;_bufferSize> set.
-                //I know there is a cost of copying this but it's max _bufferSize and make code much simpler.
-                if (position != read)
-                    ids[position..read].CopyTo(ids, 0);
+                position %= ids.Length;
+
+                //We skipped N * BufferSize chunks but there are still items to skip
+                if (position > 0)
+                {
+                    read = result.Fill(ids);
+                    readCounter += read;
+
+                    if (read > position)
+                    {
+                        ids[position..read].CopyTo(ids, 0); // skipping elements
+                        read -= position;
+                    }
+                    else
+                        read = 0;
+                }
                 else
-                    ids[0] = ids[position];
-                read -= position;
-                if (skippedResults != null)
+                {
+                    read = result.Fill(ids);
+                    readCounter += read;
+                }
+
+                if(skippedResults is not null)
                     skippedResults.Value = Convert.ToInt32(readCounter);
             }
-
-            // first Fill operation needs to be done outside loop because we need to check if there is some data
-            if (read == 0)
+            else
             {
                 read = result.Fill(ids);
                 readCounter += read;
             }
+
+            if (skippedResults is not null) 
+                skippedResults.Value = 0;
+            
         }
 
         public override void Dispose()
