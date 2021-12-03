@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.TimeSeries
         public bool IsRaw => _reader.IsRaw;
 
         public TimeSeriesMultiReader(DocumentsOperationContext context, string documentId,
-            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy, CancellationToken token = default)
+            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy, CancellationToken token)
         {
             if (string.IsNullOrEmpty(source))
                 throw new ArgumentNullException(nameof(source));

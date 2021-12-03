@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents
 
                     using (context.OpenReadTransaction())
                     {
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery, token.Token))
                         {
                             using (document)
                             {
@@ -159,7 +160,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, string startAfterId, Reference<long> alreadySeenIdsCount, int batchSize, bool isAllDocs, DocumentFields fields, out bool isStartsWithOrIdQuery)
+        protected IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, string startAfterId, Reference<long> alreadySeenIdsCount, int batchSize, bool isAllDocs, DocumentFields fields, out bool isStartsWithOrIdQuery, CancellationToken token)
         {
             if (_collectionQuery != null && _collectionQuery.Metadata.WhereFields.Count > 0)
             {
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents
                 isStartsWithOrIdQuery = true;
 
                 return new CollectionQueryEnumerable(Database, Database.DocumentsStorage, new FieldsToFetch(_operationQuery, null),
-                    collectionName, _operationQuery, null, context, null, null, null, new Reference<int>())
+                    collectionName, _operationQuery, null, context, null, null, null, new Reference<int>(), token)
                 {
                     Fields = fields,
                     StartAfterId = startAfterId,

@@ -36,9 +36,6 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public SpatialDistanceFieldComparatorSource.SpatialDistanceFieldComparator Distances;
 
-        [JsonDeserializationIgnore]
-        public CancellationToken Token;
-
         public new int Start
         {
 #pragma warning disable 618

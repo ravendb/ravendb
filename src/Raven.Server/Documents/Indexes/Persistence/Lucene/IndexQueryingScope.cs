@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-
+using System.Threading;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
         }
 
-        public void RecordAlreadyPagedItemsInPreviousPage(TopDocs search)
+        public void RecordAlreadyPagedItemsInPreviousPage(TopDocs search, CancellationToken token)
         {
             if (_query.Start == 0)
                 return;
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
-                var document = _retriever.Get(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
+                var document = _retriever.Get(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state, token);
 
                 if (document.Data.Count > 0) // we don't consider empty projections to be relevant for distinct operations
                     _alreadySeenProjections.Add(document.DataHash);
