@@ -121,6 +121,86 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
+
+                    for (int j = 0; j < 10; j++)
+                        ts.Append(baseline.AddMinutes(j), 100);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
+
+                    for (int j = 0; j < 10; j++)
+                        ts.Append(baseline.AddMinutes(j), 100);
+
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                using (var session = storeA.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
+                    ts.Append(baseline, 50);
+                    session.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRates").Get();
+                    var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRates").Get();
+
+                    Assert.Equal(tsA.Length, tsB.Length);
+                    Assert.Equal(50, tsA[0].Value);
+                    Assert.Equal(50, tsB[0].Value);
+
+                    for (int i = 1; i < tsA.Length; i++)
+                    {
+                        Assert.Equal(100, tsA[i].Value);
+                        Assert.Equal(100, tsB[i].Value);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateEntireSegmentOnUpdate_TimeSeries2()
+        {
+            var baseline = DateTime.UtcNow;
+
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "user/1" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new User { Name = "user/1" }, "users/ayende");
+                    session.SaveChanges();
+                }
 
                 using (var session = storeA.OpenSession())
                 {
@@ -179,6 +259,30 @@ namespace SlowTests.Issues
                         Assert.Equal(100, tsA[i].Value);
                         Assert.Equal(100, tsB[i].Value);
                     }
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/ayende", "HeartRates");
+                    ts.Append(baseline, 15);
+                    session.SaveChanges();
+                }
+
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var tsA = sessionA.TimeSeriesFor("users/ayende", "HeartRates").Get();
+                    var tsB = sessionB.TimeSeriesFor("users/ayende", "HeartRates").Get();
+
+                    Assert.Equal(tsA.Length, tsB.Length);
+                    Assert.Equal(15, tsA[0].Value);
+                    Assert.Equal(15, tsB[0].Value);
                 }
             }
         }
