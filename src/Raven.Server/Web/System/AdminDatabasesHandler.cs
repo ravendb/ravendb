@@ -61,6 +61,8 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : ServerRequestHandler
     {
+        //TODO stav: Add test to check all fields added to DatabaseRecord are 
+        //TODO stav: Move func here. get all db's if name empty. otherwise get specific dbrecord. 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AdminDatabasesHandler>("Server");
 
         [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
