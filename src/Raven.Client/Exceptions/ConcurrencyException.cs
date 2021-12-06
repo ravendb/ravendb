@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Exceptions
 {
@@ -40,21 +41,51 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public long ExpectedETag { get; set; }
+        public long ExpectedETag;
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
-        public long ActualETag { get; set; }
+        public long ActualETag;
 
         /// <summary>
         /// Expected Change Vector.
         /// </summary>
-        public string ExpectedChangeVector { get; set; }
+        public string ExpectedChangeVector;
 
         /// <summary>
         /// Actual Change Vector.
         /// </summary>
-        public string ActualChangeVector { get; set; }
+        public string ActualChangeVector;
+
+        /// <summary>
+        /// Cluster Transaction conflicts info.
+        /// </summary>
+        public Conflict[] ClusterTransactionConflicts;
+
+        public class Conflict
+        {
+            public ConflictType Type;
+            public string Id;
+            public string Expected;
+            public string Actual;
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue()
+                {
+                    [nameof(Type)] = Type,
+                    [nameof(Id)] = Id,
+                    [nameof(Expected)] = Expected,
+                    [nameof(Actual)] = Actual
+                };
+            }
+        }
+
+        public enum ConflictType
+        {
+            Document,
+            CompareExchange
+        }
     }
 }

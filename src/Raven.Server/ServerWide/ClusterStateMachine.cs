@@ -876,7 +876,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<string> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;
