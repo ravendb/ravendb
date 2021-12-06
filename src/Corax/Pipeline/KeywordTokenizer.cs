@@ -16,7 +16,7 @@ namespace Corax.Pipeline
             ref var token = ref tokens[0];
             token.Offset = 0;
             token.Length = (uint)source.Length;
-            token.Type = TokenType.Keyword;
+            token.Type = TokenType.Term;
 
             tokens = tokens.Slice(0, 1);
             return source.Length;
@@ -27,7 +27,7 @@ namespace Corax.Pipeline
             ref var token = ref tokens[0];
             token.Offset = 0;
             token.Length = (uint)source.Length;
-            token.Type = TokenType.Keyword;
+            token.Type = TokenType.Term;
 
             tokens = tokens.Slice(0, 1);
             return source.Length;

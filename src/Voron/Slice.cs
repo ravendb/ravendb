@@ -35,7 +35,7 @@ namespace Voron
 
         public ReadOnlySpan<byte> AsReadOnlySpan() => new ReadOnlySpan<byte>(Content.Ptr, Content.Length);
 
-    public bool HasValue => Content.HasValue;
+        public bool HasValue => Content.HasValue;
 
         public readonly int Size
         {
@@ -306,10 +306,10 @@ namespace Voron
         }
 
         public readonly Span<byte> AsSpan()
+        
         {
             return new Span<byte>(Content.Ptr, Size);
         }
-
     }
 
     public static class Slices

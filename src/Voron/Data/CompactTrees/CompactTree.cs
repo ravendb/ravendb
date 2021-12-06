@@ -375,6 +375,11 @@ namespace Voron.Data.CompactTrees
             return TryRemove(span, out oldValue);
         }
 
+        public bool TryRemove(Slice key, out long oldValue)
+        {
+            return TryRemove(key.AsReadOnlySpan(), out oldValue);
+        }
+
         public bool TryRemove(ReadOnlySpan<byte> key, out long oldValue)
         {
             FindPageFor(key, ref _internalCursor);

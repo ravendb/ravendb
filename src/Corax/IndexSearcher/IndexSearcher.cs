@@ -33,6 +33,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     internal ByteStringContext Allocator => _transaction.Allocator;
 
+    internal Transaction Transaction => _transaction;
+
 
     private readonly bool _ownsTransaction;
 

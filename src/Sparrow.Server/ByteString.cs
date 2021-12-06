@@ -915,7 +915,7 @@ namespace Sparrow.Server
             return $"Allocated {Sizes.Humane(_currentlyAllocated)} / {Sizes.Humane(_totalAllocated)}";
         }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
@@ -1327,6 +1327,30 @@ namespace Sparrow.Server
             return result;
         }
 
+        public ByteString Slice(ByteString value, int offset, int size, ByteStringType type = ByteStringType.Mutable)
+        {
+            Debug.Assert(value._pointer != null, "ByteString cant be null.");
+
+            if (_disposed)
+                ThrowObjectDisposed();
+
+            if (offset < 0)
+                throw new ArgumentException($"'{nameof(offset)}' cannot be smaller than 0.");
+
+            if (offset > value.Length)
+                throw new ArgumentException($"'{nameof(offset)}' cannot be bigger than '{nameof(value)}.Length' 0.");
+
+            int totalSize = value.Length - offset;
+            if (totalSize < size)
+                throw new ArgumentOutOfRangeException();
+
+            var result = AllocateInternal(size, type);
+            Memory.Copy(result._pointer->Ptr, value._pointer->Ptr + offset, size);
+
+            RegisterForValidation(result);
+            return result;
+        }
+
         public ByteString Clone(ByteString value, ByteStringType type = ByteStringType.Mutable)
         {
             Debug.Assert(value._pointer != null, $"{nameof(value)} cant be null.");
@@ -1342,12 +1366,6 @@ namespace Sparrow.Server
         public InternalScope From(string value, out ByteString str)
         {
             return From(value.AsSpan(), ByteStringType.Mutable, out str);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public InternalScope From(ReadOnlySpan<char> value, out ByteString str)
-        {
-            return From(value, ByteStringType.Mutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1477,6 +1495,12 @@ namespace Sparrow.Server
 
             RegisterForValidation(str);
             return new InternalScope(this, str);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public InternalScope From(ReadOnlySpan<byte> value, out ByteString str)
+        {
+            return From(value, value.Length, ByteStringType.Immutable, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
