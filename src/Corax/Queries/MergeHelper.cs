@@ -221,8 +221,8 @@ namespace Corax.Queries
                 }
                 else if (leftValue > rightValue)
                 {
-                    Sse2.StoreNonTemporal((uint*)dstPtr, ((uint*)rightValue)[0]);
-                    Sse2.StoreNonTemporal(((uint*)dstPtr) + 1, ((uint*)rightValue)[1]);
+                    Sse2.StoreNonTemporal((uint*)dstPtr, ((uint*)rightPtr)[0]);
+                    Sse2.StoreNonTemporal(((uint*)dstPtr) + 1, ((uint*)rightPtr)[1]);
                     rightPtr++;
                 }
                 else
