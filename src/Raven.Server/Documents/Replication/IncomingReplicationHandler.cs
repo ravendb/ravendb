@@ -1205,7 +1205,14 @@ namespace Raven.Server.Documents.Replication
                                     To = deletedRange.To
                                 };
                                 var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
-                                if (removedChangeVector != null)
+
+                                var status = ChangeVectorUtils.GetConflictStatus(removedChangeVector, rcvdChangeVector);
+                                if (status == ConflictStatus.Update)
+                                {
+                                    var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                                    context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, removedChangeVector);
+                                }
+                                else if (removedChangeVector != null)
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
 
                                 break;
