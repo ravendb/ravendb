@@ -17,7 +17,7 @@ namespace Corax.Pipeline
     {
         None = 0,
         Word = 1,
-        Keyword = 2,
+        Term = 2,
 
         Numeric = 4,        
         Alphabetic = 8,

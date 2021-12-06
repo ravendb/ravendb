@@ -342,6 +342,10 @@ namespace Sparrow.Collections
             ThrowWhenIndexIsOutOfRange(index);
         }
 
+        public Span<T> AsUnsafeSpan()
+        {
+            return _items.AsSpan().Slice(0, Count);
+        }
 
         public Enumerator GetEnumerator()
         {

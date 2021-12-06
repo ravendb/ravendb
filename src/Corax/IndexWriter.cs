@@ -9,6 +9,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Pipeline;
+using Corax.Queries;
+using Corax.Utils;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
@@ -50,11 +52,11 @@ namespace Corax
             _fieldsList = new List<IndexFieldBinding>();
         }
 
-        public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false)
+        public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false, bool hasSuggestion = false)
         {
             if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
             {
-                var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, notApplyAnalyzer);
+                var binding = new IndexFieldBinding(fieldId, fieldName, analyzer, notApplyAnalyzer, hasSuggestion);
                 _fields[fieldName] = binding;
                 _fieldsById[fieldId] = binding;
                 _fieldsList.Add(binding);
@@ -137,19 +139,21 @@ namespace Corax
         public readonly Slice FieldName;
         public Corax.Analyzer Analyzer;
         public readonly bool NotApplyAnalyzer;
+        public readonly bool HasSuggestions;
 
-        public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false)
+        public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null, bool notApplyAnalyzer = false, bool hasSuggestions = false)
         {
             FieldId = fieldId;
             FieldName = fieldName;
             Analyzer = analyzer;
             NotApplyAnalyzer = notApplyAnalyzer;
+            HasSuggestions = hasSuggestions;
         }
     }
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        public const int MaxTermLength = 1024;
+        public const int MaxTermLength = 1024;        
 
         private readonly IndexFieldsMapping _fieldsMapping;        
 
@@ -159,7 +163,7 @@ namespace Corax
         public readonly Transaction Transaction;
         private readonly TransactionPersistentContext _transactionPersistentContext;
 
-        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
+        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
 
         // CPU bound - embarassingly parallel
         // 
@@ -171,8 +175,10 @@ namespace Corax
 
         private readonly List<long> _entriesToDelete = new List<long>();
 
-        private readonly long _postingListContainerId,
-            _entriesContainerId;
+        private readonly long _postingListContainerId, _entriesContainerId;
+
+        private const string SuggestionsTreePrefix = "__Suggestion_";
+        private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
 
         private Queue<long> _lastEntries; // keep last 256 items
 
@@ -184,6 +190,7 @@ namespace Corax
                 Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
                 Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
                 Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
+                Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
             }
         }
 
@@ -247,11 +254,10 @@ namespace Corax
                     _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 
-                var tokenField = binding.FieldId;
                 if (binding.Analyzer is not null)                
-                    InsertAnalyzedToken(context, ref entryReader, tokenField, field, entryId, binding.Analyzer);
+                    InsertAnalyzedToken(context, ref entryReader, field, entryId, binding);
                 else
-                    InsertToken(context, ref entryReader, tokenField, field, entryId);
+                    InsertToken(context, ref entryReader, field, entryId, binding);
 
             }
             
@@ -264,16 +270,18 @@ namespace Corax
         }
 
         [SkipLocalsInit]
-        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId, Analyzer analyzer)
-        {           
+        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId, IndexFieldBinding binding)
+        {
+            Analyzer analyzer = binding.Analyzer;
             analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
 
             byte* tempWordsSpace = stackalloc byte[bufferSize];
             Token* tempTokenSpace = stackalloc Token[tokenSize];
-            
+
+            int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField);
             if (fieldType.HasFlag(IndexEntryFieldType.List))
-            {                                
+            {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
                 var iterator = entryReader.ReadMany(tokenField);
@@ -295,9 +303,12 @@ namespace Corax
                         {
                             var fieldName = slice.Clone(context);
                             field[fieldName] = term = new List<long>();
-                        }
+                        }                        
 
                         AddMaybeAvoidDuplicate(term, entryId);
+
+                        if (binding.HasSuggestions)
+                            AddSuggestions(binding, slice);
                     }
                 }
             }           
@@ -319,12 +330,72 @@ namespace Corax
                         var fieldName = slice.Clone(context);
                         field[fieldName] = term = new List<long>();
                     }
-
                     AddMaybeAvoidDuplicate(term, entryId);
+
+                    if (binding.HasSuggestions)
+                        AddSuggestions(binding, slice);
                 }
             }
-        }        
-        
+        }
+
+        private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
+        {
+            if (_suggestionsAccumulator == null)
+                _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
+
+            if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
+            {             
+                suggestionsToAdd = new Dictionary<Slice, int>();
+                _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
+            }
+
+            var keys = SuggestionsKeys.Generate(Transaction.Allocator, SuggestionTermProvider.DefaultNGramSize, slice.AsSpan(), out int keysCount);
+            int keySizes = keys.Length / keysCount;            
+
+            var bsc = Transaction.Allocator;
+            
+            int idx = 0;
+            while (idx < keysCount)
+            {
+                var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
+                if (!suggestionsToAdd.TryGetValue(key, out int counter))
+                    counter = 0;
+
+                counter++;
+                suggestionsToAdd[key] = counter;
+                idx++;
+            }
+        }
+
+        private void RemoveSuggestions(IndexFieldBinding binding, ReadOnlySpan<byte> sequence)
+        {
+            if (_suggestionsAccumulator == null)
+                _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
+
+            if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
+            {                
+                suggestionsToAdd = new Dictionary<Slice, int>();
+                _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
+            }
+
+            var keys = SuggestionsKeys.Generate(Transaction.Allocator, SuggestionTermProvider.DefaultNGramSize, sequence, out int keysCount);
+            int keySizes = keys.Length / keysCount;
+
+            var bsc = Transaction.Allocator;
+
+            int idx = 0;
+            while (idx < keysCount)
+            {
+                var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
+                if (!suggestionsToAdd.TryGetValue(key, out int counter))
+                    counter = 0;
+
+                counter--;
+                suggestionsToAdd[key] = counter;
+                idx++;
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void AddMaybeAvoidDuplicate(List<long> term, long entryId)
         {
@@ -335,8 +406,9 @@ namespace Corax
             term.Add(entryId);
         }
 
-        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
+        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId, IndexFieldBinding binding)
         {
+            int tokenField = binding.FieldId;
             var fieldType = entryReader.GetFieldType(tokenField);
             if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
@@ -353,6 +425,9 @@ namespace Corax
                     }
 
                     AddMaybeAvoidDuplicate(term, entryId);
+
+                    if (binding.HasSuggestions)
+                        AddSuggestions(binding, slice);
                 }
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
@@ -367,6 +442,9 @@ namespace Corax
                 }
 
                 AddMaybeAvoidDuplicate(term, entryId);
+
+                if (binding.HasSuggestions)
+                    AddSuggestions(binding, slice);
             }
         }
 
@@ -402,12 +480,12 @@ namespace Corax
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
 
-                foreach (var fieldBinding in _fieldsMapping) // TODO maciej: this is wrong, need to get all the fields from the entry
+                foreach (var binding in _fieldsMapping) // TODO maciej: this is wrong, need to get all the fields from the entry
                 {
-                    int fieldId = fieldBinding.FieldId;
-                    Slice fieldName = fieldBinding.FieldName;
-                    Analyzer analyzer = fieldBinding.Analyzer;  
-                    
+                    int fieldId = binding.FieldId;
+                    Slice fieldName = binding.FieldName;
+                    Analyzer analyzer = binding.Analyzer;
+
                     var fieldType = entryReader.GetFieldType(fieldId);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
@@ -418,21 +496,27 @@ namespace Corax
                             if (analyzer is null)
                             {
                                 DeleteField(id, fieldName, tmpBuf, it.Sequence);
+
+                                if (binding.HasSuggestions)
+                                    RemoveSuggestions(binding, it.Sequence);
                             }
                             else
                             {
                                 var value = it.Sequence;
                                 var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
                                 var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
-                                
-                                
+                                                                
                                 analyzer.Execute(value, ref words, ref tokens);
 
                                 for (int i = 0; i < tokens.Length; i++)
                                 {
                                     ref var token = ref tokens[i];
 
-                                    DeleteField(id, fieldName, tmpBuf, words.Slice(token.Offset, (int)token.Length));
+                                    var term = words.Slice(token.Offset, (int)token.Length);
+                                    DeleteField(id, fieldName, tmpBuf, term);
+
+                                    if (binding.HasSuggestions)
+                                        RemoveSuggestions(binding, term);
                                 }
                             }
                         }
@@ -443,6 +527,8 @@ namespace Corax
                         if (analyzer is null)
                         {
                             DeleteField(id, fieldName, tmpBuf, termValue);
+                            if (binding.HasSuggestions)
+                                RemoveSuggestions(binding, termValue);
                         }
                         else
                         {
@@ -454,7 +540,11 @@ namespace Corax
                             {
                                 ref var token = ref tokens[i];
 
-                                DeleteField(id, fieldName, tmpBuf, words.Slice(token.Offset, (int)token.Length));
+                                var term = words.Slice(token.Offset, (int)token.Length);
+                                DeleteField(id, fieldName, tmpBuf, term);
+
+                                if (binding.HasSuggestions)
+                                    RemoveSuggestions(binding, termValue);
                             }
                         }                        
                     }
@@ -609,6 +699,28 @@ namespace Corax
                     }
                 }
             }
+
+            // Check if we have suggestions to deal with. 
+            if ( _suggestionsAccumulator != null )
+            {              
+                foreach (var (fieldId, values) in _suggestionsAccumulator)
+                {
+                    Slice.From(Transaction.Allocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
+                    var tree = Transaction.CompactTreeFor(treeName);
+                    foreach (var (key, counter) in values)
+                    {
+                        if (!tree.TryGetValue(key, out var storedCounter))
+                            storedCounter = 0;
+
+                        long finalCounter = storedCounter + counter;
+                        if (finalCounter > 0)
+                            tree.Add(key, finalCounter);
+                        else
+                            tree.TryRemove(key, out storedCounter);
+                    }
+                }
+            }
+            
 
             if (_ownsTransaction)
                 Transaction.Commit();

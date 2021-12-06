@@ -142,11 +142,6 @@ namespace Corax.Queries
         {
             public int TermsCount => 0;
 
-            public bool Evaluate(long id)
-            {
-                throw new NotSupportedException();
-            }
-
             public bool Next(out TermMatch term)
             {
                 Unsafe.SkipInit(out term);
