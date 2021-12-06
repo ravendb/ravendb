@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Indexes
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = ReduceKeyProcessorHashDoubleFix;
+            public const long CurrentVersion = Corax;
         }
     }
 
