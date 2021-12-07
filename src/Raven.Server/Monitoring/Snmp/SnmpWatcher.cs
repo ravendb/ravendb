@@ -70,7 +70,7 @@ namespace Raven.Server.Monitoring.Snmp
                 if (activate)
                 {
                     if (snmpEngine.Active == false)
-                        snmpEngine.Start();
+                        StartEngine(snmpEngine, _server);
                 }
                 else
                 {
@@ -107,7 +107,7 @@ namespace Raven.Server.Monitoring.Snmp
                     if (_snmpEngine.Active)
                         throw new InvalidOperationException("Cannot start SNMP Engine because it is already activated. Should not happen!");
 
-                    _snmpEngine.Start();
+                    StartEngine(_snmpEngine, _server);
                 }
 
                 _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
@@ -575,6 +575,18 @@ namespace Raven.Server.Monitoring.Snmp
                 return;
 
             _loadedDatabases[databaseName] = new SnmpDatabase(_server.ServerStore.DatabasesLandlord, _objectStore, databaseName, (int)databaseIndex);
+        }
+
+        private static void StartEngine(SnmpEngine engine, RavenServer server)
+        {
+            try
+            {
+                engine.Start();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Could not start SNMP Engine at port {server.Configuration.Monitoring.Snmp.Port}", e);
+            }
         }
 
         internal static Dictionary<string, long> GetMapping(ServerStore serverStore, TransactionOperationContext context)
