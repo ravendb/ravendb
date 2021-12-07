@@ -17,7 +17,7 @@ class queryUtil {
     static readonly MinDateUTC = "0001-01-01T00:00:00.000Z"; // TODO - replace w/ syntax from RavenDB-17618 when done
     static readonly MaxDateUTC = "9999-01-01T00:00:00.000Z";
 
-    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, startDate?: string, endDate?: string) {
+    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, startDate?: moment.Moment, endDate?: moment.Moment) {
         const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
@@ -26,7 +26,7 @@ class queryUtil {
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates})`;
     }
 
-    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: string, endDate?: string) {
+    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: moment.Moment, endDate?: moment.Moment) {
         const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
@@ -35,14 +35,15 @@ class queryUtil {
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates} group by ${group} select avg())`;
     }
     
-    private static formatDates(startDate?: string, endDate?: string): string {
-        if (startDate && !endDate) {
-            endDate = queryUtil.MaxDateUTC;
-        } else if (endDate && !startDate) {
-            startDate = queryUtil.MinDateUTC;
+    private static formatDates(startDate?: moment.Moment, endDate?: moment.Moment): string {
+        if (!startDate && !endDate) { 
+            return null;
         }
+
+        const start = startDate ? startDate.utc().format() : queryUtil.MinDateUTC;
+        const end = endDate ? endDate.utc().format() : queryUtil.MaxDateUTC;
         
-        return startDate && endDate ? `between "${startDate}" and "${endDate}"` : "";
+        return `between "${start}" and "${end}"` 
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {

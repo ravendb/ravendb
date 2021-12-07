@@ -9,7 +9,7 @@
             </div>
             <div class="modal-body">
                 <div class="padding padding-sm">
-                    <div class="form-group">
+                    <div class="form-group margin-bottom margin-bottom-xs margin-top">
                         <label class="control-label">&nbsp;</label>
                         <div class="toggle">
                             <input id="startDateToggle" type="checkbox" data-bind="checked: setStartDate" />
@@ -17,17 +17,20 @@
                         </div>
                     </div>
                     <div data-bind="collapse: setStartDate">
-                        <div class="form-group" data-bind="validationElement: startDateLocal">
+                        <div class="form-group margin-bottom margin-bottom-lg" data-bind="validationElement: startDateLocal">
                             <label class="control-label">Start Date</label>
-                            <div class="input-group margin-top margin-top-sm flex-grow" data-bind="validationElement: startDateLocal">
-                                <input type="text" class="form-control" id="startDateLocal" placeholder="Enter start date"
-                                       data-bind="datePicker: startDateLocal, datepickerOptions: datePickerOptions, datepickerDateToUse: startDateToUse" />
+                            <div class="input-group" data-bind="validationElement: startDateLocal">
+                                <input type="text" class="form-control input-date" id="startDateLocal" placeholder="Enter start date"
+                                       data-bind="datePicker: startDateLocal, datepickerOptions: datePickerOptions" />
                                 <div class="input-group-addon">(local)</div>
                                 <span class="help-block" data-bind="validationMessage: startDateLocal"></span>
+                                <div data-bind="if: startDateLocal.isValid()" class="margin-left margin-top margin-top-xs">
+                                    <small class="form-control-static" data-bind="text: formatLocalDateAsUtc(startDateLocal)"></small>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group margin-bottom margin-bottom-xs margin-top">
                         <label class="control-label">&nbsp;</label>
                         <div class="toggle">
                             <input id="endDateToggle" type="checkbox" data-bind="checked: setEndDate" />
@@ -37,11 +40,14 @@
                     <div data-bind="collapse: setEndDate">
                         <div class="form-group" data-bind="validationElement: endDateLocal">
                             <label class="control-label">End Date</label>
-                            <div class="input-group margin-top margin-top-sm flex-grow" data-bind="validationElement: endDateLocal">
-                                <input type="text" class="form-control" id="endDateLocal" placeholder="Enter end date"
-                                       data-bind="datePicker: endDateLocal, datepickerOptions: datePickerOptions, datepickerDateToUse: endDateToUse" />
+                            <div class="input-group" data-bind="validationElement: endDateLocal">
+                                <input type="text" class="form-control input-date" id="endDateLocal" placeholder="Enter end date"
+                                       data-bind="datePicker: endDateLocal, datepickerOptions: datePickerOptions" />
                                 <div class="input-group-addon">(local)</div>
                                 <span class="help-block" data-bind="validationMessage: endDateLocal"></span>
+                                <div data-bind="if: endDateLocal.isValid()" class="margin-left margin-top margin-top-xs">
+                                    <small class="form-control-static" data-bind="text: formatLocalDateAsUtc(endDateLocal)"></small>
+                                </div>
                             </div>
                         </div>
                     </div>

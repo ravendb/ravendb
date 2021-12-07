@@ -1,15 +1,12 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
-import generalUtils = require("common/generalUtils");
+import editTimeSeriesEntry = require("viewmodels/database/timeSeries/editTimeSeriesEntry");
 
 class filterTimeSeries extends dialogViewModelBase {
 
     setStartDate = ko.observable<boolean>(false);
     setEndDate = ko.observable<boolean>(false);
-    
-    startDateToUse = ko.observable<number>(null);
-    endDateToUse = ko.observable<number>(null);
     
     startDateLocal = ko.observable<moment.Moment>();
     endDateLocal = ko.observable<moment.Moment>();
@@ -21,16 +18,17 @@ class filterTimeSeries extends dialogViewModelBase {
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor(private startDate: string, private endDate: string) {
+    constructor(startDate: moment.Moment, endDate: moment.Moment) {
         super();
         
         if (startDate) {
-            this.startDateToUse((new Date(startDate)).getTime());
             this.setStartDate(true);
+            this.startDateLocal(moment(startDate).local());
         }
+        
         if (endDate) {
-            this.endDateToUse((new Date(endDate)).getTime());
             this.setEndDate(true);
+            this.endDateLocal(moment(endDate).local());
         }
 
         this.initValidation();
@@ -42,9 +40,7 @@ class filterTimeSeries extends dialogViewModelBase {
         this.startDateLocal.extend({
             validation: [
                 {
-                    validator: () => {
-                        return !this.setStartDate() || (this.startDateLocal() && this.startDateLocal().isValid());
-                    },
+                    validator: () => !this.setStartDate() || this.startDateLocal()?.isValid(),
                     message: "Please enter a valid date"
                 }
             ]
@@ -53,9 +49,7 @@ class filterTimeSeries extends dialogViewModelBase {
         this.endDateLocal.extend({
             validation: [
                 {
-                    validator: () => {
-                        return !this.setEndDate() || (this.endDateLocal() && this.endDateLocal().isValid());
-                    },
+                    validator: () => !this.setEndDate() || (this.endDateLocal()?.isValid()),
                     message: "Please enter a valid date"
                 },
                 {
@@ -69,7 +63,7 @@ class filterTimeSeries extends dialogViewModelBase {
                         }
                         
                         // at this point both start/end are defined and valid, we can compare
-                        return this.endDateLocal().diff(this.startDateLocal()) >= 0;
+                        return this.endDateLocal().isAfter(this.startDateLocal());
                     },
                     message: "End Date must be greater than Start Date"
                 }
@@ -84,8 +78,8 @@ class filterTimeSeries extends dialogViewModelBase {
     
     filterItems() {
         if (this.isValid(this.validationGroup)) {
-            const startDateFromDialog = this.setStartDate() ? this.startDateLocal().utc().format(generalUtils.utcFullDateFormat) : null;
-            const endDateFromDialog = this.setEndDate() ? this.endDateLocal().utc().format(generalUtils.utcFullDateFormat) : null;
+            const startDateFromDialog = this.setStartDate() ? this.startDateLocal() : null;
+            const endDateFromDialog = this.setEndDate() ? this.endDateLocal() : null;
             
             const filterDates: filterTimeSeriesDates = { startDate: startDateFromDialog, endDate: endDateFromDialog };
             dialog.close(this, filterDates);
@@ -98,6 +92,17 @@ class filterTimeSeries extends dialogViewModelBase {
 
     deactivate() {
         super.deactivate(null);
+    }
+
+    formatLocalDateAsUtc(localMoment: KnockoutObservable<moment.Moment>): KnockoutComputed<string> {
+        return ko.pureComputed(() => {
+            if (!localMoment()) {
+                return null;
+            }
+            
+            const newMoment = moment(localMoment());
+            return newMoment.utc().format(editTimeSeriesEntry.utcTimeFormat) + "Z (UTC)";
+        })
     }
 }
 

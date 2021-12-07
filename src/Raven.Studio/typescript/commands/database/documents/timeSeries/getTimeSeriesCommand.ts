@@ -7,7 +7,7 @@ class getTimeSeriesCommand extends commandBase {
     
     constructor(private docId: string, private timeSeriesName: string, private db: database, 
                 private start: number, private pageSize: number, private suppressNotFound = false,
-                private startDate?: string, private endDate?: string) {
+                private startDateLocal?: moment.Moment, private endDateLocal?: moment.Moment) {
         super();
     }
     
@@ -18,8 +18,8 @@ class getTimeSeriesCommand extends commandBase {
             pageSize: this.pageSize,
             start: this.start,
             full: timeSeriesEntryModel.isIncrementalName(this.timeSeriesName),
-            from: this.startDate,
-            to: this.endDate
+            from: this.startDateLocal?.utc().format(),
+            to: this.endDateLocal?.utc().format()
         };
         
         const url = endpoints.databases.timeSeries.timeseries;
