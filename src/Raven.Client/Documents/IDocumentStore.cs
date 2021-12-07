@@ -53,6 +53,10 @@ namespace Raven.Client.Documents
 
         event EventHandler<FailedRequestEventArgs> OnFailedRequest;
 
+        event EventHandler<BeforeRequestEventArgs> OnBeforeRequest;
+
+        event EventHandler<SucceedRequestEventArgs> OnSucceedRequest;
+
         event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated;
 
         event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
