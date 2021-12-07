@@ -416,7 +416,7 @@ from EdgeCaseValues as e select MyProjection(e)"
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-15952")]
         public async Task CanIndexBigNumbersEdgeCases()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
