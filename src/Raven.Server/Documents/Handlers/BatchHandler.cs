@@ -226,10 +226,13 @@ namespace Raven.Server.Documents.Handlers
             var clusterTransactionCommand = new ClusterTransactionCommand(Database.Name, Database.IdentityPartsSeparator, topology, command.ParsedCommands, options, raftRequestId);
             var result = await ServerStore.SendToLeaderAsync(clusterTransactionCommand);
 
-            if (result.Result is List<string> errors)
+            if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
+                throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                {
+                    ClusterTransactionConflicts = errors.Select(e => e.Conflict).ToArray()
+                };
             }
 
             // wait for the command to be applied on this node
