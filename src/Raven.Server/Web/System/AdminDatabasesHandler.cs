@@ -456,7 +456,7 @@ namespace Raven.Server.Web.System
                 };
 
                 var res = await ServerStore.SendToLeaderAsync(reorder);
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
             }
@@ -479,7 +479,7 @@ namespace Raven.Server.Web.System
             foreach (var node in topology.AllNodes)
             {
                 if (unique.Add(node) == false)
-                    throw new InvalidOperationException($"node '{node}' already exists. This is not allowed.");
+                    throw new InvalidOperationException($"node '{node}' already exists. This is not allowed. Database Topology : {topology}");
 
                 var url = clusterTopology.GetUrlFromTag(node);
                 if (databaseRecord.Encrypted && NotUsingHttps(url))

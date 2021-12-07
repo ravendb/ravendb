@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     continue; // this can happen when we have '@all_docs'
 
                                 _index.HandleDelete(tombstone, collection, writeOperation, indexContext, collectionStats);
+                                stats.RecordTombstoneDeleteSuccess();
 
                                 var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.Cleanup, queryContext, indexContext, writeOperation, lastEtag,
                                     lastCollectionEtag,

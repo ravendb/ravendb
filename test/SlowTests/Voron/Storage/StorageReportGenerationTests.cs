@@ -432,9 +432,9 @@ namespace SlowTests.Voron.Storage
                 Assert.Equal(1, treeReport.Streams.Streams.Count);
                 Assert.Equal(StorageReportGenerator.SkippedStreamsDetailsName, treeReport?.Streams.Streams[0].Name);
 
-                var streamsSizeInMb = Math.Ceiling(treeReport.Streams.Streams[0].AllocatedSpaceInBytes * 0.000001);
-                var fullStreamsSizeInMb = Math.Ceiling(fullTreeReport.Streams.AllocatedSpaceInBytes * 0.000001);
-
+                var streamsSizeInMb = Math.Round(treeReport.Streams.Streams[0].AllocatedSpaceInBytes * 0.000001);
+                var fullStreamsSizeInMb = Math.Round(fullTreeReport.Streams.AllocatedSpaceInBytes * 0.000001);
+                
                 Assert.Equal(streamsSizeInMb, fullStreamsSizeInMb);
             }
         }

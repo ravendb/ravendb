@@ -218,7 +218,7 @@ class query extends viewModelBase {
     includesCache = ko.observableArray<perCollectionIncludes>([]);
     includesRevisionsCache = ko.observable<includedRevisions>(new includedRevisions());
     highlightsCache = ko.observableArray<highlightSection>([]);
-    explanationsCache = new Map<string, explanationItem>();
+    explanationsCache: explanationItem[] = [];
     totalExplanations = ko.observable<number>(0);
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
 
@@ -663,7 +663,7 @@ class query extends viewModelBase {
             }));
         
         this.explanationsFetcher(() => {
-           const allExplanations = Array.from(this.explanationsCache.values());
+           const allExplanations = this.explanationsCache;
            
            return $.when({
                items: allExplanations.map(x => new document(x)),
@@ -947,7 +947,7 @@ class query extends viewModelBase {
         this.includesCache.removeAll();
         this.includesRevisionsCache(new includedRevisions());
         this.highlightsCache.removeAll();
-        this.explanationsCache.clear();
+        this.explanationsCache.length = 0;
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -1101,7 +1101,7 @@ class query extends viewModelBase {
                             this.onIncludesLoaded(queryResults.includes);
                             this.onIncludesRevisionsLoaded(queryResults.includesRevisions);
                             this.onHighlightingsLoaded(queryResults.highlightings);
-                            this.onExplanationsLoaded(queryResults.explanations);
+                            this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
@@ -1282,15 +1282,43 @@ class query extends viewModelBase {
             });
     }
     
-    private onExplanationsLoaded(explanations: dictionary<Array<string>>): void {
-        _.forIn(explanations, (doc, id) => {
-            this.explanationsCache.set(id, {
-               id: id,
-                explanations: doc
+    /*
+    The rules are:
+    - scan through results and pick matching explanations - remove from map after pushing to results
+    - if key wasn't found in explanations - ignore and skip
+    - iterate through remaining items - push them in any order - we already did our best to sort that
+     */
+    private onExplanationsLoaded(explanations: dictionary<Array<string>>, results: document[]) {
+        const remainingItems = new Map(Object.keys(explanations).map(x => [x, explanations[x]]));
+        
+        const itemsToCache: explanationItem[] = [];
+        results.forEach(result => {
+            const id = result.getId();
+            const list = remainingItems.get(id);
+            if (list) {
+                itemsToCache.push({
+                    id,
+                    explanations: list
+            });
+                remainingItems.delete(id);
+            }
+        });
+        
+        remainingItems.forEach((value, id) => {
+            itemsToCache.push({
+                id,
+                explanations: value
             });
         });
         
-        this.totalExplanations(this.explanationsCache.size);
+        // scan existing cache for duplicates
+        const newIds = new Set<string>(itemsToCache.map(x => x.id));
+        this.explanationsCache = this.explanationsCache.filter(x => !newIds.has(x.id));
+        
+        // and push new cached items
+        this.explanationsCache.push(...itemsToCache);
+        
+        this.totalExplanations(this.explanationsCache.length);
     }
     
     private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings): void {
@@ -1488,6 +1516,9 @@ class query extends viewModelBase {
         // remove all existing highlights & included revisions when going back to 'results' tab
         this.highlightsCache.removeAll();
         this.includesRevisionsCache(new includedRevisions());
+        
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
         
         this.columnsSelector.reset();
         this.refresh();

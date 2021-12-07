@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         if (etag > lastEtag)
                                             lastEtag = etag.Value;
 
-                                        collectionStats.RecordMapCompletedReason("No more documents to index");
+                                        collectionStats.RecordBatchCompletedReason(IndexingWorkType.Map, "No more documents to index");
                                         keepRunning = false;
                                         break;
                                     }

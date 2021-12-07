@@ -180,7 +180,7 @@ class indexProgress {
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexProgress) {
         this.isStale = dto.IsStale;
-        this.name = dto.Name.toLowerCase();
+        this.name = dto.Name;
         this.collections(_.map(dto.Collections, (value, key) => new collectionProgress(key, value, dto.IndexRunningStatus)));
         const rolling: rollingProgress[] = dto.IndexRollingStatus ? _.map(dto.IndexRollingStatus.ActiveDeployments, (value, key) => new rollingProgress(key, value)) : [];
         this.rollingProgress(rolling.reverse());
