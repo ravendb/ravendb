@@ -63,9 +63,9 @@ class filterTimeSeries extends dialogViewModelBase {
                         }
                         
                         // at this point both start/end are defined and valid, we can compare
-                        return this.endDateLocal().isAfter(this.startDateLocal());
+                        return this.endDateLocal().diff(this.startDateLocal()) >= 0;
                     },
-                    message: "End Date must be greater than Start Date"
+                    message: "End Date must be greater than (or equal to) Start Date"
                 }
             ]
         });
@@ -100,8 +100,7 @@ class filterTimeSeries extends dialogViewModelBase {
                 return null;
             }
             
-            const newMoment = moment(localMoment());
-            return newMoment.utc().format(editTimeSeriesEntry.utcTimeFormat) + "Z (UTC)";
+            return localMoment().clone().utc().format(editTimeSeriesEntry.utcTimeFormat) + "Z (UTC)";
         })
     }
 }

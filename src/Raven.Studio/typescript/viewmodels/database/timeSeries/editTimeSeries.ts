@@ -206,8 +206,8 @@ class editTimeSeries extends viewModelBase {
             this.createTimeSeries(true);
         }
         
-        const formatTimeSeriesDate = (input: string) => {
-            const dateToFormat = moment.utc(input);
+        const formatTimeSeriesDate = (timestamp: string) => {
+            const dateToFormat = moment.utc(timestamp);
             return dateToFormat.format(editTimeSeries.timeSeriesFormat) + "Z";
         };
         
@@ -287,19 +287,9 @@ class editTimeSeries extends viewModelBase {
             new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, editTimeSeries.pageSize, true, this.localStartDateInFilter(), this.localEndDateInFilter())
                 .execute()
                 .done(result => {
-                    
-                    let totalResultsCount = result.TotalResults;
-                    // result.TotalResults will be actual total results ONLY when:
-                    // * no filtering was applied - or -
-                    // * 'From' is less than the smaller date && 'To' is greater than the biggest date
-                    
-                    if (this.hasFilter()) {
-                        totalResultsCount = this.calculateResultsCountForGrid(result);
-                    }
-                    
                     fetchTask.resolve({
                         items: result.Entries,
-                        totalResultCount: totalResultsCount
+                        totalResultCount: this.calculateResultsCountForGrid(result)
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -320,10 +310,6 @@ class editTimeSeries extends viewModelBase {
     }
     
     private calculateResultsCountForGrid(result: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesRangeResult): number {
-        // This calculation is relevant only when filter is set - since result.TotalResults will be null when filter is set
-        
-        // An exception to the above rule is: 
-        // The true total results are returned if the requested min/max dates are outside of the entries start & end dates
         if (result.TotalResults) {
             return result.TotalResults
         }
@@ -582,22 +568,25 @@ class editTimeSeries extends viewModelBase {
         });
         
         this.filterText = ko.pureComputed<string>(() => {
-            if (!this.localStartDateInFilter() && !this.localEndDateInFilter()) {
+            const start = this.localStartDateInFilter();
+            const end = this.localEndDateInFilter();
+
+            if (!start && !end) {
                 return "";
             }
             
             let text = "Showing entries with ";
             
-            if (this.localStartDateInFilter()) {
-                text += `date &gt;= <code>${this.localStartDateInFilter().utc().format()}</code>`;
+            if (start) {
+                text += `date &gt;= <code>${start.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
             }
             
-            if (this.localStartDateInFilter() && this.localEndDateInFilter()) {
+            if (start && end) {
                 text += " and ";
             }
             
-            if (this.localEndDateInFilter()) {
-                text += `date &lt;= <code>${this.localEndDateInFilter().utc().format()}</code>`;
+            if (end) {
+                text += `date &lt;= <code>${end.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
             }
             
             return text;

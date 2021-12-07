@@ -1,5 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import genUtils = require("common/generalUtils");
+
 interface rqlTokensIndexInfo {
     update?: RegExpExecArray,
     where?: RegExpExecArray,
@@ -40,10 +42,10 @@ class queryUtil {
             return null;
         }
 
-        const start = startDate ? startDate.utc().format() : queryUtil.MinDateUTC;
-        const end = endDate ? endDate.utc().format() : queryUtil.MaxDateUTC;
+        const start = startDate ? startDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MinDateUTC;
+        const end = endDate ? endDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MaxDateUTC;
         
-        return `between "${start}" and "${end}"` 
+        return `between "${start}" and "${end}"`;
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {

@@ -18,8 +18,8 @@ class getTimeSeriesCommand extends commandBase {
             pageSize: this.pageSize,
             start: this.start,
             full: timeSeriesEntryModel.isIncrementalName(this.timeSeriesName),
-            from: this.startDateLocal?.utc().format(),
-            to: this.endDateLocal?.utc().format()
+            from: this.startDateLocal?.clone().utc().format(),
+            to: this.endDateLocal?.clone().utc().format()
         };
         
         const url = endpoints.databases.timeSeries.timeseries;

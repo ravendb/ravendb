@@ -30,11 +30,11 @@
                                         Use minimum
                                     </label>
                                 </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate(), validationElement: startDate">
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMinStartDate(), validationElement: startDateLocal">
                                     <input type="text" class="form-control" id="startDate" placeholder="Start date"
-                                           data-bind="datePicker: startDate, datepickerOptions: $root.datePickerOptions" />
+                                           data-bind="datePicker: startDateLocal, datepickerOptions: $root.datePickerOptions" />
                                     <div class="input-group-addon">(local)</div>
-                                    <span class="help-block" data-bind="validationMessage: startDate"></span>
+                                    <span class="help-block" data-bind="validationMessage: startDateLocal"></span>
                                 </div>
                             </div>
                         </div>
@@ -47,11 +47,11 @@
                                         Use maximum
                                     </label>
                                 </div>
-                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate(), validationElement: endDate">
+                                <div class="input-group margin-top margin-top-sm" data-bind="visible: !$root.useMaxEndDate(), validationElement: endDateLocal">
                                     <input type="text" class="form-control" id="endDate" placeholder="End date"
-                                           data-bind="datePicker: endDate, datepickerOptions: $root.datePickerOptions" />
+                                           data-bind="datePicker: endDateLocal, datepickerOptions: $root.datePickerOptions" />
                                     <div class="input-group-addon">(local)</div>
-                                    <span class="help-block" data-bind="validationMessage: endDate"></span>
+                                    <span class="help-block" data-bind="validationMessage: endDateLocal"></span>
                                 </div>
                             </div>
                         </div>
@@ -62,7 +62,7 @@
                         <div class="flex-start"><i class="icon-warning"></i></div>
                         <div data-bind="visible: !useMinStartDate() || !useMaxEndDate()">
                             <div>You're deleting all time series entries matching time range:</div>
-                            <strong data-bind="text: startDateToUse() || 'Minimum'"></strong> - <strong data-bind="text: endDateToUse() || 'Maximum'"></strong>
+                            <strong data-bind="text: startDateUTC() || 'Minimum'"></strong> - <strong data-bind="text: endDateUTC() || 'Maximum'"></strong>
                         </div>
                         <div data-bind="visible: useMinStartDate() && useMaxEndDate()">
                             <div>You're deleting all time series entries</div>
