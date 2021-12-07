@@ -14,6 +14,8 @@ namespace Raven.Server.Rachis
 {
     public abstract class RachisStateMachine : IDisposable
     {
+        internal static bool EnableDebugLongCommit;
+
         protected TransactionContextPool ContextPoolForReadOnlyOperations;
         protected RachisConsensus _parent;
         public RachisVersionValidation Validator;

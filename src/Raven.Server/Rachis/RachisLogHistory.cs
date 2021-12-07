@@ -174,10 +174,10 @@ namespace Raven.Server.Rachis
 
             var type = GetTypeFromCommand(cmd);
 
-            UpdateInternal(context, guid, type, index, term, HistoryStatus.Committed, result, exception);
+            UpdateInternal(context, cmd, guid, type, index, term, HistoryStatus.Committed, result, exception);
         }
 
-        private unsafe void UpdateInternal(TransactionOperationContext context, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
+        private unsafe void UpdateInternal(TransactionOperationContext context, BlittableJsonReaderObject cmd, string guid, string type, long index, long term, HistoryStatus status, object result, Exception exception)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(LogHistoryTable, LogHistorySlice);
 
@@ -193,13 +193,24 @@ namespace Raven.Server.Rachis
                 throw new RachisApplyException("We don't support type " + result.GetType().FullName + ".");
             }
 
+            var ticks = GetUniqueTicks(context.Transaction.InnerTransaction);
+            if (RachisStateMachine.EnableDebugLongCommit)
+            {
+                var previous = Bits.SwapBytes(*(long*)reader.Read((int)(LogHistoryColumn.Ticks), out _));
+                var diff = TimeSpan.FromTicks(ticks - previous);
+                if (diff > TimeSpan.FromSeconds(2))
+                {
+                    Console.WriteLine($"Command {type} at index:{index}, term:{term} took {diff} to commit (result:{result}, exception:{exception})");
+                    Console.WriteLine(cmd);
+                }
+            }
             using (Slice.From(context.Allocator, guid, out var guidSlice))
             using (Slice.From(context.Allocator, type, out var typeSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(guidSlice);
                 tvb.Add(Bits.SwapBytes(index));
-                tvb.Add(Bits.SwapBytes(GetUniqueTicks(context.Transaction.InnerTransaction)));
+                tvb.Add(Bits.SwapBytes(ticks));
                 tvb.Add(*(long*)reader.Read((int)(LogHistoryColumn.Term), out _));
                 tvb.Add(term);
                 tvb.Add(typeSlice);
@@ -274,7 +285,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var entry in toCancel)
                 {
-                    UpdateInternal(context, entry.Guid, entry.Type, entry.Index, term, entry.Status, null, new OperationCanceledException(msg));
+                    UpdateInternal(context, cmd: null, entry.Guid, entry.Type, entry.Index, term, entry.Status, null, new OperationCanceledException(msg));
                 }
             }
         }
