@@ -873,6 +873,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         taskState = TaskStatus.Disabled;
                     }
+                    else if (_forTestingPurposes.SimulateActiveByCurrentNode_UpdateConfigurations)
+                    {
+                        taskState = TaskStatus.ActiveByCurrentNode;
+                    }
                 }
 
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
@@ -951,7 +955,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (existingBackupState.RunningTask != null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed.");
+                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
+
+                        if (existingBackupState.HasScheduledBackup() == false)
+                        {
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Currently running backup task '{taskId}' doesn't have scheduled backup, will rearrange the timer.");
+
+                            var status = new PeriodicBackupStatus
+                            {
+                                NodeTag = _serverStore.NodeTag,
+                                BackupType = existingBackupState.RunningBackupStatus.BackupType,
+                                IsFull = existingBackupState.RunningBackupStatus.IsFull,
+                                LastFullBackupInternal = existingBackupState.RunningBackupStatus.IsFull ? DateTime.UtcNow : existingBackupState.RunningBackupStatus.LastFullBackupInternal,
+                                LastIncrementalBackupInternal = existingBackupState.RunningBackupStatus.IsFull ? existingBackupState.RunningBackupStatus.LastIncrementalBackupInternal : DateTime.UtcNow,
+                                LastFullBackup = existingBackupState.RunningBackupStatus.LastFullBackup,
+                                LastEtag = existingBackupState.RunningBackupStatus.LastEtag,
+                            };
+
+                            existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, status, _serverStore.NodeTag), lockTaken: false);
+                        }
 
                         return;
                     }
@@ -1169,6 +1192,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool ClusterDownStatusSimulated;
             internal bool SimulateActiveByOtherNodeStatus_Reschedule;
             internal bool SimulateActiveByOtherNodeStatus_UpdateConfigurations;
+            internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
             internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
 
