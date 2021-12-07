@@ -394,6 +394,7 @@ class ongoingTasksStats extends viewModelBase {
         collectionNameTextColor: undefined as string,
         itemWithError: undefined as string,
         progressStripes: undefined as string,
+        stripeTextColor: undefined as string,
 
         tracks: {
             "Replication": undefined as string,
@@ -954,7 +955,7 @@ class ongoingTasksStats extends viewModelBase {
                 this.subscriptionToWorkers.set(subscriptionName, new Set<string>(workerIds));
             }
             
-            const numberOfWorkers = subscription.size;
+            const numberOfWorkers = subscription ? subscription.size : 1;
             const height = ongoingTasksStats.openedSubscriptionTrackHeight + ((numberOfWorkers - 1) * ongoingTasksStats.openedSubscriptionWorkerTrackHeight);
             
             trackInfos.push({
@@ -1663,6 +1664,7 @@ class ongoingTasksStats extends viewModelBase {
                 if (dx >= 0.8) { // Don't show tooltip for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache, op);
                 }
+                this.drawTextOnStripe(context, op.Name, dx, currentX, yStart);
             }
             // 2. Track is closed
             else if (isRootOperation) { // register only on root item
@@ -1716,6 +1718,7 @@ class ongoingTasksStats extends viewModelBase {
             if (dx >= 0.8) { // Don't show tooltip for very small items
                 this.hitTest.registerSubscriptionConnectionItem(xStart, yStart, dx, ongoingTasksStats.trackHeight, this.mapItemToRegister(perfItemWithCache, operationDuration));
             }
+            this.drawTextOnStripe(context, "ClientConnection", dx, xStart, yStart);
         }
         // Track is closed
         else if (dx >= 0.8) {
@@ -2282,6 +2285,18 @@ class ongoingTasksStats extends viewModelBase {
         this.brushContainer.call(this.brush);
 
         this.onBrush();
+    }
+    
+    private drawTextOnStripe(context: CanvasRenderingContext2D, text: string, dx: number, xStart: number, yStart: number): void {
+        if (dx > 30) {
+            context.fillStyle = this.colors.stripeTextColor;
+            const textWidth = context.measureText(text).width;
+            const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
+            if (truncatedText) {
+                context.font = "12px Lato";
+                context.fillText(truncatedText, xStart + 2, yStart + 13, dx - 4);
+            }
+        }
     }
 }
 
