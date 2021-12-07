@@ -2824,7 +2824,7 @@ namespace Raven.Server.ServerWide
 
             var result = await SendToLeaderAsync(command);
 
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+            await Cluster.WaitForIndexNotification(result.Index);
         }
 
         public DatabaseTopology LoadDatabaseTopology(string databaseName)
