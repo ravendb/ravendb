@@ -25,6 +25,7 @@ class deleteTimeSeries extends dialogViewModelBase {
     
     startDateToUse: KnockoutComputed<string>;
     endDateToUse: KnockoutComputed<string>;
+    
     showWarning: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup;
@@ -34,11 +35,21 @@ class deleteTimeSeries extends dialogViewModelBase {
         criteria.selection = criteria.selection || [];
         
         this.startDateToUse = ko.pureComputed(() => {
-            return this.useMinStartDate() ? null : this.startDate().utc().format(generalUtils.utcFullDateFormat);
+            if (this.useMinStartDate()) {
+                return null;
+            }
+            
+            const newMoment = moment(this.startDate());
+            return newMoment.utc().format(generalUtils.utcFullDateFormat);
         });
         
         this.endDateToUse = ko.pureComputed(() => {
-            return this.useMaxEndDate() ? null : this.endDate().utc().format(generalUtils.utcFullDateFormat);
+            if (this.useMaxEndDate()) {
+                return null;
+            }
+
+            const newMoment = moment(this.endDate());
+            return newMoment.utc().format(generalUtils.utcFullDateFormat);
         });
         
         this.showWarning = ko.pureComputed(() => {
@@ -95,7 +106,7 @@ class deleteTimeSeries extends dialogViewModelBase {
                         }
                         
                         // at this point both start/end are defined and valid, we can compare
-                        return this.endDate().diff(this.startDate()) >= 0;
+                        return this.endDate().isAfter(this.startDate());
                     },
                     message: "End Date must be greater than Start Date"
                 }

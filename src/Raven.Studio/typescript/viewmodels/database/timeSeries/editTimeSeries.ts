@@ -26,15 +26,13 @@ import popoverUtils = require("common/popoverUtils");
 class timeSeriesInfo {
     name = ko.observable<string>();
     
-    numberOfEntries = ko.observable<number>(); // holds only a partial result when when filtering by dates
-    totalNumberOfEntries = ko.observable<number>(); // the true total number of entries
+    totalNumberOfEntries = ko.observable<number>();
     
     nameAndNumberFormatted: KnockoutComputed<string>;
     
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
         
-        this.numberOfEntries(numberOfEntries);
         this.totalNumberOfEntries(numberOfEntries);
         
         this.initObservables();
@@ -70,8 +68,8 @@ class editTimeSeries extends viewModelBase {
     deleteButtonText: KnockoutComputed<string>;
     isRollupTimeSeries: KnockoutComputed<boolean>;
     
-    startDateUsedInFilter = ko.observable<string>();
-    endDateUsedInFilter = ko.observable<string>();
+    localStartDateInFilter = ko.observable<moment.Moment>();
+    localEndDateInFilter = ko.observable<moment.Moment>();
     
     filterText: KnockoutComputed<string>;
     hasFilter: KnockoutComputed<boolean>;
@@ -94,7 +92,7 @@ class editTimeSeries extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
+        this.bindToCurrentInstance("currentSeriesWasChanged", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
         
         this.initObservables();
         datePickerBindingHandler.install();
@@ -286,26 +284,22 @@ class editTimeSeries extends viewModelBase {
         const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, editTimeSeries.pageSize, true, this.startDateUsedInFilter(), this.endDateUsedInFilter())
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, editTimeSeries.pageSize, true, this.localStartDateInFilter(), this.localEndDateInFilter())
                 .execute()
                 .done(result => {
                     
-                    const items = result.Entries;
+                    let totalResultsCount = result.TotalResults;
+                    // result.TotalResults will be actual total results ONLY when:
+                    // * no filtering was applied - or -
+                    // * 'From' is less than the smaller date && 'To' is greater than the biggest date
                     
-                    const series = this.getSeriesFromList(timeSeriesName);
-                    if (series) {
-                        series.numberOfEntries(result.TotalResults);
-                        // result.TotalResults is only partial when filtering by dates 
-                    }
-
-                    let totalResultsCountForGrid = result.TotalResults;
                     if (this.hasFilter()) {
-                        totalResultsCountForGrid = this.calculateResultsCountForGrid(result);
+                        totalResultsCount = this.calculateResultsCountForGrid(result);
                     }
                     
                     fetchTask.resolve({
-                        items,
-                        totalResultCount: totalResultsCountForGrid
+                        items: result.Entries,
+                        totalResultCount: totalResultsCount
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -326,21 +320,20 @@ class editTimeSeries extends viewModelBase {
     }
     
     private calculateResultsCountForGrid(result: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesRangeResult): number {
-        // this calculation is relevant only when filter is set,
-        // since result.TotalResults will be only per the page size requested, and not the true total results
-                
-        // the bellow is an exception to the above rule, 
-        // if To & From are outside of the requested min/max dates then the true total results are returned
-        if (result.TotalResults > editTimeSeries.pageSize) {
+        // This calculation is relevant only when filter is set - since result.TotalResults will be null when filter is set
+        
+        // An exception to the above rule is: 
+        // The true total results are returned if the requested min/max dates are outside of the entries start & end dates
+        if (result.TotalResults) {
             return result.TotalResults
         }
-        
-        this.itemsSoFar += result.TotalResults;
+
+        const numberOfItemsFetched = result.Entries.length;
+        this.itemsSoFar += numberOfItemsFetched;
         
         if (!result.To ||
-            result.TotalResults < editTimeSeries.pageSize ||
-            (new Date(result.To)) >= (new Date(this.endDateUsedInFilter()))) {
-            
+            numberOfItemsFetched < editTimeSeries.pageSize ||
+            (this.localEndDateInFilter() &&(new Date(result.To)) >= this.localEndDateInFilter().toDate())) {
             return this.itemsSoFar;
         }
         
@@ -377,8 +370,7 @@ class editTimeSeries extends viewModelBase {
 
     private activateByCreateNew(docId: string) {
         return this.loadTimeSeries(docId)
-            .then(stats => {
-                this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
+            .then(() => {
                 this.timeSeriesName(null);
                 return { can: true };
             });
@@ -386,10 +378,9 @@ class editTimeSeries extends viewModelBase {
     
     private activateById(docId: string, timeSeriesName: string) {
         return this.loadTimeSeries(docId)
-            .then(stats => {
+            .then(() => {
                 if (this.getSeriesFromList(timeSeriesName)) {
                     this.timeSeriesName(timeSeriesName);
-                    this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
                     return { can: true };
                 } else {
                     messagePublisher.reportWarning("Unable to find time series with name: " + timeSeriesName);
@@ -398,7 +389,7 @@ class editTimeSeries extends viewModelBase {
             });
     }
     
-    loadTimeSeries(docId: string) {
+    private loadTimeSeries(docId: string) {
         return new getTimeSeriesStatsCommand(docId, this.activeDatabase())
             .execute()
             .done(stats => {
@@ -437,12 +428,17 @@ class editTimeSeries extends viewModelBase {
         };
     }
     
-    changeCurrentSeries(name: string) {
+    currentSeriesWasChanged(name: string) {
+        this.loadTimeSeries(this.documentId())
+            .then(() => {
+                this.changeCurrentSeries(name);
+            })
+    }
+    
+    private changeCurrentSeries(name: string) {
         this.cleanColumnsCache();
         this.timeSeriesName(name);
         this.itemsSoFar = 0;
-        
-        router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
         
         this.refresh(true);
     }
@@ -586,43 +582,42 @@ class editTimeSeries extends viewModelBase {
         });
         
         this.filterText = ko.pureComputed<string>(() => {
-            if (!this.startDateUsedInFilter() && !this.endDateUsedInFilter()) {
+            if (!this.localStartDateInFilter() && !this.localEndDateInFilter()) {
                 return "";
             }
             
             let text = "Showing entries with ";
             
-            if (this.startDateUsedInFilter()) {
-                text += `date >= <code>${this.startDateUsedInFilter()}</code>`;
+            if (this.localStartDateInFilter()) {
+                text += `date &gt;= <code>${this.localStartDateInFilter().utc().format()}</code>`;
             }
             
-            if (this.startDateUsedInFilter() && this.endDateUsedInFilter()) {
+            if (this.localStartDateInFilter() && this.localEndDateInFilter()) {
                 text += " and ";
             }
             
-            if (this.endDateUsedInFilter()) {
-                text += `date <= <code>${this.endDateUsedInFilter()}</code>`;
+            if (this.localEndDateInFilter()) {
+                text += `date &lt;= <code>${this.localEndDateInFilter().utc().format()}</code>`;
             }
             
             return text;
         });
         
-        this.hasFilter = ko.pureComputed<boolean>(() => !!this.startDateUsedInFilter() || !!this.endDateUsedInFilter());
+        this.hasFilter = ko.pureComputed<boolean>(() => !!this.localStartDateInFilter() || !!this.localEndDateInFilter());
     }
 
     plotTimeSeries() {
-        const queryText = queryUtil.formatRawTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), this.startDateUsedInFilter(), this.endDateUsedInFilter());
+        const queryText = queryUtil.formatRawTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), this.localStartDateInFilter(), this.localEndDateInFilter());
         this.plotTimeSeriesByQuery(queryText);
     }
 
     plotGroupedTimeSeries(group: string) {
-        const queryText = queryUtil.formatGroupedTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), group, this.startDateUsedInFilter(), this.endDateUsedInFilter());
+        const queryText = queryUtil.formatGroupedTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), group, this.localStartDateInFilter(), this.localEndDateInFilter());
         this.plotTimeSeriesByQuery(queryText);
     }
     
     plotTimeSeriesByQuery(queryText: string) {
         const query = queryCriteria.empty();
-        
 
         query.queryText(queryText);
         query.name("Time Series: " + this.timeSeriesName() + " (document id: " + this.documentId() + ")");
@@ -672,13 +667,13 @@ class editTimeSeries extends viewModelBase {
     }
     
     openFilterDialog() {
-        const filterDialog = new filterTimeSeries(this.startDateUsedInFilter(), this.endDateUsedInFilter());
+        const filterDialog = new filterTimeSeries(this.localStartDateInFilter(), this.localEndDateInFilter());
         
         app.showBootstrapDialog(filterDialog)
             .done((filterDates: filterTimeSeriesDates) => {
                 if (filterDates) {
-                    this.startDateUsedInFilter(filterDates.startDate || undefined);
-                    this.endDateUsedInFilter(filterDates.endDate || undefined);
+                    this.localStartDateInFilter(filterDates.startDate || undefined);
+                    this.localEndDateInFilter(filterDates.endDate || undefined);
                 }
             })
             .always(() => {
