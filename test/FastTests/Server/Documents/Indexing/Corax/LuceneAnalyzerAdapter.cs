@@ -46,5 +46,25 @@ namespace FastTests.Server.Documents.Indexing.Corax
             Assert.Equal(4u, outputTokens[3].Length);
             Assert.Equal(TokenType.Word, outputTokens[3].Type);
         }
+
+        [Fact]
+        public void StandardAnalyzerWithSampleDataUtf8()
+        {
+            Span<byte> source = Encoding.UTF8.GetBytes("Toms Spezialitäten");
+            //Notice: Raven uses 29 version, not 30.
+            var analyzer = LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29));
+
+            Span<byte> outputBuffer = new byte[512];
+            Span<Token> outputTokens = new Token[512];
+
+            analyzer.Execute(source, ref outputBuffer, ref outputTokens);
+
+            Assert.Equal(2, outputTokens.Length);
+            var firstWord = outputBuffer.Slice(outputTokens[0].Offset, (int)outputTokens[0].Length);
+            Assert.Equal("toms", System.Text.Encoding.Default.GetString(firstWord));
+            Assert.True(outputTokens[1].Offset + (int)outputTokens[1].Length <= outputBuffer.Length);
+            var secondWord = outputBuffer.Slice(outputTokens[1].Offset, (int)outputTokens[1].Length);
+            Assert.Equal("spezialitäten", System.Text.Encoding.Default.GetString(secondWord));
+        }
     }
 }
