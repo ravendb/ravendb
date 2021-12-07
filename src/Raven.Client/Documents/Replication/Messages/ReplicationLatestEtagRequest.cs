@@ -2,6 +2,7 @@
 
 namespace Raven.Client.Documents.Replication.Messages
 {
+    //TODO stav: move replicationType to LatestEtagRequest
     public class ReplicationLatestEtagRequest
     {
         public string SourceDatabaseName { get; set; }

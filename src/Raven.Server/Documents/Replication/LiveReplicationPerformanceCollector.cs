@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Replication
                 
                 yield return handler.PullReplication
                     ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
-                    : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.ReplicationType, handler.SourceFormatted, stats);
+                    : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.GetReplicationPerformanceType(), handler.SourceFormatted, stats);
             }
 
             foreach (var handler in Database.ReplicationLoader.OutgoingHandlers)
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Replication
 
                 yield return handler.IsPullReplicationAsHub
                     ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
-                    : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.ReplicationType, handler.DestinationFormatted, stats);
+                    : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.GetReplicationPerformanceType(), handler.DestinationFormatted, stats);
             }
         }
 
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Replication
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
                     results.Add(handler.PullReplication
                         ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
-                        : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.ReplicationType, handler.SourceFormatted, stats));
+                        : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.GetReplicationPerformanceType(), handler.SourceFormatted, stats));
                 }
             }
 
@@ -169,15 +169,15 @@ namespace Raven.Server.Documents.Replication
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
                     results.Add(handler.IsPullReplicationAsHub
                         ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
-                        : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.ReplicationType, handler.DestinationFormatted, stats));
+                        : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.GetReplicationPerformanceType(), handler.DestinationFormatted, stats));
                 }
             }
 
             foreach (var outgoingError in _outgoingErrors)
             {
                 var type = outgoingError.Key is InternalReplication
-                    ? ReplicationInitialRequest.ReplicationType.Internal
-                    : ReplicationInitialRequest.ReplicationType.External;
+                    ? ReplicationPerformanceType.OutgoingInternal
+                    : ReplicationPerformanceType.OutgoingExternal;
                 results.Add(OutgoingPerformanceStats.ForPushReplication(outgoingError.Key.Database, type, outgoingError.Value.DestinationFormatted, outgoingError.Value.GetReplicationPerformance()));
                 _outgoingErrors.TryRemove(outgoingError.Key, out _);
             }
@@ -277,10 +277,9 @@ namespace Raven.Server.Documents.Replication
                 return new OutgoingPerformanceStats(id, description, ReplicationPerformanceType.OutgoingPull, performance);
             }
 
-            public static OutgoingPerformanceStats ForPushReplication(string id, ReplicationInitialRequest.ReplicationType replicationType, string description, OutgoingReplicationPerformanceStats[] performance)
+            public static OutgoingPerformanceStats ForPushReplication(string id, ReplicationPerformanceType replicationPerformanceType, string description, OutgoingReplicationPerformanceStats[] performance)
             {
-                return new OutgoingPerformanceStats(id, description, 
-                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.OutgoingInternal : ReplicationPerformanceType.OutgoingExternal, performance);
+                return new OutgoingPerformanceStats(id, description, replicationPerformanceType, performance);
             }
         }
 
@@ -296,10 +295,9 @@ namespace Raven.Server.Documents.Replication
                 return new IncomingPerformanceStats(id, description, ReplicationPerformanceType.IncomingPull, performance);
             }
 
-            public static IncomingPerformanceStats ForPushReplication(string id, ReplicationInitialRequest.ReplicationType replicationType, string description, IncomingReplicationPerformanceStats[] performance)
+            public static IncomingPerformanceStats ForPushReplication(string id, ReplicationPerformanceType replicationPerformanceType, string description, IncomingReplicationPerformanceStats[] performance)
             {
-                return new IncomingPerformanceStats(id, description, 
-                    replicationType == ReplicationInitialRequest.ReplicationType.Internal? ReplicationPerformanceType.IncomingInternal : ReplicationPerformanceType.IncomingExternal, performance);
+                return new IncomingPerformanceStats(id, description, replicationPerformanceType, performance);
             }
         }
 

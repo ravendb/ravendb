@@ -892,6 +892,13 @@ namespace Raven.Server.Documents.Replication
                 _lastReplicationStats.TryDequeue(out stats);
         }
 
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationInitialRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
+        }
+
         public bool IsDisposed => _disposeOnce.Disposed;
 
         public void Dispose()
