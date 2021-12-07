@@ -156,9 +156,9 @@ namespace Raven.Server.Web.System
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var authStatus = feature?.Status;
             
-            if (authStatus is RavenServer.AuthenticationStatus.ClusterAdmin or
-                RavenServer.AuthenticationStatus.Operator or 
-                RavenServer.AuthenticationStatus.Allowed)
+            if (authStatus == RavenServer.AuthenticationStatus.ClusterAdmin ||
+                authStatus == RavenServer.AuthenticationStatus.Operator ||
+                authStatus == RavenServer.AuthenticationStatus.Allowed)
             {
                 HttpContext.Response.Headers["Location"] = "/studio/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
