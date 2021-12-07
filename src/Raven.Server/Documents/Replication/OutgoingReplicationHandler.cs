@@ -80,10 +80,9 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
         public readonly ReplicationNode Destination;
-        private readonly bool _external;
+        private readonly bool _external;//TODO stav: can delete this?
 
-        public ReplicationInitialRequest.ReplicationType ReplicationType =>
-            _external ? ReplicationInitialRequest.ReplicationType.External : ReplicationInitialRequest.ReplicationType.Internal;
+        public readonly ReplicationInitialRequest.ReplicationType ReplicationType;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
@@ -108,6 +107,7 @@ namespace Raven.Server.Documents.Replication
 
             Destination = node;
             _external = external;
+            ReplicationType = external ? ReplicationInitialRequest.ReplicationType.External : ReplicationInitialRequest.ReplicationType.Internal;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
                                     new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
@@ -146,6 +146,13 @@ namespace Raven.Server.Documents.Replication
             return _lastReplicationStats
                 .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
                 .ToArray();
+        }
+
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationInitialRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
         public OutgoingReplicationStatsAggregator GetLatestReplicationPerformance()
