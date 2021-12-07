@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -103,8 +104,13 @@ namespace SlowTests.Issues
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
 
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentorTag));
-                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
-                await WaitAndAssertForValueAsync(() => GetMembersCount(src), 3);
+                Assert.Equal(2, addResult.Topology.Members.Count);
+                Assert.Equal(1, addResult.Topology.Promotables.Count);
+
+                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                var membersCount = await WaitForValueAsync(() => GetMembersCount(src), 3);
+                
+                Assert.True(membersCount == 3, await AddDebugInfo(src, membersCount));
 
                 using (var session = src.OpenSession())
                 {
@@ -148,6 +154,16 @@ namespace SlowTests.Issues
             };
 
             return mre;
+        }
+
+        private async Task<string> AddDebugInfo(DocumentStore store, int membersCount)
+        {
+            var topology = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database)).Topology;
+            var sb = new StringBuilder();
+            sb.AppendLine(
+                $"Expected 3 members in database topology but got {membersCount}. Topology : {topology}");
+            await GetClusterDebugLogs(sb);
+            return sb.ToString();
         }
     }
 }
