@@ -125,7 +125,32 @@ namespace Raven.Client.Exceptions
             if (schema.Type.Contains(nameof(DocumentConflictException))) // temporary!
                 throw DocumentConflictException.From(json);
 
-            throw new ConcurrencyException(schema.Message);
+            var concurrencyException = new ConcurrencyException(schema.Message);
+            
+            json.TryGet(nameof(ConcurrencyException.ExpectedChangeVector), out concurrencyException.ExpectedChangeVector);
+            json.TryGet(nameof(ConcurrencyException.ActualChangeVector), out concurrencyException.ActualChangeVector);
+            json.TryGet(nameof(ConcurrencyException.ExpectedETag), out concurrencyException.ExpectedETag);
+            json.TryGet(nameof(ConcurrencyException.ActualETag), out concurrencyException.ActualETag);
+
+            if (json.TryGet(nameof(ConcurrencyException.ClusterTransactionConflicts), out BlittableJsonReaderArray conflicts) == false) 
+                throw concurrencyException;
+            
+            concurrencyException.ClusterTransactionConflicts = new ConcurrencyException.Conflict[conflicts.Length];
+
+            for (var i = 0; i < conflicts.Length; i++)
+            {
+                if (!(conflicts[i] is BlittableJsonReaderObject conflict))
+                    continue;
+
+                var current = concurrencyException.ClusterTransactionConflicts[i] = new ConcurrencyException.Conflict();
+
+                conflict.TryGet(nameof(ConcurrencyException.Conflict.Id), out current.Id);
+                conflict.TryGet(nameof(ConcurrencyException.Conflict.Type), out current.Type);
+                conflict.TryGet(nameof(ConcurrencyException.Conflict.Expected), out current.Expected);
+                conflict.TryGet(nameof(ConcurrencyException.Conflict.Actual), out current.Actual);
+            }
+
+            throw concurrencyException;
         }
 
         public static Type GetType(string typeAsString)
