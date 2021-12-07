@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     token.Type = TokenType.Word;
 
                     // Advance the current token output.
-                    currentOutputIdx += length;
+                    currentOutputIdx += outputLength;
                     currentTokenIdx++;
                 }
                 while (stream.IncrementToken());
@@ -71,8 +71,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         internal static void Run(Analyzer adapter, ReadOnlySpan<char> source, ref Span<char> output, ref Span<Token> tokens)
         {
-            // TODO: Currently we are not going to be supporting the use of UTF-16 in the Lucene Analyzer Adapter. All tests should
-            //       use ASCII values. 
+            // PERF: Currently we are not going to be supporting the use of UTF-16 in the Lucene Analyzer Adapter. 
+            //       A proper implementation of SpanTextReader for ReadOnlySpan<char> should be built in order to
+            //       avoid the GetBytes conversions required. 
             throw new NotImplementedException();
         }
 

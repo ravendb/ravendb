@@ -319,8 +319,54 @@ namespace Corax
                 characters = Encoding.UTF8.GetBytes(charBuffer, output);
                 output = output.Slice(0, characters);
 
-                // TODO: Adjust the tokens considering that we may be changing from 4 bytes to less and from 2 to 1.
-                //       This will cause all non-ascii test to fail. We know that, we dont care for now. 
+                // Adjust the tokens considering that we may be changing from 4 bytes to less and from 2 to 1.
+                var outputPtr = (byte*) Unsafe.AsPointer(ref MemoryMarshal.GetReference(output));
+                var endPtr = outputPtr + output.Length;
+
+                uint excessBytes = 0;
+                uint totalExcessBytes = 0;
+                int currentToken = 0;
+                int processedChars = 0;
+                while (outputPtr != endPtr)
+                {
+                    var @byte = *outputPtr;
+                    if (@byte <= 0x7F)
+                    {
+                        /* 1 byte sequence: U+0000..U+007F */
+                        // Nothing to do here. 
+                    }
+                    else if (0xC2 <= @byte && @byte <= 0xDF)
+                    {
+                        /* 0b110xxxxx: 2 bytes sequence */
+                        excessBytes += 2;
+                    }
+                    else if (0xE0 <= @byte && @byte <= 0xEF)
+                    {
+                        /* 0b1110xxxx: 3 bytes sequence */
+                        excessBytes += 3;
+                    }
+                    else if (0xF0 <= @byte && @byte <= 0xF4)
+                    {
+                        /* 0b11110xxx: 4 bytes sequence */
+                        excessBytes += 4;
+                    }
+
+                    // We have processed 1 char.
+                    processedChars++;
+
+                    ref var token = ref tokens[currentToken];
+                    if (token.Length == processedChars)
+                    {                        
+                        // We update the length of the current token. 
+                        token.Length += excessBytes;
+
+                        // We also update the offset considering all the excess bytes we accumulated. 
+                        token.Offset += (int)totalExcessBytes;
+                        
+                        // We update the total excess bytes for the next. 
+                        totalExcessBytes += excessBytes;
+                    }
+                }
 
                 BufferPool.Return(buffer);
             }
