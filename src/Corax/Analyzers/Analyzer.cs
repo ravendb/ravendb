@@ -326,48 +326,72 @@ namespace Corax
                 uint excessBytes = 0;
                 uint totalExcessBytes = 0;
                 int currentToken = 0;
-                int processedChars = 0;
-                while (outputPtr != endPtr)
+                uint processedChars = 0;
+                while (outputPtr < endPtr)
                 {
                     var @byte = *outputPtr;
-                    if (@byte <= 0x7F)
+                    switch (@byte)
                     {
-                        /* 1 byte sequence: U+0000..U+007F */
-                        // Nothing to do here. 
+                        //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
+                        case <= 0b0111_1111:
+                            /* 1 byte sequence: 0b0xxxxxxxx */
+                            // Nothing to do here. 
+                            break;
+                        case <= 0b1101_1111:
+                            /* 2 byte sequence: 0b110xxxxxx */
+                            outputPtr += 1;
+                            excessBytes += 1;
+                            break;
+                        case <= 0b1110_1111:
+                            /* 0b1110xxxx: 3 bytes sequence */
+                            outputPtr += 2;
+                            excessBytes += 2;
+                            break;
+                        case <= 0b1111_0111:
+                            /* 0b11110xxx: 4 bytes sequence */
+                            outputPtr += 3;
+                            excessBytes += 3;
+                            break;
                     }
-                    else if (0xC2 <= @byte && @byte <= 0xDF)
-                    {
-                        /* 0b110xxxxx: 2 bytes sequence */
-                        excessBytes += 2;
-                    }
-                    else if (0xE0 <= @byte && @byte <= 0xEF)
-                    {
-                        /* 0b1110xxxx: 3 bytes sequence */
-                        excessBytes += 3;
-                    }
-                    else if (0xF0 <= @byte && @byte <= 0xF4)
-                    {
-                        /* 0b11110xxx: 4 bytes sequence */
-                        excessBytes += 4;
-                    }
-
+                    
                     // We have processed 1 char.
                     processedChars++;
 
+
                     ref var token = ref tokens[currentToken];
                     if (token.Length == processedChars)
-                    {                        
+                    {
+                        // We need to persist original end of word (without considering UTF8 length)
+                        var originalEndPtrOfWordWithoutUtf8Analysis = token.Length + token.Offset;
+
                         // We update the length of the current token. 
                         token.Length += excessBytes;
 
                         // We also update the offset considering all the excess bytes we accumulated. 
                         token.Offset += (int)totalExcessBytes;
-                        
+
                         // We update the total excess bytes for the next. 
                         totalExcessBytes += excessBytes;
+
+                        //Moving to another word
+                        currentToken++;
+
+                        //Clearing
+                        excessBytes = 0;
+                        processedChars = 0;
+
+                        // We've found right tokens in buffer.
+                        if (currentToken >= tokens.Length)
+                            break;
+
+                        // We need to escape the space between current word and the next one. Eg. spaces in WhitespaceTokenizer.
+                        var nextToken = tokens[currentToken];
+                        var charsToSkip = nextToken.Offset - originalEndPtrOfWordWithoutUtf8Analysis;
+                        if (originalEndPtrOfWordWithoutUtf8Analysis > 0)
+                            outputPtr += charsToSkip;
                     }
 
-                    // We need to move outputPtr pointer to endPointer
+                    // We need to move our base ptr
                     outputPtr++;
                 }
 
