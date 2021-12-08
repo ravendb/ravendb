@@ -80,7 +80,6 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
         public readonly ReplicationNode Destination;
-        private readonly bool _external;//TODO stav: can delete this?
 
         public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
@@ -106,7 +105,6 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges = new AsyncManualResetEvent(_database.DatabaseShutdown);
 
             Destination = node;
-            _external = external;
             ReplicationType = external ? ReplicationLatestEtagRequest.ReplicationType.External : ReplicationLatestEtagRequest.ReplicationType.Internal;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
@@ -624,7 +622,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} " +
                           "on the other end. ";
-                if (_external)
+                if (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External)
                     msg += "In order for the replication to work, a database with the same name needs to be created at the destination";
 
                 var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
@@ -691,7 +689,7 @@ namespace Raven.Server.Documents.Replication
                 OccurredAt = SystemTime.UtcNow,
                 Direction = direction,
                 To = Destination,
-                IsExternal = _external,
+                IsExternal = ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External,
                 ExceptionMessage = exceptionMessage
             });
         }
@@ -948,7 +946,7 @@ namespace Raven.Server.Documents.Replication
             _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
-            if (_external == false)
+            if (ReplicationType != ReplicationLatestEtagRequest.ReplicationType.External)
             {
                 var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
                 if (update.InitAndValidate(_lastDestinationEtag))
