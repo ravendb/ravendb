@@ -751,7 +751,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     break;
                 default:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
-                    periodicBackup.DisableFutureBackups(cancelRunningBackup: true);
+                    periodicBackup.DisableFutureBackups();
                     break;
             }
 
@@ -931,17 +931,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             switch (taskState)
             {
                 case TaskStatus.Disabled:
-                    existingBackupState.DisableFutureBackups(cancelRunningBackup: true);
+                    existingBackupState.DisableFutureBackups();
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
 
                     return;
                 case TaskStatus.ActiveByOtherNode:
                     // the task is disabled or this node isn't responsible for the backup task
-                    existingBackupState.DisableFutureBackups(cancelRunningBackup: false);
-
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the timer for it.");
+                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
 
                     return;
                 case TaskStatus.ClusterDown:
@@ -956,25 +954,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
-
-                        if (existingBackupState.HasScheduledBackup() == false)
-                        {
-                            if (_logger.IsOperationsEnabled)
-                                _logger.Operations($"Currently running backup task '{taskId}' doesn't have scheduled backup, will rearrange the timer.");
-
-                            var status = new PeriodicBackupStatus
-                            {
-                                NodeTag = _serverStore.NodeTag,
-                                BackupType = existingBackupState.RunningBackupStatus.BackupType,
-                                IsFull = existingBackupState.RunningBackupStatus.IsFull,
-                                LastFullBackupInternal = existingBackupState.RunningBackupStatus.IsFull ? DateTime.UtcNow : existingBackupState.RunningBackupStatus.LastFullBackupInternal,
-                                LastIncrementalBackupInternal = existingBackupState.RunningBackupStatus.IsFull ? existingBackupState.RunningBackupStatus.LastIncrementalBackupInternal : DateTime.UtcNow,
-                                LastFullBackup = existingBackupState.RunningBackupStatus.LastFullBackup,
-                                LastEtag = existingBackupState.RunningBackupStatus.LastEtag,
-                            };
-
-                            existingBackupState.UpdateTimer(GetNextBackupDetails(newConfiguration, status, _serverStore.NodeTag), lockTaken: false);
-                        }
 
                         return;
                     }
