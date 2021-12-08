@@ -973,6 +973,53 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void SimpleWildcardStatement()
+        {
+            var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "Testing" };
+            var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
+            var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
+
+            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "4", out var four);
+
+            {
+                var match = searcher.ContainsQuery("Content", "ing");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery("Content", "Run");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery("Content", "nn");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.ContainsQuery("Content", "run");
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(0, match.Fill(ids));
+            }
+        }
+
+        [Fact]
         public void SimpleBetweenCompareStatement()
         {
             var entry1 = new IndexSingleEntry { Id = "entry/1", Content = "3" };

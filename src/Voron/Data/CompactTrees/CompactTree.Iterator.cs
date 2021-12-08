@@ -11,6 +11,7 @@ namespace Voron.Data.CompactTrees
     {
         public interface IIterator
         {
+            void Reset();
             void Seek(ReadOnlySpan<byte> key);
             bool Skip(long count);
 
@@ -29,7 +30,7 @@ namespace Voron.Data.CompactTrees
             public Iterator(CompactTree tree)
             {
                 _tree = tree;
-                _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };
+                _cursor = new() { _stk = new CursorState[8], _pos = -1, _len = 0 };                
             }
 
             public void Seek(string key)
@@ -44,6 +45,11 @@ namespace Voron.Data.CompactTrees
                 ref var state = ref _cursor._stk[_cursor._pos];
                 if (state.LastSearchPosition < 0)
                     state.LastSearchPosition = ~state.LastSearchPosition;
+            }
+
+            public void Reset()
+            {
+                _tree.PushPage(_tree._state.RootPage, ref _cursor);
             }
 
             public bool MoveNext(out Slice key, out long value)
@@ -114,8 +120,6 @@ namespace Voron.Data.CompactTrees
                 return true;
 
             }
-
-
         }
 
         public Iterator Iterate()
