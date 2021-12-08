@@ -200,8 +200,7 @@ namespace Raven.Server.Rachis
                 var diff = TimeSpan.FromTicks(ticks - previous);
                 if (diff > TimeSpan.FromSeconds(2))
                 {
-                    Console.WriteLine($"Command {type} at index:{index}, term:{term} took {diff} to commit (result:{result}, exception:{exception})");
-                    Console.WriteLine(cmd);
+                    Console.WriteLine($"Command {type} at index:{index}, term:{term} took {diff} to commit (result:{result}, exception:{exception}){Environment.NewLine}{cmd}");
                 }
             }
             using (Slice.From(context.Allocator, guid, out var guidSlice))
