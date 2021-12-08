@@ -366,6 +366,9 @@ namespace Corax
                         // We update the total excess bytes for the next. 
                         totalExcessBytes += excessBytes;
                     }
+
+                    // We need to move outputPtr pointer to endPointer
+                    outputPtr++;
                 }
 
                 BufferPool.Return(buffer);
