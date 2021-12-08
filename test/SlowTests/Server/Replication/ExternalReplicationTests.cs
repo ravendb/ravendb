@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Replication;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Utils.Stats;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -71,6 +76,92 @@ namespace SlowTests.Server.Replication
                 var elapsed = DateTime.UtcNow - date;
                 Assert.True(elapsed >= delay, $" only {elapsed}/{delay} ticks elapsed");
 
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_17187_CheckInternalShowsInStats()
+        {
+            var database = GetDatabaseName();
+            var cluster = await CreateRaftCluster(3);
+            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
+
+            using (var store1 = new DocumentStore()
+            {
+                Urls = new[] { cluster.Nodes[0].WebUrl },
+                Database = database
+            }.Initialize())
+            using (var store2 = new DocumentStore()
+            {
+                Urls = new[] { cluster.Nodes[1].WebUrl },
+                Database = database,
+            }.Initialize())
+            using (var store3 = new DocumentStore()
+            {
+                Urls = new[] { cluster.Nodes[2].WebUrl },
+                Database = database
+            }.Initialize())
+            {
+                using (var s1 = store1.OpenSession(database))
+                {
+                    s1.Store(new User(), "foo/bar/store1");
+                    s1.SaveChanges();
+                }
+                using (var s2 = store2.OpenSession(database))
+                {
+                    s2.Store(new User(), "foo/bar/store2");
+                    s2.SaveChanges();
+                }
+                using (var s3 = store3.OpenSession(database))
+                {
+                    s3.Store(new User(), "foo/bar/store3");
+                    s3.SaveChanges();
+                }
+
+                var collector = new LiveReplicationPerformanceCollector(await cluster.Nodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database));
+                var stats = await collector.Stats.DequeueAsync();
+                Assert.Equal(4, stats.Count);
+                Assert.Equal(2,
+                    stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.IncomingPerformanceStats perf &&
+                                        perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal));
+                Assert.Equal(2,
+                    stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.OutgoingPerformanceStats perf &&
+                                                    perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal));
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_17187_CheckExternalShowsInStats()
+        {
+            var database = GetDatabaseName();
+            
+            using (var sender = GetNewServer(new ServerCreationOptions() { }))
+            using (var receiver = GetNewServer(new ServerCreationOptions() { }))
+            using (var senderStore = GetDocumentStore(new Options()
+            {
+                Server = sender,
+                CreateDatabase = true,
+                ModifyDatabaseName = (s) => database
+            }))
+            using (var receiverStore = GetDocumentStore(new Options()
+            {
+                Server = receiver,
+                CreateDatabase = true,
+                ModifyDatabaseName = (s) => database
+            }))
+            {
+                await SetupReplicationAsync(senderStore, receiverStore);
+                await EnsureReplicatingAsync(senderStore, receiverStore);
+                
+                var collector = new LiveReplicationPerformanceCollector(await sender.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database));
+                var stats = await collector.Stats.DequeueAsync();
+                Assert.Equal(1, stats.Count);
+                Assert.Equal(LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal, ((LiveReplicationPerformanceCollector.OutgoingPerformanceStats)stats[0]).Type);
+
+                var collector2 = new LiveReplicationPerformanceCollector(await receiver.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database));
+                var stats2 = await collector2.Stats.DequeueAsync();
+                Assert.Equal(1, stats2.Count);
+                Assert.Equal(LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal, ((LiveReplicationPerformanceCollector.IncomingPerformanceStats)stats2[0]).Type);
             }
         }
 

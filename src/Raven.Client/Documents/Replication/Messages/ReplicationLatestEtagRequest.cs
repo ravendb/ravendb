@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public enum ReplicationType
         {
+            //No None here for legacy reasons. External should be default.
             External,
             Internal
         }

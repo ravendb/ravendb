@@ -634,10 +634,10 @@ namespace Raven.Server.Documents.Replication
                     throw new Exception(exceptionSchema.Message);
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
-                if (_log.IsInfoEnabled)//TODO stav: add replicationsType to the logger too?
+                if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
+                        $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}. Type: {getLatestEtagMessage.ReplicationsType}");
                 }
             }
 
