@@ -106,6 +106,30 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Contains(Slice other)
+        {
+            var length = this.Size - other.Size;
+            if (length < 0)
+                return false;
+
+            // This is the last position with enough space to contain the other slice.             
+            var ptr = Content.Ptr;
+            var end = ptr + length;
+            
+            var otherSpan = new ReadOnlySpan<byte>(other.Content.Ptr, other.Size);
+            byte firstByte = otherSpan[0];
+            while (end >= ptr)
+            {
+                if (*end == firstByte && otherSpan.SequenceCompareTo(new ReadOnlySpan<byte>(end, otherSpan.Length)) == 0)
+                    return true;
+                end--;
+            }
+
+            return false;
+        }
+
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope From(ByteStringContext context, ReadOnlySpan<char> value, out Slice str)
         {
             return From(context, value, ByteStringType.Mutable, out str);

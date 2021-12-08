@@ -169,8 +169,7 @@ namespace Corax
                 return MultiTermMatch.Create(stack[0]);
             }
 
-            
-            return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, 0, inTerms)));
+            return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, inTerms)));
         }
         
         public MultiTermMatch StartWithQuery(string field, string startWith, int fieldId = NonAnalyzer)
@@ -182,6 +181,17 @@ namespace Corax
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
             return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, startWith)));
+        }
+
+        public MultiTermMatch ContainsQuery(string field, string containsTerm)
+        {
+            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+            return MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm)));
         }
 
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
@@ -535,7 +545,7 @@ namespace Corax
             
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<InTermProvider>.Create(
-                    this, new InTermProvider(this, field, 0, inTerms), scoreFunction));
+                    this, new InTermProvider(this, field, inTerms), scoreFunction));
         }
 
         public MultiTermMatch StartWithQuery<TScoreFunction>(string field, string startWith, TScoreFunction scoreFunction)
@@ -550,6 +560,20 @@ namespace Corax
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<StartWithTermProvider>.Create(
                     this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith), scoreFunction));
+        }
+
+        public MultiTermMatch ContainsQuery<TScoreFunction>(string field, string containsTerm, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
+        {
+            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+            return MultiTermMatch.Create(
+                MultiTermBoostingMatch<ContainsTermProvider>.Create(
+                    this, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm), scoreFunction));
         }
 
         public BoostingMatch Boost<TInner>(TInner match, IQueryScoreFunction scoreFunction)

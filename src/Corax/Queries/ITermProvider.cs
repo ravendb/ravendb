@@ -4,6 +4,5 @@
     { 
         void Reset();
         bool Next(out TermMatch term);
-        bool Evaluate(long id);
     }    
 }

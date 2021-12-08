@@ -15,14 +15,11 @@ namespace Corax.Queries
         private readonly CompactTree.Iterator _iterator;
         private readonly string _field;
         private readonly Slice _startWith;
-        private readonly int _fieldId;
-
 
         public StartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, string startWith)
         {
             _searcher = searcher;
             _field = field;
-            _fieldId = fieldId;
             _iterator = tree.Iterate();
             
             Slice.From(context, _searcher.EncodeTerm(startWith, fieldId), out _startWith);
@@ -42,11 +39,6 @@ namespace Corax.Queries
 
             term = _searcher.TermQuery(_field, termSlice.ToString());
             return true;
-        }
-
-        public bool Evaluate(long id)
-        {
-            throw new NotImplementedException();
         }
     }
 }

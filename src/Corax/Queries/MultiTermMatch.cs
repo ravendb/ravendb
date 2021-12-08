@@ -34,7 +34,9 @@ namespace Corax.Queries
             _totalResults = totalResults;
             _confidence = confidence;
 
-            _inner.Next(out _currentTerm);
+            var result = _inner.Next(out _currentTerm);
+            if (result == false)
+                _current = QueryMatch.Invalid;
         }
 
         [SkipLocalsInit]
