@@ -23,8 +23,9 @@
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
                         <!-- TODO replace the arrow-down icon when RavenDB-17594 is done -->
-                        <!-- TODO add access level for DatabaseAdmin on v5.2 (RavenDB-17595) -->
-                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex" href="#" class="btn" title="Dump the raw Lucene index files"><i class="icon-arrow-down"></i><span>Dump</span></a>
+                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'" href="#" class="btn" title="Dump the raw Lucene index files">
+                            <i class="icon-arrow-down"></i><span>Dump</span>
+                        </a>
                         <button class="btn btn-danger" 
                                 data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }, requiredAccess: 'DatabaseReadWrite'">
                             <i class="icon-trash"></i><span>Delete</span>
@@ -437,9 +438,12 @@
                         <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
                         <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
                         <!-- TODO replace the arrow-down icon when RavenDB-17594 is done -->
-                        <!-- TODO add access level for DatabaseAdmin on v5.2 (RavenDB-17595) -->
-                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex" href="#" class="btn" title="Dump the raw Lucene index files"><i class="icon-arrow-down"></i><span>Dump</span></a>
-                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex" title="Delete this index"><i class="icon-trash"></i><span>Delete</span></button>
+                        <a data-bind="click: openDumpDialog, visible: isEditingExistingIndex, requiredAccess: 'DatabaseAdmin'" href="#" class="btn" title="Dump the raw Lucene index files">
+                            <i class="icon-arrow-down"></i><span>Dump</span>
+                        </a>
+                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, requiredAccess: 'DatabaseReadWrite'" title="Delete this index">
+                            <i class="icon-trash"></i><span>Delete</span>
+                        </button>
                     </div>
                 </div>
             </div>
