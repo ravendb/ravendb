@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Replication
         public readonly ReplicationNode Destination;
         private readonly bool _external;//TODO stav: can delete this?
 
-        public readonly ReplicationInitialRequest.ReplicationType ReplicationType;
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Replication
 
             Destination = node;
             _external = external;
-            ReplicationType = external ? ReplicationInitialRequest.ReplicationType.External : ReplicationInitialRequest.ReplicationType.Internal;
+            ReplicationType = external ? ReplicationLatestEtagRequest.ReplicationType.External : ReplicationLatestEtagRequest.ReplicationType.Internal;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
                                     new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
@@ -150,9 +150,9 @@ namespace Raven.Server.Documents.Replication
 
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
-            return ReplicationType == ReplicationInitialRequest.ReplicationType.Internal
-                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
-                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal;
         }
 
         public OutgoingReplicationStatsAggregator GetLatestReplicationPerformance()
@@ -287,8 +287,7 @@ namespace Raven.Server.Documents.Replication
         {
             var request = new DynamicJsonValue
             {
-                ["Type"] = nameof(ReplicationInitialRequest),
-                [nameof(ReplicationInitialRequest.ReplicationsType)] = ReplicationType
+                ["Type"] = nameof(ReplicationInitialRequest)
             };
 
             if (Destination is PullReplicationAsSink destination)
@@ -575,7 +574,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
                 [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(),
                 [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
-                [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName
+                [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
+                [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = ReplicationType
             };
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))

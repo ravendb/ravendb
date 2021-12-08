@@ -2,7 +2,6 @@
 
 namespace Raven.Client.Documents.Replication.Messages
 {
-    //TODO stav: move replicationType to LatestEtagRequest
     public class ReplicationLatestEtagRequest
     {
         public string SourceDatabaseName { get; set; }
@@ -14,7 +13,14 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceTag { get; set; }
 
         public string SourceMachineName { get; set; }
-        
+
+        public ReplicationType ReplicationsType { get; set; }
+
+        public enum ReplicationType
+        {
+            External,
+            Internal
+        }
     }
 
     public class ReplicationInitialRequest
@@ -30,13 +36,5 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceUrl { get; set; }
 
         public string DatabaseGroupId { get; set; }
-
-        public ReplicationType ReplicationsType { get; set; }
-
-        public enum ReplicationType
-        {
-            External,
-            Internal
-        }
     }
 }

@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.Replication
                 };
             }
 
-            CreateIncomingInstance(tcpConnectionOptions, buffer, pullReplicationParams, initialRequest?.ReplicationsType?? ReplicationInitialRequest.ReplicationType.External);
+            CreateIncomingInstance(tcpConnectionOptions, buffer, pullReplicationParams);
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
@@ -527,7 +527,7 @@ namespace Raven.Server.Documents.Replication
                     PreventDeletionsMode = null,
                     Type = PullReplicationParams.ConnectionType.Incoming
                 };
-                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams, ReplicationInitialRequest.ReplicationType.External);
+                var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPullParams);
                 newIncoming.Failed += RetryPullReplication;
 
                 _outgoing.TryRemove(source); // we are pulling and therefore incoming, upon failure 'RetryPullReplication' will put us back as an outgoing
@@ -558,9 +558,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationParams pullReplicationParams, ReplicationInitialRequest.ReplicationType replicationType)
+        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationParams pullReplicationParams)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams, replicationType);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -602,8 +602,7 @@ namespace Raven.Server.Documents.Replication
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            PullReplicationParams incomingPullParams,
-            ReplicationInitialRequest.ReplicationType replicationType)
+            PullReplicationParams incomingPullParams)
         {
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPullParams, buffer);
 
@@ -612,7 +611,7 @@ namespace Raven.Server.Documents.Replication
                 getLatestEtagMessage,
                 this,
                 buffer,
-                replicationType,
+                getLatestEtagMessage.ReplicationsType,
                 incomingPullParams);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
@@ -635,7 +634,7 @@ namespace Raven.Server.Documents.Replication
                     throw new Exception(exceptionSchema.Message);
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
-                if (_log.IsInfoEnabled)
+                if (_log.IsInfoEnabled)//TODO stav: add replicationsType to the logger too?
                 {
                     _log.Info(
                         $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
