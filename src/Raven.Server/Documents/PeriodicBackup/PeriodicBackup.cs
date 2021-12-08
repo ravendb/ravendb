@@ -60,21 +60,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             return new DisposableAction(() => _updateBackupTaskSemaphore.Release());
         }
 
-        public void DisableFutureBackups(bool cancelRunningBackup)
+        public void DisableFutureBackups()
         {
             using (UpdateBackupTask())
             {
-                CancelFutureTasks(cancelRunningBackup);
+                CancelFutureTasks();
             }
         }
 
-        private void CancelFutureTasks(bool cancelRunningBackup = true)
+        private void CancelFutureTasks()
         {
             _backupTimer?.Dispose();
             _backupTimer = null;
-
-            if (cancelRunningBackup == false)
-                return;
 
             try
             {

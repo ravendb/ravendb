@@ -1767,9 +1767,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
                     responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
-                    var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
-                    Assert.NotNull(pb);
-                    Assert.False(pb.HasScheduledBackup(), "ActiveByOtherNode didn't remove the backup timer.");
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
                     responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByCurrentNode_UpdateConfigurations = true;
                     responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
