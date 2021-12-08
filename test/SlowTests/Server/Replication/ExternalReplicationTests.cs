@@ -1,22 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
-using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,57 +43,6 @@ namespace SlowTests.Server.Replication
                 // SlowTests uses the regular old value of 3000mSec. But if called from StressTests - needs more timeout
                 Assert.True(WaitForDocument(store2, "foo/bar", timeout), store2.Identifier);
                 Assert.True(WaitForDocument(store3, "foo/bar", timeout), store3.Identifier);
-            }
-        }
-
-        [Fact]
-        public async Task RavenDB_17187_2()
-        {
-            var database = GetDatabaseName();
-            var cluster = await CreateRaftCluster(3);
-            await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
-            
-            var externalServer = GetNewServer(new ServerCreationOptions() {NodeTag = "Server1"});
-
-            using (var externalStore = GetDocumentStore(new Options() {Server = externalServer}))
-            using (var store1 = new DocumentStore()
-            {
-                Urls = new [] {cluster.Nodes[0].WebUrl},
-                Database = database
-            }.Initialize())
-            using (var store2 = new DocumentStore()
-            {
-                Urls = new[] { cluster.Nodes[1].WebUrl },
-                Database = database,
-            }.Initialize())
-            using (var store3 = new DocumentStore()
-            {
-                Urls = new[] { cluster.Nodes[2].WebUrl },
-                Database = database
-            }.Initialize())
-            {
-                await Task.Delay(2000);
-                await SetupReplicationAsync(externalStore, store1);
-
-                using (var s1 = store1.OpenSession(database))
-                {
-                    s1.Store(new User(), "foo/bar");
-                    s1.SaveChanges();
-                }
-                using (var s2 = store2.OpenSession(database))
-                {
-                    s2.Store(new User(), "foo/bar/store2");
-                    s2.SaveChanges();
-                }
-                using (var s3 = store3.OpenSession(database))
-                {
-                    s3.Store(new User(), "foo/bar/store3");
-                    s3.SaveChanges();
-                }
-                
-                Assert.True(WaitForDocument(store2, "foo/bar", 10000, database), store2.Identifier);
-                Assert.True(WaitForDocument(store3, "foo/bar", 10000, database), store3.Identifier);
-                WaitForUserToContinueTheTest(store1);
             }
         }
 

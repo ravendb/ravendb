@@ -78,14 +78,14 @@ namespace Raven.Server.Documents.Replication
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
-        public readonly ReplicationInitialRequest.ReplicationType ReplicationType;
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            ReplicationInitialRequest.ReplicationType replicationType,
+            ReplicationLatestEtagRequest.ReplicationType replicationType,
             ReplicationLoader.PullReplicationParams pullReplicationParams = null)
         {
             if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
@@ -894,7 +894,7 @@ namespace Raven.Server.Documents.Replication
 
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
-            return ReplicationType == ReplicationInitialRequest.ReplicationType.Internal
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
                 ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
                 : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
