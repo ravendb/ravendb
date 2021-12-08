@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -146,6 +146,85 @@ namespace FastTests.Corax
             Assert.Equal(source[1], buffer[1]);
 
             Assert.Equal((byte)'s', buffer[10]);
+        }
+
+        [Theory]
+        [InlineData("Antonio Moreno Taquería")]
+        [InlineData("Galería del gastrónomo")]
+        [InlineData("Suprêmes délices")]
+        [InlineData("łódź żółćżeż")]
+        [InlineData("zażółć gęślą jaźń")]
+        public void BasicAnalyzerWithUtf8(string input)
+        {
+            Span<byte> source = Encoding.UTF8.GetBytes(input);
+            ReadOnlySpan<byte> sourceLowerCased = Encoding.UTF8.GetBytes(input.ToLower());
+
+            var analyzer = Analyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+            analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
+
+            Span<byte> buffer = new byte[bufferSize];
+            Span<Token> tokens = new Token[tokenSize];
+
+            analyzer.Execute(source, ref buffer, ref tokens);
+
+            Assert.Equal(buffer.Length, (int)tokens[0].Length);
+            Assert.Equal(source.Length, buffer.Length);
+
+            Assert.True(buffer.SequenceEqual(sourceLowerCased));
+        }
+
+        [Theory]
+        [InlineData("ஸஇႤკპ")]
+        public void BasicAnalyzerWithUtf8WithoutLowerCasing(string input)
+        {
+            Span<byte> source = Encoding.UTF8.GetBytes(input);
+
+            var analyzer = Analyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
+            analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
+
+            Span<byte> buffer = new byte[bufferSize];
+            Span<Token> tokens = new Token[tokenSize];
+
+            analyzer.Execute(source, ref buffer, ref tokens);
+
+            Assert.Equal(buffer.Length, (int)tokens[0].Length);
+            Assert.Equal(source.Length, buffer.Length);
+
+            Assert.True(buffer.SequenceEqual(source));
+        }
+
+        [Theory]
+        [InlineData("Antonio Moreno Taquería")]
+        [InlineData("Galería del gastrónomo")]
+        [InlineData("Suprêmes délices")]
+        [InlineData("łódź żółćżeż")]
+        [InlineData("zażółć gęślą jaźń")]
+        [InlineData("Quería test")]
+        public void BasicAnalyzerWithUtf8WhitespaceTokenizer(string input)
+        {
+            Span<byte> source = Encoding.UTF8.GetBytes(input);
+
+
+            var analyzer = Analyzer.Create(default(WhitespaceTokenizer), default(LowerCaseTransformer));
+            analyzer.GetOutputBuffersSize(source.Length, out int bufferSize, out int tokenSize);
+
+            Span<byte> buffer = new byte[bufferSize];
+            Span<Token> tokens = new Token[tokenSize];
+
+            var words = input.Split(' ');
+
+            analyzer.Execute(source, ref buffer, ref tokens);
+
+            Assert.Equal(tokens.Length, words.Length);
+
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                var token = tokens[i];
+                var word = buffer.Slice(token.Offset, (int)token.Length);
+                ReadOnlySpan<byte> wordLowerCased = Encoding.UTF8.GetBytes(words[i].ToLower());
+                Assert.True(wordLowerCased.SequenceEqual(word));
+                Assert.Equal(wordLowerCased.Length, (int)token.Length);
+            }
         }
 
         private struct BasicLowercaseFilter : ITokenFilter
