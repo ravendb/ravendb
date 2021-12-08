@@ -640,9 +640,12 @@ namespace Raven.Server.Smuggler.Documents
                 _clusterTransactionCommands.Clear();
                 _documentContextHolder.Reset();
 
-                if (clusterTransactionResult.Result is List<string> errors)
-                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
-
+                if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
+                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                    {
+                        ClusterTransactionConflicts = errors.Select(e => e.Conflict).ToArray()
+                    };
+                
                 await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
 
                 //When restoring from snapshot the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
