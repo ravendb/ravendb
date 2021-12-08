@@ -1099,9 +1099,16 @@ class query extends viewModelBase {
                             resultsTask.resolve(queryResults);
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
-                            this.onIncludesRevisionsLoaded(queryResults.includesRevisions);
-                            this.onHighlightingsLoaded(queryResults.highlightings);
-                            this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
+                            if (queryResults.includesRevisions) {
+                                this.onIncludesRevisionsLoaded(queryResults.includesRevisions);    
+                            }
+                            if (queryResults.highlightings) {
+                                this.onHighlightingsLoaded(queryResults.highlightings);
+                            }
+                            
+                            if (queryResults.explanations) {
+                                this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
+                            }
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
@@ -1299,11 +1306,11 @@ class query extends viewModelBase {
                 itemsToCache.push({
                     id,
                     explanations: list
-            });
+                });
                 remainingItems.delete(id);
             }
         });
-        
+
         remainingItems.forEach((value, id) => {
             itemsToCache.push({
                 id,
@@ -1516,7 +1523,7 @@ class query extends viewModelBase {
         // remove all existing highlights & included revisions when going back to 'results' tab
         this.highlightsCache.removeAll();
         this.includesRevisionsCache(new includedRevisions());
-        
+
         this.explanationsCache.length = 0;
         this.totalExplanations(0);
         
