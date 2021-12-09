@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -70,7 +71,9 @@ namespace Corax.Queries
             [SkipLocalsInit]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
-                Span<long> orMatches = stackalloc long[matches.Length];
+                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
+                var orMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matches.Length);
+
                 var count = FillFunc(ref match, orMatches);
 
                 var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
@@ -78,7 +81,11 @@ namespace Corax.Queries
 
                 var orMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(orMatches));
 
-                return MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, orMatchesPtr, count);
+                var result = MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, orMatchesPtr, count);
+                
+                QueryContext.MatchesPool.Return(bufferHolder);
+
+                return result;
             }
 
             [SkipLocalsInit]
@@ -86,6 +93,17 @@ namespace Corax.Queries
             {
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
+
+                if (matches.Length == 1)
+                {
+                    // Special case when matches is a single element (no OR is possible under this conditions)
+                    // PERF: For performance reason if this branch is been triggered repeteadly ensure the 
+                    //       calling code to avoid this happening. 
+                    var count = inner.Fill(matches);
+                    if (count == 0)
+                        count = outer.Fill(matches);
+                    return count;
+                }
 
                 var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
                 var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);

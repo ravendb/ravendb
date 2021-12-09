@@ -105,11 +105,13 @@ namespace Corax.Queries
 
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
 
-            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * sizeof(float) * matches.Length);            
-            var allScoresValues = MemoryMarshal.Cast<byte, float>(matchesKeysHolder);            
+            int floatArraySize = 2 * sizeof(float) * matches.Length;
+            int matchesArraySize = sizeof(long) * matches.Length;
+            var bufferHolder = QueryContext.MatchesPool.Rent(floatArraySize + matchesArraySize);
+            var allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.AsSpan().Slice(0, floatArraySize));
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
-            var matchesScores = allScoresValues[0..matches.Length];
+            var matchesScores = allScoresValues[..matches.Length];
             var bScores = allScoresValues[^matches.Length..];           
 
             TotalResults += totalMatches;
@@ -125,9 +127,8 @@ namespace Corax.Queries
             var sorter = new Sorter<float, long, NumericDescendingComparer>();
             sorter.Sort(matchesScores[0..totalMatches], matches[0..totalMatches]);
 
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(floatArraySize, matchesArraySize));
             var searcher = _searcher;
-            var bValuesHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
-            var bValues = MemoryMarshal.Cast<byte, long>(bValuesHolder);
             while (true)
             {
                 // We get a new batch
@@ -162,8 +163,6 @@ namespace Corax.Queries
 
                 int aIdx = aTotalMatches;
                 bIdx = 0;
-                kIdx = 0;
-
                 while (aIdx > 0 && aIdx >= aTotalMatches / 8)
                 {
                     // If the 'bigger' of what we had is 'bigger than'
@@ -190,7 +189,6 @@ namespace Corax.Queries
 
                     if (result)
                     {
-
                         matches[kIdx] = matches[aIdx];
                         aIdx++;
                     }
@@ -223,11 +221,11 @@ namespace Corax.Queries
                     bIdx++;
                 }
 
-            End:
+                End:
                 totalMatches = kIdx;
             }
-            
-            QueryContext.MatchesPool.Return(matchesKeysHolder);
+
+            QueryContext.MatchesPool.Return(bufferHolder);
             return totalMatches;
         }
 
@@ -244,13 +242,19 @@ namespace Corax.Queries
             int totalMatches = _inner.Fill(matches);
             if (totalMatches == 0)
                 return 0;
+            
+            int matchesArraySize = sizeof(long) * matches.Length;
+            int itemArraySize = 2 * Unsafe.SizeOf<MatchComparer<TComparer, W>.Item>() * matches.Length;
+            var bufferHolder = QueryContext.MatchesPool.Rent(itemArraySize + matchesArraySize);
 
-            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * Unsafe.SizeOf<MatchComparer<TComparer, W>.Item>() * matches.Length);
-            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, W>.Item>(matchesKeysHolder);
+            var itemKeys = MemoryMarshal.Cast<byte, MatchComparer<TComparer, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
+            Debug.Assert(itemKeys.Length == 2 * matches.Length);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
-            var matchesKeys = itemKeys[0..matches.Length];            
-            var bKeys = itemKeys[^matches.Length..]; 
+            var matchesKeys = itemKeys.Slice(0, matches.Length);
+            Debug.Assert(matchesKeys.Length == matches.Length);
+            var bKeys = itemKeys.Slice(matches.Length, matches.Length);
+            Debug.Assert(bKeys.Length == matches.Length);
 
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
 
@@ -269,7 +273,8 @@ namespace Corax.Queries
             var sorter = new Sorter<MatchComparer<TComparer, W>.Item, long, MatchComparer<TComparer, W>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
 
-            Span<long> bValues = stackalloc long[matches.Length];                        
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(itemArraySize, matchesArraySize));
+            Debug.Assert(bValues.Length == matches.Length);
             while (true)
             {
                 // We get a new batch
@@ -279,7 +284,7 @@ namespace Corax.Queries
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                 {
-                    QueryContext.MatchesPool.Return(matchesKeysHolder);
+                    QueryContext.MatchesPool.Return(bufferHolder);
                     return totalMatches;
                 }
 

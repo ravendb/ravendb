@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Corax.Queries
 {
@@ -73,9 +74,10 @@ namespace Corax.Queries
             if (innerBoosting == true && outerBoosting == true)
             {
                 _inner.Score(matches, scores);
-                
-                // TODO: We are not going to use stackalloc here.
-                Span<float> outerScores = stackalloc float[scores.Length];
+
+                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(float) * scores.Length);
+                var outerScores = MemoryMarshal.Cast<byte, float>(bufferHolder).Slice(0, scores.Length);
+
                 outerScores.Fill(1); // We will fill the scores with 1.0
 
                 // We get the score for the outer chain.
@@ -84,6 +86,9 @@ namespace Corax.Queries
                 // We multiply the scores from the outer chain with the current scores and return.
                 for(int i = 0; i < scores.Length; i++)
                     scores[i] *= outerScores[i];
+
+                QueryContext.MatchesPool.Return(bufferHolder);
+
                 return;
             }
 
