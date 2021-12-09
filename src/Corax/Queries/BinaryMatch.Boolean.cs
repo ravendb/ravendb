@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -81,6 +82,7 @@ namespace Corax.Queries
 
                 // need to be ready to put both outputs to the matches
                 int length = matches.Length / 2;
+                Debug.Assert(length > 0);
                 Span<long> innerMatches = longBuffer.Slice(0, length);
                 Span<long> outerMatches = longBuffer.Slice(length, length);
 

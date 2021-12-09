@@ -30,7 +30,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        private const int MaxTermLength = 1024;
+        public const int MaxTermLength = 1024;
 
         private readonly Analyzer _analyzer;
         private readonly StorageEnvironment _environment;

@@ -125,7 +125,9 @@ namespace Corax
             {
                 matches = TermMatch.YieldOnce(value);
             }
-
+#if DEBUG
+            matches.Term = term;
+#endif
             return matches;
         }
 
