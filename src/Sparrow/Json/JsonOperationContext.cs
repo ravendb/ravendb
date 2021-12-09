@@ -605,6 +605,33 @@ namespace Sparrow.Json
             }
         }
 
+        public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
+        {
+            var state = new JsonParserState();
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
+
+            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(ptr, size, out _);
+
+            int memorySize = maxByteCount + escapePositionsSize;
+            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
+
+            var address = memory.Address;
+
+            Memory.Copy(address, ptr, size);
+
+            state.FindEscapePositionsIn(address, ref size, escapePositionsSize);
+
+            state.WriteEscapePositionsTo(address + size);
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+
+            if (state.EscapePositions.Count > 0)
+            {
+                result.EscapePositions = state.EscapePositions.ToArray();
+            }
+            return result;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue GetLazyStringValue(byte* ptr)
         {

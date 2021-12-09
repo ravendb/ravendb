@@ -733,17 +733,23 @@ namespace Raven.Server.Smuggler.Documents
 
                 using (tombstone)
                 {
-                    _context.Write(Writer, new DynamicJsonValue
+                    unsafe
                     {
-                        ["Key"] = tombstone.LowerId,
-                        [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
-                        [nameof(Tombstone.Collection)] = tombstone.Collection,
-                        [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
-                        [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
-                        [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
-                        [nameof(Tombstone.Etag)] = tombstone.Etag,
-                        [nameof(Tombstone.LastModified)] = tombstone.LastModified,
-                    });
+                        using (var escapedId = _context.GetLazyString(tombstone.LowerId.Buffer, tombstone.LowerId.Size))
+                        {
+                            _context.Write(Writer, new DynamicJsonValue
+                            {
+                                ["Key"] = escapedId,
+                                [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
+                                [nameof(Tombstone.Collection)] = tombstone.Collection,
+                                [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
+                                [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
+                                [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
+                                [nameof(Tombstone.Etag)] = tombstone.Etag,
+                                [nameof(Tombstone.LastModified)] = tombstone.LastModified,
+                            });
+                        }
+                    }
                 }
             }
 
