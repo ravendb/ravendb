@@ -3,11 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -66,15 +64,17 @@ namespace SlowTests
 
                     var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
                     await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
+
+                    var val = await WaitForValueAsync(async () => await GetPromotableCount(store, store.Database), 0);
+                    Assert.Equal(0, val);
+                    val = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
+                    Assert.Equal(3, val);
                 }
                 catch (Exception e)
                 {
-                    throw e;
+                    Console.WriteLine(e);
+                    throw;
                 }
-                var val = await WaitForValueAsync(async () => await GetPromotableCount(store, store.Database), 0);
-                Assert.Equal(0, val);
-                val = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
-                Assert.Equal(3, val);
             }
         }
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
