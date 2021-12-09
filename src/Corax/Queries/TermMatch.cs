@@ -221,7 +221,7 @@ namespace Corax.Queries
                     current = it.Current;
                 }
 
-            End:
+                End:
                 term._set = it;
                 term._current = current;
                 return matchedIdx;
@@ -239,17 +239,21 @@ namespace Corax.Queries
                 term._set.MaybeSeek(matches[0] - 1);
 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
-                long* inputPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-                long* inputEndPtr = inputPtr + matches.Length;                
-               
-                long* blockStartPtr = stackalloc long[BlockSize]; // The size of this array is fixed to improve cache locality.
-                var tmpMatches = new Span<long>(blockStartPtr, BlockSize);
-
-                int matchesLength = matches.Length;
-                long* dstPtr = inputPtr;
+                long* inputStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+                long* inputEndPtr = inputStartPtr + matches.Length;
+                
+                // The size of this array is fixed to improve cache locality.
+                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * BlockSize);
+                var blockMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, BlockSize);
+                Debug.Assert(blockMatches.Length == BlockSize);
+                
+                long* blockStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(blockMatches));
+                
+                long* inputPtr = inputStartPtr;
+                long* dstPtr = inputStartPtr;
                 while (inputPtr < inputEndPtr)
                 {
-                    var result = term._set.Fill(tmpMatches, out int read, pruneGreaterThan: matches[^1]);
+                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThan: matches[^1]);
                     if (result == false)
                         break;
 
@@ -258,7 +262,7 @@ namespace Corax.Queries
 
                     long* smallerPtr, largerPtr;
                     long* smallerEndPtr, largerEndPtr;
-
+                    
                     if (read < matches.Length)
                     {
                         smallerPtr = blockStartPtr;
@@ -273,35 +277,38 @@ namespace Corax.Queries
                         largerPtr = blockStartPtr;
                         largerEndPtr = blockStartPtr + read;
                     }
+                    
+                    Debug.Assert( (ulong) (smallerEndPtr - smallerPtr) <= (ulong) (largerEndPtr - largerPtr));
 
                     while (true)
                     {
                         // TODO: In here we can do SIMD galloping with gather operations. Therefore we will be able to do
                         //       multiple checks at once and find the right amount of skipping using a table. 
 
+                        // If we dont have a whole block get out of the loop. 
+                        if (largerPtr + N - 1 >= largerEndPtr)
+                            break;
+                        
                         // If the value to compare is bigger than the biggest element in the block, we advance the block. 
                         if ((ulong)*smallerPtr > (ulong)*(largerPtr + N - 1))
                         {
-                            if (largerPtr + N >= largerEndPtr)
-                                break;
-
                             largerPtr += N;
                             continue;
                         }
-
+                    
                         // If the value to compare is smaller than the smallest element in the block, we advance the scalar value.
                         if ((ulong)*smallerPtr < (ulong)*largerPtr)
                         {
                             smallerPtr++;
                             if (smallerPtr >= smallerEndPtr)
                                 break;
-
+                    
                             continue;
                         }
-
+                    
                         Vector256<ulong> value = Vector256.Create((ulong)*smallerPtr);
                         Vector256<ulong> blockValues = Avx.LoadVector256((ulong*)largerPtr);
-
+                    
                         // We are going to select which direction we are going to be moving forward. 
                         if (!Avx2.CompareEqual(value, blockValues).Equals(Vector256<ulong>.Zero))
                         {
@@ -309,41 +316,52 @@ namespace Corax.Queries
                             *dstPtr = *smallerPtr;
                             dstPtr++;
                         }
-
+                    
                         smallerPtr++;
                         if (smallerPtr >= smallerEndPtr)
                             break;
                     }
 
-                    // The scalar version. This shouldnt cost much either way. 
-                    while (smallerPtr < smallerEndPtr && largerPtr < largerEndPtr)
+                    if (largerPtr < largerEndPtr && smallerPtr < smallerEndPtr)
                     {
-                        ulong leftValue = (ulong)*smallerPtr;
-                        ulong rightValue = (ulong)*largerPtr;
+                        // The scalar version. This shouldn't cost much either way. 
+                        while (true)
+                        {
+                            ulong leftValue = (ulong)*smallerPtr;
+                            ulong rightValue = (ulong)*largerPtr;
 
-                        if (leftValue > rightValue)
-                        {
-                            largerPtr++;
-                        }
-                        else if (leftValue < rightValue)
-                        {
-                            smallerPtr++;
-                        }
-                        else
-                        {
-                            *dstPtr = (long)leftValue;
-                            dstPtr++;
-                            smallerPtr++;
-                            largerPtr++;
+                            if (leftValue > rightValue)
+                            {
+                                largerPtr++;
+                                if (largerPtr >= largerEndPtr)
+                                    break;
+                            }
+                            else if (leftValue < rightValue)
+                            {
+                                smallerPtr++;
+                                if (smallerPtr >= smallerEndPtr)
+                                    break;
+                            }
+                            else
+                            {
+                                *dstPtr = (long)leftValue;
+                                dstPtr++;
+                                smallerPtr++;
+                                largerPtr++;
+
+                                if (largerPtr >= largerEndPtr || smallerPtr >= smallerEndPtr)
+                                    break;
+                            }
                         }
                     }
 
                     inputPtr = read < matches.Length ? largerPtr : smallerPtr;
 
                     Debug.Assert(inputPtr >= dstPtr);
+                    Debug.Assert((read >= matches.Length ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                 }
 
-                return (int)((ulong)dstPtr - (ulong)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches))) / sizeof(ulong);
+                return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
             }            
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

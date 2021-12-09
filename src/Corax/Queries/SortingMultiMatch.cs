@@ -271,8 +271,12 @@ namespace Corax.Queries
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
             TotalResults += totalMatches;
 
-            var matchesKeysHolder = QueryContext.MatchesPool.Rent(2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length);
-            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(matchesKeysHolder);
+            int matchesArraySize = sizeof(long) * matches.Length;
+            int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length;
+            var bufferHolder = QueryContext.MatchesPool.Rent(itemArraySize + matchesArraySize);
+
+            var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
+            Debug.Assert(matchesKeysSpan.Length == 2 * matches.Length);
 
             // PERF: We want to avoid to share cache lines, that's why the second array will move toward the end of the array. 
             var matchesKeys = matchesKeysSpan[0..matches.Length];
@@ -293,9 +297,9 @@ namespace Corax.Queries
             // We sort the first batch. That will also mean that we will sort the indexes too. 
             var sorter = new Sorter<MultiMatchComparer<TComparer1, W>.Item, long, MultiMatchComparer<TComparer1, W>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
-            
-            var bValuesHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
-            var bValues = MemoryMarshal.Cast<byte, long>(bValuesHolder);
+
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(itemArraySize, matchesArraySize));
+            Debug.Assert(bValues.Length == matches.Length);
 
             while (true)
             {
@@ -306,7 +310,7 @@ namespace Corax.Queries
                 // When we don't have any new batch, we are done.
                 if (bTotalMatches == 0)
                 {
-                    QueryContext.MatchesPool.Return(matchesKeysHolder);
+                    QueryContext.MatchesPool.Return(bufferHolder);
                     return totalMatches;
                 }
 
@@ -411,7 +415,7 @@ namespace Corax.Queries
 
             End:
                 totalMatches = kIdx;
-                QueryContext.MatchesPool.Return(bValuesHolder);
+                QueryContext.MatchesPool.Return(bufferHolder);
             }
         }
 

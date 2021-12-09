@@ -40,10 +40,11 @@ namespace Corax.Queries
 
             var comparer = default(TComparer);
             var currentMatches = matches;
-            int totalResults = 0;
-            int results = 0;
+            int totalResults = 0;            
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
+
+            int results;
             do
             {
                 var freeMemory = currentMatches.Slice(storeIdx);
@@ -65,10 +66,10 @@ namespace Corax.Queries
                     }
                 }
 
-            } while (results >= totalResults + maxUnusedMatchesSlots);
+            } 
+            while (results >= totalResults + maxUnusedMatchesSlots);
 
-            matches = currentMatches.Slice(0,storeIdx);
-            return totalResults;
+            return storeIdx;
         }
 
         [SkipLocalsInit]
