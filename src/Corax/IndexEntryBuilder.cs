@@ -730,17 +730,13 @@ namespace Corax
                 return false;
             }
 
-            //todo federico: please look into this. I assume it's not efficient enough ;) When field isn't a list, constructor of IndexEntryFieldIterator throws exception. 
-            try
+            if ((IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset) != IndexEntryFieldType.List)
             {
-                iterator = new IndexEntryFieldIterator(_buffer, intOffset);
-            }
-            catch (FormatException e)
-            {
-                iterator = default(IndexEntryFieldIterator);
+                iterator = default;
                 return false;
             }
-            
+
+            iterator = new IndexEntryFieldIterator(_buffer, intOffset);
             return true;
         }
 

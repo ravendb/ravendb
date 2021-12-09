@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents.Indexes
             return field;
         }
 
-        public List<IndexField> ToIndexFields()
+        public List<IndexField> ToIndexFields(Reference<int> lastUsedId)
         {
             var fields = new List<IndexField>();
 
@@ -237,7 +238,7 @@ namespace Raven.Server.Documents.Indexes
                     OriginalName = originalName,
                     Storage = hasHighlighting ? FieldStorage.Yes : Storage,
                     TermVector = hasHighlighting ? FieldTermVector.WithPositionsAndOffsets : FieldTermVector.No,
-                    Id = Id
+                    Id = ++lastUsedId.Value
                 });
             }
 
@@ -249,7 +250,7 @@ namespace Raven.Server.Documents.Indexes
                     Name = GetExactAutoIndexFieldName(Name),
                     OriginalName = originalName,
                     Storage = Storage,
-                    Id = Id
+                    Id = ++lastUsedId.Value
                 });
             }
 

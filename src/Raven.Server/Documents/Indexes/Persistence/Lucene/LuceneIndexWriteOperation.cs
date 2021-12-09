@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _analyzer = CreateLuceneAnalyzer(index, index.Definition);
+                _analyzer = IndexingHelpers.CreateLuceneAnalyzer(index, index.Definition);
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
                 _writer = persistence.EnsureIndexWriter(_state);
 
