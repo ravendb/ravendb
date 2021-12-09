@@ -31,40 +31,46 @@ namespace SlowTests
 
             }))
             {
-                Random rnd = new();
-                for (int i = 0; i < 100; i++)
+                try
                 {
-                    using (var session = store.OpenAsyncSession())
+                    Random rnd = new();
+                    for (int i = 0; i < 100; i++)
                     {
-                        await session.StoreAsync(new User { Name = "Toli" , Count = i, Age = rnd.Next(1,100)}, "users/" + i);
-                        await session.SaveChangesAsync();
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            await session.StoreAsync(new User { Name = "Toli", Count = i, Age = rnd.Next(1, 100) }, "users/" + i);
+                            await session.SaveChangesAsync();
+                        }
                     }
+
+                    var count = new AutoIndexField
+                    {
+                        Name = "Count",
+                    };
+
+                    var age = new AutoIndexField
+                    {
+                        Name = "Age",
+                    };
+
+                    var sum = new AutoIndexField
+                    {
+                        Name = "Sum",
+                    };
+                    var node = nodes.First(n => n.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database));
+                    var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var index = await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString());
+
+                    await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
+                    db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
+
+                    var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+                    await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 }
-
-                var count = new AutoIndexField
+                catch (Exception e)
                 {
-                    Name = "Count",
-                };
-
-                var age = new AutoIndexField
-                {
-                    Name = "Age",
-                };
-
-                var sum = new AutoIndexField
-                {
-                    Name = "Sum",
-                };
-                var node = nodes.First(n => n.ServerStore.DatabasesLandlord.IsDatabaseLoaded(store.Database));
-                var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var index = await db.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { age }), Guid.NewGuid().ToString());
-
-                await leader.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index.Name, IndexState.Idle, db.Name, Guid.NewGuid().ToString()));
-                db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
-
-                var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
-
+                    throw e;
+                }
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, store.Database), 0);
                 Assert.Equal(0, val);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, store.Database), 3);
