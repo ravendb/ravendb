@@ -25,7 +25,7 @@ class queryUtil {
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
         const dates = queryUtil.formatDates(startDate, endDate);
         
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates})`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates})`;
     }
 
     static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: moment.Moment, endDate?: moment.Moment) {
@@ -34,18 +34,18 @@ class queryUtil {
         const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
         const dates = queryUtil.formatDates(startDate, endDate);
 
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} ${dates} group by ${group} select avg())`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates} group by ${group} select avg())`;
     }
     
     private static formatDates(startDate?: moment.Moment, endDate?: moment.Moment): string {
         if (!startDate && !endDate) { 
-            return null;
+            return "";
         }
 
         const start = startDate ? startDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MinDateUTC;
         const end = endDate ? endDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MaxDateUTC;
         
-        return `between "${start}" and "${end}"`;
+        return ` between "${start}" and "${end}"`;
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
