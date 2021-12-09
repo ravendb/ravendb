@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -64,7 +65,7 @@ namespace Corax
             _sourceBufferMultiplier = sourceBufferMultiplier;
             _tokenBufferMultiplier = tokenBufferMultiplier;
             
-            GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out MaximumOutputSize, out MaximumTokenSize);
+            GetOutputBuffersSize(MaximumSingleTokenLength, out MaximumOutputSize, out MaximumTokenSize);
         }
 
         public void GetOutputBuffersSize(int inputSize, out int outputSize, out int tokenSize )

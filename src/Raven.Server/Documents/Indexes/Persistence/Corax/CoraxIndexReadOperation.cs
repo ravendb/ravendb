@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
-        private JsonOperationContext _jsonAllocator;
         private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
@@ -35,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _analyzers = CreateCoraxAnalyzers(index, index.Definition, true);
+            _analyzers = IndexingHelpers.CreateCoraxAnalyzers(index, index.Definition, true);
             _indexSearcher = new IndexSearcher(readTransaction, _analyzers.Analyzers);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
         }
@@ -121,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int fieldId = 0;
             HashSet<string> results = new();
 
-            if ((field is Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName or Constants.Documents.Indexing.Fields.DocumentIdFieldName) == false)
+            if (field is Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName or Constants.Documents.Indexing.Fields.DocumentIdFieldName == false)
             {
                 fieldId = -1;
                 foreach (var indexField in _index.Definition.IndexFields.Values)
@@ -136,9 +135,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     throw new InvalidDataException($"Cannot find {field} field in {_index.Name}'s terms.");
             }
 
-            var ids = ArrayPool<long>.Shared.Rent(BufferSize);
+            long[] ids = null;
             try
             {
+                ids = ArrayPool<long>.Shared.Rent(BufferSize);
                 int read = 0;
                 var allItems = _indexSearcher.AllEntries();
 
@@ -148,15 +148,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 Skip(ref allItems, skip, ref read, null, out _, ref ids, token);
 
+                var analyzer = _analyzers.Analyzers[fieldId];
+                analyzer.GetOutputBuffersSize(512, out int outputSize, out int tokenSize);
+                var encodedBuffer = new byte[outputSize];
+                var tokensBuffer = new Token[tokenSize];
+
+
                 while (read != 0 && results.Count < pageSize)
                 {
                     token.ThrowIfCancellationRequested();
                     for (int i = 0; i < read; ++i)
                     {
+                        Span<byte> encoded = encodedBuffer;
+                        Span<Token> tokens = tokensBuffer;
                         token.ThrowIfCancellationRequested();
                         var reader = _indexSearcher.GetReaderFor(ids[i]);
                         reader.Read(fieldId, out Span<byte> value);
-                        results.Add(System.Text.Encoding.UTF8.GetString(value));
+                        analyzer.Execute(value, ref encoded, ref tokens);
+                        for (int tIndex = 0; tIndex < tokens.Length; ++tIndex)
+                        {
+                            var result = encoded.Slice(tokens[tIndex].Offset, (int)tokens[tIndex].Length);
+                            results.Add(System.Text.Encoding.UTF8.GetString(result));
+                        }
                     }
 
                     read = allItems.Fill(ids);
@@ -164,7 +177,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
             finally
             {
-                ArrayPool<long>.Shared.Return(ids);
+                if(ids is not null)
+                    ArrayPool<long>.Shared.Return(ids);
             }
 
             return results;
@@ -182,59 +196,120 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var pageSize = query.PageSize;
             var skip = query.Start;
             
-            var allDocsInIndex = _indexSearcher.AllEntries();
-            totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
-            var names = MapIndexIdentifiers();
-            var ids = ArrayPool<long>.Shared.Rent(2048);
-
-            var read = 0;
-            Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
-            int returnedCounter = 0;
-            List<string> listItemInIndex = null;
-
-            while (read != 0 && returnedCounter < pageSize)
+            int outputSize = 0;
+            int tokenSize = 0;
+            foreach (var analyzer in _analyzers.Analyzers.Values.Where(analyzer => analyzer is not null))
             {
-                token.ThrowIfCancellationRequested();
-                for (int i = 0; i < read && returnedCounter < pageSize; ++i)
-                {
-                    token.ThrowIfCancellationRequested();
-                    var doc = new DynamicJsonValue();
+                analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
 
-                    for (int fieldId = 0; fieldId < names.Count; ++fieldId)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        var name = names[fieldId];
-                        var reader = _indexSearcher.GetReaderFor(ids[i]);
-
-                        if (reader.Read(fieldId, out var value))
-                        {
-                            doc[name] = Encodings.Utf8.GetString(value);
-                        }
-                        else if (reader.TryReadMany(fieldId, out var iterator))
-                        {
-                            listItemInIndex ??= new(32);
-                            listItemInIndex.Clear();
-
-                            while (iterator.ReadNext())
-                            {
-                                token.ThrowIfCancellationRequested();
-                                listItemInIndex.Add(Encodings.Utf8.GetString(iterator.Sequence));
-                            }
-
-                            doc[name] = listItemInIndex;
-                        }
-                    }
-
-                    returnedCounter++;
-                    yield return documentsContext.ReadObject(doc, "index/entries");
-                }
-
-                read = allDocsInIndex.Fill(ids);
+                if (tempTokenSize > tokenSize)
+                    tokenSize = tempTokenSize;
+                if (tempOutputSize > outputSize)
+                    outputSize = tempOutputSize;
             }
 
+            if (outputSize is 0 || tokenSize is 0)
+                throw new InvalidDataException($"Analyzers of {_index.Name} does not exist or are invalid.");
 
-            ArrayPool<long>.Shared.Return(ids);
+            long[] ids = null;
+            byte[] encodedBuffer = null;
+            Token[] tokensBuffer = null;
+
+            try
+            {
+                var names = MapIndexIdentifiers();
+                var allDocsInIndex = _indexSearcher.AllEntries();
+                totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
+                ids = ArrayPool<long>.Shared.Rent(2048);
+
+                var read = 0;
+                Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
+                int returnedCounter = 0;
+                List<string> listItemInIndex = null;
+
+
+
+
+                encodedBuffer = ArrayPool<byte>.Shared.Rent(outputSize);
+                tokensBuffer = ArrayPool<Token>.Shared.Rent(tokenSize);
+
+                while (read != 0 && returnedCounter < pageSize)
+                {
+                    token.ThrowIfCancellationRequested();
+                    for (int i = 0; i < read && returnedCounter < pageSize; ++i)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        var doc = new DynamicJsonValue();
+
+                        for (int fieldId = 0; fieldId < names.Count; ++fieldId)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var analyzer = _analyzers.Analyzers[fieldId];
+                            var name = names[fieldId];
+                            var reader = _indexSearcher.GetReaderFor(ids[i]);
+                            Span<byte> encoded = encodedBuffer;
+                            Span<Token> tokens = tokensBuffer;
+
+                            if (reader.Read(fieldId, out var value))
+                            {
+                                analyzer.Execute(value, ref encoded, ref tokens);
+                                if (tokens.Length > 1)
+                                {
+                                    listItemInIndex ??= new(32);
+                                    listItemInIndex.Clear();
+                                    for (var index = 0; index < tokens.Length; index++)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        var t = tokens[index];
+                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
+                                    }
+
+                                    doc[name] = listItemInIndex.ToArray();
+                                    continue;
+                                }
+
+                                doc[name] = Encodings.Utf8.GetString(encoded);
+                            }
+                            else if (reader.TryReadMany(fieldId, out var iterator))
+                            {
+                                List<string[]> map = new(8);
+                                while (iterator.ReadNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    analyzer.Execute(iterator.Sequence, ref encoded, ref tokens);
+                                    listItemInIndex ??= new(32);
+                                    listItemInIndex.Clear();
+                                    for (var index = 0; index < tokens.Length; index++)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        var t = tokens[index];
+                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
+                                    }
+
+                                    map.Add(listItemInIndex.ToArray());
+                                }
+
+                                doc[name] = map;
+                            }
+                        }
+
+                        returnedCounter++;
+                        yield return documentsContext.ReadObject(doc, "index/entries");
+                    }
+
+                    read = allDocsInIndex.Fill(ids);
+                }
+            }
+            finally
+            {
+                if (ids is not null)
+                    ArrayPool<long>.Shared.Return(ids);
+                if (encodedBuffer is not null)
+                    ArrayPool<byte>.Shared.Return(encodedBuffer);
+                if (tokensBuffer is not null)
+                    ArrayPool<Token>.Shared.Return(tokensBuffer);
+            }
 
             Dictionary<int, string> MapIndexIdentifiers()
             {
@@ -298,10 +373,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override void Dispose()
-        {
-            _indexSearcher?.Dispose();
-            _analyzers?.Dispose();
-            _jsonAllocator?.Dispose();
+        { 
+            var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
+
+            exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
+            exceptionAggregator.Execute(() => _analyzers?.Dispose());
+            
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }

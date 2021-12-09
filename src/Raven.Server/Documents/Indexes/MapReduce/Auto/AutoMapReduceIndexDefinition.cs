@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Voron;
@@ -27,6 +28,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 
+            var lastUsedId = new Reference<int>() { Value = mapFields.Length };
+
             foreach (var field in MapFields)
             {
                 MapAndGroupByFields[field.Key] = field.Value.As<AutoIndexField>();
@@ -36,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 MapAndGroupByFields[field.Key] = field.Value;
 
-                foreach (var indexField in field.Value.ToIndexFields())
+                foreach (var indexField in field.Value.ToIndexFields(lastUsedId))
                 {
                     IndexFields.Add(indexField.Name, indexField);
                 }

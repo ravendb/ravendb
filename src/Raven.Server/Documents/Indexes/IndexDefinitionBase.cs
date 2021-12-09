@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Jint.Runtime.References;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -162,6 +164,8 @@ namespace Raven.Server.Documents.Indexes
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
+            var lastUsedId = new Reference<int>() { Value = mapFields.Length };
+
 
             foreach (var field in mapFields)
             {
@@ -169,7 +173,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (field is AutoIndexField autoField)
                 {
-                    foreach (var indexField in autoField.ToIndexFields())
+                    foreach (var indexField in autoField.ToIndexFields(lastUsedId))
                     {
                         IndexFields.Add(indexField.Name, indexField);
                     }

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _analyzer = CreateLuceneAnalyzer(index, indexDefinition, forQuerying: true);
+                _analyzer = IndexingHelpers.CreateLuceneAnalyzer(index, indexDefinition, forQuerying: true);
             }
             catch (Exception e)
             {

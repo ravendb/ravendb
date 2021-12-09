@@ -25,17 +25,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
         }
         
-        public void AddAnalyzer(int fieldId, Analyzer analyzer) => _analyzers.TryAdd(fieldId, analyzer);
+        public void AddAnalyzer(int fieldId, Analyzer analyzer)
+        {
+            if (_analyzers.TryAdd(fieldId, analyzer) == false)
+            {
+                _analyzers[fieldId] = analyzer;
+            }
+        }
 
         public void Dispose()
         {
-            var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(Analyzer)}.");
+            var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxRavenPerFieldAnalyzerWrapper)}.");
             
             exceptionAggregator.Execute(() =>
             {
                 foreach(var disposableItem in _analyzers.Values)
                     disposableItem?.Dispose();
             });
+            
+            exceptionAggregator.ThrowIfNeeded();
         }
     }
 }
