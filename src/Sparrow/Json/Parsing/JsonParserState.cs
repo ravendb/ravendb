@@ -90,6 +90,46 @@ namespace Sparrow.Json.Parsing
             return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
         }
 
+        public static int FindEscapePositionsMaxSize(byte* str, int size, out int escapedCount)
+        {
+            var count = 0;
+            var controlCount = 0;
+
+            for (int i = 0; i < size; i++)
+            {
+                byte value = str[i];
+
+                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
+                // 8  => '\b' => 0000 1000
+                // 9  => '\t' => 0000 1001
+                // 10 => '\n' => 0000 1010
+
+                // 12 => '\f' => 0000 1100
+                // 13 => '\r' => 0000 1101
+
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
+
+                if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
+                {
+                    count++;
+                    continue;
+                }
+
+                if (value < 32)
+                {
+                    controlCount++;
+                }
+            }
+
+            escapedCount = controlCount;
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FindEscapePositionsIn(byte* str, ref int len, int previousComputedMaxSize)
         {
