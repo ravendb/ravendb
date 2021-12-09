@@ -39,7 +39,7 @@ class queryUtil {
     
     private static formatDates(startDate?: moment.Moment, endDate?: moment.Moment): string {
         if (!startDate && !endDate) { 
-            return null;
+            return "";
         }
 
         const start = startDate ? startDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MinDateUTC;
