@@ -74,7 +74,7 @@ class editTimeSeries extends viewModelBase {
     filterText: KnockoutComputed<string>;
     hasFilter: KnockoutComputed<boolean>;
     
-    itemsSoFar: number = 0;
+    itemsSoFar = ko.observable<number>();
     
     isPoliciesDefined = ko.observable<boolean>(false);
     hasMoreThanFiveRawValues = ko.observable<boolean>(false);
@@ -311,19 +311,20 @@ class editTimeSeries extends viewModelBase {
     
     private calculateResultsCountForGrid(result: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesRangeResult): number {
         if (result.TotalResults) {
-            return result.TotalResults
+            this.itemsSoFar(result.TotalResults);
+            return result.TotalResults;
         }
 
         const numberOfItemsFetched = result.Entries.length;
-        this.itemsSoFar += numberOfItemsFetched;
+        this.itemsSoFar(this.itemsSoFar() + numberOfItemsFetched);
         
         if (!result.To ||
             numberOfItemsFetched < editTimeSeries.pageSize ||
             (this.localEndDateInFilter() &&(new Date(result.To)) >= this.localEndDateInFilter().toDate())) {
-            return this.itemsSoFar;
+            return this.itemsSoFar();
         }
         
-        return this.itemsSoFar + 1; // indicate there are more results to scroll for
+        return this.itemsSoFar() + 1; // indicate there are more results to scroll for
     }
     
     private checkColumns(result: pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>) {
@@ -380,7 +381,7 @@ class editTimeSeries extends viewModelBase {
             .execute()
             .done(stats => {
                 this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
-                this.itemsSoFar = 0;
+                this.itemsSoFar(0);
             });
     }
 
@@ -424,7 +425,7 @@ class editTimeSeries extends viewModelBase {
     private changeCurrentSeries(name: string) {
         this.cleanColumnsCache();
         this.timeSeriesName(name);
-        this.itemsSoFar = 0;
+        this.itemsSoFar(0);
         
         this.refresh(true);
     }
@@ -666,7 +667,7 @@ class editTimeSeries extends viewModelBase {
                 }
             })
             .always(() => {
-                this.itemsSoFar = 0;
+                this.itemsSoFar(0);
                 this.refresh();
             })
     }
