@@ -2617,6 +2617,81 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server
+            }))
+            {
+                const string documentId = "Users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(documentDatabase);
+                var tcs = new TaskCompletionSource<object>();
+                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+                try
+                {
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+                    var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var backups1 = record1.PeriodicBackups;
+                    Assert.Equal(1, backups1.Count);
+
+                    var taskId = backups1.First().TaskId;
+                    var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    Assert.NotNull(responsibleDatabase);
+                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    Assert.Equal(server.ServerStore.NodeTag, tag);
+
+                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
+                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByCurrentNode_UpdateConfigurations = true;
+                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                    tcs.SetResult(null);
+
+                    responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
+                    PeriodicBackupStatus status = null;
+                    var val = WaitForValue(() =>
+                    {
+                        status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
+                        return status?.LastFullBackup != null;
+                    }, true, timeout: 66666, interval: 444);
+                    Assert.NotNull(status);
+                    Assert.Null(status.Error);
+                    Assert.True(val, "Failed to complete the backup in time");
+
+                    var pb2 = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    Assert.NotNull(pb2);
+                    Assert.True(pb2.HasScheduledBackup(), "Completed backup didn't schedule next one.");
+                }
+                finally
+                {
+                    try
+                    {
+                        tcs.TrySetResult(null);
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
+
+                    documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = null;
+                }
+            }
+        }
+
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
         {
             var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backTaskId)).Status;
