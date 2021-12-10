@@ -2,8 +2,10 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Corax;
+using Corax.Pipeline;
 using Corax.Queries;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -47,12 +49,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (isDistinctCount)
                 pageSize = int.MaxValue;
             var position = query.Start;
-            var take = Math.Min(pageSize, Convert.ToInt32(_indexSearcher.CountItemsInIndex)) + position;
+
+            var take = pageSize + position;
+            if (take > _indexSearcher.NumberOfEntries)
+                take = IndexSearcher.TakeAll;
+
             IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch, take);
-            if (result == null)
+            if (result is null)
                 yield break;
 
-            var ids = ArrayPool<long>.Shared.Rent(BufferSize);
+            
+            var ids = ArrayPool<long>.Shared.Rent(query.Metadata.OrderBy?.Length == 0 ? BufferSize : CoraxGetPageSize(_indexSearcher, BufferSize));
 
             int read = 0;
             int docsToLoad = pageSize;
@@ -107,14 +114,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     totalResults.Value = Convert.ToInt32(readCounter);
                 }
-                
+
                 skippedResults.Value = 0;
             }
-            finally
-            {
-                ArrayPool<long>.Shared.Return(ids);
-            }
-            
+
             ArrayPool<long>.Shared.Return(ids);
         }
 
@@ -230,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 var names = MapIndexIdentifiers();
                 var allDocsInIndex = _indexSearcher.AllEntries();
                 totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
-                ids = ArrayPool<long>.Shared.Rent(2048);
+                ids = ArrayPool<long>.Shared.Rent(BufferSize);
 
                 var read = 0;
                 Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
@@ -351,6 +354,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             if (ids.Length is 0)
                 throw new OutOfMemoryException("Corax buffer has no memory.");
+
             readCounter = 0;
             if (position != 0)
             {
@@ -385,7 +389,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     readCounter += read;
                 }
 
-                if(skippedResults is not null)
+                if (skippedResults is not null)
                     skippedResults.Value = Convert.ToInt32(readCounter);
             }
             else
@@ -394,9 +398,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 readCounter += read;
             }
 
-            if (skippedResults is not null) 
+            if (skippedResults is not null)
                 skippedResults.Value = 0;
-            
+
         }
 
         public override void Dispose()

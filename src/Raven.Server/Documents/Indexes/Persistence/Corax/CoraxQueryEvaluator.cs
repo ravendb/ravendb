@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             return _searcher.StartWithQuery(fieldName,
                                 ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
                         case MethodType.Exact:
-                            return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated);
+                            return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take);
                         default:
                             throw new NotImplementedException($"Method {nameof(methodExpression)} is not implemented.");
                     }
@@ -299,7 +299,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 //Note: we want use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
                 case 1:
                 {
-                    if (orders[0].Expression is not FieldExpression fe) throw new Exception();
+                    if (orders[0].Expression is not FieldExpression fe)
+                        throw new InvalidQueryException($"The expression used in the ORDER BY clause is wrong.");
                     var id = GetFieldIdInIndex(GetField(fe));
                     var orderTypeField = OrderTypeFieldConverter(orders[0].FieldType);
 
@@ -316,7 +317,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var secondOrder = orders[1];
                     if (firstOrder.Expression is not FieldExpression first || secondOrder.Expression is not FieldExpression second)
                     {
-                        throw new Exception();
+                        throw new InvalidQueryException($"The expression used in the ORDER BY clause is wrong.");
                     }
                     var firstId = GetFieldIdInIndex(GetField(first));
                     var firstTypeField = OrderTypeFieldConverter(firstOrder.FieldType);
@@ -351,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     if (firstOrder.Expression is not FieldExpression first || secondOrder.Expression is not FieldExpression second ||
                         thirdOrder.Expression is not FieldExpression third)
                     {
-                        throw new Exception();
+                        throw new InvalidQueryException("The expression used in the ORDER BY clause is wrong.");
                     }
 
                     var firstId = GetFieldIdInIndex(GetField(first));
@@ -435,7 +436,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     comparers[7])
             };
         }
-
 
         public void Dispose()
         {

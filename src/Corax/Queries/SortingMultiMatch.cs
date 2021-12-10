@@ -293,8 +293,10 @@ namespace Corax.Queries
             // We sort the first batch. That will also mean that we will sort the indexes too. 
             var sorter = new Sorter<MultiMatchComparer<TComparer1, W>.Item, long, MultiMatchComparer<TComparer1, W>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
+            
+            var bValuesHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
+            var bValues = MemoryMarshal.Cast<byte, long>(bValuesHolder);
 
-            Span<long> bValues = stackalloc long[matches.Length];
             while (true)
             {
                 // We get a new batch
@@ -409,6 +411,7 @@ namespace Corax.Queries
 
             End:
                 totalMatches = kIdx;
+                QueryContext.MatchesPool.Return(bValuesHolder);
             }
         }
 

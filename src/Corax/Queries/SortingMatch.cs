@@ -125,7 +125,8 @@ namespace Corax.Queries
             sorter.Sort(matchesScores[0..totalMatches], matches[0..totalMatches]);
 
             var searcher = _searcher;
-            Span<long> bValues = stackalloc long[matches.Length];            
+            var bValuesHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
+            var bValues = MemoryMarshal.Cast<byte, long>(bValuesHolder);
             while (true)
             {
                 // We get a new batch
@@ -224,7 +225,7 @@ namespace Corax.Queries
             End:
                 totalMatches = kIdx;
             }
-
+            
             QueryContext.MatchesPool.Return(matchesKeysHolder);
             return totalMatches;
         }
