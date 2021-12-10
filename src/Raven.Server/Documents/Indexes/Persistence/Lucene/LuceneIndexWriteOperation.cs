@@ -46,11 +46,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _converter = converter;
             DocumentDatabase = index._indexStorage.DocumentDatabase;
 
-            
 
             try
             {
                 _analyzer = LuceneIndexingHelpers.CreateLuceneAnalyzer(index, index.Definition);
+            }
+            catch (Exception e)
+            {
+                throw new IndexAnalyzerException(e);
+            }
+
+            try
+            {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
                 _writer = persistence.EnsureIndexWriter(_state);
 

@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 match = OrderBy(match, query.Metadata.Query.OrderBy);
             return match;
         }
-
+        
         private IQueryMatch Evaluate(QueryExpression condition, bool isNegated)
         {
             switch (condition)
@@ -58,13 +58,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return EvaluateBetween(betweenExpression, isNegated);
                 case MethodExpression methodExpression:
                     var expressionType = QueryMethod.GetMethodType(methodExpression.Name.Value);
-                    var fieldName = GetField((FieldExpression)methodExpression.Arguments[0]);
-                    var fieldId = GetFieldIdInIndex(fieldName);
+                    string fieldName = string.Empty;
+                    int fieldId;
                     switch (expressionType)
                     {
                         case MethodType.StartsWith:
+                            fieldName = GetField((FieldExpression)methodExpression.Arguments[0]);
+                            fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.StartWithQuery(fieldName,
                                 ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
+                        case MethodType.Exact:
+                            return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated);
                         default:
                             throw new NotImplementedException($"Method {nameof(methodExpression)} is not implemented.");
                     }
