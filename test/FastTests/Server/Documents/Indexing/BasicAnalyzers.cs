@@ -13,6 +13,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -184,7 +185,7 @@ namespace FastTests.Server.Documents.Indexing
 
             public LuceneRavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return IndexingHelpers.CreateLuceneAnalyzer(_index, new TestIndexDefinitions
+                return LuceneIndexingHelpers.CreateLuceneAnalyzer(_index, new TestIndexDefinitions
                 {
                     IndexFields = fields
                 }, forQuerying);

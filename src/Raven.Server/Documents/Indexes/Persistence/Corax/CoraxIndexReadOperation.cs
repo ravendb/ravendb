@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _analyzers = IndexingHelpers.CreateCoraxAnalyzers(index, index.Definition, true);
+            _analyzers = CoraxIndexingHelpers.CreateCoraxAnalyzers(index, index.Definition, true);
             _indexSearcher = new IndexSearcher(readTransaction, _analyzers.Analyzers);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
         }
@@ -56,56 +56,52 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield break;
 
             var ids = ArrayPool<long>.Shared.Rent(BufferSize);
-            try
+
+            int read = 0;
+            int docsToLoad = pageSize;
+            Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
+
+            while (read != 0)
             {
-                int read = 0;
-                int docsToLoad = pageSize;
-                Skip(ref result, position, ref read, skippedResults, out var readCounter, ref ids, token);
-
-                while (read != 0)
+                for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
                 {
-                    for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
-                    {
-                        RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
-                        var fetchedDocument = retriever.Get(ref retrieverInput);
+                    RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
+                    var fetchedDocument = retriever.Get(ref retrieverInput);
 
-                        if (fetchedDocument.Document != null)
+                    if (fetchedDocument.Document != null)
+                    {
+                        yield return new QueryResult { Result = fetchedDocument.Document };
+                    }
+                    else if (fetchedDocument.List != null)
+                    {
+                        foreach (Document item in fetchedDocument.List)
                         {
-                            yield return new QueryResult { Result = fetchedDocument.Document };
-                        }
-                        else if (fetchedDocument.List != null)
-                        {
-                            foreach (Document item in fetchedDocument.List)
-                            {
-                                yield return new QueryResult { Result = item };
-                            }
+                            yield return new QueryResult { Result = item };
                         }
                     }
+                }
 
-                    if (docsToLoad == 0)
-                        break;
+                if (docsToLoad == 0)
+                    break;
 
+                read = result.Fill(ids);
+                readCounter += read;
+            }
+
+            if (result is SortingMatch sm)
+                totalResults.Value = Convert.ToInt32(sm.TotalResults);
+            else
+            {
+                while (read != 0)
+                {
                     read = result.Fill(ids);
                     readCounter += read;
                 }
 
-                if (result is SortingMatch sm)
-                    totalResults.Value = Convert.ToInt32(sm.TotalResults);
-                else
-                {
-                    while (read != 0)
-                    {
-                        read = result.Fill(ids);
-                        readCounter += read;
-                    }
-
-                    totalResults.Value = Convert.ToInt32(readCounter);
-                }
+                totalResults.Value = Convert.ToInt32(readCounter);
             }
-            finally
-            {
-                ArrayPool<long>.Shared.Return(ids);
-            }
+            
+            ArrayPool<long>.Shared.Return(ids);
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
@@ -177,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
             finally
             {
-                if(ids is not null)
+                if (ids is not null)
                     ArrayPool<long>.Shared.Return(ids);
             }
 
@@ -195,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             var pageSize = query.PageSize;
             var skip = query.Start;
-            
+
             int outputSize = 0;
             int tokenSize = 0;
             foreach (var analyzer in _analyzers.Analyzers.Values.Where(analyzer => analyzer is not null))
@@ -226,8 +222,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 Skip(ref allDocsInIndex, skip, ref read, new Reference<int>(), out var readCounter, ref ids, token);
                 int returnedCounter = 0;
                 List<string> listItemInIndex = null;
-
-
 
 
                 encodedBuffer = ArrayPool<byte>.Shared.Rent(outputSize);
@@ -373,12 +367,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override void Dispose()
-        { 
+        {
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
 
             exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
             exceptionAggregator.Execute(() => _analyzers?.Dispose());
-            
+
             exceptionAggregator.ThrowIfNeeded();
         }
     }
