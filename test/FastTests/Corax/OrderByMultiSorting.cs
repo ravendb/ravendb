@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,7 +22,7 @@ namespace FastTests.Corax
         private List<IndexSingleNumericalEntry<long, long>> longList = new();
         private IndexSearcher _indexSearcher;
         private const int IndexId = 0, Content1 = 1, Content2 = 2;
-
+        private long[] _buffer = new long[200_005];
         public OrderByMultiSortingTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -42,7 +43,7 @@ namespace FastTests.Corax
                 var match = SortingMultiMatch.Create(searcher, match1, comparer1, comparer2);
 
                 List<string> sortedByCorax = new();
-                Span<long> ids = stackalloc long[2048];
+                Span<long> ids = _buffer;
                 int read = 0;
                 do
                 {
@@ -55,7 +56,7 @@ namespace FastTests.Corax
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Id, sortedByCorax[i]);
 
-                Assert.Equal(1000, sortedByCorax.Count);
+                Assert.Equal(100_000, sortedByCorax.Count);
             }
         }
 
@@ -77,7 +78,7 @@ namespace FastTests.Corax
                 var match = SortingMultiMatch.Create(searcher, match1, comparer1, comparer2);
 
                 List<string> sortedByCorax = new();
-                Span<long> ids = stackalloc long[2048];
+                Span<long> ids = _buffer;
                 int read = 0;
                 do
                 {
@@ -93,7 +94,7 @@ namespace FastTests.Corax
                 }
                     
 
-                Assert.Equal(2000, sortedByCorax.Count);
+                Assert.Equal(100_000 * 2, sortedByCorax.Count);
             }
         }
 
@@ -117,13 +118,13 @@ namespace FastTests.Corax
 
         private void PrepareData(bool inverse = false)
         {
-            for (int i = 0; i < 1000; ++i)
+            for (int i = 0; i < 100_000; ++i)
             {
                 longList.Add(new IndexSingleNumericalEntry<long, long>
                 {
                     Id = inverse ? $"list/1000-{i}" : $"list/{i}",
                     Content1 = i,
-                    Content2 = inverse ? 1000 - i : i
+                    Content2 = inverse ? 100_000 - i : i
                 });
             }
         }

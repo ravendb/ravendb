@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (isDistinctCount)
                 pageSize = int.MaxValue;
 
-            pageSize = GetPageSize(_searcher, pageSize);
+            pageSize = LuceneGetPageSize(_searcher, pageSize);
 
             var docsToGet = pageSize;
             var position = query.Start;
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
 
-                    docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
+                    docsToGet += LuceneGetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                 }
 
                 if (isDistinctCount)
@@ -367,8 +367,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part
             //of the final result because we're doing an intersection query (but we might exclude some of them)
-            var pageSize = GetPageSize(_searcher, query.PageSize);
-            int pageSizeBestGuess = GetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
+            var pageSize = LuceneGetPageSize(_searcher, query.PageSize);
+            int pageSizeBestGuess = LuceneGetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
             int skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0;
 
@@ -496,7 +496,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            var minPageSize = GetPageSize(_searcher, (long)pageSize + start);
+            var minPageSize = LuceneGetPageSize(_searcher, (long)pageSize + start);
 
             if (sort != null)
             {
@@ -789,7 +789,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;
 
-            var pageSize = GetPageSize(_searcher, query.PageSize);
+            var pageSize = LuceneGetPageSize(_searcher, query.PageSize);
 
             Query mltQuery;
             if (baseDocId.HasValue)
@@ -858,7 +858,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token)
         {
-            var docsToGet = GetPageSize(_searcher, query.PageSize);
+            var docsToGet = LuceneGetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);

@@ -20,6 +20,7 @@ namespace Corax
 {
     public sealed unsafe class IndexSearcher : IDisposable
     {
+        
         private const int NonAnalyzer = -1;
         private readonly Transaction _transaction;
         private readonly Dictionary<int, Analyzer> _analyzers;
@@ -29,10 +30,12 @@ namespace Corax
         /// way than reference algorithms. 
         /// </summary>
         public bool ForceNonAccelerated { get; set; }
+        
+        public const int TakeAll = -1;
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
         
-        public long CountItemsInIndex => _transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
+        public long NumberOfEntries => _transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
 
         internal ByteStringContext Allocator => _transaction.Allocator;
 
@@ -196,19 +199,19 @@ namespace Corax
             return MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm)));
         }
 
-        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
-        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
-        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = -1)
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
             where TInner : IQueryMatch
             where TComparer : IMatchComparer
         {
@@ -228,13 +231,13 @@ namespace Corax
             throw new ArgumentException($"The comparer of type {typeof(TComparer).Name} is not supported. Isn't {nameof(OrderByCustomOrder)} the right call for it?");
         }
 
-        public SortingMatch OrderByScore<TInner>(in TInner set, int take = -1)
+        public SortingMatch OrderByScore<TInner>(in TInner set, int take = TakeAll)
             where TInner : IQueryMatch    
         {
             return Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
         }
 
-        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = -1)
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, in TComparer comparer, int take = TakeAll)
             where TInner : IQueryMatch
             where TComparer : struct, IMatchComparer
         {
@@ -247,7 +250,7 @@ namespace Corax
                 delegate*<double, double, int> compareDoubleFunc,
                 delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, int> compareSequenceFunc,
                 MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, 
-                int take = -1)
+                int take = TakeAll)
             where TInner : IQueryMatch     
         {
             // Federico: I don't even really know if we are going to find a use case for this. However, it was built for the purpose
@@ -332,139 +335,139 @@ namespace Corax
             return BinaryMatch.Create(BinaryMatch<TInner, TOuter>.YieldOr(in set1, in set2));
         }
 
-        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldGreaterThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldGreaterThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch GreaterThan<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldGreaterThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch GreaterThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldGreaterThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldLessThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldLessThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch LessThan<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldLessThan(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch LessThanOrEqual<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldLessThanOrEqualMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldEqualsMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldEqualsMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch Equals<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldEqualsMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, Slice value, int take = -1)
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
-        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, long value, int take = -1)
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
-        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, double value, int take = -1)
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
 
-        public UnaryMatch Between<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = -1)
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
         }
-        public UnaryMatch Between<TInner>(in TInner set, int fieldId, long value1, long value2, int take = -1)
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, long value1, long value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
         }
-        public UnaryMatch Between<TInner>(in TInner set, int fieldId, double value1, double value2, int take = -1)
+        public UnaryMatch Between<TInner>(in TInner set, int fieldId, double value1, double value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
         }
 
-        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = -1)
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, Slice value1, Slice value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
-        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, long value1, long value2, int take = -1)
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, long value1, long value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
-        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, double value1, double value2, int take = -1)
+        public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, double value1, double value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static int GetPageSize(IndexSearcher searcher, long pageSize)
+        protected static int LuceneGetPageSize(IndexSearcher searcher, long pageSize)
         {
             if (pageSize >= searcher.MaxDoc)
                 return searcher.MaxDoc;
@@ -121,6 +121,17 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return int.MaxValue;
 
             return (int)pageSize;
+        }
+
+        protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int bufferSize)
+        {
+            var size = searcher.NumberOfEntries;
+            return size switch
+            {
+                > int.MaxValue => int.MaxValue,
+                <= 0 => bufferSize,
+                _ => (int)size
+            };
         }
     }
 }
