@@ -458,6 +458,7 @@ namespace Corax
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
         
+        //TODO PERF Search
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ReadOnlySpan<byte> EncodeTerm(string term, int fieldId)
         {

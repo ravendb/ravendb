@@ -31,6 +31,7 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
+        //PERF need to get rid off TryGetValue (_analyzers)
         private readonly Dictionary<int, Analyzer> _analyzers;
         private readonly StorageEnvironment _environment;
         private readonly TransactionPersistentContext _transactionPersistentContext;
@@ -120,6 +121,7 @@ namespace Corax
             {
                 if (_buffer.TryGetValue(key, out var field) == false)
                 {
+                    //PERF: avoid creating dictionary
                     _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 

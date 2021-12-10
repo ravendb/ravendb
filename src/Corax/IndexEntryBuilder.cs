@@ -412,6 +412,7 @@ namespace Corax
     public ref struct IndexEntryFieldIterator 
     {
         public readonly IndexEntryFieldType Type;
+        public readonly bool IsValid;
         public readonly int Count;
         private int _currentIdx;
 
@@ -421,7 +422,7 @@ namespace Corax
         private int _longOffset;
         private int _doubleOffset;
         private readonly bool IsTuple => _doubleOffset != 0;
-
+        
 
         internal IndexEntryFieldIterator(IndexEntryFieldType type)
         {
@@ -429,7 +430,8 @@ namespace Corax
             Type = IndexEntryFieldType.Invalid;
             Count = 0;
             _buffer = ReadOnlySpan<byte>.Empty;
-
+            IsValid = false;
+            
             Unsafe.SkipInit(out _currentIdx);
             Unsafe.SkipInit(out _spanTableOffset);
             Unsafe.SkipInit(out _spanOffset);
@@ -444,7 +446,16 @@ namespace Corax
             offset += length;
 
             if (((byte)Type & (byte)IndexEntryFieldType.List) == 0)
-                throw new FormatException("Type is not a list.");
+            {
+                IsValid = false;
+                Unsafe.SkipInit(out _currentIdx);
+                Unsafe.SkipInit(out _spanTableOffset);
+                Unsafe.SkipInit(out _spanOffset);
+                Unsafe.SkipInit(out _longOffset);
+                Unsafe.SkipInit(out _doubleOffset);
+                Unsafe.SkipInit(out Count);
+                return;
+            }
 
             Count = VariableSizeEncoding.Read<ushort>(_buffer, out length, offset);
 
@@ -465,6 +476,7 @@ namespace Corax
             }
 
             _currentIdx = -1;
+            IsValid = true;
         }
 
         public ReadOnlySpan<byte> Sequence
@@ -729,15 +741,9 @@ namespace Corax
                 iterator = default;
                 return false;
             }
-
-            if ((IndexEntryFieldType)VariableSizeEncoding.Read<byte>(_buffer, out var length, intOffset) != IndexEntryFieldType.List)
-            {
-                iterator = default;
-                return false;
-            }
-
+            
             iterator = new IndexEntryFieldIterator(_buffer, intOffset);
-            return true;
+            return iterator.IsValid;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
