@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
+using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Global;
@@ -395,6 +396,9 @@ namespace SlowTests.Voron.Storage
         [InlineDataWithRandomSeed(1)]
         [InlineDataWithRandomSeed(5)]
         [InlineDataWithRandomSeed(15)]
+        [InlineData(1, 265522278)]
+        [InlineData(1, 1859588471)]
+        [InlineData(5, 550046396)]
         public void TreeReportContainsPartialInfoAboutStreams(int numberOfStreams, int seed)
         {
             var r = new Random(seed);
@@ -432,10 +436,10 @@ namespace SlowTests.Voron.Storage
                 Assert.Equal(1, treeReport.Streams.Streams.Count);
                 Assert.Equal(StorageReportGenerator.SkippedStreamsDetailsName, treeReport?.Streams.Streams[0].Name);
 
-                var streamsSizeInMb = Math.Round(treeReport.Streams.Streams[0].AllocatedSpaceInBytes * 0.000001);
-                var fullStreamsSizeInMb = Math.Round(fullTreeReport.Streams.AllocatedSpaceInBytes * 0.000001);
+                var streamsSizeInMb = new Size(treeReport.Streams.Streams[0].AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                var fullStreamsSizeInMb = new Size(fullTreeReport.Streams.AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
                 
-                Assert.Equal(streamsSizeInMb, fullStreamsSizeInMb);
+                Assert.Equal(streamsSizeInMb,fullStreamsSizeInMb);
             }
         }
 
