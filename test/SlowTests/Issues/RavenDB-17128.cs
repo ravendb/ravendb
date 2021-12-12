@@ -42,18 +42,18 @@ namespace SlowTests.Issues
 
                     var ex = await Assert.ThrowsAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
                     
-                    Assert.NotNull(ex.ClusterTransactionConflicts);
-                    Assert.Equal(2, ex.ClusterTransactionConflicts.Length);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations);
+                    Assert.Equal(2, ex.ClusterConcurrencyViolations.Length);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterTransactionConflicts[0].Type);
-                    Assert.Equal("usernames/ravendb", ex.ClusterTransactionConflicts[0].Id);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[0].Expected);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[0].Actual);
+                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterConcurrencyViolations[0].Type);
+                    Assert.Equal("usernames/ravendb", ex.ClusterConcurrencyViolations[0].Id);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Expected);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Actual);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterTransactionConflicts[1].Type);
-                    Assert.Equal("emails/info@ravendb.net", ex.ClusterTransactionConflicts[1].Id);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[1].Expected);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[1].Actual);
+                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterConcurrencyViolations[1].Type);
+                    Assert.Equal("emails/info@ravendb.net", ex.ClusterConcurrencyViolations[1].Id);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Expected);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Actual);
                 }
             }
         }
@@ -89,18 +89,18 @@ namespace SlowTests.Issues
                     o2.Value = 23;
 
                     var ex = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.NotNull(ex.ClusterTransactionConflicts);
-                    Assert.Equal(2, ex.ClusterTransactionConflicts.Length);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations);
+                    Assert.Equal(2, ex.ClusterConcurrencyViolations.Length);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterTransactionConflicts[0].Type);
-                    Assert.Equal("rvn-atomic/objects/1", ex.ClusterTransactionConflicts[0].Id);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[0].Expected);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[0].Actual);
+                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterConcurrencyViolations[0].Type);
+                    Assert.Equal("rvn-atomic/objects/1", ex.ClusterConcurrencyViolations[0].Id);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Expected);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Actual);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterTransactionConflicts[1].Type);
-                    Assert.Equal("rvn-atomic/objects/2", ex.ClusterTransactionConflicts[1].Id);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[1].Expected);
-                    Assert.NotNull(ex.ClusterTransactionConflicts[1].Actual);
+                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterConcurrencyViolations[1].Type);
+                    Assert.Equal("rvn-atomic/objects/2", ex.ClusterConcurrencyViolations[1].Id);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Expected);
+                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Actual);
                 }
             }
         }

@@ -41,27 +41,34 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public long ExpectedETag;
+        [Obsolete("Not used and will be removed and the next major version")]
+        public long ExpectedETag { get; set; }
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
-        public long ActualETag;
+        [Obsolete("Not used and will be removed and the next major version")]
+        public long ActualETag { get; set; }
 
         /// <summary>
         /// Expected Change Vector.
         /// </summary>
-        public string ExpectedChangeVector;
+        public string ExpectedChangeVector { get; set; }
 
         /// <summary>
         /// Actual Change Vector.
         /// </summary>
-        public string ActualChangeVector;
+        public string ActualChangeVector { get; set; }
 
         /// <summary>
-        /// Cluster Transaction conflicts info.
+        /// The Document Id.
         /// </summary>
-        public Conflict[] ClusterTransactionConflicts;
+        public string Id;
+
+        /// <summary>
+        /// Cluster Concurrency violations info.
+        /// </summary>
+        public Conflict[] ClusterConcurrencyViolations;
 
         public class Conflict
         {
