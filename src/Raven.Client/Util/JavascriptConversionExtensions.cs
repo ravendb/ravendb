@@ -2490,15 +2490,17 @@ namespace Raven.Client.Util
         public class IdentityPropertySupport : JavascriptConversionExtension
         {
             private readonly DocumentConventions _conventions;
+            private readonly string _parameterName;
 
-            public IdentityPropertySupport(DocumentConventions conventions)
+            public IdentityPropertySupport(DocumentConventions conventions, string parameterName = null)
             {
                 _conventions = conventions;
+                _parameterName = parameterName;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (CanConvert(context.Node, _conventions, out var innerExpression) == false)
+                if (CanConvert(context.Node, _conventions, _parameterName, out var innerExpression) == false)
                     return;
 
                 var writer = context.GetWriter();
@@ -2516,7 +2518,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out Expression innerExpression)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, string parameterName, out Expression innerExpression)
             {
                 innerExpression = null;
 
@@ -2536,8 +2538,7 @@ namespace Raven.Client.Util
                 innerExpression = innerMember;
 
                 var p = GetParameter(innerMember)?.Name;
-
-                return p != null && p.StartsWith(TransparentIdentifier);
+                return p != null && (p.StartsWith(TransparentIdentifier) || p == parameterName);
             }
         }
 
@@ -2583,6 +2584,35 @@ namespace Raven.Client.Util
                 }
             }
         }
+
+        public class TypedParameterSupport : JavascriptConversionExtension
+        {
+            public readonly string Name;
+
+            public TypedParameterSupport(string name)
+            {
+                if (string.IsNullOrEmpty(name))
+                    throw new ArgumentNullException(nameof(name));
+
+                Name = name;
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression memberExpression) || 
+                    !(memberExpression.Expression is ParameterExpression parameter) ||
+                    parameter.Name != Name) 
+                    return;
+                
+                context.PreventDefault();
+                var writer = context.GetWriter();
+                using (writer.Operation(memberExpression))
+                {
+                    writer.Write(memberExpression);
+                }
+            }
+        }
+
 
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
