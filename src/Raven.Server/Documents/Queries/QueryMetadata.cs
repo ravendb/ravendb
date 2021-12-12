@@ -71,6 +71,14 @@ namespace Raven.Server.Documents.Queries
             IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
             IsGroupBy = Query.GroupBy != null;
+            
+            if (query.Filter != null)
+            {
+                var stringBuilder = new StringBuilder();
+                new JavascriptCodeQueryVisitor(stringBuilder, Query).VisitExpression(query.Filter);
+
+                FilterScript = stringBuilder.ToString();
+            }
 
             if (IsGraph == false)
             {
@@ -102,6 +110,8 @@ namespace Raven.Server.Documents.Queries
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
         }
+
+        public string FilterScript;
 
         public readonly bool AddSpatialProperties;
 

@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Patch
             runner.AddScript(GenerateRootScript());
         }
 
-        private string GenerateRootScript()
+        protected virtual string GenerateRootScript()
         {
             switch (Type)
             {
