@@ -30,7 +30,9 @@ namespace Corax.Queries
                         break;
                 }
             }
-            return BoostingMatch.WithTermFrequency(searcher, match);
+
+            return searcher.OrderByScore( searcher.Boost(match, 2));
+            
         }
         
         private static IQueryMatch CreateAnalyzedQuery(string field, IndexSearcher searcher, LazyStringValue value, Analyzer analyzer)

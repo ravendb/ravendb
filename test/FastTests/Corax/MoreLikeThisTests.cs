@@ -42,7 +42,7 @@ namespace FastTests.Corax
             Assert.Equal(1,mlt.Fill(match));
             Assert.Equal("arava", indexSearcher.GetIdentityFor(match[0]));
             
-            // match on "running" to phoebe, zoof
+            // match on "running" to phoebe, zoof (order of insert)
              mlt = MoreLikeThisQuery.Build(indexSearcher, ctx.ReadObject(new DynamicJsonValue
             {
                 ["Bio"] = "Running on the beach",
@@ -50,6 +50,17 @@ namespace FastTests.Corax
             Assert.Equal(2,mlt.Fill(match));
             Assert.Equal("phoebe", indexSearcher.GetIdentityFor(match[0]));
             Assert.Equal("zoof", indexSearcher.GetIdentityFor(match[1]));
+
+            // match on "running" to phoebe, zoof (order of most similar)
+            mlt = MoreLikeThisQuery.Build(indexSearcher, ctx.ReadObject(new DynamicJsonValue
+            {
+                ["Bio"] = "Running on the beach",
+                ["Interests"] = "jumping fences"
+            }, "test"), analyzer);
+            Assert.Equal(3,mlt.Fill(match));
+            Assert.Equal("zoof", indexSearcher.GetIdentityFor(match[0]));
+            Assert.Equal("phoebe", indexSearcher.GetIdentityFor(match[1]));
+            Assert.Equal("sunny", indexSearcher.GetIdentityFor(match[2]));
 
         }
 
@@ -62,7 +73,7 @@ namespace FastTests.Corax
             writer.Index("arava", CreateEntry(buffer, knownFields, "arava", "Arava Eini", "German shepherd & Barking", "Balls and walks"), knownFields);
             writer.Index("phoebe", CreateEntry(buffer, knownFields , "phoebe", "Phoebe Eini", "Barking and resting and running", "Moving as little as possible, balls"), knownFields);
             writer.Index("zoof", CreateEntry(buffer, knownFields, "zoof", "Zoof Orphan", "Running and licking and jumping", "Jumping on people"), knownFields);
-            writer.Index("sunny", CreateEntry(buffer, knownFields, "sunny", "Sunny Inlaw", "Shedding and resting and eating", "Hiding under a chair"), knownFields);
+            writer.Index("sunny", CreateEntry(buffer, knownFields, "sunny", "Sunny Inlaw", "Shedding and resting and eating", "Hiding under a chair, jumping on couch"), knownFields);
             writer.Commit();
         }
         
