@@ -80,6 +80,7 @@ namespace Raven.Server.Documents.Patch
 
                     throw new ConcurrencyException($"Could not patch document '{id}' because non current change vector was used")
                     {
+                        Id = id,
                         ActualChangeVector = null,
                         ExpectedChangeVector = expectedChangeVector
                     };
@@ -97,6 +98,7 @@ namespace Raven.Server.Documents.Patch
 
                     throw new ConcurrencyException($"Could not patch document '{id}' because non current change vector was used")
                     {
+                        Id = id,
                         ActualChangeVector = originalDocument.ChangeVector,
                         ExpectedChangeVector = expectedChangeVector
                     };

@@ -1610,7 +1610,11 @@ namespace Raven.Server.Documents
             {
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
-                                                   "Optimistic concurrency violation, transaction will be aborted.");
+                                                   "Optimistic concurrency violation, transaction will be aborted.")
+                    {
+                        Id = local.Tombstone.LowerId,
+                        ExpectedChangeVector = expectedChangeVector
+                    };
                 if (collectionName == null)
                 {
                     collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
