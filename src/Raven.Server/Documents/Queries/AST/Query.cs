@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Queries.AST
         public bool IsDistinct;
         public GraphQuery GraphQuery;
         public QueryExpression Where;
+        public QueryExpression Filter;
         public FromClause From;
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;

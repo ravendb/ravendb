@@ -116,6 +116,12 @@ namespace Raven.Server.Documents.Queries.Parser
                     message = "Unable to parse WHERE clause";
                     return false;
                 }
+                
+                if (Scanner.TryScan("FILTER") && Expression(out query.Filter) == false)
+                {
+                    message = "Unable to parse FILTER clause";
+                    return false;
+                }
             }
             else
             {
@@ -1806,6 +1812,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             "AS",
             "SELECT",
             "WHERE",
+            "FILTER",
             "LOAD",
             "GROUP",
             "ORDER",
