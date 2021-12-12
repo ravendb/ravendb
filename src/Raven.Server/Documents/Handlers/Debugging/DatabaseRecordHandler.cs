@@ -3,14 +3,15 @@ using Raven.Client.ServerWide;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class DatabaseRecordHandler : DatabaseRequestHandler
+    public class DatabaseRecordHandler : RequestHandler
     {
-        private static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
+        internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
         {
             nameof(DatabaseRecord.Encrypted),
             nameof(DatabaseRecord.Disabled),
@@ -32,8 +33,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.ExternalReplications),
             nameof(DatabaseRecord.SinkPullReplications),
             nameof(DatabaseRecord.HubPullReplications),
-            nameof(DatabaseRecord.RavenConnectionStrings),
-            nameof(DatabaseRecord.SqlConnectionStrings),
             nameof(DatabaseRecord.RavenEtls),
             nameof(DatabaseRecord.SqlEtls),
             nameof(DatabaseRecord.Client),
@@ -42,14 +41,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.UnusedDatabaseIds),
         };
 
-        [RavenAction("/databases/*/debug/database-record", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/debug/database-record", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetDatabaseRecord()
         {
+            var databaseName = GetStringQueryString("name");
             var djv = new DynamicJsonValue();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var databaseRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name);
+                var databaseRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
                 foreach (string fld in FieldsThatShouldBeExposedForDebug)
                 {
                     if (databaseRecord.Raw.TryGetMember(fld, out var obj))
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
                 }
 
-                using (ContextPool.AllocateOperationContext(out JsonOperationContext jsonContext))
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonContext))
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
                 }
             }
-            
+
             return Task.CompletedTask;
         }
     }
