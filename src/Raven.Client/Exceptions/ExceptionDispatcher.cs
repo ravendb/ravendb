@@ -126,23 +126,25 @@ namespace Raven.Client.Exceptions
                 throw DocumentConflictException.From(json);
 
             var concurrencyException = new ConcurrencyException(schema.Message);
-            
-            json.TryGet(nameof(ConcurrencyException.ExpectedChangeVector), out concurrencyException.ExpectedChangeVector);
-            json.TryGet(nameof(ConcurrencyException.ActualChangeVector), out concurrencyException.ActualChangeVector);
-            json.TryGet(nameof(ConcurrencyException.ExpectedETag), out concurrencyException.ExpectedETag);
-            json.TryGet(nameof(ConcurrencyException.ActualETag), out concurrencyException.ActualETag);
+            json.TryGet(nameof(ConcurrencyException.Id), out concurrencyException.Id);
 
-            if (json.TryGet(nameof(ConcurrencyException.ClusterTransactionConflicts), out BlittableJsonReaderArray conflicts) == false) 
+            if (json.TryGet(nameof(ConcurrencyException.ExpectedChangeVector), out string expectedCv))
+                concurrencyException.ExpectedChangeVector = expectedCv;
+            
+            if (json.TryGet(nameof(ConcurrencyException.ActualChangeVector), out string actualCv))
+                concurrencyException.ActualChangeVector = actualCv;
+            
+            if (json.TryGet(nameof(ConcurrencyException.ClusterConcurrencyViolations), out BlittableJsonReaderArray violations) == false) 
                 throw concurrencyException;
             
-            concurrencyException.ClusterTransactionConflicts = new ConcurrencyException.Conflict[conflicts.Length];
+            concurrencyException.ClusterConcurrencyViolations = new ConcurrencyException.Conflict[violations.Length];
 
-            for (var i = 0; i < conflicts.Length; i++)
+            for (var i = 0; i < violations.Length; i++)
             {
-                if (!(conflicts[i] is BlittableJsonReaderObject conflict))
+                if (!(violations[i] is BlittableJsonReaderObject conflict))
                     continue;
 
-                var current = concurrencyException.ClusterTransactionConflicts[i] = new ConcurrencyException.Conflict();
+                var current = concurrencyException.ClusterConcurrencyViolations[i] = new ConcurrencyException.Conflict();
 
                 conflict.TryGet(nameof(ConcurrencyException.Conflict.Id), out current.Id);
                 conflict.TryGet(nameof(ConcurrencyException.Conflict.Type), out current.Type);

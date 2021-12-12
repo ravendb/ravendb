@@ -643,7 +643,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (clusterTransactionResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
                     throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
                     {
-                        ClusterTransactionConflicts = errors.Select(e => e.Conflict).ToArray()
+                        ClusterConcurrencyViolations = errors.Select(e => e.Conflict).ToArray()
                     };
                 
                 await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);

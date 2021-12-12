@@ -323,13 +323,12 @@ namespace Raven.Server
 
             if (exception is ConcurrencyException concurrencyException)
             {
+                djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
                 djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
                 djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
-                djv[nameof(ConcurrencyException.ExpectedETag)] = concurrencyException.ExpectedETag;
-                djv[nameof(ConcurrencyException.ActualETag)] = concurrencyException.ActualETag;
-    
-                if (concurrencyException.ClusterTransactionConflicts != null)
-                    djv[nameof(ConcurrencyException.ClusterTransactionConflicts)] = new DynamicJsonArray(concurrencyException.ClusterTransactionConflicts.Select(c => c.ToJson()));
+
+                if (concurrencyException.ClusterConcurrencyViolations != null)
+                    djv[nameof(ConcurrencyException.ClusterConcurrencyViolations)] = new DynamicJsonArray(concurrencyException.ClusterConcurrencyViolations.Select(c => c.ToJson()));
             }
         }
 
