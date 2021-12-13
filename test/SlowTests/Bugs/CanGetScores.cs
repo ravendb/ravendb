@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Lucene.Net.Analysis;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -18,10 +19,11 @@ namespace SlowTests.Bugs
 
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
-        [Fact]
-        public void FromQuery()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQuery(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -54,10 +56,11 @@ namespace SlowTests.Bugs
         }
 
 
-        [Fact]
-        public void FromQueryWithOrderByScoreThenName()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByScoreThenName(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -101,10 +104,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByScoreThenNameDescending()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByScoreThenNameDescending(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -148,10 +152,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScore()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByNameThenByScore(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -206,10 +211,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreDescending()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreDescending(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -264,10 +270,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreThenByAge()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreThenByAge(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -324,10 +331,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {

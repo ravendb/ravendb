@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -37,10 +38,11 @@ namespace FastTests.Client
   
          */
         
-        [Fact]
-        public void RawQuery_with_transformation_function_should_work()
+        [Theory]
+        [SearchEngineClassData]
+        public void RawQuery_with_transformation_function_should_work(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -119,10 +121,11 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
-        public void LinqQuery_with_transformation_function_should_work()
+        [Theory]
+        [SearchEngineClassData]
+        public void LinqQuery_with_transformation_function_should_work(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -195,10 +198,11 @@ namespace FastTests.Client
         }
 
         
-        [Fact]
-        public void Query_Simple()
+        [Theory]
+        [SearchEngineClassData]
+        public void Query_Simple(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -215,10 +219,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Query_With_Where_Clause()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Query_With_Where_Clause(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -246,13 +251,14 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
-        public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork(string searchEngineType)
         {
             const string constStrToQuery = "Tarzan";
             string varStrToQuery = constStrToQuery;
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
             using var session = store.OpenAsyncSession();
             
             await session.StoreAsync(new User { Name = "John" });
@@ -362,13 +368,14 @@ namespace FastTests.Client
             public string[] StrList { get; set; }
         }
         
-        [Fact]
-        public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork(string searchEngineType)
         {
             const string constStrToQuery = "Tarzan";
             string varStrToQuery = constStrToQuery;
 
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
             using var session = store.OpenAsyncSession();
 
             await session.StoreAsync(new Test {StrList = new[]{"John"}});
@@ -473,10 +480,11 @@ namespace FastTests.Client
             Assert.Equal(queryResult.Count, 1);
         }
 
-        [Fact]
-        public async Task QueryWithWhere_WhenUsingNotSupportedExpressions_ShouldThrowNotSupported()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task QueryWithWhere_WhenUsingNotSupportedExpressions_ShouldThrowNotSupported(string searchEngineType)
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
             using var session = store.OpenAsyncSession();
 
             const string toQuery = "John";
@@ -534,10 +542,11 @@ namespace FastTests.Client
             });
         }
         
-        [Fact]
-        public void Query_With_Customize()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Query_With_Customize(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new DogsIndex().Execute(store);
                 using (var newSession = store.OpenSession())
@@ -583,14 +592,16 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Query_Long_Request()
+        [Theory]
+        [SearchEngineClassData]
+        public void Query_Long_Request(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var newSession = store.OpenSession())
                 {
-                    var longName = new string('x', 2048);
+                    //todo maciej: maximum size of term
+                    var longName = new string('x', 512);
                     newSession.Store(new User { Name = longName }, "users/1");
                     newSession.SaveChanges();
 
@@ -603,10 +614,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void Query_By_Index()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Query_By_Index(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new DogsIndex().Execute(store);
                 using (var newSession = store.OpenSession())

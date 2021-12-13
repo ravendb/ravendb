@@ -8,7 +8,7 @@ using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
-
+using FastTests.Server.Documents.Indexing;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -21,10 +21,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void BasicSorting()
+        [Theory]
+        [SearchEngineClassData]
+        public void BasicSorting(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

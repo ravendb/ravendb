@@ -6,6 +6,7 @@
 
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -35,10 +36,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanWorkProperly()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanWorkProperly(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new ItemIndex().Execute(store);
                 using (var session = store.OpenSession())
