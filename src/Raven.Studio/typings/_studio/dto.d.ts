@@ -1,6 +1,5 @@
 /// <reference path="../tsd.d.ts"/>
 
-
 interface disposable {
     dispose(): void;
 }
@@ -151,9 +150,9 @@ interface timeSeriesDeleteCriteria {
 
 type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
 
-interface filterTimeSeriesDates {
-    startDate: moment.Moment;
-    endDate: moment.Moment;
+interface filterTimeSeriesDates<T> {
+    startDate: T;
+    endDate: T;
 }
 
 interface documentAttachmentDto {

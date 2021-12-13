@@ -663,7 +663,7 @@ class editTimeSeries extends viewModelBase {
         const filterDialog = new filterTimeSeries(this.localStartDateInFilter(), this.localEndDateInFilter());
         
         app.showBootstrapDialog(filterDialog)
-            .done((filterDates: filterTimeSeriesDates) => {
+            .done((filterDates: filterTimeSeriesDates<moment.Moment>) => {
                 if (filterDates) {
                     this.localStartDateInFilter(filterDates.startDate || undefined);
                     this.localEndDateInFilter(filterDates.endDate || undefined);
