@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             ScriptRunner.ReturnRun releaseFilterScriptRunner = default;
             if (query.Metadata.FilterScript != null)
             {
-                var key = new CollectionQueryEnumerable.FilterKey(query.Metadata.FilterScript, query.Metadata.DeclaredFunctions, query.Metadata.Query.From.Alias?.Value);
+                var key = new CollectionQueryEnumerable.FilterKey(query.Metadata);
                 releaseFilterScriptRunner = _index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out filterScriptRun);
             }
             
