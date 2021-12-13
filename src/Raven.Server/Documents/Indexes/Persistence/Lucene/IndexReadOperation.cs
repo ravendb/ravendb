@@ -20,6 +20,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Highlightings;
 using Raven.Server.Documents.Indexes.Static.Spatial;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
@@ -118,6 +119,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
 
+            ScriptRunner.SingleRun filterScriptRun = null;
+            ScriptRunner.ReturnRun releaseFilterScriptRunner = default;
+            if (query.Metadata.FilterScript != null)
+            {
+                var key = new CollectionQueryEnumerable.FilterKey(query.Metadata.FilterScript, query.Metadata.DeclaredFunctions, query.Metadata.Query.From.Alias?.Value);
+                releaseFilterScriptRunner = _index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out filterScriptRun);
+            }
+            
+            using(releaseFilterScriptRunner)
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -149,10 +159,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         using (luceneScope?.Start())
                             document = _searcher.Doc(scoreDoc.Doc, _state);
 
+
                         if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
                             skippedResults.Value++;
                             continue;
+                        }
+                        
+                        if (filterScriptRun != null)
+                        {
+                            var doc = retriever.DirectGet(document, key, DocumentFields.All, _state);
+                            if (doc == null)
+                            {
+                                skippedResults.Value++;
+                                continue;
+                            }
+                            object self = filterScriptRun.Translate(documentsContext, doc);
+                            using (var result = filterScriptRun.Run(documentsContext, documentsContext, "execute", new[]{self, }))
+                            {
+                                if (result.BooleanValue != true)
+                                {
+                                    skippedResults.Value++;
+                                    continue;
+                                }
+                            }
                         }
 
                         bool markedAsSkipped = false;
