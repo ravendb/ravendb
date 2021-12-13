@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
+using System.Collections.Generic;
 
 namespace Corax.Queries
 {
@@ -15,6 +16,7 @@ namespace Corax.Queries
         private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
         private readonly delegate*<ref TermMatch, Span<long>, int> _andWithFunc;
         private readonly delegate*<ref TermMatch, Span<long>, Span<float>, void> _scoreFunc;
+        private readonly delegate*<ref TermMatch, QueryInspectionNode> _inspectFunc;
 
         private readonly long _totalResults;
         private long _currentIdx;
@@ -33,7 +35,8 @@ namespace Corax.Queries
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
             delegate*<ref TermMatch, Span<long>, int> andWithFunc,
-            delegate*<ref TermMatch, Span<long>, Span<float>, void> scoreFunc = null)
+            delegate*<ref TermMatch, Span<long>, Span<float>, void> scoreFunc = null,
+            delegate*<ref TermMatch, QueryInspectionNode> inspectFunc = null)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
@@ -42,6 +45,7 @@ namespace Corax.Queries
             _fillFunc = fillFunc;
             _andWithFunc = andWithFunc;
             _scoreFunc = scoreFunc;
+            _inspectFunc = inspectFunc;
 
             _container = default;
             _set = default;
@@ -56,7 +60,17 @@ namespace Corax.Queries
                 return 0;
             }
 
-            return new TermMatch(0, &FillFunc, &FillFunc);
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [Empty]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
+                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                    });
+            }
+
+            return new TermMatch(0, &FillFunc, &FillFunc, inspectFunc: &InspectFunc);
         }
 
         public static TermMatch YieldOnce(long value)
@@ -91,8 +105,17 @@ namespace Corax.Queries
                 return 0;
             }
 
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [Once]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
+                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                    });
+            }
 
-            return new TermMatch(1, &FillFunc, &AndWithFunc)
+            return new TermMatch(1, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _current = value,
                 _currentIdx = QueryMatch.Start
@@ -167,8 +190,18 @@ namespace Corax.Queries
                 End:  return matchedIdx;
             }
 
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [SmallSet]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
+                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                    });
+            }
+
             var itemsCount = ZigZagEncoding.Decode<int>(containerItem.ToSpan(), out var len);
-            return new TermMatch(itemsCount, &FillFunc, &AndWithFunc)
+            return new TermMatch(itemsCount, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _container = containerItem,
                 _currentIdx = len,
@@ -358,11 +391,21 @@ namespace Corax.Queries
                 return i;
             }
 
+            static QueryInspectionNode InspectFunc(ref TermMatch term)
+            {
+                return new QueryInspectionNode($"{nameof(TermMatch)} [Set]",
+                    parameters: new Dictionary<string, string>()
+                    {
+                    { nameof(term.IsBoosting), term.IsBoosting.ToString() },
+                    { nameof(term.Count), $"{term.Count} [{term.Confidence}]" }
+                    });
+            }
+
             if (!Avx2.IsSupported)
                 useAccelerated = false;
 
             // We will select the AVX version if supported.             
-            return new TermMatch(set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc)
+            return new TermMatch(set.State.NumberOfEntries, &FillFunc, useAccelerated ? &AndWithVectorizedFunc : &AndWithFunc, inspectFunc: &InspectFunc)
             {
                 _set = set.Iterate(),
                 _current = long.MinValue
@@ -388,6 +431,11 @@ namespace Corax.Queries
                 return; // We ignore. Nothing to do here. 
 
             _scoreFunc(ref this, matches, scores);
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return _inspectFunc(ref this);
         }
     }
 }

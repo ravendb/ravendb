@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Voron;
@@ -91,6 +92,16 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores)
         {
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode(nameof(AllEntriesMatch),
+                parameters: new Dictionary<string, string>()
+                {
+                    { nameof(IsBoosting), IsBoosting.ToString() },
+                    { nameof(Count), $"{Count} [{Confidence}]" }
+                });
         }
     }
 }

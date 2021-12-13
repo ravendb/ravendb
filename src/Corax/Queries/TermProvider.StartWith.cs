@@ -40,5 +40,15 @@ namespace Corax.Queries
             term = _searcher.TermQuery(_field, termSlice.ToString());
             return true;
         }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode($"{nameof(StartWithTermProvider)}",
+                            parameters: new Dictionary<string, string>()
+                            {
+                                { "Field", _field },
+                                { "Terms", _startWith.ToString()}
+                            });
+        }
     }
 }

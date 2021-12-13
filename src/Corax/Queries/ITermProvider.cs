@@ -4,5 +4,6 @@
     { 
         void Reset();
         bool Next(out TermMatch term);
+        QueryInspectionNode Inspect();
     }    
 }

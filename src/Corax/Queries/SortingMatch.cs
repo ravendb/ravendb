@@ -378,5 +378,15 @@ namespace Corax.Queries
         public void Score(Span<long> matches, Span<float> scores) 
         {
         }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode($"{nameof(SortingMatch)} [{typeof(TComparer).Name}]",
+                children: new List<QueryInspectionNode> { _inner.Inspect()},
+                parameters: new Dictionary<string, string>()
+                {
+                        { nameof(IsBoosting), IsBoosting.ToString() },
+                });
+        }
     }
 }

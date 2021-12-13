@@ -102,5 +102,10 @@ namespace Corax.Queries
         {
             _inner.Score(matches, scores); 
         }
+
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
     }
 }

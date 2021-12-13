@@ -43,6 +43,11 @@ namespace Corax.Queries
             _functionTable.ScoreFunc(ref this, matches, scores);
         }
 
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
+
         internal class FunctionTable
         {
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> FillFunc;
@@ -145,6 +150,15 @@ namespace Corax.Queries
             }
 
             public void Reset(){}
+
+            public QueryInspectionNode Inspect()
+            {
+                return new QueryInspectionNode($"{nameof(EmptyTermProvider)}",
+                    parameters: new Dictionary<string, string>()
+                    {
+                        { nameof(TermsCount), $"{TermsCount}" }
+                    });
+            }
         }
 
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -27,6 +28,7 @@ namespace Corax.Queries
         internal int _bufferIdx;        
         internal IDisposable _bufferHandler;
         private readonly delegate*<ref MultiTermBoostingMatch<TTermProvider>, Span<long>, Span<float>, void> _scoreFunc;
+        private readonly delegate*<ref MultiTermBoostingMatch<TTermProvider>, QueryInspectionNode> _inspectFunc;
 
         public bool IsBoosting => true;
         public long Count => _totalResults;
@@ -35,8 +37,9 @@ namespace Corax.Queries
         public QueryCountConfidence Confidence => _confidence;
 
         public MultiTermBoostingMatch(
-            ByteStringContext context, TTermProvider inner, long totalResults = 0, 
-            QueryCountConfidence confidence = QueryCountConfidence.Low, 
+            ByteStringContext context, TTermProvider inner,
+            delegate*<ref MultiTermBoostingMatch<TTermProvider>, QueryInspectionNode> inspectFunc,
+            long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low,
             delegate*<ref MultiTermBoostingMatch<TTermProvider>, Span<long>, Span<float>, void> scoreFunc = null)
         {
             _inner = inner;
@@ -46,6 +49,7 @@ namespace Corax.Queries
             _totalResults = totalResults;
             _confidence = confidence;
             _scoreFunc = scoreFunc;
+            _inspectFunc = inspectFunc;
 
             _inner.Next(out _currentTerm);
 
@@ -219,18 +223,34 @@ namespace Corax.Queries
             _scoreFunc(ref this, matches, scores);
         }
 
+        public QueryInspectionNode Inspect()
+        {
+            return _inspectFunc(ref this);
+        }
+
         public static MultiTermBoostingMatch<TTermProvider> Create<TScoreFunction>(IndexSearcher searcher, TTermProvider inTermProvider, TScoreFunction scoreFunction) 
             where TScoreFunction : IQueryScoreFunction
         {
+            static QueryInspectionNode InspectFunc(ref MultiTermBoostingMatch<TTermProvider> match)
+            {
+                return new QueryInspectionNode($"{nameof(MultiTermBoostingMatch<TTermProvider>)} [{typeof(TScoreFunction).Name}]",
+                    children: new List<QueryInspectionNode> { match._inner.Inspect() },
+                    parameters: new Dictionary<string, string>()
+                    {
+                        { nameof(match.IsBoosting), match.IsBoosting.ToString() },
+                        { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                    });
+            }
+
             if (typeof(TScoreFunction) == typeof(ConstantScoreFunction))
             {
-                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, scoreFunc: &TermFrequencyScoreFunc);
+                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoreFunc: &TermFrequencyScoreFunc);
             }
             else if (typeof(TScoreFunction) == typeof(TermFrequencyScoreFunction))
             {
-                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, scoreFunc: &ConstantScoreFunc);
+                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoreFunc: &ConstantScoreFunc);
             }
-            else throw new NotSupportedException($"The ");
+            else throw new NotSupportedException($"The scoring function '{typeof(TScoreFunction).Name}' is not supported.");
         }
 
         private static void TermFrequencyScoreFunc(ref MultiTermBoostingMatch<TTermProvider> match, Span<long> matches, Span<float> scores)

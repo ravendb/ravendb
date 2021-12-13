@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Corax.Queries
@@ -8,7 +9,9 @@ namespace Corax.Queries
         where TOuter : IQueryMatch
     {
         private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int>  _fillFunc;
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> _andWith;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> _andWithFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> _inspectFunc;
+
         private TInner _inner;
         private TOuter _outer;
 
@@ -24,14 +27,18 @@ namespace Corax.Queries
 
         private BinaryMatch(in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
-            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> andWith,
+            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> andWithFunc,
+            delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
             QueryCountConfidence confidence)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
+
             _fillFunc = fillFunc;
-            _andWith = andWith;
+            _andWithFunc = andWithFunc;
+            _inspectFunc = inspectionFunc;
+
             _inner = inner;
             _outer = outer;
             _confidence = confidence;
@@ -46,7 +53,7 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer)
         {
-            return _andWith(ref this, buffer);
+            return _andWithFunc(ref this, buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -94,6 +101,11 @@ namespace Corax.Queries
                 // the call into the boosting layer that provides us the information.
                 _outer.Score(matches, scores);
             }
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return _inspectFunc(ref this);
         }
     }
 }

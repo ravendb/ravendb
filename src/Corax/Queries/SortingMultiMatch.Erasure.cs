@@ -40,6 +40,11 @@ namespace Corax.Queries
             throw new NotSupportedException($"{nameof(SortingMatch)} does not support the operation of {nameof(AndWith)}.");
         }
 
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
+
         internal class FunctionTable
         {
             public readonly delegate*<ref SortingMultiMatch, Span<long>, int> FillFunc;

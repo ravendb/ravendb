@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Voron;
 
@@ -20,7 +21,8 @@ namespace Corax.Queries
         where TInner : IQueryMatch
     {
         private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _fillFunc;
-        private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _andWith;
+        private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _andWithFunc;
+
         private TInner _inner;
         private UnaryMatchOperation _operation;
         private readonly IndexSearcher _searcher;
@@ -45,14 +47,16 @@ namespace Corax.Queries
             int fieldId,
             TValueType value,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
-            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> andWith,
+            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> andWithFunc,
             long totalResults,
             QueryCountConfidence confidence, int take = -1)
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
+
             _fillFunc = fillFunc;
-            _andWith = andWith;
+            _andWithFunc = andWithFunc;
+
             _inner = inner;
             _operation = operation;
             _searcher = searcher;
@@ -76,8 +80,10 @@ namespace Corax.Queries
         {
             _totalResults = totalResults;
             _current = QueryMatch.Start;
+
             _fillFunc = fillFunc;
-            _andWith = andWith;
+            _andWithFunc = andWith;
+
             _inner = inner;
             _operation = operation;
             _searcher = searcher;
@@ -97,13 +103,24 @@ namespace Corax.Queries
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int AndWith(Span<long> buffer)
         {
-            return _andWith(ref this, buffer);
+            return _andWithFunc(ref this, buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores) 
         {
             _inner.Score(matches, scores);
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode($"{nameof(UnaryMatch)} [{_operation}]",
+                parameters: new Dictionary<string, string>()
+                {
+                    { nameof(IsBoosting), IsBoosting.ToString() },
+                    { nameof(Count), $"{Count} [{Confidence}]" },
+                    { "FieldId", $"{_fieldId}" }
+                });
         }
     }
 }

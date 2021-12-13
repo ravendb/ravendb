@@ -158,5 +158,16 @@ namespace Corax.Queries
         {
             // We ignore. Nothing to do here. 
         }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode(nameof(MultiTermMatch<TTermProvider>),
+                children: new List<QueryInspectionNode> { _inner.Inspect() },
+                parameters: new Dictionary<string, string>()
+                {
+                    { nameof(IsBoosting), IsBoosting.ToString() },
+                    { nameof(Count), $"{Count} [{Confidence}]" }
+                });
+        }
     }
 }
