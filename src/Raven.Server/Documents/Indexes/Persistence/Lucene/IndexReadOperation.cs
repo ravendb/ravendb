@@ -175,7 +175,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 continue;
                             }
                             object self = filterScriptRun.Translate(documentsContext, doc);
-                            using (var result = filterScriptRun.Run(documentsContext, documentsContext, "execute", new[]{self, }))
+                            using(queryTimings.For(nameof(QueryTimingsScope.Names.JavaScript)))
+                            using (var result = filterScriptRun.Run(documentsContext, documentsContext, "execute", new[]{self, query.QueryParameters}, queryTimings))
                             {
                                 if (result.BooleanValue != true)
                                 {
