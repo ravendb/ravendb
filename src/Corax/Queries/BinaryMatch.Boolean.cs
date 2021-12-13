@@ -42,6 +42,17 @@ namespace Corax.Queries
                 return outer.AndWith(matches.Slice(0, results));
             }
 
+            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
+            {
+                return new QueryInspectionNode($"{nameof(BinaryMatch)} [And]",
+                    children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
+                    parameters: new Dictionary<string, string>()
+                    {
+                        { nameof(match.IsBoosting), match.IsBoosting.ToString() },
+                        { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                    });
+            }
+
             // Estimate Confidence values.
             QueryCountConfidence confidence;
             if (inner.Count < outer.Count / 2)
@@ -51,7 +62,7 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, Math.Min(inner.Count, outer.Count), confidence);
+            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence);
         }
 
         public static BinaryMatch<TInner, TOuter> YieldOr(in TInner inner, in TOuter outer)
@@ -155,6 +166,17 @@ namespace Corax.Queries
                 return result;
             }
 
+            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
+            {
+                return new QueryInspectionNode($"{nameof(BinaryMatch)} [Or]",
+                    children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
+                    parameters: new Dictionary<string, string>()
+                    {
+                        { nameof(match.IsBoosting), match.IsBoosting.ToString() },
+                        { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                    });
+            }
+
             // Estimate Confidence values.
             QueryCountConfidence confidence;
             if (inner.Count / 10 > outer.Count)
@@ -164,7 +186,7 @@ namespace Corax.Queries
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, inner.Count + outer.Count, confidence);
+            return new BinaryMatch<TInner, TOuter>(in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence);
         }
     }
 }

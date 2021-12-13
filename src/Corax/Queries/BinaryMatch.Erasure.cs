@@ -39,6 +39,11 @@ namespace Corax.Queries
             _inner.Score(matches, scores);
         }
 
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
+
         internal class FunctionTable
         {
             public readonly delegate*<ref BinaryMatch, Span<long>, int> FillFunc;

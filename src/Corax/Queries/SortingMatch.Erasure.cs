@@ -92,5 +92,10 @@ namespace Corax.Queries
         {
             return new SortingMatch(query, StaticFunctionCache<TInner, TComparer>.FunctionTable);
         }
+
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
     }
 }

@@ -41,13 +41,19 @@ namespace Corax.Queries
         internal int _countOfCalls;
         internal bool _requiresSort;
         internal IDisposable _bufferHandler;
+
         private readonly delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, Span<long>, Span<float>, void> _scoreFunc;
-        
-        public BoostingMatch(in IndexSearcher searcher, in TInner inner, in TQueryScoreFunction scorer, delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, Span<long>, Span<float>, void> scoreFunc)
+        private readonly delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, QueryInspectionNode> _inspectFunc;
+
+        public BoostingMatch(in IndexSearcher searcher, in TInner inner, 
+            in TQueryScoreFunction scorer, delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, Span<long>, Span<float>, void> scoreFunc,
+            delegate*<ref BoostingMatch<TInner, TQueryScoreFunction>, QueryInspectionNode> inspectFunc)
         {
             _inner = inner;
             _scorer = scorer;
             _scoreFunc = scoreFunc;
+            _inspectFunc = inspectFunc;
+
             _searcher = searcher;
             _bufferIdx = 0;
             _countOfCalls = 0;
@@ -176,6 +182,11 @@ namespace Corax.Queries
             }
 
             _scoreFunc(ref this, matches, scores);
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return _inspectFunc(ref this);
         }
 
         internal static void ConstantScoreFunc(ref BoostingMatch<TInner, ConstantScoreFunction> match, Span<long> matches, Span<float> scores)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -507,7 +507,35 @@ namespace Corax.Queries
 
         public void Score(Span<long> matches, Span<float> scores) 
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException($"Scoring is not supported by {nameof(SortingMultiMatch)}");
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            var comparers = typeof(TComparer1).Name;
+            if (typeof(TComparer2) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer2).Name}";
+            if (typeof(TComparer3) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer3).Name}";
+            if (typeof(TComparer4) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer4).Name}";
+            if (typeof(TComparer5) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer5).Name}";
+            if (typeof(TComparer6) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer6).Name}";
+            if (typeof(TComparer7) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer7).Name}";
+            if (typeof(TComparer8) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer8).Name}";
+            if (typeof(TComparer9) != typeof(SortingMultiMatch.NullComparer))
+                comparers += $"|{typeof(TComparer9).Name}";
+
+            return new QueryInspectionNode($"{nameof(SortingMatch)} [{comparers}]",
+                    children: new List<QueryInspectionNode> { _inner.Inspect() },
+                    parameters: new Dictionary<string, string>()
+                    {
+                        { nameof(IsBoosting), IsBoosting.ToString() },
+                    });
         }
     }
 }

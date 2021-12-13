@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -41,6 +42,10 @@ namespace Corax.Queries
             _functionTable.ScoreFunc(ref this, matches, scores);
         }
 
+        public QueryInspectionNode Inspect()
+        {
+            return _inner.Inspect();
+        }
         internal class FunctionTable
         {
             public readonly delegate*<ref BoostingMatch, Span<long>, int> FillFunc;
@@ -121,12 +126,11 @@ namespace Corax.Queries
             return new BoostingMatch(query, StaticFunctionCache<TInner, TQueryScoreFunction>.FunctionTable);
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BoostingMatch WithConstant<TInner>(IndexSearcher searcher, in TInner inner, float value)
             where TInner : IQueryMatch
         {
-            return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, new ConstantScoreFunction(value), &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc));
+            return WithConstant(searcher, inner, new ConstantScoreFunction(value));
         }
 
 
@@ -134,14 +138,41 @@ namespace Corax.Queries
         public static BoostingMatch WithConstant<TInner>(IndexSearcher searcher, in TInner inner, ConstantScoreFunction func)
             where TInner : IQueryMatch
         {
-            return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, func, &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc));
+            static QueryInspectionNode InspectFunc(ref BoostingMatch<TInner, ConstantScoreFunction> match)
+            {
+                return new QueryInspectionNode($"{nameof(BoostingMatch)} [Constant]",
+                        children: new List<QueryInspectionNode> { match._inner.Inspect() },
+                        parameters: new Dictionary<string, string>()
+                        {
+                            { nameof(match.IsBoosting), match.IsBoosting.ToString() },
+                            { nameof(match.Count), $"{match.Count} [{match.Confidence}]" },
+                            { "Value", $"{match._scorer.Value}" }
+                        });
+            }
+
+            return Create(new BoostingMatch<TInner, ConstantScoreFunction>(searcher, inner, func, 
+                &BoostingMatch<TInner, ConstantScoreFunction>.ConstantScoreFunc,
+                &InspectFunc));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BoostingMatch WithTermFrequency<TInner>(IndexSearcher searcher, in TInner inner, TermFrequencyScoreFunction func = default(TermFrequencyScoreFunction))
             where TInner : IQueryMatch
         {
-            return Create(new BoostingMatch<TInner, TermFrequencyScoreFunction>(searcher, inner, func, &BoostingMatch<TInner, TermFrequencyScoreFunction>.TermFrequencyScoreFunc));
+            static QueryInspectionNode InspectFunc(ref BoostingMatch<TInner, TermFrequencyScoreFunction> match)
+            {
+                return new QueryInspectionNode($"{nameof(BoostingMatch)} [TermFrequency]",
+                            children: new List<QueryInspectionNode> { match._inner.Inspect() },
+                            parameters: new Dictionary<string, string>()
+                            {
+                                { nameof(match.IsBoosting), match.IsBoosting.ToString() },
+                                { nameof(match.Count), $"{match.Count} [{match.Confidence}]" }
+                            });
+            }
+
+            return Create(new BoostingMatch<TInner, TermFrequencyScoreFunction>(searcher, inner, func, 
+                &BoostingMatch<TInner, TermFrequencyScoreFunction>.TermFrequencyScoreFunc,
+                &InspectFunc));
         }
     }
 }
