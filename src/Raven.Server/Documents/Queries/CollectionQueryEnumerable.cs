@@ -30,7 +30,8 @@ namespace Raven.Server.Documents.Queries
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
-        private readonly Reference<int> _totalResults;
+        private readonly Reference<int> _totalResults, _scannedResults;
+        private readonly Reference<long> _skippedResults;
         private readonly CancellationToken _token;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Queries
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
-            CancellationToken token)
+            Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
             _documents = documents;
@@ -55,19 +56,21 @@ namespace Raven.Server.Documents.Queries
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
             _totalResults = totalResults;
             _token = token;
+            _scannedResults = scannedResults;
+            _skippedResults = skippedResults;
         }
 
         public string StartAfterId { get; set; }
 
         public Reference<long> AlreadySeenIdsCount { get; set; }
 
-        public Reference<long> SkippedResults { get; set; }
-
         public DocumentFields Fields { get; set; } = DocumentFields.All;
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields, SkippedResults, _token);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
+                _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
+                StartAfterId, AlreadySeenIdsCount, Fields, _skippedResults, _token);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -119,6 +122,7 @@ namespace Raven.Server.Documents.Queries
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
             private readonly Reference<int> _totalResults;
+            private readonly Reference<int> _scannedResults;
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
@@ -148,7 +152,7 @@ namespace Raven.Server.Documents.Queries
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
                 IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
-                string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
+                Reference<int> scannedResults, string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -158,6 +162,7 @@ namespace Raven.Server.Documents.Queries
                 _queryTimings = queryTimings;
                 _context = context;
                 _totalResults = totalResults;
+                _scannedResults = scannedResults;
                 _totalResults.Value = 0;
                 _startAfterId = startAfterId;
                 _alreadySeenIdsCount = alreadySeenIdsCount;
@@ -285,6 +290,11 @@ namespace Raven.Server.Documents.Queries
 
                 if (_filterScriptRun != null)
                 {
+                    if ( _scannedResults.Value == _query.ScanLimit)
+                    {
+                        return (false, null);
+                    }
+                    _scannedResults.Value++;
                     object self = _filterScriptRun.Translate(_context, _inner.Current);
                     using(_queryTimings?.For(nameof(QueryTimingsScope.Names.JavaScript)))
                     using (var result = _filterScriptRun.Run(_context, _context, "execute", _inner.Current!.Id, new[]{self, _query.QueryParameters}, _queryTimings))
