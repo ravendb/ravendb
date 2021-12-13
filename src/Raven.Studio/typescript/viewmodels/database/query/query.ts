@@ -1015,7 +1015,9 @@ class query extends viewModelBase {
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
                             this.onHighlightingsLoaded(queryResults.highlightings);
-                            this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
+                            if (queryResults.explanations) {
+                                this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
+                            }
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
