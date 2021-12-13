@@ -645,7 +645,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
-            _loadedDocuments[document.Id ?? string.Empty] = document;
+            // we have to clone, because the `document` instance is updated on result
+            _loadedDocuments[document.Id ?? string.Empty] = document.Clone(_context); 
 
             document.IgnoreDispose = true; // so we can do multiple projections of the same value
 
