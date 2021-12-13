@@ -525,9 +525,9 @@ namespace Raven.Client.Documents.Changes
 
                     await ProcessChanges().ConfigureAwait(false);
                 }
-                catch (OperationCanceledException e)
+                catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
                 {
-                    NotifyAboutError(e);
+                    // disposing
                     return;
                 }
                 catch (ChangeProcessingException)
