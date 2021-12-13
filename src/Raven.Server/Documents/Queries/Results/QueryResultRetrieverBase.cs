@@ -278,7 +278,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                if (ReferenceEquals(newData, doc.Data) == false)
+                if (ReferenceEquals(newData, doc.Data) == false
+                    && doc.IgnoreDispose == false) // this is being referenced by the _loadedDocuments still...
                     doc.Data?.Dispose();
             }
             catch (Exception)
@@ -287,7 +288,14 @@ namespace Raven.Server.Documents.Queries.Results
                 throw;
             }
 
-            doc.Data = newData;
+            if (doc.IgnoreDispose)// this is being retained by the _loadedDocuments
+            {
+                doc = doc.CloneWith(context, newData);
+            }
+            else
+            {
+                doc.Data = newData;
+            }
             FinishDocumentSetup(doc, scoreDoc);
 
             return doc;
@@ -505,6 +513,9 @@ namespace Raven.Server.Documents.Queries.Results
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
+
+            document.IgnoreDispose = true; // so we can do multiple projections of the same value
+
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
                 if (fieldToFetch.QueryField.IsQuoted)
