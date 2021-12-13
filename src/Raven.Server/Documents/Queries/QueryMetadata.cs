@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Esprima.Ast;
+using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
@@ -74,10 +75,7 @@ namespace Raven.Server.Documents.Queries
             
             if (query.Filter != null)
             {
-                var stringBuilder = new StringBuilder();
-                new JavascriptCodeQueryVisitor(stringBuilder, Query).VisitExpression(query.Filter);
-
-                FilterScript = stringBuilder.ToString();
+                BuildFilterScript(query);
             }
 
             if (IsGraph == false)
@@ -109,6 +107,43 @@ namespace Raven.Server.Documents.Queries
 
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
+        }
+
+        private void BuildFilterScript(Query query)
+        {
+            var stringBuilder = new StringBuilder();
+            stringBuilder.AppendLine(@"
+function __actual_func(args) {
+    Raven_ExplodeArgs(this, args);");
+
+            if (query.From.Alias != null)
+            {
+                stringBuilder.Append("  var ").Append(query.From.Alias.Value.Value).AppendLine(" = this;");
+            }
+
+            var queryVisitor = new JavascriptCodeQueryVisitor(stringBuilder, Query);
+            if (query.Load != null)
+            {
+                foreach (var (expr, alias) in query.Load)
+                {
+                    stringBuilder.Append("  var ").Append(alias.Value.Value).Append(" = load(");
+                    queryVisitor.VisitExpression(expr);
+                    stringBuilder.AppendLine(");");
+                }
+            }
+
+            stringBuilder.Append("  return ");
+            queryVisitor.VisitExpression(query.Filter);
+
+            stringBuilder.Append(@";
+
+}
+
+function execute(doc, args){
+    return __actual_func.call(doc, args);
+}
+");
+            FilterScript = stringBuilder.ToString();
         }
 
         public string FilterScript;
