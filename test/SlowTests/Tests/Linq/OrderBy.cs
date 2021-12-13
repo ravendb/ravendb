@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,10 +25,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanDescOrderBy_AProjection()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanDescOrderBy_AProjection(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,10 +51,11 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
-        public void CanAscOrderBy_AProjection()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanAscOrderBy_AProjection(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 using (var session = store.OpenSession())
                 {

@@ -23,7 +23,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexSearcher _searcher;
         private readonly ByteStringContext _allocator;
         private IndexQueryServerSide _query;
-
+        private const int TakeAll = -1;
+        
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
 
@@ -33,11 +34,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _searcher = searcher;
         }
 
-        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = -1)
+        public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = TakeAll)
         {
             _fieldsToFetch = fieldsToFetch;
             _query = query;
-            var match = Evaluate(query.Metadata.Query.Where, false, take);
+            var match = _query.Metadata.Query.Where is null ? _searcher.AllEntries() : Evaluate(query.Metadata.Query.Where, false, take);
 
             if (query.Metadata.OrderBy != null)
                 match = OrderBy(match, query.Metadata.Query.OrderBy, take);
@@ -167,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return _searcher.GreaterThanOrEqual(previousMatch, fieldId, sliceValue, take);
 
                 default:
-                    throw new Exception($"Got {type} and the value: {field.ValueType} at UnaryMatch.");
+                    throw new EvaluateException($"Got {type} and the value: {field.ValueType} at UnaryMatch.");
             }
         }
 
@@ -199,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var unsupportedType = exprMin.ValueType is ValueTokenType.Double or ValueTokenType.Long or ValueTokenType.String
                         ? exprMax.ValueType
                         : exprMin.ValueType;
-                    throw new InvalidDataException($"Got {unsupportedType} but expected: {ValueTokenType.String}, {ValueTokenType.Long}, {ValueTokenType.Double}.");
+                    throw new EvaluateException($"Got {unsupportedType} but expected: {ValueTokenType.String}, {ValueTokenType.Long}, {ValueTokenType.Double}.");
             }
         }
 
@@ -296,7 +297,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             switch (orders.Count)
             {
-                //Note: we want use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
+                //Note: we want to use generics up to 3 comparers. This way we gonna avoid virtual calls in most cases.
                 case 1:
                 {
                     if (orders[0].Expression is not FieldExpression fe)
@@ -433,10 +434,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 6 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5]),
                 7 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5], comparers[6]),
                 8 => SortingMultiMatch.Create(_searcher, match, comparers[0], comparers[1], comparers[2], comparers[3], comparers[4], comparers[5], comparers[6],
-                    comparers[7])
+                    comparers[7]),
+                _ => throw new InvalidQueryException("Maximum amount of comparers in ORDER BY clause is 8.")
             };
         }
-
+        
         public void Dispose()
         {
             _allocator?.Dispose();

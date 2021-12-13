@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -14,10 +15,11 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact]
-        public void ShouldNotOutputNull()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void ShouldNotOutputNull(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

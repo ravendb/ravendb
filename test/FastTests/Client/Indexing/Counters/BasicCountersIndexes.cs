@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
@@ -19,10 +20,11 @@ namespace FastTests.Client.Indexing.Counters
         {
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void BasicMapIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -232,10 +234,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public async Task BasicMapIndexWithLoad(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -400,10 +403,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void BasicMapReduceIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -576,10 +580,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public async Task BasicMapReduceIndexWithLoad(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -741,10 +746,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void MapIndexWithCaseInsensitiveCounterNames()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void MapIndexWithCaseInsensitiveCounterNames(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -790,10 +796,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapCountersIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanUpdateMapCountersIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -829,10 +836,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -870,10 +878,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapReduceCountersIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanUpdateMapReduceCountersIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -927,10 +936,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new CountersIndexDefinition
                 {
@@ -984,10 +994,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanMapAllCountersFromCollection()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanMapAllCountersFromCollection(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1155,10 +1166,11 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
-        public void CanMapAllCounters()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanMapAllCounters(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

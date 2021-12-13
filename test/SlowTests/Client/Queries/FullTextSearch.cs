@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -23,10 +24,11 @@ namespace SlowTests.Client.Queries
             public ICollection<string> Tags { get; set; }
         }
 
-        [Fact]
-        public void CanSearchUsingPhrase()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSearchUsingPhrase(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -54,10 +56,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchUsingPhraseAndOrderBy()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSearchUsingPhraseAndOrderBy(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,10 +98,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchUsingPhrase_MultipleSearches()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSearchUsingPhrase_MultipleSearches(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -132,10 +136,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void StandardSearchWillProduceExpectedResult()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void StandardSearchWillProduceExpectedResult(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -155,10 +160,11 @@ namespace SlowTests.Client.Queries
 
 
 
-        [Fact]
-        public void SearchCanUseAnd2()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchCanUseAnd2(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -176,10 +182,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseAnd()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchCanUseAnd(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -197,10 +204,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseOr()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchCanUseOr(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -218,10 +226,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchWillUseGuessByDefault()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchWillUseGuessByDefault(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -242,10 +251,11 @@ namespace SlowTests.Client.Queries
         }
 
 
-        [Fact]
-        public void ActuallySearchWithAndAndNot()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void ActuallySearchWithAndAndNot(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -281,10 +291,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseNot()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchCanUseNot(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -302,10 +313,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void SearchCanUseNotAndAnd()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void SearchCanUseNotAndAnd(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -323,10 +335,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void BoostingSearches()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void BoostingSearches(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -377,10 +390,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void MultipleSearches()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void MultipleSearches(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -414,10 +428,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void UsingSuggest()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void UsingSuggest(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -455,10 +470,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_inner_words()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Can_search_inner_words(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -489,10 +505,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void CanSearchFullyAnalyzedTerm()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSearchFullyAnalyzedTerm(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
 
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
@@ -515,10 +532,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_inner_words_with_extra_condition()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Can_search_inner_words_with_extra_condition(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -552,11 +570,12 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_have_special_characters_in_search_text()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Can_have_special_characters_in_search_text(string searchEngineType)
         {
             const string specialCharacters = "+-!(){}:[]^\"~*";
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -577,10 +596,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_have_special_characters_in_search_text_string()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Can_have_special_characters_in_search_text_string(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
@@ -598,10 +618,11 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Fact]
-        public void Can_search_on_array_of_strings()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void Can_search_on_array_of_strings(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

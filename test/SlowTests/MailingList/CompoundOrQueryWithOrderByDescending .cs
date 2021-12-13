@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -21,10 +23,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ThreeOrClauses_works()
+        [Theory]
+        [SearchEngineClassData]
+        public void ThreeOrClauses_works(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Initialize();
 
@@ -66,10 +69,11 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
-        public void FourOrClauses_fails()
+        [Theory]
+        [SearchEngineClassData]
+        public void FourOrClauses_fails(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 store.Initialize();
 

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -82,10 +83,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanSortDynamically()
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSortDynamically(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new WithDynamicIndex().Execute(store);
                 using (var session = store.OpenSession())
@@ -122,10 +124,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void CanSortDynamically_Desc()
+	    [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
+        public void CanSortDynamically_Desc(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new WithDynamicIndex().Execute(store);
                 using (var session = store.OpenSession())

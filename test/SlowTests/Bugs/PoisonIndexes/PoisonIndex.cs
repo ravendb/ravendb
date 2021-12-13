@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.PoisonIndexes
@@ -11,10 +12,11 @@ namespace SlowTests.Bugs.PoisonIndexes
         {
         }
 
-        [Fact]
-        public void ShouldNotCauseFailures()
+        [Theory]
+        [SearchEngineClassData]
+        public void ShouldNotCauseFailures(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

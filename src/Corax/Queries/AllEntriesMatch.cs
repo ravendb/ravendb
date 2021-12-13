@@ -23,6 +23,17 @@ namespace Corax.Queries
         {
             _tx = tx;
             _count = tx.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
+            if (_count == 0)
+            {
+                Unsafe.SkipInit(out _currentPage);
+                Unsafe.SkipInit(out _offset);
+                Unsafe.SkipInit(out _entriesContainerId);
+                Unsafe.SkipInit(out _entriesPagesIt);
+                Unsafe.SkipInit(out _entriesContainerId);
+                Unsafe.SkipInit(out _itemsLeftOnCurrentPage);
+                return;
+            }
+            
             _entriesContainerId = tx.OpenContainer(IndexWriter.EntriesContainerSlice);
             _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).Iterate();
             _offset = 0;
@@ -36,6 +47,9 @@ namespace Corax.Queries
 
         public unsafe int Fill(Span<long> matches)
         {
+            if (_count == 0)
+                return 0;
+            
             var results = 0;
             while (true)
             {
@@ -49,7 +63,7 @@ namespace Corax.Queries
                     _currentPage = _tx.LowLevelTransaction.GetPage(_entriesPagesIt.Current);
                     _offset = 0;
                 }
-            
+
                 while (results < matches.Length)
                 {
                     var read = Container.GetEntriesInto(_entriesContainerId, ref _offset, _currentPage, matches, results, out _itemsLeftOnCurrentPage);
@@ -58,6 +72,7 @@ namespace Corax.Queries
                         _currentPage = new Page(null);
                         break;
                     }
+
                     results += read;
                 }
 
@@ -74,8 +89,8 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Score(Span<long> matches, Span<float> scores) 
-        {            
+        public void Score(Span<long> matches, Span<float> scores)
+        {
         }
     }
 }
