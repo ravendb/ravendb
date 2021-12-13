@@ -372,7 +372,15 @@ namespace Raven.Client.Documents.Changes
                 // nothing we can do here
             }
 
-            ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch
+            {
+               // we are disposing
+            }
+
             ConnectionStatusChanged -= OnConnectionStatusChanged;
 
             _onDispose?.Invoke();
