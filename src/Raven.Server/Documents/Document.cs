@@ -27,6 +27,7 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
+        public bool IgnoreDispose;
 
         public unsafe ulong DataHash
         {
@@ -88,6 +89,14 @@ namespace Raven.Server.Documents
 
         public Document Clone(DocumentsOperationContext context)
         {
+            var newData = Data.Clone(context);
+            return CloneWith(context, newData);
+        }
+
+        public Document CloneWith(JsonOperationContext context, BlittableJsonReaderObject newData)
+        {
+            var newId = context.GetLazyString(Id);
+            var newLowerId = context.GetLazyString(LowerId);
             return new Document
             {
                 Etag = Etag,
@@ -99,10 +108,9 @@ namespace Raven.Server.Documents
                 Flags = Flags,
                 NonPersistentFlags = NonPersistentFlags,
                 TransactionMarker = TransactionMarker,
-
-                Id = context.GetLazyString(Id),
-                LowerId = context.GetLazyString(LowerId),
-                Data = Data.Clone(context),
+                Id = newId,
+                LowerId = newLowerId,
+                Data = newData,
             };
         }
 
