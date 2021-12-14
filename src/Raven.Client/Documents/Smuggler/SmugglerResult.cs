@@ -50,7 +50,16 @@ namespace Raven.Client.Documents.Smuggler
 
         public IOperationProgress Progress => _progress;
 
-        public IReadOnlyList<string> Messages => _messages;
+        public IReadOnlyList<string> Messages
+        {
+            get
+            {
+                lock (this)
+                {
+                    return _messages.ToArray();
+                }
+            }
+        }
 
         public void AddWarning(string message)
         {
