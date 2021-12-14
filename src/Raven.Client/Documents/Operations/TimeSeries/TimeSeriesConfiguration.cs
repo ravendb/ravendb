@@ -18,7 +18,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         // collection -> timeseries -> names
         public Dictionary<string, Dictionary<string, string[]>> NamedValues { get; set; }
-        
+
+        public TimeSeriesConfiguration()
+        {
+            Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>();
+        }
+
         internal void InitializeRollupAndRetention()
         {
             if (Collections == null || Collections.Count == 0) 
