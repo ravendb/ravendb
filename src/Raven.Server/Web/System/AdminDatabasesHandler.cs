@@ -333,7 +333,7 @@ namespace Raven.Server.Web.System
                         {
                             case IndexType.AutoMap:
                             case IndexType.AutoMapReduce:
-                                var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBase)definition, index.Type);
+                                var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBaseServerSide)definition, index.Type);
                                 databaseRecord.AutoIndexes.Add(autoIndexDefinition.Name, autoIndexDefinition);
                                 break;
 

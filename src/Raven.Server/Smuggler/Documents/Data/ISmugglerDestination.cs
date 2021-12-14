@@ -73,7 +73,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IIndexActions : IAsyncDisposable
     {
-        ValueTask WriteIndexAsync(IndexDefinitionBase indexDefinition, IndexType indexType);
+        ValueTask WriteIndexAsync(IndexDefinitionBaseServerSide indexDefinition, IndexType indexType);
 
         ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
     }

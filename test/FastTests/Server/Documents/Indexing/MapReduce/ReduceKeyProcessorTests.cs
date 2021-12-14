@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {
-                var sut = new ReduceKeyProcessor(9, bufferPool, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var sut = new ReduceKeyProcessor(9, bufferPool, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 sut.Reset();
 
