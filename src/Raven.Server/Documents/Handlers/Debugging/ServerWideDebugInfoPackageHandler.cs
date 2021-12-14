@@ -203,19 +203,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             JsonOperationContext context,
             RequestExecutor requestExecutor)
         {
-            using (var ms = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, ms))
-            {
-                context.Write(writer, new DynamicJsonValue());
-                writer.Flush();
-                ms.Flush();
-
-                var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package", ms);
-
-                await requestExecutor.ExecuteAsync(rawStreamCommand, context);
-                rawStreamCommand.Result.Position = 0;
-                return rawStreamCommand.Result;
-            }
+            var rawStreamCommand = new GetRawStreamResultCommand($"/admin/debug/info-package");
+            await requestExecutor.ExecuteAsync(rawStreamCommand, context);
+            rawStreamCommand.Result.Position = 0;
+            return rawStreamCommand.Result;
         }
 
         private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
