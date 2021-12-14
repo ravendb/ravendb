@@ -56,7 +56,7 @@ namespace RachisTests
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = "ContinueFromThePointIStopped";
+            var defaultDatabase = GetDatabaseName();
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
@@ -122,7 +122,7 @@ namespace RachisTests
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = "ContinueFromThePointIStopped";
+            var defaultDatabase = GetDatabaseName();
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
@@ -181,7 +181,7 @@ namespace RachisTests
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = "ContinueFromThePointIStopped";
+            var defaultDatabase = GetDatabaseName();
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
@@ -253,7 +253,7 @@ namespace RachisTests
             const int nodesAmount = 5;
             var (_, leader) = await CreateRaftCluster(nodesAmount);
 
-            var defaultDatabase = "SetMentorToSubscription";
+            var defaultDatabase = GetDatabaseName();
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
@@ -581,6 +581,7 @@ namespace RachisTests
 
             SubscriptionWorker<User> subscription;
             List<Task> subTasks = new();
+            int connections = numberOfConnections;
             do
             {
                 subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
@@ -589,7 +590,6 @@ namespace RachisTests
                     MaxDocsPerBatch = batchSize,
                     Strategy = numberOfConnections > 1 ? SubscriptionOpeningStrategy.Concurrent : SubscriptionOpeningStrategy.OpenIfFree
                 });
-
                 subscription.AfterAcknowledgment += b =>
                 {
                     try
@@ -628,8 +628,8 @@ namespace RachisTests
                         }
                     }
                 }));
-                numberOfConnections--;
-            } while (numberOfConnections > 0);
+                connections--;
+            } while (connections > 0);
 
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);

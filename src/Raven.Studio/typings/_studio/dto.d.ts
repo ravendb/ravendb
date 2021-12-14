@@ -151,6 +151,11 @@ interface timeSeriesDeleteCriteria {
 
 type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
 
+interface filterTimeSeriesDates {
+    startDate: moment.Moment;
+    endDate: moment.Moment;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;

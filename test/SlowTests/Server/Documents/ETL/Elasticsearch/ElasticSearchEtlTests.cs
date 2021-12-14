@@ -893,13 +893,13 @@ loadToOrders(orderData);
             }
         }
 
-        [RequiresElasticSearchFact]
+        [Fact]
         public async Task ShouldImportTask()
         {
             using (var srcStore = GetDocumentStore())
             using (var dstStore = GetDocumentStore())
             {
-                SetupElasticEtl(srcStore, defaultScript, new List<string> { OrderIndexName, OrderLinesIndexName });
+                SetupElasticEtl(srcStore, defaultScript, new List<string> { OrderIndexName, OrderLinesIndexName }, nodes: new [] {"http://localhost:1234"});
 
                 var exportFile = GetTempFileName();
 

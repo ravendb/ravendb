@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
                 await RavenDB_7912.WaitForDatabaseToBeDeleted(leader, src.Database, TimeSpan.FromSeconds(15), CancellationToken.None);
                 await WaitAndAssertForValueAsync(() => GetMembersCount(src), 2);
 
-                var newResponsibleTag = WaitForNewResponsibleNode(src, addEtl.TaskId, mentorTag);
+                var newResponsibleTag = WaitForNewResponsibleNode(src, addEtl.TaskId, OngoingTaskType.RavenEtl, mentorTag);
                 Assert.NotNull(newResponsibleTag);
 
                 var newResponsible = nodes.Single(s => s.ServerStore.NodeTag == newResponsibleTag);
@@ -103,8 +104,13 @@ namespace SlowTests.Issues
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
 
                 var addResult = await src.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(src.Database, node: mentorTag));
-                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(30));
-                await WaitAndAssertForValueAsync(() => GetMembersCount(src), 3);
+                Assert.Equal(2, addResult.Topology.Members.Count);
+                Assert.Equal(1, addResult.Topology.Promotables.Count);
+
+                await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                var membersCount = await WaitForValueAsync(() => GetMembersCount(src), 3);
+                
+                Assert.True(membersCount == 3, await AddDebugInfo(src, membersCount));
 
                 using (var session = src.OpenSession())
                 {
@@ -121,7 +127,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static string WaitForNewResponsibleNode(IDocumentStore store, long taskId, string oldTag, int timeout = 10_000)
+        internal static string WaitForNewResponsibleNode(IDocumentStore store, long taskId, OngoingTaskType type, string oldTag, int timeout = 10_000)
         {
             var sw = Stopwatch.StartNew();
             while (true)
@@ -129,7 +135,7 @@ namespace SlowTests.Issues
                 if (sw.ElapsedMilliseconds > timeout)
                     return null;
 
-                var taskInfo = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.RavenEtl));
+                var taskInfo = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, type));
                 if (taskInfo.ResponsibleNode.NodeTag != oldTag)
                     return taskInfo.ResponsibleNode.NodeTag;
 
@@ -148,6 +154,16 @@ namespace SlowTests.Issues
             };
 
             return mre;
+        }
+
+        private async Task<string> AddDebugInfo(DocumentStore store, int membersCount)
+        {
+            var topology = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database)).Topology;
+            var sb = new StringBuilder();
+            sb.AppendLine(
+                $"Expected 3 members in database topology but got {membersCount}. Topology : {topology}");
+            await GetClusterDebugLogs(sb);
+            return sb.ToString();
         }
     }
 }

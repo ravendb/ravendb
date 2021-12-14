@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     totalCount = stats.Count;
                 }
-
+                
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     if (rangeResult != null)

@@ -6,7 +6,8 @@ import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntr
 class getTimeSeriesCommand extends commandBase {
     
     constructor(private docId: string, private timeSeriesName: string, private db: database, 
-                private start: number, private pageSize: number, private suppressNotFound = false) {
+                private start: number, private pageSize: number, private suppressNotFound = false,
+                private startDateLocal?: moment.Moment, private endDateLocal?: moment.Moment) {
         super();
     }
     
@@ -16,7 +17,9 @@ class getTimeSeriesCommand extends commandBase {
             name: this.timeSeriesName,
             pageSize: this.pageSize,
             start: this.start,
-            full: timeSeriesEntryModel.isIncrementalName(this.timeSeriesName)
+            full: timeSeriesEntryModel.isIncrementalName(this.timeSeriesName),
+            from: this.startDateLocal?.clone().utc().format(),
+            to: this.endDateLocal?.clone().utc().format()
         };
         
         const url = endpoints.databases.timeSeries.timeseries;

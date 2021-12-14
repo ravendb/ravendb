@@ -24,11 +24,11 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         private static readonly SemaphoreSlim ConcurrentEsEtlTests = new SemaphoreSlim(1, 1);
         public ElasticSearchEtlTestBase(ITestOutputHelper output) : base(output)
         {
-            ConcurrentEsEtlTests.Wait();
+            
         }
 
         protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
-            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null)
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null, string[] nodes = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
@@ -55,31 +55,43 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     }
                 },
 
-                new ElasticSearchConnectionString { Name = connectionStringName, Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
+                new ElasticSearchConnectionString { Name = connectionStringName, Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
         }
 
         protected IDisposable GetElasticClient(out ElasticClient client)
         {
-            var localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
+            ElasticClient localClient;
 
-            CleanupIndexes(localClient);
+            ConcurrentEsEtlTests.Wait();
+
+            try
+            {
+                localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
+
+                CleanupIndexes(localClient);
+            }
+            catch
+            {
+                ConcurrentEsEtlTests.Release();
+                throw;
+            }
 
             return new DisposableAction(() =>
             {
-                CleanupIndexes(localClient);
+                try
+                {
+                    CleanupIndexes(localClient);
+                }
+                finally 
+                {
+                    ConcurrentEsEtlTests.Release();
+                }
             });
         }
 
         protected void CleanupIndexes(ElasticClient client)
         {
             var response = client.Indices.Delete(Indices.All);
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            ConcurrentEsEtlTests.Release();
         }
     }
 }

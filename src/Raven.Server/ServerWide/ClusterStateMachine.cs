@@ -544,7 +544,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
+                        UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
                         break;
 
                     case nameof(DeleteServerWideBackupConfigurationCommand):
@@ -560,7 +560,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(PutServerWideExternalReplicationCommand):
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication);
+                        UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
                         break;
 
                     case nameof(DeleteServerWideTaskCommand):
@@ -570,7 +570,7 @@ namespace Raven.Server.ServerWide
 
                     case nameof(ToggleServerWideTaskStateCommand):
                         var parameters = UpdateValue<ToggleServerWideTaskStateCommand.Parameters>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        ToggleServerWideTaskState(cmd, parameters, context, type);
+                        ToggleServerWideTaskState(cmd, parameters, context, type, index);
                         break;
 
                     case nameof(PutCertificateWithSamePinningHashCommand):
@@ -3681,7 +3681,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
-        private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration)
+        private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
         {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
@@ -3752,7 +3752,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, index, items, context);
         }
 
         private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject databaseTask, string serverWideTaskName, HashSet<string> allServerWideTasksNames)
@@ -3823,7 +3823,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void UpdateDatabasesWithExternalReplication(ClusterOperationContext context, string type, ServerWideExternalReplication serverWideExternalReplication)
+        private void UpdateDatabasesWithExternalReplication(ClusterOperationContext context, string type, ServerWideExternalReplication serverWideExternalReplication, long index)
         {
             if (serverWideExternalReplication == null)
                 throw new RachisInvalidOperationException($"Server-wide external replication is null for command type: {type}");
@@ -3936,8 +3936,9 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-            var index = serverWideExternalReplication.TaskId;
-            ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
+
+            // we don't mind indexForValueChanges for ServerWideExternalReplication
+            ApplyDatabaseRecordUpdates(toUpdate, type, serverWideExternalReplication.TaskId, index, items, context);
         }
 
         private static unsafe HashSet<string> GetAllSeverWideExternalReplicationNames(ClusterOperationContext context)
@@ -4065,7 +4066,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
-        private void ToggleServerWideTaskState(BlittableJsonReaderObject cmd, ToggleServerWideTaskStateCommand.Parameters parameters, ClusterOperationContext context, string type)
+        private void ToggleServerWideTaskState(BlittableJsonReaderObject cmd, ToggleServerWideTaskStateCommand.Parameters parameters, ClusterOperationContext context, string type, long index)
         {
             if (cmd.TryGet(nameof(ToggleServerWideTaskStateCommand.Name), out string name) == false)
                 throw new RachisApplyException($"Failed to get configuration key name for command type '{type}'");
@@ -4081,12 +4082,12 @@ namespace Raven.Server.ServerWide
             {
                 case OngoingTaskType.Backup:
                     var serverWideBackupConfiguration = JsonDeserializationCluster.ServerWideBackupConfiguration(task);
-                    UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
+                    UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
                     break;
 
                 case OngoingTaskType.Replication:
                     var serverWideExternalReplication = JsonDeserializationCluster.ServerWideExternalReplication(task);
-                    UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication);
+                    UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
                     break;
 
                 default:
