@@ -179,8 +179,8 @@ namespace Raven.Client.Documents.Conventions
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
 
-            FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
-            FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
+            FindPropertyNameForIndex = DefaultFindPropertyNameForIndex;
+            FindPropertyNameForDynamicIndex = DefaultFindPropertyNameForDynamicIndex;
 
             MaxNumberOfRequestsPerSession = 30;
 
@@ -1105,7 +1105,11 @@ namespace Raven.Client.Documents.Conventions
             // multiple capital letters, so probably something that we want to preserve caps on.
             return collectionName;
         }
-
+        
+        public static string DefaultFindPropertyNameForIndex(Type indexedType, string indexedName, string path, string prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
+        
+        public static string DefaultFindPropertyNameForDynamicIndex(Type indexedType, string indexedName, string path, string prop) => path + prop;
+        
         private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
         {
             foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
