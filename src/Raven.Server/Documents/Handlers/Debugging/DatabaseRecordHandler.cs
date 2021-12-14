@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
     {
         internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
         {
+            nameof(DatabaseRecord.DatabaseName),
             nameof(DatabaseRecord.Encrypted),
             nameof(DatabaseRecord.Disabled),
             nameof(DatabaseRecord.EtagForBackup),
