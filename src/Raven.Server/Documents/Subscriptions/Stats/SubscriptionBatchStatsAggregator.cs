@@ -55,7 +55,10 @@ namespace Raven.Server.Documents.Subscriptions.Stats
                 SizeOfIncludedDocumentsInBytes = Stats.SizeOfIncludedDocumentsInBytes,
                 
                 NumberOfIncludedCounters = Stats.NumberOfIncludedCounters,
+                SizeOfIncludedCountersInBytes = Stats.SizeOfIncludedCountersInBytes,
+
                 NumberOfIncludedTimeSeriesEntries = Stats.NumberOfIncludedTimeSeriesEntries,
+                SizeOfIncludedTimeSeriesInBytes = Stats.SizeOfIncludedTimeSeriesInBytes,
                 
                 Exception = Stats.Exception,
                 

@@ -959,7 +959,14 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                                 writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
 
-                                batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count));
+                                var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp => kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
+                                    + includeCountersCommand.Results.Sum(kvp => kvp.Value.Sum(counter => counter.CounterName.Length
+                                                                                                         + counter.DocumentId.Length
+                                                                                                         + sizeof(long) //Etag
+                                                                                                         + sizeof(long) //Total Value
+                                    ));
+                                batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
+
 
                                 writer.WriteEndObject();
                             }
@@ -973,10 +980,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WriteComma();
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                                writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
+                                var size = writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
 
                                 batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
-                                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))));
+                                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);
 
                                 writer.WriteEndObject();
                             }
