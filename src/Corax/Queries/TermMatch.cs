@@ -11,6 +11,7 @@ using System.Collections.Generic;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct TermMatch : IQueryMatch
     {
         private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
@@ -437,5 +438,7 @@ namespace Corax.Queries
         {
             return _inspectFunc(ref this);
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

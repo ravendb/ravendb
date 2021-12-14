@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Corax.Queries
 {
@@ -59,5 +60,7 @@ namespace Corax.Queries
         void Score(Span<long> matches, Span<float> scores);
 
         QueryInspectionNode Inspect();
+
+        string DebugView => Inspect().ToString();
     }
 }

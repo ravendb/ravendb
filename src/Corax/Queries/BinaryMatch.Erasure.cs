@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct BinaryMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
@@ -122,5 +124,7 @@ namespace Corax.Queries
         {
             return new BinaryMatch(query, StaticFunctionCache<TInner, TOuter>.FunctionTable);
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
@@ -28,6 +29,7 @@ namespace Corax.Queries
         }
     }
 
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct BoostingMatch<TInner, TQueryScoreFunction> : IQueryMatch
         where TInner : IQueryMatch
         where TQueryScoreFunction : IQueryScoreFunction
@@ -188,6 +190,8 @@ namespace Corax.Queries
         {
             return _inspectFunc(ref this);
         }
+
+        string DebugView => Inspect().ToString();
 
         internal static void ConstantScoreFunc(ref BoostingMatch<TInner, ConstantScoreFunction> match, Span<long> matches, Span<float> scores)
         {

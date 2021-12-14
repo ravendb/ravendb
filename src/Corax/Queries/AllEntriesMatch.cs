@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron;
 using Voron.Data.Containers;
@@ -10,6 +11,7 @@ using Voron.Impl;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public struct AllEntriesMatch : IQueryMatch
     {
         private readonly Transaction _tx;
@@ -103,5 +105,7 @@ namespace Corax.Queries
                     { nameof(Count), $"{Count} [{Confidence}]" }
                 });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }
