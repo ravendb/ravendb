@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public struct InTermProvider : ITermProvider
     {
         private readonly IndexSearcher _searcher;
@@ -41,5 +43,6 @@ namespace Corax.Queries
                             });
         }
 
+        string DebugView => Inspect().ToString();
     }
 }

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe partial struct SortingMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
@@ -97,5 +99,7 @@ namespace Corax.Queries
         {
             return _inner.Inspect();
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

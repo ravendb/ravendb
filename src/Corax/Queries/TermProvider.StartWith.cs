@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public struct StartWithTermProvider : ITermProvider
     {
         private readonly IndexSearcher _searcher;
@@ -50,5 +52,7 @@ namespace Corax.Queries
                                 { "Terms", _startWith.ToString()}
                             });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

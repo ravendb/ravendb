@@ -8,6 +8,7 @@ using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct SortingMatch<TInner, TComparer> : IQueryMatch
         where TInner : IQueryMatch
         where TComparer : struct, IMatchComparer
@@ -388,5 +389,7 @@ namespace Corax.Queries
                         { nameof(IsBoosting), IsBoosting.ToString() },
                 });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

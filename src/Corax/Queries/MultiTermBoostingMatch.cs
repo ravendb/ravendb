@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -8,6 +9,7 @@ using Size = Voron.Global.Constants.Size;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MultiTermBoostingMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
@@ -227,6 +229,8 @@ namespace Corax.Queries
         {
             return _inspectFunc(ref this);
         }
+
+        string DebugView => Inspect().ToString();
 
         public static MultiTermBoostingMatch<TTermProvider> Create<TScoreFunction>(IndexSearcher searcher, TTermProvider inTermProvider, TScoreFunction scoreFunction) 
             where TScoreFunction : IQueryScoreFunction

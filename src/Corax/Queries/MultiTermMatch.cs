@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
@@ -7,6 +8,7 @@ using Sparrow.Server;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct MultiTermMatch<TTermProvider> : IQueryMatch
         where TTermProvider : ITermProvider
     {
@@ -169,5 +171,7 @@ namespace Corax.Queries
                     { nameof(Count), $"{Count} [{Confidence}]" }
                 });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

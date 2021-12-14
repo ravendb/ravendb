@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Voron;
 
@@ -17,6 +18,7 @@ namespace Corax.Queries
         NotBetween
     }
 
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe partial struct UnaryMatch<TInner, TValueType> : IQueryMatch
         where TInner : IQueryMatch
     {
@@ -122,5 +124,7 @@ namespace Corax.Queries
                     { "FieldId", $"{_fieldId}" }
                 });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

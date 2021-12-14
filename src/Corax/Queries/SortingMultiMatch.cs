@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -8,6 +8,7 @@ using static Corax.Queries.SortingMatch;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> : IQueryMatch
         where TInner : IQueryMatch
         where TComparer1 : IMatchComparer
@@ -537,5 +538,7 @@ namespace Corax.Queries
                         { nameof(IsBoosting), IsBoosting.ToString() },
                     });
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

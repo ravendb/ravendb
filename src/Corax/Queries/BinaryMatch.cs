@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe partial struct BinaryMatch<TInner, TOuter> : IQueryMatch
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
@@ -107,5 +109,7 @@ namespace Corax.Queries
         {
             return _inspectFunc(ref this);
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

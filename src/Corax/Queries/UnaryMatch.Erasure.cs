@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct UnaryMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
@@ -107,5 +109,7 @@ namespace Corax.Queries
         {
             return _inner.Inspect();
         }
+
+        string DebugView => Inspect().ToString();
     }
 }

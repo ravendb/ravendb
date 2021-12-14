@@ -5,5 +5,7 @@
         void Reset();
         bool Next(out TermMatch term);
         QueryInspectionNode Inspect();
+
+        string DebugView => Inspect().ToString();
     }    
 }

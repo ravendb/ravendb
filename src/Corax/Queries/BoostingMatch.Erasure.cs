@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Corax.Queries
 {
+    [DebuggerDisplay("{DebugView,nq}")]
     public unsafe struct BoostingMatch : IQueryMatch
     {
         private readonly FunctionTable _functionTable;
@@ -174,5 +175,7 @@ namespace Corax.Queries
                 &BoostingMatch<TInner, TermFrequencyScoreFunction>.TermFrequencyScoreFunc,
                 &InspectFunc));
         }
+
+        string DebugView => Inspect().ToString();
     }
 }
