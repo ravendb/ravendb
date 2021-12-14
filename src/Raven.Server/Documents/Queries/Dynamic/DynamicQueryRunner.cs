@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                         map.SupersededIndexes.Add(currentIndex);
 
-                        map.ExtendMappingBasedOn((AutoIndexDefinitionBase)currentIndex.Definition);
+                        map.ExtendMappingBasedOn((AutoIndexDefinitionBaseServerSide)currentIndex.Definition);
                     }
 
                     break;

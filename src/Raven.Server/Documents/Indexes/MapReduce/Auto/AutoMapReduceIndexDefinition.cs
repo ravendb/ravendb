@@ -10,7 +10,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 {
-    public class AutoMapReduceIndexDefinition : AutoIndexDefinitionBase
+    public class AutoMapReduceIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public readonly Dictionary<string, AutoIndexField> GroupByFields;
 
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return (hashCode * 397) ^ GroupByFields.GetDictionaryHashCode();
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide other)
         {
             var otherDefinition = other as AutoMapReduceIndexDefinition;
             if (otherDefinition == null)
