@@ -661,14 +661,10 @@ namespace Raven.Server.Documents.ETL
                                             transformations.AddRange(transformed);
                                     }
 
-                                    var successfulLoad = false;
-
-                                    if (transformations.Count > 0)
-                                        successfulLoad = Load(transformations, context, stats);
-
+                                    var noFailures = Load(transformations, context, stats);
                                     var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
 
-                                    if (lastProcessed > Statistics.LastProcessedEtag && successfulLoad)
+                                    if (lastProcessed > Statistics.LastProcessedEtag && noFailures)
                                     {
                                         didWork = true;
                                         Statistics.LastProcessedEtag = lastProcessed;
