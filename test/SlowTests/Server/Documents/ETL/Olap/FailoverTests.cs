@@ -18,6 +18,7 @@ using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_17096;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
@@ -128,12 +129,8 @@ loadToOrders(partitionBy(key),
 
             var store2 = stores.First(s => s != store);
 
-            var ongoingTask = store2.Maintenance.Send(new GetOngoingTaskInfoOperation(task.TaskId, OngoingTaskType.OlapEtl));
-            Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
-            Assert.NotNull(ongoingTask.ResponsibleNode);
-            Assert.NotEqual(mentorTag, ongoingTask.ResponsibleNode.NodeTag);
-
-            var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == ongoingTask.ResponsibleNode.NodeTag);
+            var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag);
+            var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == newResponsible);
             etlDone = WaitForEtl(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             using (var session = store2.OpenAsyncSession())

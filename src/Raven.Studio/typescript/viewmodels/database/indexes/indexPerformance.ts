@@ -1053,18 +1053,18 @@ class indexPerformance extends viewModelBase {
             context.fillRect(currentX, yStart, dx, indexPerformance.trackHeight);
 
             if (yOffset !== 0) { // track is opened
-                if (dx >= 0.8) { // don't show tooltip for very small items
+                if (dx >= 0.8) { // don't show tooltip & text for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
-                }
-       
-                if (dx > 30) {
-                    context.fillStyle = this.colors.stripeTextColor;
-                    const text = op.Name.startsWith("Collection_") ? `${op.Name.substr("Collection_".length)} (Collection)` : op.Name;
-                    const textWidth = context.measureText(text).width;
-                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
-                    if (truncatedText) {
-                        context.font = "12px Lato";
-                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+
+                    if (dx > 30) {
+                        context.fillStyle = this.colors.stripeTextColor;
+                        const text = op.Name.startsWith("Collection_") ? `${op.Name.substr("Collection_".length)} (Collection)` : op.Name;
+                        const textWidth = context.measureText(text).width;
+                        const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
+                        if (truncatedText) {
+                            context.font = "12px Lato";
+                            context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+                        }
                     }
                 }
             } else { // track is closed

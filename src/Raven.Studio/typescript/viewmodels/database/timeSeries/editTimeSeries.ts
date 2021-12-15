@@ -13,6 +13,7 @@ import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
+import filterTimeSeries = require("viewmodels/database/timeSeries/filterTimeSeries");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
@@ -24,27 +25,35 @@ import popoverUtils = require("common/popoverUtils");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
-    numberOfEntries = ko.observable<number>();
+    
+    totalNumberOfEntries = ko.observable<number>();
+    
     nameAndNumberFormatted: KnockoutComputed<string>;
     
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
-        this.numberOfEntries(numberOfEntries);
+        
+        this.totalNumberOfEntries(numberOfEntries);
         
         this.initObservables();
     }
     
     private initObservables(): void {
         this.nameAndNumberFormatted = ko.pureComputed(() => {
-            const numberPart = this.numberOfEntries().toLocaleString();
+            const numberPart = this.totalNumberOfEntries().toLocaleString();
             
             return `${this.name()} (${numberPart})`;
         });
+    }
+
+    incrementTotal(incrementBy: number) {
+        this.totalNumberOfEntries(this.totalNumberOfEntries() + incrementBy);
     }
 }
 
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static pageSize = 100;
     
     documentId = ko.observable<string>();
     documentCollection = ko.observable<string>();
@@ -58,6 +67,14 @@ class editTimeSeries extends viewModelBase {
     deleteCriteria: KnockoutComputed<timeSeriesDeleteCriteria>;
     deleteButtonText: KnockoutComputed<string>;
     isRollupTimeSeries: KnockoutComputed<boolean>;
+    
+    localStartDateInFilter = ko.observable<moment.Moment>();
+    localEndDateInFilter = ko.observable<moment.Moment>();
+    
+    filterText: KnockoutComputed<string>;
+    hasFilter: KnockoutComputed<boolean>;
+    
+    itemsSoFar: number = 0;
     
     isPoliciesDefined = ko.observable<boolean>(false);
     hasMoreThanFiveRawValues = ko.observable<boolean>(false);
@@ -75,7 +92,7 @@ class editTimeSeries extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
+        this.bindToCurrentInstance("currentSeriesWasChanged", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
         
         this.initObservables();
         datePickerBindingHandler.install();
@@ -116,7 +133,7 @@ class editTimeSeries extends viewModelBase {
         }
     }
     
-    private getColumnnNamesToUse(columnsCount: number): string[] {
+    private getColumnNamesToUse(columnsCount: number): string[] {
         
         if (this.isRollupTimeSeries()) {
             const definedNamedValues = this.getDefinedNamedValues();
@@ -189,8 +206,8 @@ class editTimeSeries extends viewModelBase {
             this.createTimeSeries(true);
         }
         
-        const formatTimeSeriesDate = (input: string) => {
-            const dateToFormat = moment.utc(input);
+        const formatTimeSeriesDate = (timestamp: string) => {
+            const dateToFormat = moment.utc(timestamp);
             return dateToFormat.format(editTimeSeries.timeSeriesFormat) + "Z";
         };
         
@@ -210,7 +227,7 @@ class editTimeSeries extends viewModelBase {
         grid.init((s, t) => this.fetchSeries(s).done(result => this.checkColumns(result)), () => {
             const { valuesCount, hasTag } = this.columnsCacheInfo;
             
-            const columnNames = this.getColumnnNamesToUse(valuesCount);
+            const columnNames = this.getColumnNamesToUse(valuesCount);
             
             const valueColumns = columnNames
                 .map((name, idx) => 
@@ -262,24 +279,17 @@ class editTimeSeries extends viewModelBase {
 
     private fetchSeries(skip: number): JQueryPromise<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>> {
         const fetchTask = $.Deferred<pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
+        
         const timeSeriesName = this.timeSeriesName();
         const db = this.activeDatabase();
 
         if (timeSeriesName) {
-            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, 100, true)
+            new getTimeSeriesCommand(this.documentId(), timeSeriesName, db, skip, editTimeSeries.pageSize, true, this.localStartDateInFilter(), this.localEndDateInFilter())
                 .execute()
                 .done(result => {
-                    
-                    const items = result.Entries;
-                    
-                    const series = this.getSeriesFromList(timeSeriesName);
-                    if (series) {
-                        series.numberOfEntries(result.TotalResults);
-                    }
-
                     fetchTask.resolve({
-                        items,
-                        totalResultCount: result.TotalResults
+                        items: result.Entries,
+                        totalResultCount: this.calculateResultsCountForGrid(result)
                     })
                 })
                 .fail((response: JQueryXHR) => {
@@ -297,6 +307,23 @@ class editTimeSeries extends viewModelBase {
         }
         
         return fetchTask;
+    }
+    
+    private calculateResultsCountForGrid(result: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesRangeResult): number {
+        if (result.TotalResults) {
+            return result.TotalResults
+        }
+
+        const numberOfItemsFetched = result.Entries.length;
+        this.itemsSoFar += numberOfItemsFetched;
+        
+        if (!result.To ||
+            numberOfItemsFetched < editTimeSeries.pageSize ||
+            (this.localEndDateInFilter() &&(new Date(result.To)) >= this.localEndDateInFilter().toDate())) {
+            return this.itemsSoFar;
+        }
+        
+        return this.itemsSoFar + 1; // indicate there are more results to scroll for
     }
     
     private checkColumns(result: pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>) {
@@ -329,8 +356,7 @@ class editTimeSeries extends viewModelBase {
 
     private activateByCreateNew(docId: string) {
         return this.loadTimeSeries(docId)
-            .then(stats => {
-                this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
+            .then(() => {
                 this.timeSeriesName(null);
                 return { can: true };
             });
@@ -338,10 +364,9 @@ class editTimeSeries extends viewModelBase {
     
     private activateById(docId: string, timeSeriesName: string) {
         return this.loadTimeSeries(docId)
-            .then(stats => {
+            .then(() => {
                 if (this.getSeriesFromList(timeSeriesName)) {
                     this.timeSeriesName(timeSeriesName);
-                    this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
                     return { can: true };
                 } else {
                     messagePublisher.reportWarning("Unable to find time series with name: " + timeSeriesName);
@@ -350,11 +375,12 @@ class editTimeSeries extends viewModelBase {
             });
     }
     
-    loadTimeSeries(docId: string) {
+    private loadTimeSeries(docId: string) {
         return new getTimeSeriesStatsCommand(docId, this.activeDatabase())
             .execute()
             .done(stats => {
                 this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
+                this.itemsSoFar = 0;
             });
     }
 
@@ -388,12 +414,17 @@ class editTimeSeries extends viewModelBase {
         };
     }
     
-    changeCurrentSeries(name: string) {
+    currentSeriesWasChanged(name: string) {
+        this.loadTimeSeries(this.documentId())
+            .then(() => {
+                this.changeCurrentSeries(name);
+            })
+    }
+    
+    private changeCurrentSeries(name: string) {
         this.cleanColumnsCache();
-        
         this.timeSeriesName(name);
-        
-        router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);
+        this.itemsSoFar = 0;
         
         this.refresh(true);
     }
@@ -443,7 +474,7 @@ class editTimeSeries extends viewModelBase {
         if (series) {
             // New Entry - for an existing time series
             this.changeCurrentSeries(seriesName);
-            series.numberOfEntries(series.numberOfEntries() + 1);
+            series.incrementTotal(1);
         } else {
             // New Time Series - reload data from server
             this.loadTimeSeries(this.documentId())
@@ -535,21 +566,47 @@ class editTimeSeries extends viewModelBase {
             const tsInfo = this.getSeriesFromList(this.timeSeriesName());
             return tsInfo ? tsInfo.nameAndNumberFormatted() : "<creating new>";
         });
+        
+        this.filterText = ko.pureComputed<string>(() => {
+            const start = this.localStartDateInFilter();
+            const end = this.localEndDateInFilter();
+
+            if (!start && !end) {
+                return "";
+            }
+            
+            let text = "Showing entries with ";
+            
+            if (start) {
+                text += `date &gt;= <code>${start.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
+            }
+            
+            if (start && end) {
+                text += " and ";
+            }
+            
+            if (end) {
+                text += `date &lt;= <code>${end.clone().utc().format(editTimeSeries.timeSeriesFormat)}Z</code>`;
+            }
+            
+            return text;
+        });
+        
+        this.hasFilter = ko.pureComputed<boolean>(() => !!this.localStartDateInFilter() || !!this.localEndDateInFilter());
     }
 
     plotTimeSeries() {
-        const queryText = queryUtil.formatRawTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName());
+        const queryText = queryUtil.formatRawTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), this.localStartDateInFilter(), this.localEndDateInFilter());
         this.plotTimeSeriesByQuery(queryText);
     }
 
     plotGroupedTimeSeries(group: string) {
-        const queryText = queryUtil.formatGroupedTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), group);
+        const queryText = queryUtil.formatGroupedTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), group, this.localStartDateInFilter(), this.localEndDateInFilter());
         this.plotTimeSeriesByQuery(queryText);
     }
     
     plotTimeSeriesByQuery(queryText: string) {
         const query = queryCriteria.empty();
-        
 
         query.queryText(queryText);
         query.name("Time Series: " + this.timeSeriesName() + " (document id: " + this.documentId() + ")");
@@ -595,6 +652,22 @@ class editTimeSeries extends viewModelBase {
                 placement: "bottom",
                 html: true,
                 container: ".edit-time-series"
+            })
+    }
+    
+    openFilterDialog() {
+        const filterDialog = new filterTimeSeries(this.localStartDateInFilter(), this.localEndDateInFilter());
+        
+        app.showBootstrapDialog(filterDialog)
+            .done((filterDates: filterTimeSeriesDates) => {
+                if (filterDates) {
+                    this.localStartDateInFilter(filterDates.startDate || undefined);
+                    this.localEndDateInFilter(filterDates.endDate || undefined);
+                }
+            })
+            .always(() => {
+                this.itemsSoFar = 0;
+                this.refresh();
             })
     }
 }
