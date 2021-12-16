@@ -120,6 +120,9 @@ namespace Raven.Client.Documents.Commands.MultiGet
             for (int i = 0; i < _commands.Count; i++)
             {
                 var command = _commands[i];
+                
+                if(command.Headers.ContainsKey(Constants.Headers.IfNoneMatch))
+                    continue; // command already explicitly handling setting this, let's not touch it.
 
                 var cacheKey = GetCacheKey(command, out _);
                 var cachedItem = _httpCache.Get(ctx, cacheKey, out var changeVector, out var cached);
