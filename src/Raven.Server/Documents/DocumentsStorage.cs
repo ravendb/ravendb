@@ -876,6 +876,7 @@ namespace Raven.Server.Documents
                     start--;
                     continue;
                 }
+
                 if (take-- <= 0)
                     continue; // we need to calculate totalCount correctly
 
@@ -895,11 +896,12 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, int start, int take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, List<Slice> ids, string collection, int start, int take, Reference<int> totalCount)
         {
-            foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
+            // we'll fetch all documents and do the filtering here since we must check the collection name
+            foreach (var doc in GetDocuments(context, ids, start, int.MaxValue, totalCount))
             {
-                if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
+                if (collection == Constants.Documents.Collections.AllDocumentsCollection)
                 {
                     yield return doc;
                     continue;
@@ -910,7 +912,7 @@ namespace Raven.Server.Documents
                     totalCount.Value--;
                     continue;
                 }
-                if (metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string c) == false)
+                if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string c) == false)
                 {
                     totalCount.Value--;
                     continue;
@@ -920,6 +922,9 @@ namespace Raven.Server.Documents
                     totalCount.Value--;
                     continue;
                 }
+
+                if (take-- <= 0)
+                    continue; // we need to calculate totalCount correctly
 
                 yield return doc;
             }

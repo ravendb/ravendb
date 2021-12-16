@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         documents = _isAllDocsCollection
                             ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
-                            : _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
                     }
                 }
                 else if (_isAllDocsCollection)
