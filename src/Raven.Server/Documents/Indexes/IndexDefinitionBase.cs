@@ -137,10 +137,12 @@ namespace Raven.Server.Documents.Indexes
 
             public const long ReduceKeyProcessorHashDoubleFix = 52_001; // RavenDB-17572
 
+            public const long ProperlyParseThreeDigitsMillisecondsDates = 52_002; // RavenDB-17711
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = ReduceKeyProcessorHashDoubleFix;
+            public const long CurrentVersion = ProperlyParseThreeDigitsMillisecondsDates;
         }
     }
 

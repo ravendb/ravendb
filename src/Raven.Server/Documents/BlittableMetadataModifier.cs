@@ -80,7 +80,7 @@ namespace Raven.Server.Documents
         {
             var str = CreateLazyStringValueFromParserState(jsonParserState);
 
-            var result = LazyStringParser.TryParseDateTime(str.Buffer, str.Size, out DateTime dt, out DateTimeOffset _);
+            var result = LazyStringParser.TryParseDateTime(str.Buffer, str.Size, out DateTime dt, out DateTimeOffset _, properlyParseThreeDigitsMilliseconds: true);
             if (result != LazyStringParser.Result.DateTime)
                 ThrowInvalidLastModifiedProperty(state, str, reader);
 
