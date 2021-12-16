@@ -268,6 +268,12 @@ namespace Raven.Server.Documents.ETL
                 {
                     stats.RecordLastExtractedEtag(item.Etag, item.Type);
 
+                    if (CanContinueBatch(stats, item, batchSize, context) == false)
+                    {
+                        batchStopped = true;
+                        break;
+                    }
+
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -293,12 +299,6 @@ namespace Raven.Server.Documents.ETL
 
                         try
                         {
-                            if (CanContinueBatch(stats, item, batchSize, context) == false)
-                            {
-                                batchStopped = true;
-                                break;
-                            }
-
                             transformer.Transform(item, stats);
 
                             Statistics.TransformationSuccess();
