@@ -1113,7 +1113,7 @@ namespace Raven.Server.Documents.Indexes
 
             configuration.InitializeAnalyzers(DocumentDatabase.Name);
             InitializeMetrics(configuration);
-            var stateChanged = false;
+            var startIndex = false;
 
             using (DrainRunningQueries())
             {
@@ -1125,8 +1125,19 @@ namespace Raven.Server.Documents.Indexes
 
                 if (definition._clusterState?.LastStateIndex > (Definition._clusterState?.LastStateIndex ?? -1))
                 {
-                    stateChanged = definition.State == IndexState.Normal;
-                    SetState(definition.State);
+                    switch (definition.State)
+                    {
+                        case IndexState.Disabled:
+                            Disable();
+                            break;
+                        case IndexState.Normal:
+                            startIndex = true;
+                            SetState(definition.State);
+                            break;
+                        case IndexState.Error:
+                            SetState(definition.State);// Just in case we change to error manually ==> indexState == error and the index is paused
+                            break;
+                    }
                 }
 
                 Definition = definition;
@@ -1139,7 +1150,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _priorityChanged.Raise();
 
-                if (status == IndexRunningStatus.Running || stateChanged)
+                if (status == IndexRunningStatus.Running || startIndex)
                     Start();
             }
         }
