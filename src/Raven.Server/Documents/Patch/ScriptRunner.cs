@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Patch
             var s = arg.AsString();
             fixed (char* pValue = s)
             {
-                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _, properlyParseThreeDigitsMilliseconds: true);
                 if (result != LazyStringParser.Result.DateTime)
                     ThrowInvalidDateArgument();
 
@@ -1668,7 +1668,7 @@ namespace Raven.Server.Documents.Patch
                     var s = args[0].AsString();
                     fixed (char* pValue = s)
                     {
-                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _, properlyParseThreeDigitsMilliseconds: true);
                         switch (result)
                         {
                             case LazyStringParser.Result.DateTime:

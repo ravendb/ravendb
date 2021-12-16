@@ -369,7 +369,7 @@ namespace Raven.Server.Documents.Handlers
         {
             fixed (char* c = dateStr)
             {
-                var result = LazyStringParser.TryParseDateTime(c, dateStr.Length, out var dt, out _);
+                var result = LazyStringParser.TryParseDateTime(c, dateStr.Length, out var dt, out _, properlyParseThreeDigitsMilliseconds: true);
                 if (result != LazyStringParser.Result.DateTime)
                     ThrowInvalidDateTime(name, dateStr);
 

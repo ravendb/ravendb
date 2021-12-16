@@ -131,7 +131,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                 {
                     fixed (char* pBuffer = s)
                     {
-                        var r = LazyStringParser.TryParseDateTime(pBuffer, s.Length, out var dt, out var dto);
+                        var r = LazyStringParser.TryParseDateTime(pBuffer, s.Length, out var dt, out var dto, properlyParseThreeDigitsMilliseconds: true);
                         switch (r)
                         {
                             case LazyStringParser.Result.Failed:
