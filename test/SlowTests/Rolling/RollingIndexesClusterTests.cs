@@ -484,7 +484,7 @@ namespace SlowTests.Rolling
                 var res = WaitForValue(() => count, 3);
 
                 Assert.True(res == 3 , info);
-                Console.WriteLine(info);
+
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
 
                 await VerifyHistory(cluster, store);
