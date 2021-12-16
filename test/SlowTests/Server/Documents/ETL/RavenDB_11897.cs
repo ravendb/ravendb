@@ -39,7 +39,13 @@ namespace SlowTests.Server.Documents.ETL
             {
                 AddEtl(src, dest, "Users", script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var last = 0;
+                var etlDone = WaitForEtl(src, (n, s) =>
+                {
+                    var check = s.LoadSuccesses > last;
+                    last = s.LoadSuccesses;
+                    return check;
+                });
 
                 using (var session = src.OpenSession())
                 {
