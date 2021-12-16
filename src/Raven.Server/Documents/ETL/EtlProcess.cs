@@ -268,6 +268,8 @@ namespace Raven.Server.Documents.ETL
                 {
                     stats.RecordLastExtractedEtag(item.Etag, item.Type);
 
+                    CancellationToken.ThrowIfCancellationRequested();
+
                     if (CanContinueBatch(stats, item, batchSize, context) == false)
                     {
                         batchStopped = true;
@@ -295,8 +297,6 @@ namespace Raven.Server.Documents.ETL
 
                     using (stats.For(EtlOperations.Transform))
                     {
-                        CancellationToken.ThrowIfCancellationRequested();
-
                         try
                         {
                             transformer.Transform(item, stats);
