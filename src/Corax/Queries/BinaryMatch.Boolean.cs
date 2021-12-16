@@ -60,13 +60,15 @@ namespace Corax.Queries
             [SkipLocalsInit]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
-                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
-                var orMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matches.Length);
+                int matchesSize = matches.Length;
+
+                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matchesSize);
+                var orMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matchesSize);
 
                 var count = FillFunc(ref match, orMatches);
 
                 var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-                int matchesSize = matches.Length;
+
 
                 var orMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(orMatches));
 
@@ -83,6 +85,9 @@ namespace Corax.Queries
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
 
+                if (matches.Length == 0)
+                    return 0;
+
                 if (matches.Length == 1)
                 {
                     // Special case when matches is a single element (no OR is possible under this conditions)
@@ -98,9 +103,11 @@ namespace Corax.Queries
                 var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
 
                 // need to be ready to put both outputs to the matches
-                int length = matches.Length / 2;
+                int length = matches.Length / 2;           
                 Span<long> innerMatches = longBuffer.Slice(0, length);
+                Debug.Assert(innerMatches.Length == length);
                 Span<long> outerMatches = longBuffer.Slice(length, length);
+                Debug.Assert(outerMatches.Length == length);
 
                 var innerCount = inner.Fill(innerMatches);
                 var outerCount = outer.Fill(outerMatches);
@@ -111,12 +118,12 @@ namespace Corax.Queries
 
                 if (innerCount == 0)
                 {
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesStartPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)outerCount * sizeof(long));
+                    Unsafe.CopyBlockUnaligned(matchesStartPtr, outerMatchesPtr, (uint)outerCount * sizeof(long));
                     return outerCount;
                 }
                 if (outerCount == 0)
                 {
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesStartPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)innerCount * sizeof(long));
+                    Unsafe.CopyBlockUnaligned(matchesStartPtr, innerMatchesPtr, (uint)innerCount * sizeof(long));
                     return innerCount;
                 }
 
@@ -124,10 +131,12 @@ namespace Corax.Queries
                 var outerMatchesPtrEnd = outerMatchesPtr + outerCount;
 
                 long* matchesPtr = matchesStartPtr;
-                long* matchesPtrEnd = matchesStartPtr + outerCount;
+                long* matchesPtrEnd = matchesStartPtr + matches.Length;
 
                 while (innerMatchesPtr < innerMatchesPtrEnd && outerMatchesPtr < outerMatchesPtrEnd)
                 {
+                    Debug.Assert(matchesPtr >= matchesStartPtr && matchesPtr < matchesPtrEnd);
+
                     long innerMatch = *innerMatchesPtr;
                     long outerMatch = *outerMatchesPtr;
 
@@ -153,19 +162,20 @@ namespace Corax.Queries
                     matchesPtr++;
                 }
 
-                long values = 0;
                 if (innerMatchesPtr < innerMatchesPtrEnd)
                 {
-                    values = innerMatchesPtrEnd - innerMatchesPtr;
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(innerMatchesPtr), (uint)values * sizeof(long));
+                    long values = innerMatchesPtrEnd - innerMatchesPtr;
+                    Unsafe.CopyBlockUnaligned(matchesPtr, innerMatchesPtr, (uint)values * sizeof(long));
+                    matchesPtr += values;
                 }
                 else if (outerMatchesPtr < outerMatchesPtrEnd)
                 {
-                    values = outerMatchesPtrEnd - outerMatchesPtr;
-                    Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(matchesPtr), ref Unsafe.AsRef<byte>(outerMatchesPtr), (uint)values * sizeof(long));
+                    long values = outerMatchesPtrEnd - outerMatchesPtr;
+                    Unsafe.CopyBlockUnaligned(matchesPtr, outerMatchesPtr, (uint)values * sizeof(long));
+                    matchesPtr += values;
                 }
 
-                matchesPtr += values;
+                Debug.Assert(matchesPtr >= matchesStartPtr && matchesPtr <= matchesPtrEnd);
                 var result = (int)(matchesPtr - matchesStartPtr);
 
                 QueryContext.MatchesPool.Return(bufferHolder);
