@@ -308,8 +308,9 @@ class shell extends viewModelBase {
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
                     content: authenticationInfo,
-                    placement: 'top'
-                });
+                    placement: 'top',
+                    sanitize: false
+                } as PopoverOptions);
         }
         
         if (!this.clientCertificate()) {

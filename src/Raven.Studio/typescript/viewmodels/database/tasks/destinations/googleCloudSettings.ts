@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class googleCloudSettings extends backupSettings {
+
+    view = require("views/database/tasks/destinations/googleCloudSettings.html");
+    
     bucket = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     googleCredentialsJson = ko.observable<string>();

@@ -6,6 +6,12 @@ import moment = require("moment");
 
 class licenseAgpl  {
     
+    view = require("views/common/notificationCenter/customControlls/licenseAgpl.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     canUseUntil = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         if (!licenseStatus) {

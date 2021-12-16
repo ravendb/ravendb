@@ -18,7 +18,7 @@
             <div data-bind="compose: $root.backupConfigurationView"></div>
         </div>
         <div data-bind="collapse: !hasConfigurationScript()">
-            <div data-bind="compose: $root.connectionStringOlapView"></div>
+            <div data-bind="compose: $root.backupDestinationLocalView"></div>
         </div>
     </div>
 </div>
@@ -51,7 +51,7 @@
                 <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
-                <div data-bind="compose: $data"></div>
+                <div data-bind="compose: { model: $data }"></div>
                 <div class="text-right">
                     <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                         <i class="icon-rocket"></i>
@@ -87,7 +87,7 @@
                 <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
-                <div data-bind="compose: $data"></div>
+                <div data-bind="compose: { model: $data }"></div>
                 <div class="text-right">
                     <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                         <i class="icon-rocket"></i>
@@ -123,7 +123,7 @@
                 <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
-                <div data-bind="compose: $data"></div>
+                <div data-bind="compose: { model: $data }"></div>
                 <div class="text-right">
                     <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                         <i class="icon-rocket"></i>
@@ -159,7 +159,7 @@
                 <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
-                <div data-bind="compose: $data"></div>
+                <div data-bind="compose: { model: $data }"></div>
                 <div class="text-right">
                     <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                         <i class="icon-rocket"></i>
@@ -195,7 +195,7 @@
                 <div data-bind="compose: $root.backupConfigurationView"></div>
             </div>
             <div data-bind="collapse: !hasConfigurationScript()">
-                <div data-bind="compose: $data"></div>
+                <div data-bind="compose: { model: $data }"></div>
                 <div class="text-right">
                     <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                         <i class="icon-rocket"></i>

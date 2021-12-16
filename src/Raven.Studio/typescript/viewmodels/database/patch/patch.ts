@@ -178,10 +178,6 @@ class patch extends viewModelBase {
     }
 
     private initValidation() {
-        this.patchSaveName.extend({
-            required: true
-        });
-        
         this.saveValidationGroup = ko.validatedObservable({
             patchSaveName: this.patchSaveName
         });
