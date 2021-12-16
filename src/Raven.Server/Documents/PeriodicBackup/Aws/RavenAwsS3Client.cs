@@ -288,12 +288,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public void TestConnection()
-        {
-            AsyncHelpers.RunSync(TestConnectionAsync);
-        }
-
-        private async Task TestConnectionAsync()
+        public async Task TestConnectionAsync()
         {
             await AssertBucketLocationAsync();
 

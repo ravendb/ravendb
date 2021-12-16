@@ -176,12 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }, _cancellationToken);
         }
 
-        public void TestConnection()
-        {
-            AsyncHelpers.RunSync(TestConnectionAsync);
-        }
-
-        private async Task TestConnectionAsync()
+        public async Task TestConnectionAsync()
         {
             try
             {
