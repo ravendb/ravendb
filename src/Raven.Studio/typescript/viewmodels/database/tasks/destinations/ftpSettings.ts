@@ -6,6 +6,8 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class ftpSettings extends backupSettings {
+    view = require("views/database/tasks/destinations/ftpSettings.html");
+    
     url = ko.observable<string>();
     port = ko.observable<number>();
     userName = ko.observable<string>();

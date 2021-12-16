@@ -5,6 +5,9 @@ import genUtils = require("common/generalUtils");
 type container =  "backup" | "connectionString";
 
 class localSettings extends backupSettings {
+
+    view: string = null;
+    
     folderPath = ko.observable<string>();
     folderPathHasFocus = ko.observable<boolean>(false);
     

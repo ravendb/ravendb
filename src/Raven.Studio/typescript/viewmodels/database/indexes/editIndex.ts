@@ -812,7 +812,7 @@ class editIndex extends viewModelBase {
                 }
             });
 
-            dialog.show(deleteViewModel);
+            app.showBootstrapDialog(deleteViewModel);
         }
     }
 

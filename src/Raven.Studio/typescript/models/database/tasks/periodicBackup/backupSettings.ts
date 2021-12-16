@@ -3,6 +3,17 @@
 import generalUtils = require("common/generalUtils");
 
 abstract class backupSettings {
+
+    get __moduleId__() {
+        return "backupSettings/" + this.constructor.name;
+    }
+    
+    abstract view: string;
+    
+    getView() {
+        return this.view;
+    }
+    
     enabled = ko.observable<boolean>();
 
     connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupConnectionType;

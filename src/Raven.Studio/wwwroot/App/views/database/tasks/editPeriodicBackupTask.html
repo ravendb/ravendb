@@ -118,7 +118,7 @@
                         <div data-bind="validationElement: incrementalBackupEnabled">
                             <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
                         </div>
-                        <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
+                        <div data-bind="compose: { model: $root.incrementalBackupCronEditor }, visible: incrementalBackupEnabled"></div>
                     </div>
                 </div>
             </div>

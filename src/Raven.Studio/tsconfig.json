@@ -61,6 +61,7 @@
   },
   "exclude": [
     "node_modules",
-    "wwwroot"
+    "wwwroot",
+    "aceBuild"
   ]
 }
