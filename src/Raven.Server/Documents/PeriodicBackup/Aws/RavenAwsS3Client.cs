@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private AmazonS3Client _client;
         private readonly string _bucketName;
-
+        private readonly bool _usingCustomServerUrl;
         public readonly string RemoteFolderName;
 
         public readonly string Region;
@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
             else
             {
+                _usingCustomServerUrl = true;
                 config.UseHttp = true;
                 config.ForcePathStyle = s3Settings.ForcePathStyle;
                 config.ServiceURL = s3Settings.CustomServerUrl;
@@ -326,12 +327,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             var bucketLocationResponse = await _client.GetBucketLocationAsync(_bucketName, _cancellationToken);
             var bucketLocation = bucketLocationResponse.Location.Value;
-            if (string.IsNullOrEmpty(bucketLocation))
-                bucketLocation = "us-east-1";
+            if (_usingCustomServerUrl == false && string.IsNullOrEmpty(bucketLocation))
+                bucketLocation = "us-east-1"; // relevant only for AWS
 
             if (bucketLocation.Equals(Region, StringComparison.OrdinalIgnoreCase) == false)
             {
-                throw new InvalidOperationException($"AWS location is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
+                throw new InvalidOperationException($"Region is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
             }
         }
 
