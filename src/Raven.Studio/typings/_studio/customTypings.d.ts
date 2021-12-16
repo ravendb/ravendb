@@ -211,7 +211,7 @@ interface DurandalRouteConfiguration {
     dynamicHash?: KnockoutObservable<string> | (() => string);
     tabName?: string;
     requiredAccess?: accessLevel;
-    moduleId: Function | string;
+    moduleId: Function;
 }
 
 declare module AceAjax {

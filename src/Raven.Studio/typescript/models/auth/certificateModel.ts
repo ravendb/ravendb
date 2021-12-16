@@ -85,7 +85,7 @@ class certificateModel {
                 return null;
             }
 
-            return moment.utc().add(validPeriod, this.validityPeriodUnitsLabel() as any).format(); //TODO:
+            return moment.utc().add(validPeriod, this.validityPeriodUnitsLabel() as any).format();
         });
         
         this.validityPeriodUnitsLabel = ko.pureComputed(
