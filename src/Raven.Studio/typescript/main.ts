@@ -33,8 +33,6 @@ ko.DirtyFlag = DirtyFlag;
 
 system.debug(!(window as any).ravenStudioRelease);
 
-//TODO:  dialog.MessageBox.setViewUrl("views/dialog.html"); //TODO:
-
 app.title = "Raven.Studio";
 
 const router = require('plugins/router');

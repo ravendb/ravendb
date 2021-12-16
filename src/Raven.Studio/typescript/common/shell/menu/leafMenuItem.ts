@@ -7,7 +7,7 @@ class leafMenuItem implements menuItem {
     tooltip: string;
     nav: boolean | KnockoutObservable<boolean>;
     route: string | Array<string>;
-    moduleId: Function | string;
+    moduleId: Function;
     hash: string;
     dynamicHash: dynamicHashType;
     css: string;
