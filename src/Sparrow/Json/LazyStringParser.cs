@@ -407,6 +407,7 @@ namespace Sparrow.Json
                         goto Failed;
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
+                    fractions *= 10000;
                     goto Finished_DT;
                 case 28://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
                     if (buffer[27] != 'Z')
@@ -518,6 +519,7 @@ namespace Sparrow.Json
                         goto Failed;
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
+                    fractions *= 10000;
                     goto Finished_DT;
                 case 28://"yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff'Z'"
                     if (buffer[27] != 'Z')
