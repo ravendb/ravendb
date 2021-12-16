@@ -458,11 +458,18 @@ namespace SlowTests.Rolling
                 await CreateData(store);
 
                 var count = 0L;
+                var info = "";
                 foreach (var server in Servers)
                 {
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     var indexStore = database.IndexStore;
-                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = _ => Interlocked.Increment(ref count);
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexFinished = index =>
+                    {
+                        Interlocked.Increment(ref count);
+                        info += $"Server : Count = {count}. {index.DocumentDatabase.ServerStore.NodeTag}, " +
+                                $"{index.Name}/{index.Definition.Name}, " +
+                                $"{index._indexingThread.Name} - {index._indexingThread.ManagedThreadId} . \n";
+                    };
                 }
 
                 await store.ExecuteIndexAsync(new MyErrorRollingIndex());
@@ -474,6 +481,10 @@ namespace SlowTests.Rolling
                 // let's try to fix it
                 await store.ExecuteIndexAsync(new MyRollingIndex());
 
+                var res = WaitForValue(() => count, 3);
+
+                Assert.True(res == 3 , info);
+                Console.WriteLine(info);
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
 
                 await VerifyHistory(cluster, store);
