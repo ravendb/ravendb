@@ -1953,7 +1953,7 @@ namespace Raven.Server.Documents.Indexes
             foreach (var index in _indexes)
             {
                 var current = indexCleanupMode;
-                if (index.NoQueryInLast10Minutes())
+                if (index.NoQueryRecently())
                     current |= IndexCleanup.Readers;
 
                 index.Cleanup(current);
