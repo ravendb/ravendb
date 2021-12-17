@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -18,17 +19,23 @@ namespace Raven.Client.Documents.Commands.MultiGet
         private readonly RequestExecutor _requestExecutor;
         private readonly HttpCache _httpCache;
         private readonly List<GetRequest> _commands;
+        private readonly SessionInfo _sessionInfo;
 
         private string _baseUrl;
         private Cached _cached;
 
         internal bool AggressivelyCached;
 
-        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
+        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)  :this(requestExecutor, commands, null)
+        {
+            
+        }
+        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands, SessionInfo sessionInfo)
         {
             _requestExecutor = requestExecutor ?? throw new ArgumentNullException(nameof(requestExecutor));
             _httpCache = _requestExecutor.Cache ?? throw new ArgumentNullException(nameof(_requestExecutor.Cache));
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
+            _sessionInfo = sessionInfo;
             ResponseType = RavenCommandResponseType.Raw;
         }
 
@@ -37,7 +44,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
             _baseUrl = $"{node.Url}/databases/{node.Database}";
             url = $"{_baseUrl}/multi_get";
 
-            if (MaybeReadAllFromCache(ctx, _requestExecutor.AggressiveCaching.Value))
+            if (_sessionInfo?.NoCaching != true &&
+                MaybeReadAllFromCache(ctx, _requestExecutor.AggressiveCaching.Value))
             {
                 AggressivelyCached = true;
                 return null;// aggressively cached
