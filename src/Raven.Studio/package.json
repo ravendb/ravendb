@@ -2,7 +2,9 @@
   "version": "1.0.0",
   "name": "Raven.Studio",
   "scripts": {
-    "gulp": "gulp"
+    "gulp": "gulp",
+    "compile": "npm run gulp compile",
+    "restore": "npm run gulp restore"
   },
   "private": true,
   "devDependencies": {
