@@ -26,11 +26,13 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         internal bool AggressivelyCached;
 
-        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)  :this(requestExecutor, commands, null)
+        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
+            : this(requestExecutor, commands, null)
         {
-            
+
         }
-        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands, SessionInfo sessionInfo)
+
+        internal MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands, SessionInfo sessionInfo)
         {
             _requestExecutor = requestExecutor ?? throw new ArgumentNullException(nameof(requestExecutor));
             _httpCache = _requestExecutor.Cache ?? throw new ArgumentNullException(nameof(_requestExecutor.Cache));
@@ -44,7 +46,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             _baseUrl = $"{node.Url}/databases/{node.Database}";
             url = $"{_baseUrl}/multi_get";
 
-            if (_sessionInfo?.NoCaching != true &&
+            if ((_sessionInfo == null || _sessionInfo.NoCaching == false) &&
                 MaybeReadAllFromCache(ctx, _requestExecutor.AggressiveCaching.Value))
             {
                 AggressivelyCached = true;
@@ -353,7 +355,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             {
                 _size = size;
                 Values = ArrayPool<(HttpCache.ReleaseCacheItem, BlittableJsonReaderObject)>.Shared.Rent(size);
-    }
+            }
 
             public void Dispose()
             {
