@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 if (bucketLocation.Equals(Region, StringComparison.OrdinalIgnoreCase) == false)
                 {
-                    throw new InvalidOperationException($"Region is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
+                    throw new InvalidOperationException($"AWS location is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
                 }
             }
         }

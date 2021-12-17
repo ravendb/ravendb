@@ -300,7 +300,7 @@ namespace Raven.Server.Web.Studio
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
                             using (var azureClient = RavenAzureClient.Create(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await azureClient.TestConnection();
+                                await azureClient.TestConnectionAsync();
                             }
                             break;
                         case PeriodicBackupConnectionType.GoogleCloud:

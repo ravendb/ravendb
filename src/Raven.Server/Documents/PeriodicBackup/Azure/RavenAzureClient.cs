@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Task<RavenStorageClient.ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, string continuationToken = null);
         Task<RavenStorageClient.Blob> GetBlobAsync(string blobName);
         void DeleteBlobs(List<string> blobsToDelete);
-        Task TestConnection();
+        Task TestConnectionAsync();
         string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata)
         {
-            AsyncHelpers.RunSync(TestConnection);
+            AsyncHelpers.RunSync(TestConnectionAsync);
 
             var streamSize = new Size(stream.Length, SizeUnit.Bytes);
             if (streamSize > TotalBlocksSizeLimit)
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public async Task TestConnection()
+        public async Task TestConnectionAsync()
         {
             try
             {
