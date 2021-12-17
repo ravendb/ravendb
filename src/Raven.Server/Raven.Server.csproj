@@ -116,8 +116,8 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.97" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.4.4" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.107" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.7.3" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
     <PackageReference Include="CsvHelper" Version="15.0.10" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
@@ -153,7 +153,7 @@
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
-    <PackageReference Include="System.Linq.Async" Version="5.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="5.1.0" />
     <PackageReference Include="System.Reflection.Metadata" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0" />
