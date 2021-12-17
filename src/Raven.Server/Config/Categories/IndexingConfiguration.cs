@@ -365,6 +365,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.SkipDatabaseIdValidationOnIndexOpening", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool SkipDatabaseIdValidationOnIndexOpening { get; set; }
 
+        [Description("Time since last query after which when cleanup is executed additional items will be released (e.g. readers).")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

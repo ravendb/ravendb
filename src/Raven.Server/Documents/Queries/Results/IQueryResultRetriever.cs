@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
 using Corax;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -7,7 +8,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public interface IQueryResultRetriever
     {
-        (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput);
+        (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
     }
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Queries.Results
         public IndexEntryReader CoraxEntry;
 
         public IState State;
-        
+
         public Lucene.Net.Documents.Document LuceneDocument;
 
         public string DocumentId;

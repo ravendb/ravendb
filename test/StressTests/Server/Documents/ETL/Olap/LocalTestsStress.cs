@@ -144,7 +144,8 @@ loadToOrders(partitionBy(key), o);
 
                 var secondBatchTime = DateTime.UtcNow;
                 var secondBatchTimeMinutes = secondBatchTime.Minute;
-                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0;
+                var oneMinuteApart = secondBatchTimeMinutes - firstBatchTimeMinutes == 1 || firstBatchTimeMinutes == 59 && secondBatchTimeMinutes == 0 || 
+                    (secondBatchTime - firstBatchTime).TotalSeconds >= 59;
                 
                 Assert.True(oneMinuteApart, 
                     $"First batch time : {firstBatchTime}, second batch time : {secondBatchTime}. Files : {string.Join(", ", Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories))}");

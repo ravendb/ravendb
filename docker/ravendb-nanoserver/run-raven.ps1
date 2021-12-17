@@ -2,7 +2,9 @@ $ErrorActionPreference = 'Stop'
 
 $COMMAND=".\Raven.Server.exe"
 $hostname = & "hostname.exe"
-$env:RAVEN_ServerUrl = "http://$($hostname):8080"
+if ([string]::IsNullOrEmpty($env:RAVEN_ServerUrl) -eq $True) {
+    $env:RAVEN_ServerUrl = "http://$($hostname):8080"
+}
 
 if ([string]::IsNullOrEmpty($env:RAVEN_SETTINGS) -eq $False) {
     Set-Content -Path "settings.json" -Value "$env:RAVEN_SETTINGS"

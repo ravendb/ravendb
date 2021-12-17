@@ -9,7 +9,7 @@ class ioStats extends viewModelBase {
         super();
         
         this.graph = new ioStatsGraph(
-            () => this.activeDatabase().name,
+            () => `database-${this.activeDatabase().name}`,
             ["Documents", "Index", "Configuration"],
             true,
             (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.activeDatabase(), onUpdate, cutOff));

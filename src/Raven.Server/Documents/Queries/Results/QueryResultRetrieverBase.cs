@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax;
 using Jint.Native;
 using Jint.Native.Object;
@@ -110,7 +111,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public abstract (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput);
+        public abstract (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
@@ -122,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected abstract DynamicJsonValue GetCounterRaw(string docId, string name);
 
-        protected (Document Document, List<Document> List) GetProjection(ref RetrieverInput retrieverInput, string lowerId)
+        protected (Document Document, List<Document> List) GetProjection(ref RetrieverInput retrieverInput, string lowerId, CancellationToken token)
         {
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
@@ -143,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Results
                         return default;
                     }
 
-                    return GetProjectionFromDocumentInternal(doc, ref retrieverInput, FieldsToFetch, _context);
+                    return GetProjectionFromDocumentInternal(doc, ref retrieverInput, FieldsToFetch, _context, token);
                 }
 
                 var result = new DynamicJsonValue();
@@ -223,7 +224,7 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
 
-                    if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
+                    if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token))
                     {
                         if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
                         {
@@ -268,22 +269,22 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        public (Document Document, List<Document> List) GetProjectionFromDocument(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
             {
-                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, fieldsToFetch, context);
+                return GetProjectionFromDocumentInternal(doc, ref retrieverInput, fieldsToFetch, context, token);
             }
         }
 
-        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        private (Document Document, List<Document> List) GetProjectionFromDocumentInternal(Document doc, ref RetrieverInput retrieverInput, FieldsToFetch fieldsToFetch, JsonOperationContext context, CancellationToken token)
         {
             var result = new DynamicJsonValue();
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, ref retrieverInput, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false)
+                if (TryGetValue(fieldToFetch, doc, ref retrieverInput, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token) == false)
                 {
                     if (FieldsToFetch.Projection.MustExtractFromDocument)
                     {
@@ -616,7 +617,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value)
+        protected bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, ref RetrieverInput retrieverInput, Dictionary<string, IndexField> indexFields, bool? anyDynamicIndexFields, out string key, out object value, CancellationToken token)
         {
             key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
@@ -631,13 +632,13 @@ namespace Raven.Server.Documents.Queries.Results
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
 
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, ref retrieverInput, indexFields, anyDynamicIndexFields, out _, out args[i], token);
                     if (ReferenceEquals(args[i], document))
                     {
                         args[i] = Tuple.Create(document, retrieverInput.LuceneDocument, retrieverInput.State, indexFields, anyDynamicIndexFields, FieldsToFetch.Projection);
                     }
                 }
-                value = GetFunctionValue(fieldToFetch, document.Id, args);
+                value = GetFunctionValue(fieldToFetch, document.Id, args, token);
                 return true;
             }
 
@@ -849,7 +850,7 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
-        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args)
+        protected object GetFunctionValue(FieldsToFetch.FieldToFetch fieldToFetch, string documentId, object[] args, CancellationToken token)
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
@@ -859,7 +860,8 @@ namespace Raven.Server.Documents.Queries.Results
                     _query.Metadata.Query,
                     documentId,
                     args,
-                    _functionScope);
+                    _functionScope,
+                    token);
 
                 return value;
             }
@@ -933,11 +935,11 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings)
+        private object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings, CancellationToken token)
         {
             if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments, token);
                 var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
                 if (_query.IsStream)
                     return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);

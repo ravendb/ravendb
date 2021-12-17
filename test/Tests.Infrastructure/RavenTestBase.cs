@@ -308,7 +308,14 @@ namespace FastTests
                     }
                     else if (pathToUse == null)
                     {
-                        pathToUse = NewDataPath(name);
+                        if (options.ReplicationFactor > 1)
+                        {
+                            // the folders will be assigned automatically - when running in cluster it's better to put files in directories under dedicated server / node dir
+                        }
+                        else
+                        {
+                            pathToUse = NewDataPath(name);
+                        }
                     }
                     else
                     {

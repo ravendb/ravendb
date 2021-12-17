@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.13</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Tryouts</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -94,7 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />
-    <PackageReference Include="CsvHelper" Version="27.1.1" />
+    <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="Lucene.Net" Version="4.8.0-beta00014" />
     <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00014" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />

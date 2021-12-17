@@ -9,9 +9,11 @@ using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
@@ -22,7 +24,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         Task<RavenStorageClient.ListBlobResult> ListBlobsAsync(string prefix, string delimiter, bool listFolders, string continuationToken = null);
         Task<RavenStorageClient.Blob> GetBlobAsync(string blobName);
         void DeleteBlobs(List<string> blobsToDelete);
-        void TestConnection();
+        Task TestConnectionAsync();
         string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
@@ -93,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata)
         {
-            TestConnection();
+            AsyncHelpers.RunSync(TestConnectionAsync);
 
             var streamSize = new Size(stream.Length, SizeUnit.Bytes);
             if (streamSize > TotalBlocksSizeLimit)
@@ -182,11 +184,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        public void TestConnection()
+        public async Task TestConnectionAsync()
         {
             try
             {
-                if (_client.Exists(cancellationToken: _cancellationToken) == false)
+                if (await _client.ExistsAsync(cancellationToken: _cancellationToken) == false)
                     throw new ContainerNotFoundException($"Container '{_storageContainer}' wasn't found!");
             }
             catch (UnauthorizedAccessException)

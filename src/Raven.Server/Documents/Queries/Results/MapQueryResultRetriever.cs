@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput)
+        public override (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token)
         {
 
             using (RetrieverScope?.Start())
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 if (FieldsToFetch.IsProjection)
-                    return GetProjection(ref retrieverInput, id);
+                    return GetProjection(ref retrieverInput, id, token);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {

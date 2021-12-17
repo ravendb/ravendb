@@ -645,7 +645,8 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
                     
-                    if (subscriptionState.LastClientConnectionTime == null)
+                    if (subscriptionState.LastClientConnectionTime == null && 
+                        subscriptionState.ChangeVectorForNextBatchStartingPoint != subscriptionConnectionsState.LastChangeVectorSent)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} was modified, connection must be restarted", canReconnect: true));
                         continue;

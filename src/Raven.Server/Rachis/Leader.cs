@@ -467,9 +467,15 @@ namespace Raven.Server.Rachis
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
-                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
+                var sp = Stopwatch.StartNew();
+                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
 
                 context.Transaction.Commit();
+
+                var elapsed = sp.Elapsed;
+                if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
+                    Console.WriteLine($"Commiting from {_lastCommit} to {maxIndexOnQuorum} took {elapsed}");
+
                 _lastCommit = maxIndexOnQuorum;
             }
 

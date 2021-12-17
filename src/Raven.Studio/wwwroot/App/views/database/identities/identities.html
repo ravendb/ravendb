@@ -47,11 +47,9 @@
                         <div class="form-group margin-top margin-top-lg" data-bind="if: validationGroup.isValid()">
                             <label class="control-label">&nbsp;</label>
                             <div class="flex-vertical flex-grow">
-                                <div>
-                                    <div class="text-info bg-info padding padding-sm">
-                                        <i class="icon-info"></i>
-                                        <span data-bind="html: nextDocumentText"></span>
-                                    </div>
+                                <div class="text-info bg-info padding padding-sm flex-horizontal">
+                                    <div class="flex-start"><i class="icon-info"></i></div>
+                                    <div data-bind="html: nextDocumentText"></div>
                                 </div>
                                 <div class="margin-top" data-bind="if: warnAboutSmallerValue">
                                     <div class="text-warning bg-warning padding padding-xs">

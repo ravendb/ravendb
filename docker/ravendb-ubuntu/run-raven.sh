@@ -1,6 +1,6 @@
 #!/bin/bash
 COMMAND="./Raven.Server"
-export RAVEN_ServerUrl="http://$(hostname):8080"
+[ -z "$RAVEN_ServerUrl" ] && export RAVEN_ServerUrl="http://$(hostname):8080"
 
 if [ ! -z "$RAVEN_SETTINGS" ]; then
     echo "$RAVEN_SETTINGS" > settings.json

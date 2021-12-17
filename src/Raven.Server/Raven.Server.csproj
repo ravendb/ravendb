@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion>5.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.13</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -134,10 +134,10 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.97" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.4.4" />
+    <PackageReference Include="AWSSDK.Glacier" Version="3.7.0.107" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.7.3" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.10.0" />
-    <PackageReference Include="CsvHelper" Version="27.1.1" />
+    <PackageReference Include="CsvHelper" Version="27.2.1" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2021.3.0">
       <PrivateAssets>All</PrivateAssets>
@@ -164,7 +164,7 @@
     <PackageReference Include="NuGet.Resolver" Version="5.11.0" />
     <PackageReference Include="NuGet.PackageManagement" Version="5.11.0" />
     <PackageReference Include="NuGet.Protocol" Version="5.11.0" />
-    <PackageReference Include="NEST" Version="7.15.2" />
+    <PackageReference Include="NEST" Version="7.16.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.4" />
     <PackageReference Include="Parquet.Net" Version="3.9.1" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
@@ -173,7 +173,7 @@
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.3" />
-    <PackageReference Include="System.Linq.Async" Version="5.0.0" />
+    <PackageReference Include="System.Linq.Async" Version="5.1.0" />
     <PackageReference Include="System.Reflection.Metadata" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0" />
