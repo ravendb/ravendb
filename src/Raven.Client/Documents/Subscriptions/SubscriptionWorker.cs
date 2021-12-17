@@ -703,7 +703,7 @@ namespace Raven.Client.Documents.Subscriptions
                         }
                         if (ShouldTryToReconnect(ex))
                         {
-                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry, _processingCts.Token).ConfigureAwait(false);
 
                             if (_redirectNode == null)
                             {

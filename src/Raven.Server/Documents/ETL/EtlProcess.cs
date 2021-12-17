@@ -312,6 +312,14 @@ namespace Raven.Server.Documents.ETL
 
                     stats.RecordLastExtractedEtag(item.Etag, item.Type);
 
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                    if (CanContinueBatch(stats, item, batchSize, context) == false)
+                    {
+                        batchStopped = true;
+                        break;
+                    }
+
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -333,16 +341,8 @@ namespace Raven.Server.Documents.ETL
 
                     using (stats.For(EtlOperations.Transform))
                     {
-                        CancellationToken.ThrowIfCancellationRequested();
-
                         try
                         {
-                            if (CanContinueBatch(stats, item, batchSize, context) == false)
-                            {
-                                batchStopped = true;
-                                break;
-                            }
-
                             transformer.Transform(item, stats, state);
 
                             Statistics.TransformationSuccess();
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.ETL
                 if (stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
                     stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
                 {
-                    var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value}"))})";
+                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value:#,#;;0}"))})";
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
