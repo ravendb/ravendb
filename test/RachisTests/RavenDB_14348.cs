@@ -16,6 +16,7 @@ namespace RachisTests
         [Fact]
         public async Task ShouldWork()
         {
+            DoNotReuseServer();
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var store = GetDocumentStore())
             {

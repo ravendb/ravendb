@@ -1246,7 +1246,9 @@ class ongoingTasksStats extends viewModelBase {
                 context.save();
 
                 // Draw perf items
+                if (perfWithCache.Details) {
                 this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache, trackName);
+                }
 
                 // Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
@@ -1259,7 +1261,7 @@ class ongoingTasksStats extends viewModelBase {
                 // Save to compare with the start time of the next item...
                 perfCompleted = perf.Completed;
 
-                if (!perf.Completed) {
+                if (!perf.Completed && perf.Details) {
                     this.findInProgressAction([perf.Details], extentFunc, x1, stripesYStart, yOffset);
                 }
             }
@@ -1585,12 +1587,16 @@ class ongoingTasksStats extends viewModelBase {
     
     private getTaskTypeDescription(type: ongoingTaskStatType): string {
         switch (type) {
-            case "IncomingPush":
+            case "IncomingExternal":
                 return "Incoming External Replication";
+            case "IncomingInternal":
+                return "Incoming Internal Replication";
             case "IncomingPull":
                 return "Incoming Pull Replication";
-            case "OutgoingPush":
+            case "OutgoingExternal":
                 return "Outgoing External Replication";
+            case "OutgoingInternal":
+                return "Outgoing Internal Replication";
             case "OutgoingPull":
                 return "Outgoing Pull Replication";
             case "Raven":
@@ -1879,7 +1885,8 @@ class ongoingTasksStats extends viewModelBase {
 
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
-            const isReplication = type === "OutgoingPull" || type === "OutgoingPush" || type === "IncomingPull" || type === "IncomingPush";
+            const isReplication = type === "OutgoingPull" || type === "OutgoingExternal" || type === "OutgoingInternal" ||
+                                  type === "IncomingPull" || type === "IncomingExternal" || type === "IncomingInternal";
             const isEtl = type === "Raven" || type === "Sql" || type === "Olap" || type === "ElasticSearch";
             const isSubscription = type === "SubscriptionConnection" || type === "SubscriptionBatch" || type === "AggregatedBatchesInfo";
             const isRootItem = context.rootStats.Details === context.item;
@@ -1894,17 +1901,19 @@ class ongoingTasksStats extends viewModelBase {
             
             if (isRootItem) {
                 switch (type) {
-                    case "IncomingPush":
+                    case "IncomingExternal":
+                    case "IncomingInternal":
                     case "IncomingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `<div class="tooltip-li">Received last Etag: <div class="value">${elementWithData.ReceivedLastEtag} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Network input count: <div class="value">${elementWithData.Network.InputCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Documents read count: <div class="value">${elementWithData.Network.DocumentReadCount.toLocaleString()} </div></div>`;
                         tooltipHtml += `<div class="tooltip-li">Attachments read count: <div class="value">${elementWithData.Network.AttachmentReadCount.toLocaleString()} </div></div>`;
-                        tooltipHtml += `Counters read count: ${elementWithData.Network.CounterReadCount}<br/>`;
+                        tooltipHtml += `<div class="tooltip-li">Counters read count: <div class="value">${elementWithData.Network.CounterReadCount.toLocaleString()} </div></div>`;
                     }
                         break;
-                    case "OutgoingPush":
+                    case "OutgoingExternal":
+                    case "OutgoingInternal":
                     case "OutgoingPull": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
                         tooltipHtml += `<div class="tooltip-li">Sent last Etag: <div class="value">${elementWithData.SendLastEtag}</div></div>`;

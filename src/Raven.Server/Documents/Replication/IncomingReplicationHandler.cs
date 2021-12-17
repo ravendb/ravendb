@@ -80,11 +80,14 @@ namespace Raven.Server.Documents.Replication
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
+            ReplicationLatestEtagRequest.ReplicationType replicationType,
             ReplicationLoader.PullReplicationParams pullReplicationParams = null)
         {
             if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
@@ -104,6 +107,8 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
+
+            ReplicationType = replicationType;
 
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
@@ -887,6 +892,13 @@ namespace Raven.Server.Documents.Replication
 
             while (_lastReplicationStats.Count > 25)
                 _lastReplicationStats.TryDequeue(out stats);
+        }
+
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
         }
 
         public bool IsDisposed => _disposeOnce.Disposed;

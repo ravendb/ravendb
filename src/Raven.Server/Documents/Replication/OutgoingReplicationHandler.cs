@@ -80,7 +80,8 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
         public readonly ReplicationNode Destination;
-        private readonly bool _external;
+
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
@@ -104,7 +105,7 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges = new AsyncManualResetEvent(_database.DatabaseShutdown);
 
             Destination = node;
-            _external = external;
+            ReplicationType = external ? ReplicationLatestEtagRequest.ReplicationType.External : ReplicationLatestEtagRequest.ReplicationType.Internal;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
                                     new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
@@ -143,6 +144,13 @@ namespace Raven.Server.Documents.Replication
             return _lastReplicationStats
                 .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
                 .ToArray();
+        }
+
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal;
         }
 
         public OutgoingReplicationStatsAggregator GetLatestReplicationPerformance()
@@ -284,7 +292,7 @@ namespace Raven.Server.Documents.Replication
         {
             var request = new DynamicJsonValue
             {
-                ["Type"] = nameof(ReplicationInitialRequest),
+                ["Type"] = nameof(ReplicationInitialRequest)
             };
 
             if (Destination is PullReplicationAsSink destination)
@@ -571,7 +579,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
                 [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(),
                 [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
-                [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName
+                [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
+                [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = ReplicationType
             };
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
@@ -620,7 +629,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} " +
                           "on the other end. ";
-                if (_external)
+                if (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External)
                     msg += "In order for the replication to work, a database with the same name needs to be created at the destination";
 
                 var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
@@ -687,7 +696,7 @@ namespace Raven.Server.Documents.Replication
                 OccurredAt = SystemTime.UtcNow,
                 Direction = direction,
                 To = Destination,
-                IsExternal = _external,
+                IsExternal = ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External,
                 ExceptionMessage = exceptionMessage
             });
         }
@@ -959,7 +968,7 @@ namespace Raven.Server.Documents.Replication
             _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
-            if (_external == false)
+            if (ReplicationType != ReplicationLatestEtagRequest.ReplicationType.External)
             {
                 var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
                 if (update.InitAndValidate(_lastDestinationEtag))

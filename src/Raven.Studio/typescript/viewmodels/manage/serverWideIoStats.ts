@@ -9,7 +9,7 @@ class serverWideIoStats extends viewModelBase {
         super();
         
         this.graph = new ioStatsGraph(
-            () => this.activeDatabase().name,
+            () => "Server",
             ["System"],
             false,
             (onUpdate, cutOff) => new serverWideLiveIOStatsWebSocketClient(onUpdate, cutOff));

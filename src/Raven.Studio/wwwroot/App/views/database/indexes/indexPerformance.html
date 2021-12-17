@@ -116,7 +116,7 @@
                 </div>
             </section>
         </div>
-        <div class="results-error" data-bind="visible: !isConnectedToWebSocket()">
+        <div class="results-error" data-bind="visible: !isConnectedToWebSocket() && !isImport()">
             <div class="help-block bg-warning text-warning">
                 <span><i class="btn-spinner"></i><span class="margin-left">Trying to Connect</span></span>
             </div>

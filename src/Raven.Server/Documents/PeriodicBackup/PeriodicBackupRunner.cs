@@ -776,7 +776,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 default:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
-                    periodicBackup.DisableFutureBackups(cancelRunningBackup: true);
+                    periodicBackup.DisableFutureBackups();
                     break;
             }
 
@@ -899,6 +899,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         taskState = TaskStatus.Disabled;
                     }
+                    else if (_forTestingPurposes.SimulateActiveByCurrentNode_UpdateConfigurations)
+                    {
+                        taskState = TaskStatus.ActiveByCurrentNode;
+                    }
                 }
 
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
@@ -953,17 +957,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             switch (taskState)
             {
                 case TaskStatus.Disabled:
-                    existingBackupState.DisableFutureBackups(cancelRunningBackup: true);
+                    existingBackupState.DisableFutureBackups();
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
 
                     return;
                 case TaskStatus.ActiveByOtherNode:
                     // the task is disabled or this node isn't responsible for the backup task
-                    existingBackupState.DisableFutureBackups(cancelRunningBackup: false);
-
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the timer for it.");
+                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
 
                     return;
 
@@ -979,7 +981,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (existingBackupState.RunningTask != null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed.");
+                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
 
                         return;
                     }
@@ -1263,6 +1265,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             internal bool ClusterDownStatusSimulated;
             internal bool SimulateActiveByOtherNodeStatus_Reschedule;
             internal bool SimulateActiveByOtherNodeStatus_UpdateConfigurations;
+            internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
             internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
 
