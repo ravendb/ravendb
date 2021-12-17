@@ -2868,6 +2868,46 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_restore_smuggler_with_escaped_quotes()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            const string docId = "\"users/1\"";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, docId);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(docId);
+                    await session.SaveChangesAsync();
+                }
+
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
+                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+            }
+
+            using (var store = GetDocumentStore())
+            {
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
+
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), backupDirectory);
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>(docId);
+                    Assert.Null(user);
+                }
+            }
+        }
+
         private static string GetBackupPath(IDocumentStore store, long backTaskId, bool incremental = true)
         {
             var status = store.Maintenance.Send(new GetPeriodicBackupStatusOperation(backTaskId)).Status;

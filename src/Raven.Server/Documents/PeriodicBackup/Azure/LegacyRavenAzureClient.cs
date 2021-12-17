@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            TestConnection();
+            AsyncHelpers.RunSync(TestConnectionAsync);
 
             if (stream.Length > MaxUploadPutBlob.GetValue(SizeUnit.Bytes))
             {
@@ -318,11 +318,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw StorageException.FromResponseMessage(response);
         }
 
-        public void TestConnection()
+        public async Task TestConnectionAsync()
         {
             try
             {
-                if (ContainerExists() == false)
+                if (await ContainerExistsAsync() == false)
                     throw new ContainerNotFoundException($"Container '{_containerName}' wasn't found!");
             }
             catch (UnauthorizedAccessException)
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private bool ContainerExists()
+        private async Task<bool> ContainerExistsAsync()
         {
             var url = GetUrl(_serverUrlForContainer, "restype=container");
             var now = SystemTime.UtcNow;
@@ -347,7 +347,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var client = GetClient();
             SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
 
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
+            var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.IsSuccessStatusCode)
                 return true;
 
