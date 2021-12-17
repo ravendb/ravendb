@@ -28,6 +28,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -94,6 +95,7 @@ namespace FastTests
         {
             IgnoreProcessorAffinityChanges(ignore: true);
             LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
+            RachisStateMachine.EnableDebugLongCommit = true;
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'.Only default projection behavior can be used for graph queries.", _query.Query, _query.QueryParameters);
         }
 
-        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
+        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state, CancellationToken token)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Graph Queries do not deal with Counters.");
         }
 
-        internal Document ProjectFromMatch(Match match, JsonOperationContext context)
+        internal Document ProjectFromMatch(Match match, JsonOperationContext context, CancellationToken token)
         {
             var result = new DynamicJsonValue();
             result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
@@ -122,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Results
                     }
 
                     key = fieldToFetch.ProjectedName ?? (fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value);
-                    fieldVal = GetFunctionValue(fieldToFetch, null, args);
+                    fieldVal = GetFunctionValue(fieldToFetch, null, args, token);
 
                     var immediateResult = AddProjectionToResult(item, OneScore, FieldsToFetch, result, key, fieldVal);
                     if (immediateResult.Document != null)
@@ -136,7 +137,7 @@ namespace Raven.Server.Documents.Queries.Results
                     {
                         case Document d:
                             {
-                                if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, d, null, null, null, null, out key, out fieldVal, token) == false)
                                     continue;
                                 d.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(d, OneScore, FieldsToFetch, result, key, fieldVal);
@@ -147,7 +148,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case BlittableJsonReaderObject bjro:
                             {
                                 var doc = new Document { Data = bjro };
-                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal, token) == false)
                                     continue;
                                 doc.EnsureMetadata();
                                 var immediateResult = AddProjectionToResult(doc, OneScore, FieldsToFetch, result, key, fieldVal);
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                                 var doc = new Document { Data = matchJson };
 
-                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal) == false)
+                                if (TryGetValue(fieldToFetch, doc, null, null, null, null, out key, out fieldVal, token) == false)
                                     continue;
                                 doc.EnsureMetadata();
                                 if (ReferenceEquals(doc, fieldVal))

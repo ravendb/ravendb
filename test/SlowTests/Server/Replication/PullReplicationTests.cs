@@ -207,6 +207,7 @@ namespace SlowTests.Server.Replication
                     main.Store(new User(), "users/1");
                     main.SaveChanges();
                 }
+
                 await SetupPullReplicationAsync(definitionName, sink, hub);
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
@@ -215,14 +216,12 @@ namespace SlowTests.Server.Replication
                     DelayReplicationFor = TimeSpan.FromDays(1),
                     TaskId = saveResult.TaskId
                 }));
-
                 using (var main = hub.OpenSession())
                 {
                     main.Store(new User(), "users/2");
                     main.SaveChanges();
                 }
                 Assert.False(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
-
                 var res= await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(definitionName)
                 {
                     TaskId = saveResult.TaskId
@@ -236,7 +235,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(hubResult.Definition.DelayReplicationFor, new TimeSpan());
                 Assert.Equal(hubResult.Definition.Disabled, false);
 
-                Assert.True(WaitForDocument(sink, "users/2", timeout), sink.Identifier);
+                Assert.True(WaitForDocument(sink, "users/2", timeout * 2));
             }
         }
 

@@ -30,6 +30,8 @@ namespace Voron.Impl.Journal
         private readonly List<EncryptionBuffer> _encryptionBuffers;
         private TransactionHeader* _firstValidTransactionHeader = null;
 
+        private long? _firstSkippedTx = null;
+        private long? _lastSkippedTx = null;
 
         public bool RequireHeaderUpdate { get; private set; }
 
@@ -247,6 +249,11 @@ namespace Voron.Impl.Journal
                 if (current->TransactionId > _journalInfo.LastSyncedTransactionId)
                     LastTransactionHeader = current;
             }
+
+            if (_firstSkippedTx == null)
+                _firstSkippedTx = current->TransactionId;
+            else
+                _lastSkippedTx = current->TransactionId;
         }
 
         private bool IsAlreadySyncTransaction(TransactionHeader* current)
@@ -504,13 +511,13 @@ namespace Voron.Impl.Journal
                         if (LastTransactionHeader != null)
                         {
                             throw new InvalidJournalException(
-                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}." +
+                                $"Transaction has valid(!) hash with invalid transaction id {current->TransactionId}, the last valid transaction id is {LastTransactionHeader->TransactionId}. Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}." +
                                 $" Journal file {_journalPager.FileName} might be corrupted. Debug details - file header {_currentFileHeader}", _journalInfo);
                         }
 
                         throw new InvalidJournalException(
-                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). Tx diff is: {txIdDiff}. " +
-                            $"Some journals are missing. Current journal file {_journalPager.FileName}. Debug details - file header {_currentFileHeader}", _journalInfo);
+                            $"The last synced transaction id was {_journalInfo.LastSyncedTransactionId} (in journal: {_journalInfo.LastSyncedJournal}) but the first transaction being read in the recovery process is {current->TransactionId} (transaction has valid hash). Tx diff is: {txIdDiff}{AddSkipTxInfoDetails()}. " +
+                            $"Some journals might be missing. Current journal file {_journalPager.FileName}. Debug details - file header {_currentFileHeader}", _journalInfo);
                     }
                 }
 
@@ -734,5 +741,18 @@ namespace Voron.Impl.Journal
         bool IPagerLevelTransactionState.IsWriteTransaction => true;
 
         public long NumberOfAllocated4Kb => _journalPagerNumberOfAllocated4Kb;
+
+        private string AddSkipTxInfoDetails()
+        {
+            var details = string.Empty;
+
+            if (_firstSkippedTx != null)
+                details += $"first skipped tx - {_firstSkippedTx}";
+
+            if (_lastSkippedTx != null)
+                details += $", last skipped tx - {_lastSkippedTx}";
+
+            return details != string.Empty ? $" ({details})" : string.Empty;
+        }
     }
 }
