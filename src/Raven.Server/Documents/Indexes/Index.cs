@@ -1693,7 +1693,7 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
 
                                 var mode = IndexCleanup.Basic;
-                                if (NoQueryInLast10Minutes())
+                                if (NoQueryRecently())
                                     mode |= IndexCleanup.Readers;
 
                                 ReduceMemoryUsage(storageEnvironment, mode);
@@ -2940,11 +2940,11 @@ namespace Raven.Server.Documents.Indexes
             return _lastQueryingTime;
         }
 
-        public bool NoQueryInLast10Minutes()
+        public bool NoQueryRecently()
         {
             var last = _lastQueryingTime;
             return last.HasValue == false ||
-                   DocumentDatabase.Time.GetUtcNow() - last.Value > TimeSpan.FromMinutes(10);
+                   DocumentDatabase.Time.GetUtcNow() - last.Value > Configuration.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted.AsTimeSpan;
         }
 
         private void MarkQueried(DateTime time)
