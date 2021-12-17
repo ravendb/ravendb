@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public void PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            AsyncHelpers.RunSync(TestConnection);
+            AsyncHelpers.RunSync(TestConnectionAsync);
 
             if (stream.Length > MaxUploadPutBlob.GetValue(SizeUnit.Bytes))
             {
@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             throw StorageException.FromResponseMessage(response);
         }
 
-        public async Task TestConnection()
+        public async Task TestConnectionAsync()
         {
             try
             {
