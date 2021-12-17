@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.CompactTrees;
@@ -45,6 +46,16 @@ namespace Corax.Queries
 
             term = TermMatch.CreateEmpty();
             return false;
+        }
+
+        public QueryInspectionNode Inspect()
+        {
+            return new QueryInspectionNode($"{nameof(ContainsTermProvider)}",
+                            parameters: new Dictionary<string, string>()
+                            {
+                                { "Field", _field },
+                                { "Suffix", _suffix.ToString()}
+                            });
         }
     }
 }
