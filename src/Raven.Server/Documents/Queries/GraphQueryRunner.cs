@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries
                             if (match.Empty)
                                 continue;
 
-                            var result = resultRetriever.ProjectFromMatch(match, queryContext.Documents);
+                            var result = resultRetriever.ProjectFromMatch(match, queryContext.Documents, token.Token);
                             // ReSharper disable once PossibleNullReferenceException
                             if (q.IsDistinct && alreadySeenProjections.Add(result.DataHash) == false)
                                 continue;

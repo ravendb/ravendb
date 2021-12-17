@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -31,13 +32,16 @@ namespace Raven.Server.Documents.Queries
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
         private readonly Reference<int> _totalResults;
+        private readonly CancellationToken _token;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
         private readonly QueryTimingsScope _queryTimings;
         private readonly bool _isAllDocsCollection;
 
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
-            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults)
+            IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
+            IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
+            CancellationToken token)
         {
             _database = database;
             _documents = documents;
@@ -52,6 +56,7 @@ namespace Raven.Server.Documents.Queries
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
             _totalResults = totalResults;
+            _token = token;
         }
 
         public string StartAfterId { get; set; }
@@ -64,7 +69,7 @@ namespace Raven.Server.Documents.Queries
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields, SkippedResults);
+            return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields, SkippedResults, _token);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -100,11 +105,13 @@ namespace Raven.Server.Documents.Queries
             private readonly MapQueryResultRetriever _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
+            private readonly CancellationToken _token;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
-                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, IncludeRevisionsCommand includeRevisionsCommand,
+                IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
+                IncludeRevisionsCommand includeRevisionsCommand,
                 IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
-                string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults)
+                string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;
                 _searchEngineType = searchEngineType;
@@ -119,6 +126,7 @@ namespace Raven.Server.Documents.Queries
                 _alreadySeenIdsCount = alreadySeenIdsCount;
                 _fields = fields;
                 _skippedResults = skippedResults;
+                _token = token;
 
                 if (_fieldsToFetch.IsDistinct)
                     _alreadySeenProjections = new HashSet<ulong>();
@@ -233,7 +241,7 @@ namespace Raven.Server.Documents.Queries
                 RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                 if (_fieldsToFetch.IsProjection)
                 {
-                    var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context);
+                    var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
                     if (result.List != null)
                     {
                         var it = result.List.GetEnumerator();
@@ -308,14 +316,14 @@ namespace Raven.Server.Documents.Queries
 
                             documents = _isAllDocsCollection
                                 ? _documents.GetDocuments(_context, ids, 0, _query.PageSize, _totalResults)
-                                : _documents.GetDocuments(_context, ids, _collection, 0, _query.PageSize, _totalResults);
+                                : _documents.GetDocumentsForCollection(_context, ids, _collection, 0, _query.PageSize, _totalResults);
                         }
                     }
                     else
                     {
                         documents = _isAllDocsCollection
                             ? _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults)
-                            : _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                            : _documents.GetDocumentsForCollection(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
                     }
                 }
                 else if (_isAllDocsCollection)
@@ -355,7 +363,7 @@ namespace Raven.Server.Documents.Queries
                         RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
                         if (_fieldsToFetch.IsProjection)
                         {
-                            var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context);
+                            var result = _resultsRetriever.GetProjectionFromDocument(document, ref retrieverInput, _fieldsToFetch, _context, _token);
                             if (result.Document != null)
                             {
                                 if (IsStartingPoint(result.Document))

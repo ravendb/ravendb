@@ -29,6 +29,7 @@ class cluster extends viewModelBase {
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;
     canBootstrapCluster: KnockoutComputed<boolean>;
+    canStepDown: KnockoutComputed<boolean>;
     
     leaderUrl: KnockoutComputed<string>;
     utilizedCores: KnockoutComputed<number>;
@@ -79,7 +80,8 @@ class cluster extends viewModelBase {
         this.canDeleteNodes = ko.pureComputed(() => this.topology().leader() && this.topology().nodes().length > 1);
         this.canAddNodes = ko.pureComputed(() => !!this.topology().leader() || this.topology().nodeTag() === "?");
         this.canBootstrapCluster = ko.pureComputed(() => this.topology().nodeTag() === "?");
-
+        this.canStepDown = ko.pureComputed(() => this.topology().membersCount() >= 2);
+        
         this.leaderUrl = ko.pureComputed(() => {
             const topology = this.topology();
 

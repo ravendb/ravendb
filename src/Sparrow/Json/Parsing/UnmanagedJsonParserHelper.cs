@@ -42,20 +42,21 @@ namespace Sparrow.Json.Parsing
 
         public static async Task<bool> ReadAsync(PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
         {
-            if (parser.Read())
-                return true;
-
-            var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
-            if (read == 0)
+            while (parser.Read() == false)
             {
-                if (state.CurrentTokenType != JsonParserToken.EndObject)
-                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+                var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
+                if (read == 0)
+                {
+                    if (state.CurrentTokenType != JsonParserToken.EndObject)
+                        throw new EndOfStreamException("Stream ended without reaching end of json content");
 
-                return false;
+                    return false;
+                }
+
+                parser.SetBuffer(buffer, 0, read);
             }
 
-            parser.SetBuffer(buffer, 0, read);
-            return parser.Read();
+            return true;
         }
 
         public static void ThrowInvalidJson(string msg, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser)

@@ -3,6 +3,8 @@
   "name": "Raven.Studio",
   "scripts": {
     "gulp": "gulp",
+    "compile": "npm run gulp compile",
+    "restore": "npm run gulp restore",
     "webpack-language-service": "webpack --config languageService/webpack.config.js",
     "webpack-language-service-watch": "webpack --config languageService/webpack.config.js --watch",
     "antlr4ts": "antlr4ts languageService/grammar/BaseRqlLexer.g4 -visitor -no-listener languageService/grammar/BaseRqlParser.g4 -o languageService/src/generated/",

@@ -611,6 +611,7 @@ namespace Raven.Server.Documents.Replication
                 getLatestEtagMessage,
                 this,
                 buffer,
+                getLatestEtagMessage.ReplicationsType,
                 incomingPullParams);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
@@ -636,7 +637,7 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                 {
                     _log.Info(
-                        $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}");
+                        $"GetLastEtag: {getLatestEtagMessage.SourceTag}({getLatestEtagMessage.SourceMachineName}) / {getLatestEtagMessage.SourceDatabaseName} ({getLatestEtagMessage.SourceDatabaseId}) - {getLatestEtagMessage.SourceUrl}. Type: {getLatestEtagMessage.ReplicationsType}");
                 }
             }
 

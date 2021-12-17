@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
         }
 
-        public void RecordAlreadyPagedItemsInPreviousPage(TopDocs search)
+        public void RecordAlreadyPagedItemsInPreviousPage(TopDocs search, CancellationToken token)
         {
             if (_query.Start == 0)
                 return;
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
                 var retrieverInput = new RetrieverInput(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
-                var result = _retriever.Get(ref retrieverInput);
+                var result = _retriever.Get(ref retrieverInput, token);
 
                 if (result.Document != null)
                 {

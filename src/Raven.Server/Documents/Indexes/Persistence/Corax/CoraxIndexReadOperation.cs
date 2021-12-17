@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
                 {
                     RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
-                    var fetchedDocument = retriever.Get(ref retrieverInput);
+                    var fetchedDocument = retriever.Get(ref retrieverInput, token);
 
                     if (fetchedDocument.Document != null)
                     {

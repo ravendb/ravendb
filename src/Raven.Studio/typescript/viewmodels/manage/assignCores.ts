@@ -33,7 +33,8 @@ class assignCores extends dialogViewModelBase {
 
         this.maxUtilizedCores.extend({
             required: false,
-            min: 1
+            min: 1,
+            max: this.numberOfCores()
         });
     }
 

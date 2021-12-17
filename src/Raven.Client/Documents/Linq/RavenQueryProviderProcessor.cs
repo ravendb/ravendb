@@ -76,6 +76,8 @@ namespace Raven.Client.Documents.Linq
         private bool _addedDefaultAlias;
         private Type _ofType;
         private bool _isSelectArg;
+        private (bool IsSet, string Name) _manualLet;
+        private JavascriptConversionExtensions.TypedParameterSupport _typedParameterSupport;
 
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -2000,9 +2002,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            LambdaExpression innerLambda = null;
             if (expression.Arguments[0] is MethodCallExpression mce &&
                 mce.Method.Name == "Select" &&
-                ExpressionHasNestedLambda(mce, out var innerLambda) &&
+                ExpressionHasNestedLambda(mce, out innerLambda) &&
                 innerLambda.Body is MethodCallExpression innerMce &&
                 CheckForLoad(innerMce))
             {
@@ -2010,7 +2013,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
-            HandleLoadFromSelectIfNeeded(lambdaExpression);
+            if (HandleLoadFromSelectIfNeeded(lambdaExpression) == false && innerLambda?.Body is NewExpression)
+            {
+                // handle select after select new
+                // treat it as 'let' and use js output function
+
+                if (_manualLet.IsSet)
+                {
+                    throw new NotSupportedException("Unsupported query expression. Try to use 'Let' instead of multiple Selects");
+                }
+
+                _insideLet++;
+                _manualLet.IsSet = true;
+                _manualLet.Name = parameterName;
+                AddFromAlias(innerLambda.Parameters[0].Name);
+            }
         }
 
         private bool CheckForLoad(MethodCallExpression mce)
@@ -2042,13 +2059,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         }
 
-        private void HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
+        private bool HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
         {
             if (CheckForNestedLoad(lambdaExpression, out var mce, out var member) == false)
             {
                 if (!(lambdaExpression.Body is MethodCallExpression methodCall) ||
                     CheckForLoad(methodCall) == false)
-                    return;
+                    return false;
 
                 mce = methodCall;
             }
@@ -2086,6 +2103,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _selectLoad = true;
+            return true;
         }
 
         private static bool ExpressionHasNestedLambda(MethodCallExpression expression, out LambdaExpression lambdaExpression)
@@ -2635,8 +2653,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddReturnStatementToOutputFunction(Expression expression)
         {
+            if (_manualLet.IsSet)
+            {
+                _typedParameterSupport = new JavascriptConversionExtensions.TypedParameterSupport(_manualLet.Name);
+            }
             var js = TranslateSelectBodyToJs(expression);
-            _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
+            _declareBuilder.Append('\t').Append("return ").Append(js).Append(';');
 
             var paramBuilder = new StringBuilder();
             paramBuilder.Append(FromAlias);
@@ -2673,11 +2695,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_insideWhere > 0)
                 throw new NotSupportedException("Queries with a LET clause before a WHERE clause are not supported. " +
                                                 "WHERE clauses should appear before any LET clauses.");
-            var name = GetSelectPath(expression.Members[1]);
-            var parameter = expression?.Arguments[0] as ParameterExpression;
 
             if (FromAlias == null)
             {
+                var parameter = expression.Arguments[0] as ParameterExpression;
                 AddFromAlias(parameter?.Name);
             }
 
@@ -2686,35 +2707,70 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _projectionParameters = new List<string>();
             }
 
-            if (IsRawOrTimeSeriesCall(expression.Arguments[1], out string script))
+            TranslateLetBody(expression);
+        }
+
+        private void TranslateLetBody(NewExpression expression)
+        {
+            StringBuilder wrapper = null;
+            int start = 1, upTo = 2;
+            if (_manualLet.IsSet)
             {
-                AppendLineToOutputFunction(name, script);
-                return;
+                // treat this 'Select(x => new {...})' expression as 'let'
+                // wrap all the projection fields inside an object and append it to output function, e.g. :
+                // 'Select(x => new { Foo = x.Foo, Bar = x.Bar }).Select(y => ...)' turns into :
+                // function output(x){
+                //  var y = { Foo : x.Foo, Bar : x.Bar }
+                //  return {...}
+                // }
+
+                start = 0;
+                upTo = expression.Arguments.Count;
+                wrapper = new StringBuilder();
+                wrapper.Append('{')
+                    .Append(Environment.NewLine);
             }
 
-            // if _declareBuilder != null then we already have an 'output' function
-            // the load-argument might depend on previous statements inside the function body
-            // use js load() method instead of a LoadToken
-            var shouldUseLoadToken = _declareBuilder == null &&
-                                     expression.Arguments[1].NodeType != ExpressionType.Conditional &&
-                                     (!(expression.Arguments[1] is MethodCallExpression methodCall) || methodCall.Method.Name == nameof(RavenQuery.Load));
-
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
-            var js = ToJs(expression.Arguments[1], false, loadSupport);
-
-            if (loadSupport.HasLoad == false || shouldUseLoadToken == false)
+            for (var i = start; i < upTo; i++)
             {
-                AppendLineToOutputFunction(name, js);
+                var arg = expression.Arguments[i];
+                var memberInfo = expression.Members[i];
+                var name = GetSelectPath(memberInfo);
+
+                if (IsRawOrTimeSeriesCall(arg, out string script))
+                {
+                    AppendLineToOutputFunction(name, script, wrapper);
+                    continue;
+                }
+
+                // if _declareBuilder != null then we already have an 'output' function
+                // the load-argument might depend on previous statements inside the function body
+                // use js load() method instead of a LoadToken
+                var shouldUseLoadToken = _declareBuilder == null &&
+                                         arg.NodeType != ExpressionType.Conditional &&
+                                         (!(arg is MethodCallExpression methodCall) || methodCall.Method.Name == nameof(RavenQuery.Load));
+
+                var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = shouldUseLoadToken };
+                var js = ToJs(arg, false, loadSupport);
+
+                if (loadSupport.HasLoad && shouldUseLoadToken)
+                {
+                    HandleLoad(arg, loadSupport, name, js, wrapper);
+                    continue;
+                }
+
+                AppendLineToOutputFunction(name, js, wrapper);
             }
 
-            else
+            if (wrapper != null)
             {
-                HandleLoad(expression, loadSupport, name, js);
+                wrapper.Append('}').Append(Environment.NewLine);
+                AppendLineToOutputFunction(_manualLet.Name, wrapper.ToString());
             }
         }
 
 
-        private void HandleLoad(NewExpression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js)
+        private void HandleLoad(Expression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js, StringBuilder wrapper)
         {
             string arg;
             if (loadSupport.Arg is ConstantExpression constantExpression && constantExpression.Type == typeof(string))
@@ -2749,7 +2805,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     //so we use js load() method (inside output function) instead of using a LoadToken
 
-                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    AppendLineToOutputFunction(name, ToJs(expression), wrapper);
                     return;
                 }
                 arg = ToJs(loadSupport.Arg, true);
@@ -2758,7 +2814,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 //the argument is not a static string value nor a path, 
                 //so we use js load() method (inside output function) instead of using a LoadToken
-                AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                AppendLineToOutputFunction(name, ToJs(expression), wrapper);
                 return;
             }
 
@@ -2786,7 +2842,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     //we add to the output function:
                     //var alias2 = load(alias1.SomeId2); (JS load() method)
 
-                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    AppendLineToOutputFunction(name, ToJs(expression), wrapper);
                     _loadAliasesMovedToOutputFunction.Add(name);
                     return;
                 }
@@ -2800,6 +2856,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     : name;
 
                 AddLoadToken(arg, alias);
+                if (wrapper != null)
+                {
+                    AddPropertyToWrapperObject(alias, alias, wrapper);
+                }
                 return;
             }
 
@@ -2829,7 +2889,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 js = "." + js;
             }
 
-            AppendLineToOutputFunction(name, doc + js);
+            AppendLineToOutputFunction(name, doc + js, wrapper);
         }
 
         private void AddLoadToken(string arg, string alias)
@@ -2838,15 +2898,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _loadAliases.Add(alias);
         }
 
-        private void AppendLineToOutputFunction(string name, string js)
+        private void AppendLineToOutputFunction(string name, string js, StringBuilder wrapper = null)
         {
-            _declareBuilder ??= new StringBuilder();
-
             name = RenameAliasIfReservedInJs(name);
 
+            if (wrapper != null)
+            {
+                AddPropertyToWrapperObject(name, js, wrapper);
+                return;
+            }
+
+            _declareBuilder ??= new StringBuilder();
             _declareBuilder.Append('\t')
                 .Append("var ").Append(name)
                 .Append(" = ").Append(js).Append(';')
+                .Append(Environment.NewLine);
+        }
+
+        private static void AddPropertyToWrapperObject(string name, string js, StringBuilder wrapper)
+        {
+            wrapper.Append('\t')
+                .Append(name)
+                .Append(" : ").Append(js).Append(',')
                 .Append(Environment.NewLine);
         }
 
@@ -2998,9 +3071,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (loadArg == false)
             {
-                Array.Resize(ref extensions, extensions.Length + 1);
-
-                extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions);
+                var newSize = _typedParameterSupport != null
+                    ? extensions.Length + 2
+                    : extensions.Length + 1;
+                Array.Resize(ref extensions, newSize);
+                if (_typedParameterSupport != null)
+                    extensions[newSize - 2] = _typedParameterSupport;
+                extensions[newSize - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(DocumentQuery.Conventions, _typedParameterSupport?.Name);
             }
 
             return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
