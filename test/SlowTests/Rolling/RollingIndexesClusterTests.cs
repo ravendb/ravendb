@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Orders;
@@ -66,6 +67,170 @@ namespace SlowTests.Rolling
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
 
                 await VerifyHistory(cluster, store);
+            }
+        }
+
+        [Fact]
+        public async Task DeployRollingIndexWhileDocumentsModified()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(
+                       new Options
+                       {
+                           Server = cluster.Leader, 
+                           ReplicationFactor = 3,
+                       }))
+            {
+                await CreateData(store);
+
+                
+                var count = 0L;
+                var violation = new StringBuilder();
+
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index =>
+                    {
+                        var inc = Interlocked.Increment(ref count);
+                        if (inc > 1)
+                            violation.AppendLine($"{index} started concurrently (count: {inc})");
+                    };
+                    indexStore.ForTestingPurposesOnly().BeforeRollingIndexFinished = index =>
+                    {
+                        var dec = Interlocked.Decrement(ref count);
+                        if (dec != 0)
+                            violation.AppendLine($"finishing {index} must be zero but is {dec}");
+                    };
+                }
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    var t = ContinuouslyModifyDocuments(store, cts.Token);
+                    try
+                    {
+                        await store.ExecuteIndexAsync(new MyRollingIndex());
+
+                        WaitForIndexingInTheCluster(store, store.Database);
+
+                        var v = violation.ToString();
+                        Assert.True(string.IsNullOrEmpty(v), v);
+
+                        await VerifyHistory(cluster, store);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            cts.Cancel();
+                            await t;
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task EditRollingIndexWhileDocumentsModified()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(
+                       new Options
+                       {
+                           Server = cluster.Leader, 
+                           ReplicationFactor = 3,
+                       }))
+            {
+                await CreateData(store);
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await VerifyHistory(cluster, store);
+
+                var count = 0L;
+                var violation = new StringBuilder();
+
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index =>
+                    {
+                        if (index.Name != "ReplacementOf/MyRollingIndex")
+                            return;
+
+                        var inc = Interlocked.Increment(ref count);
+                        if (inc > 1)
+                            violation.AppendLine($"{index} started concurrently (count: {inc})");
+                    };
+                    indexStore.ForTestingPurposesOnly().BeforeRollingIndexFinished = index =>
+                    {
+                        var dec = Interlocked.Decrement(ref count);
+                        if (dec != 0)
+                            violation.AppendLine($"finishing {index} must be zero but is {dec}");
+                    };
+                }
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    var t = ContinuouslyModifyDocuments(store, cts.Token);
+                    try
+                    {
+                        await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+
+                        WaitForIndexingInTheCluster(store, store.Database);
+
+                        var v = violation.ToString();
+                        Assert.True(string.IsNullOrEmpty(v), v);
+
+                        await VerifyHistory(cluster, store);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            cts.Cancel();
+                            await t;
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ContinuouslyModifyDocuments(IDocumentStore store, CancellationToken token)
+        {
+            while (token.IsCancellationRequested == false)
+            {
+                try
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var o = await session.LoadAsync<Order>("orders/830-A");
+                        o.RequireAt = DateTime.UtcNow;
+                        await session.SaveChangesAsync(token);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch
+                {
+                    await Task.Delay(500, token);
+                }
             }
         }
 
