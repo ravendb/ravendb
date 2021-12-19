@@ -17,6 +17,8 @@ using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -387,6 +389,9 @@ namespace Raven.Server.Documents.Patch
                 var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
                     AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
+                var increment = new ClrFunctionInstance(ScriptEngine, "increment", (thisObj, values) =>
+                    IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+
                 var delete = new ClrFunctionInstance(ScriptEngine, "delete", (thisObj, values) =>
                     DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
@@ -398,6 +403,7 @@ namespace Raven.Server.Documents.Patch
 
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
+                obj.Set("increment", increment);
                 obj.Set("delete", delete);
                 obj.Set("get", get);
                 obj.Set("doc", args[0]);
@@ -514,6 +520,87 @@ namespace Raven.Server.Documents.Patch
                             ["Name"] = timeSeries,
                             ["Timestamp"] = timestamp,
                             ["Tag"] = lsTag,
+                            ["Values"] = values.ToArray().Cast<object>(),
+                            ["Created"] = newSeries
+                        });
+                    }
+                }
+                finally
+                {
+                    if (valuesBuffer != null)
+                        ArrayPool<double>.Shared.Return(valuesBuffer);
+                }
+
+                return Undefined.Instance;
+            }
+
+            private JsValue IncrementTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            {
+                AssertValidDatabaseContext("timeseries(doc, name).increment");
+
+                const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
+
+                if(args.Length != 2)
+                    throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args}");
+
+                string signature = signature2Args;
+
+                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+
+                double[] valuesBuffer = null;
+                try
+                {
+                    var valuesArg = args[1];
+                    Memory<double> values;
+                    if (valuesArg.IsArray())
+                    {
+                        var jsValues = valuesArg.AsArray();
+                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
+                    }
+                    else if (valuesArg.IsNumber())
+                    {
+                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                        valuesBuffer[0] = valuesArg.AsNumber();
+                        values = new Memory<double>(valuesBuffer, 0, 1);
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
+                    }
+
+                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
+                    var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+                    if (newSeries)
+                    {
+                        DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        DocumentTimeSeriesToUpdate.Add(id);
+                    }
+
+                    var toIncrement = new TimeSeriesOperation.IncrementOperation
+                    {
+                        Values = values.ToArray(),
+                        Timestamp = timestamp
+                    };
+
+                    tss.IncrementTimestamp(
+                        _docsCtx,
+                        id,
+                        CollectionName.GetCollectionName(doc),
+                        timeSeries,
+                        new[] { toIncrement });
+
+                    if (DebugMode)
+                    {
+                        DebugActions.IncrementTimeSeries.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = timeSeries,
+                            ["Timestamp"] = timestamp,
                             ["Values"] = values.ToArray().Cast<object>(),
                             ["Created"] = newSeries
                         });
@@ -1374,7 +1461,7 @@ namespace Raven.Server.Documents.Patch
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
                 var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, loadedDocuments: null, token: _token);
-                
+
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);
 
