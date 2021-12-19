@@ -11,6 +11,7 @@ using Lucene.Net.Store;
 using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
@@ -418,7 +419,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                if (ReferenceEquals(newData, doc.Data) == false)
+                if (ReferenceEquals(newData, doc.Data) == false
+                    && doc.IgnoreDispose == false) // this is being referenced by the _loadedDocuments still...
                     doc.Data?.Dispose();
             }
             catch (Exception)
@@ -427,7 +429,14 @@ namespace Raven.Server.Documents.Queries.Results
                 throw;
             }
 
-            doc.Data = newData;
+            if (doc.IgnoreDispose)// this is being retained by the _loadedDocuments
+            {
+                doc = doc.CloneWith(context, newData);
+            }
+            else
+            {
+                doc.Data = newData;
+            }
             FinishDocumentSetup(doc, scoreDoc);
 
             return doc;
@@ -645,8 +654,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
-            // we have to clone, because the `document` instance is updated on result
-            _loadedDocuments[document.Id ?? string.Empty] = document.Clone(_context); 
+            _loadedDocuments[document.Id ?? string.Empty] = document; 
 
             document.IgnoreDispose = true; // so we can do multiple projections of the same value
 
