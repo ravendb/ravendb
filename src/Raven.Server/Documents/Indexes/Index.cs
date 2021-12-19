@@ -1007,6 +1007,8 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
+                DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeRollingIndexFinished?.Invoke(this);
+
                 // We may send the command multiple times so we need a new Id every time.
                 var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
                 _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command).ContinueWith(async t =>
@@ -1399,13 +1401,13 @@ namespace Raven.Server.Documents.Indexes
                         while (true)
                         {
 
-                            WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                            var result = WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
                             _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
                             
                             if (_indexDisabled)
                                 return;
-
-                            _rollingEvent.Reset();
+                            
+                            _mre.Reset();
 
                             var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
 
@@ -1413,10 +1415,12 @@ namespace Raven.Server.Documents.Indexes
                                 return;
 
                             if (replaceStatus == ReplaceStatus.NotNeeded)
-                                break;
+                            {
+                                if (result != 0)
+                                    break;
+                            }
 
                             Thread.Sleep(500); // replace will be re-tried
-                            _rollingEvent.Set();
                         }
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
