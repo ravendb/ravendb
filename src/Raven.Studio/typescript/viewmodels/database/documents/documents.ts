@@ -418,19 +418,14 @@ class documents extends viewModelBase {
     queryCollection() {
         const query = queryCriteria.empty();
         const collection = this.currentCollection();
-        const queryText = "from " + queryUtil.escapeCollectionOrFieldName(collection.collectionNameForQuery);
+        const queryText = "from " + queryUtil.wrapWithSingleQuotes(collection.collectionNameForQuery);
         
         query.queryText(queryText);
         query.name("Recent query (" + collection.collectionNameForQuery + ")");
         query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
-        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
-        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
-        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
-
-        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash);
-        this.navigate(queryUrl);
+        recentQueriesStorage.saveAndNavigate(this.activeDatabase(), queryDto);
     }
 }
 

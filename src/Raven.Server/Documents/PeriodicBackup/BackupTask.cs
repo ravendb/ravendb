@@ -98,6 +98,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 if (_forTestingPurposes != null && _forTestingPurposes.SimulateFailedBackup)
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+                if (_forTestingPurposes != null && _forTestingPurposes.OnBackupTaskRunHoldBackupExecution != null)
+                    _forTestingPurposes.OnBackupTaskRunHoldBackupExecution.Task.Wait();
 
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
@@ -149,11 +151,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
 
                 GenerateFolderNameAndBackupDirectory(localSettings, _startTimeUtc, out var nowAsString, out var folderName, out var backupDirectory);
-                var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
+                var startEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
                 var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, nowAsString, _configuration.BackupType, out string backupFilePath);
-                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, startRaftIndex);
+                var internalBackupResult = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startEtag, startRaftIndex);
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
@@ -184,7 +186,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
-                runningBackupStatus.LastEtag = internalBackupResult.LastDocumentEtag;
+                runningBackupStatus.LastEtag = internalBackupResult.LastEtag;
                 runningBackupStatus.LastDatabaseChangeVector = internalBackupResult.LastDatabaseChangeVector;
                 runningBackupStatus.LastRaftIndex.LastEtag = internalBackupResult.LastRaftIndex;
                 runningBackupStatus.FolderName = folderName;
@@ -539,12 +541,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private class InternalBackupResult
         {
-            public long LastDocumentEtag { get; set; }
+            public long LastEtag { get; set; }
             public string LastDatabaseChangeVector { get; set; }
             public long LastRaftIndex { get; set; }
         }
 
-        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, long? startDocumentEtag, long? startRaftIndex)
+        private InternalBackupResult CreateLocalBackupOrSnapshot(PeriodicBackupStatus status, string backupFilePath, long? startEtag, long? startRaftIndex)
         {
             var internalBackupResult = new InternalBackupResult();
 
@@ -571,7 +573,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         options.OperateOnTypes |= DatabaseItemType.Tombstones;
                         options.OperateOnTypes |= DatabaseItemType.CompareExchangeTombstones;
 
-                        var currentBackupResult = CreateBackup(options, tempBackupFilePath, startDocumentEtag, startRaftIndex);
+                        var currentBackupResult = CreateBackup(options, tempBackupFilePath, startEtag, startRaftIndex);
 
                         if (_isFullBackup)
                         {
@@ -582,7 +584,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             if (_backupResult.GetLastEtag() == _previousBackupStatus.LastEtag &&
                                 _backupResult.GetLastRaftIndex() == _previousBackupStatus.LastRaftIndex.LastEtag)
                             {
-                                internalBackupResult.LastDocumentEtag = startDocumentEtag ?? 0;
+                                internalBackupResult.LastEtag = startEtag ?? 0;
                                 internalBackupResult.LastDatabaseChangeVector = _previousBackupStatus.LastDatabaseChangeVector;
                                 internalBackupResult.LastRaftIndex = startRaftIndex ?? 0;
                             }
@@ -597,7 +599,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         // snapshot backup
                         ValidateFreeSpaceForSnapshot(tempBackupFilePath);
 
-                        (internalBackupResult.LastDocumentEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
+                        (internalBackupResult.LastEtag, internalBackupResult.LastDatabaseChangeVector) = _database.ReadLastEtagAndChangeVector();
                         internalBackupResult.LastRaftIndex = GetDatabaseEtagForBackup();
                         var databaseSummary = _database.GetDatabaseSummary();
                         var indexesCount = _database.IndexStore.Count;
@@ -773,7 +775,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         throw new InvalidOperationException($" {outputStream.GetType()} not supported");
                 }
 
-                currentBackupResults.LastDocumentEtag = smugglerSource.LastEtag;
+                currentBackupResults.LastEtag = smugglerSource.LastEtag;
                 currentBackupResults.LastDatabaseChangeVector = smugglerSource.LastDatabaseChangeVector;
                 currentBackupResults.LastRaftIndex = smugglerSource.LastRaftIndex;
 

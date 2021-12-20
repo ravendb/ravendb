@@ -2,9 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -43,6 +45,26 @@ namespace Raven.Server.Documents.TimeSeries
                 [nameof(TimeSeriesEntry.Values)] = values,
                 [nameof(TimeSeriesEntry.IsRollup)] = Type == SingleResultType.RolledUp,
             };
+        }
+
+        public void CopyTo(SingleResult dest)
+        {
+            dest.Status = Status;
+
+            // destination is shorter
+            if (dest.Values.Length < Values.Length)
+                dest.Values = new double[Values.Length]; 
+
+            // destination is larger, so we need to forget values from the previous entry
+            for (int i = Values.Length; i < dest.Values.Length; i++)
+            {
+                dest.Values.Span[i] = 0;
+            }
+
+            Values.CopyTo(dest.Values);
+            dest.Tag = Tag?.CloneOnSameContext();
+            dest.Type = Type;
+            dest.Timestamp = Timestamp;
         }
     }
 
@@ -98,10 +120,12 @@ namespace Raven.Server.Documents.TimeSeries
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
+        private DetailedSingleResult _details;
+        private readonly CancellationToken _token;
 
         public bool IsRaw { get; }
 
-        public TimeSeriesReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset)
+        public TimeSeriesReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset, CancellationToken token = default)
         {
             _context = context;
             _documentId = documentId;
@@ -109,11 +133,19 @@ namespace Raven.Server.Documents.TimeSeries
             _table = new Table(TimeSeriesStorage.TimeSeriesSchema, context.Transaction.InnerTransaction);
             _tag = new LazyStringValue(null, null, 0, context);
             _offset = offset;
+            _token = token;
 
             _from = from;
             _to = to;
             IsRaw = _name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) == false;
         }
+
+        public void IncludeDetails()
+        {
+            _details = new DetailedSingleResult(_context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(_context));;
+        }
+
+        public DetailedSingleResult GetDetails => _details ?? throw new ArgumentNullException($"Forget to explicitly to 'IncludeDetails'?");
 
         internal bool Init()
         {
@@ -268,6 +300,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             while (true)
             {
+                _token.ThrowIfCancellationRequested();
+
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
                 if (baseline > _to)
@@ -292,7 +326,8 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to &&
-                        _currentSegment.InvalidLastValue() == false) // legacy issue RavenDB-15645
+                        _currentSegment.InvalidLastValue() == false && // legacy issue RavenDB-15645 
+                        _currentSegment.Version.ContainsLastValueDuplicate == false) 
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment;
@@ -317,6 +352,8 @@ namespace Raven.Server.Documents.TimeSeries
             InitializeSegment(out var baselineMilliseconds, out _currentSegment);
             while (true)
             {
+                _token.ThrowIfCancellationRequested();
+
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
 
                 if (baseline > _to)
@@ -339,6 +376,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     foreach (var val in YieldSegment(baseline, includeDead))
                     {
+                        _token.ThrowIfCancellationRequested();
                         yield return val;
                     }
                 }
@@ -348,7 +386,158 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public IEnumerable<SingleResult> YieldSegmentMergeDuplicates(DateTime baseline, bool includeDead = false)
+        {
+            var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
+            if (shouldBreak)
+                yield break;
+
+            using var enumerator = _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead).GetEnumerator();
+
+            var previous = new SingleResult {Values = new double[_currentSegment.NumberOfValues]};
+            var current = new SingleResult {Values = new double[_currentSegment.NumberOfValues]};
+            var aggregated = new double[_currentSegment.NumberOfValues];
+
+            while (true)
+            {
+                if (enumerator.MoveNext() == false)
+                    yield break;
+
+                if (enumerator.Current.Timestamp > _to)
+                    yield break;
+
+                if (enumerator.Current.Timestamp < _from)
+                    continue;
+
+                enumerator.Current.CopyTo(previous);
+
+                var isDuplicate = false;
+                while (true)
+                {
+                    if (enumerator.MoveNext())
+                    {
+                        enumerator.Current.CopyTo(current);
+                    }
+                    else
+                    {
+                        if (isDuplicate)
+                        {
+                            previous.Tag = null;
+                            aggregated.CopyTo(previous.Values);
+                        }
+                        else
+                        {
+                            _details?.Add(previous);
+                        }
+
+                        yield return previous;
+                        _details?.Reset();
+                        yield break;
+                    }
+
+                    if (current.Timestamp != previous.Timestamp)
+                    {
+                        if (isDuplicate)
+                        {
+                            previous.Tag = null;
+                            aggregated.CopyTo(previous.Values);
+                        }
+                        else
+                        {
+                            _details?.Add(previous);
+                        }
+
+                        yield return previous;
+                        _details?.Reset();
+
+                        if (current.Timestamp > _to)
+                            yield break;
+
+                        current.CopyTo(previous);
+
+                        if (isDuplicate)
+                        {
+                            isDuplicate = false;
+                            ResetAggregation(aggregated);
+                        }
+                        continue;
+                    }
+
+                    Aggregate(aggregated, current);
+
+                    if (isDuplicate == false)
+                    {
+                        Aggregate(aggregated, previous);
+                        isDuplicate = true;
+                    }
+                }
+            }
+        }
+
+        public class DetailedSingleResult
+        {
+            private readonly string _databaseChangeVector;
+            public Dictionary<string, double[]> Details = new Dictionary<string, double[]>();
+
+            public DetailedSingleResult(string databaseChangeVector)
+            {
+                _databaseChangeVector = databaseChangeVector;
+            }
+
+            public void Add(SingleResult result)
+            {
+                var key = FetchNodeDetails(result, _databaseChangeVector);
+
+                if (Details.TryGetValue(key, out var values) == false)
+                    values = new double[result.Values.Length];
+
+                for (int i = 0; i < result.Values.Length; i++)
+                {
+                    values[i] += result.Values.Span[i];
+                }
+
+                Details[key] = values;
+            }
+
+            public void Reset()
+            {
+                Details.Clear();
+            }
+
+            private static string FetchNodeDetails(SingleResult result, string databaseChangeVector)
+            {
+                var dbId = result.Tag.Substring(7); // extract dbId from tag [tag struct: "TC:XXX-dbId" - where "XXX" can be "INC"/"DEC"] 
+                var nodeTag = ChangeVectorUtils.GetNodeTagById(databaseChangeVector, dbId) ?? "?";
+                return nodeTag + "-" + dbId;
+            }
+        }
+
+        private static void ResetAggregation(double[] aggregated)
+        {
+            for (int i = 0; i < aggregated.Length; i++)
+            {
+                aggregated[i] = 0;
+            }
+        }
+
+        private void Aggregate(double[] aggregated, SingleResult result)
+        {
+            _details?.Add(result);
+            for (var index = 0; index < aggregated.Length; index++)
+            {
+                aggregated[index] += result.Values.Span[index];
+            }
+        }
+
         public IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
+        {
+            if(_currentSegment.Version.ContainsDuplicates)
+                return YieldSegmentMergeDuplicates(baseline, includeDead);
+
+            return YieldSegmentRaw(baseline, includeDead);
+        }
+
+        public IEnumerable<SingleResult> YieldSegmentRaw(DateTime baseline, bool includeDead = false)
         {
             var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
             if (shouldBreak)
@@ -357,16 +546,18 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var result in _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead))
             {
                 if (result.Timestamp > _to)
-                        yield break;
+                    yield break;
 
                 if (result.Timestamp < _from)
-                        continue;
+                    continue;
 
                 result.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
-
+                
+                _details?.Add(result);
                 yield return result;
-                    }
-                }
+                _details?.Reset();
+            }
+        }
 
         public DateTime NextSegmentBaseline()
         {
@@ -442,13 +633,14 @@ namespace Raven.Server.Documents.TimeSeries
         private readonly string _collection;
         private readonly TimeSpan? _offset;
         private readonly TimeValue _groupBy;
+        private readonly CancellationToken _token;
         private readonly DateTime _from, _to;
         private Stack<(DateTime Start, string Name)> _timeseriesStack;
 
         public bool IsRaw => _reader.IsRaw;
 
         public TimeSeriesMultiReader(DocumentsOperationContext context, string documentId,
-            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy)
+            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy, CancellationToken token)
         {
             if (string.IsNullOrEmpty(source))
                 throw new ArgumentNullException(nameof(source));
@@ -460,6 +652,7 @@ namespace Raven.Server.Documents.TimeSeries
             _to = to;
             _offset = offset;
             _groupBy = groupBy;
+            _token = token;
 
             Initialize();
         }
@@ -610,7 +803,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (_timeseriesStack.Count == 0)
                 {
-                    _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, _to, _offset);
+                    _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, _to, _offset, _token);
                     return true;
                 }
 
@@ -622,7 +815,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_to < to)
                     to = _to;
 
-                _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, to, _offset);
+                _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, to, _offset, _token);
                 return true;
             }
         }

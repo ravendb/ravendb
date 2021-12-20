@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -1595,6 +1594,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 // the promotable don't have them.
 
                 if (mentorIndex.Value.IsSideBySide)
+                    continue;
+
+                if (mentorIndex.Value.State == IndexState.Idle)
                     continue;
 
                 if (mentor.TryGetValue(Constants.Documents.Indexing.SideBySideIndexNamePrefix + mentorIndex.Key, out var mentorIndexStats) == false)

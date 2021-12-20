@@ -1,5 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import genUtils = require("common/generalUtils");
+
 interface rqlTokensIndexInfo {
     update?: RegExpExecArray,
     where?: RegExpExecArray,
@@ -14,32 +16,47 @@ class queryUtil {
     static readonly AutoPrefix = "auto/";
     static readonly DynamicPrefix = "collection/";
     static readonly AllDocs = "AllDocs";
+    static readonly MinDateUTC = "0001-01-01T00:00:00.000Z"; // TODO - replace w/ syntax from RavenDB-17618 when done
+    static readonly MaxDateUTC = "9999-01-01T00:00:00.000Z";
 
-    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, startDate?: moment.Moment, endDate?: moment.Moment) {
+        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const dates = queryUtil.formatDates(startDate, endDate);
         
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates})`;
     }
 
-    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: moment.Moment, endDate?: moment.Moment) {
+        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const dates = queryUtil.formatDates(startDate, endDate);
 
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select avg())`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates} group by ${group} select avg())`;
+    }
+    
+    private static formatDates(startDate?: moment.Moment, endDate?: moment.Moment): string {
+        if (!startDate && !endDate) { 
+            return "";
+        }
+
+        const start = startDate ? startDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MinDateUTC;
+        const end = endDate ? endDate.clone().utc().format(genUtils.utcFullDateFormat) : queryUtil.MaxDateUTC;
+        
+        return ` between "${start}" and "${end}"`;
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
-        const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
+        const escapedFieldName = queryUtil.wrapWithSingleQuotes(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
         return `from index ${escapedIndexName} where ${escapedFieldName} = '${value}' `;
     }
     
-    private static wrapWithSingleQuotes(input: string) {
+    static wrapWithSingleQuotes(input: string) {
         if (input.includes("'")) {
-            input = input.replace("'", "''");
+            input = input.replace(/'/g, "''");
         }
         return "'" + input + "'";
     }
@@ -47,24 +64,15 @@ class queryUtil {
     static escapeName(name: string) {
         return queryUtil.wrapWithSingleQuotes(name);
     }
-    
-    static escapeCollectionOrFieldName(name: string) : string {
-        // wrap collection name in 'collection name' if it has spaces.
-        // @ is allowed (ex. @all_docs) - but only in front
-        if (/^@?[0-9a-zA-Z_]+$/.test(name)) {
-            return name;
+
+    static escapeIndexName(indexName: string): string {
+        indexName = indexName.replace(/"/g, '\\"');
+        
+        if (indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix) && indexName.includes("'")) {
+            return `"${indexName}"`;
         }
 
-        return queryUtil.wrapWithSingleQuotes(name);
-    }
-    
-    static escapeTimeSeriesName(name: string): string {
-        // wrap collection name in 'collection name' if it has spaces.
-        if (/^[0-9a-zA-Z_]+$/.test(name)) {
-            return name;
-        }
-
-        return queryUtil.wrapWithSingleQuotes(name);
+        return `'${indexName}'`;
     }
 
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;

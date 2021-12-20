@@ -16,7 +16,8 @@ class deleteTimeSeriesCommand extends commandBase {
         const payload: TimeSeriesOperation = {
             Name: this.name, 
             Appends: [],
-            Deletes: this.dtos
+            Deletes: this.dtos,
+            Increments: []
         };
 
         return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })

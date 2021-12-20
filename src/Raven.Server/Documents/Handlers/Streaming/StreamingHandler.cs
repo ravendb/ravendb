@@ -97,23 +97,26 @@ namespace Raven.Server.Documents.Handlers.Streaming
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var reader = new TimeSeriesReader(context, documentId, name, from, to, offset);
-
+                using (var token = CreateOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    var reader = new TimeSeriesReader(context, documentId, name, from, to, offset, token.Token);
+
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
+                    
                     foreach (var entry in reader.AllValues())
                     {
                         context.Write(writer, entry.ToTimeSeriesEntryJson());
                         writer.WriteComma();
-                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
+                        await writer.MaybeFlushAsync(token.Token);
                     }
+
                     writer.WriteEndArray();
                     writer.WriteEndObject();
 
-                    await writer.MaybeFlushAsync(Database.DatabaseShutdown);
+                    await writer.MaybeFlushAsync(token.Token);
                 }
             }
         }

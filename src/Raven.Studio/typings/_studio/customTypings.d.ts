@@ -320,6 +320,15 @@ interface DurandalRouteConfiguration {
 }
 
 declare module AceAjax {
+
+    // this is duplicate declaration to solve temporary issue with 2 builds systems: bower + webpack
+    interface Annotation {
+        row: number;
+        column: number;
+        text: string;
+        type: string;
+    }
+    
     interface IEditSession {
         foldAll(): void;
     }

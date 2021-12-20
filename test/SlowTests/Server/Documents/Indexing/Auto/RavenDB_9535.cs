@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
 using Sparrow.Server;
@@ -20,7 +21,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("RavenDB_9535"))
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {
-                var sut = new ReduceKeyProcessor(1, bufferPool);
+                var sut = new ReduceKeyProcessor(1, bufferPool, IndexDefinitionBase.IndexVersion.CurrentVersion);
 
                 try
                 {

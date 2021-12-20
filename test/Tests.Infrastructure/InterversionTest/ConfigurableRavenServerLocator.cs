@@ -18,8 +18,10 @@ namespace Tests.Infrastructure.InterversionTest
             _serverDirPath = serverDirPath;
             _dataDir = dataDir;
             _serverUrl = url;
-
-            _commandsArg = "--Http.UseLibuv=true";
+            if (version.StartsWith("4."))
+            {
+                _commandsArg = "--Http.UseLibuv=true";
+            }
             if (version.StartsWith("4.0") == false)
             {
                 _commandsArg += " --Features.Availability=Experimental";

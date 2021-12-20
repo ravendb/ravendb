@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _database.TombstoneCleaner.Subscribe(this);
             IOExtensions.DeleteDirectory(_tempBackupPath.FullPath);
-            Directory.CreateDirectory(_tempBackupPath.FullPath);
+            IOExtensions.CreateDirectory(_tempBackupPath.FullPath);
         }
 
         public NextBackup GetNextBackupDetails(
@@ -755,7 +755,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     taskStatus = TaskStatus.ClusterDown;
                     _forTestingPurposes.ClusterDownStatusSimulated = true;
                 }
-                else if (_forTestingPurposes.SimulateActiveByOtherNodeStatus)
+                else if (_forTestingPurposes.SimulateActiveByOtherNodeStatus_Reschedule)
                 {
                     taskStatus = TaskStatus.ActiveByOtherNode;
                 }
@@ -889,6 +889,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                 allBackupTaskIds.Add(newBackupTaskId);
 
                 var taskState = GetTaskStatus(databaseRecord.Topology, periodicBackupConfiguration);
+                if (_forTestingPurposes != null)
+                {
+                    if (_forTestingPurposes.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
+                    {
+                        taskState = TaskStatus.ActiveByOtherNode;
+                    }
+                    else if (_forTestingPurposes.SimulateDisableNodeStatus_UpdateConfigurations)
+                    {
+                        taskState = TaskStatus.Disabled;
+                    }
+                    else if (_forTestingPurposes.SimulateActiveByCurrentNode_UpdateConfigurations)
+                    {
+                        taskState = TaskStatus.ActiveByCurrentNode;
+                    }
+                }
 
                 UpdatePeriodicBackup(newBackupTaskId, periodicBackupConfiguration, taskState);
             }
@@ -942,12 +957,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             switch (taskState)
             {
                 case TaskStatus.Disabled:
+                    existingBackupState.DisableFutureBackups();
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the backup for it.");
+
+                    return;
                 case TaskStatus.ActiveByOtherNode:
                     // the task is disabled or this node isn't responsible for the backup task
-                    existingBackupState.DisableFutureBackups();
-
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will cancel the timer for it.");
+                        _logger.Operations($"Backup task '{taskId}' state is '{taskState}', will keep the timer for it.");
 
                     return;
 
@@ -963,7 +981,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (existingBackupState.RunningTask != null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed.");
+                            _logger.Operations($"Backup task '{taskId}' state is '{taskState}', and currently are being executed since '{existingBackupState.StartTimeInUtc}'.");
 
                         return;
                     }
@@ -1245,8 +1263,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             internal bool SimulateClusterDownStatus;
             internal bool ClusterDownStatusSimulated;
-            internal bool SimulateActiveByOtherNodeStatus;
+            internal bool SimulateActiveByOtherNodeStatus_Reschedule;
+            internal bool SimulateActiveByOtherNodeStatus_UpdateConfigurations;
+            internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
+            internal bool SimulateDisableNodeStatus_UpdateConfigurations;
             internal bool SimulateFailedBackup;
+
+            internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
         }
     }
 }

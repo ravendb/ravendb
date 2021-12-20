@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "sourceMap": true,
+        "outDir": "build",
+        "target": "ES2020",
+        "moduleResolution": "Node",
+        "esModuleInterop": true
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}

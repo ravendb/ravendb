@@ -31,6 +31,7 @@ class smugglerDatabaseRecord {
     includeAnalyzers = ko.observable<boolean>(true);
     includeHubReplications = ko.observable<boolean>(true);
     includeSinkReplications = ko.observable<boolean>(true);
+    includePostgreSqlIntegration = ko.observable<boolean>(true);
 
     hasIncludes: KnockoutComputed<boolean>;
 
@@ -144,6 +145,9 @@ class smugglerDatabaseRecord {
         }
         if (this.includeTimeSeries()) {
             result.push("TimeSeries")
+        }
+        if (this.includePostgreSqlIntegration()) {
+            result.push("PostgreSQLIntegration")
         }
         
         return result;

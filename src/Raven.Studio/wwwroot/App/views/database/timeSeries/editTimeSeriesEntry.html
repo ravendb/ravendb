@@ -1,11 +1,12 @@
-<div class="modal-dialog prevent-close modal-lg edit-time-series-entry" role="document" data-bind="css: { 'fit-dialog-content': model().rollupValues().length }">
+<div class="modal-dialog prevent-close modal-lg edit-time-series-entry" role="document"
+     data-bind="css: { 'fit-dialog-content': model().rollupValues().length || (model().isIncrementalEntry() && $root.lockTimeStamp) }">
     <form class="flex-form" data-bind="submit: save" autocomplete="off" novalidate>
         <div class="modal-content" tabindex="-1">
             <div class="modal-header">
                 <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                     <i class="icon-cancel"></i>
                 </button>
-                <h4 class="modal-title">Time Series Entry for <strong data-bind="text: documentId"></strong></h4>
+                <h4 class="modal-title" data-bind="text: model().entryTitle"></h4>
             </div>
             <div class="modal-body" data-bind="with: model">
                 <div class="padding padding-sm">
@@ -15,50 +16,66 @@
                             <p class="form-control-static" data-bind="text: $root.documentId"></p>
                         </div>
                     </div>
+                    <div data-bind="if: isCreatingNewTimeSeries">
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle create-incremental">
+                                <input id="createIncremental" type="checkbox" data-bind="checked: createIncrementalTimeSeries">
+                                <label for="createIncremental">Create an Incremental Time Series</label>
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-group" data-bind="validationElement: name">
                         <label class="control-label">Series Name</label>
                         <div class="flex-grow">
-                            <input type="text" class="form-control" id="name" placeholder="Time Series Name"
-                                   data-bind="textInput: name, visible: !$root.lockSeriesName">
-                            <p class="form-control-static" data-bind="text: name, visible: $root.lockSeriesName"></p>
+                            <input type="text" class="form-control" id="name"
+                                   data-bind="textInput: name, visible: !$root.lockSeriesName, attr: { placeholder: createIncrementalTimeSeries() ? 'INC:Time Series Name' : 'Time Series Name' }">
+                            <strong data-bind="visible: $root.lockSeriesName"><p class="form-control-static" data-bind="text: name"></p></strong>
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: timestamp">
                         <label class="control-label">Timestamp</label>
-                        <div class="flex-grow">
-                            <div class="row">
-                                <div data-bind="css: { 'col-sm-6': !rollupValues().length, 'col-sm-3': rollupValues().length }">
-                                    <div class="input-group" data-bind="visible: !$root.lockTimeStamp">
-                                        <input type="text" class="form-control" id="timestamp" placeholder="Enter timestamp"
-                                               data-bind="datePicker: timestamp, datepickerOptions: $root.datePickerOptions" />
-                                        <div class="input-group-addon">(local)</div>
-                                        <span class="help-block" data-bind="validationMessage: timestamp"></span>
-                                    </div>
-                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>
+                        <div>
+                            <div class="input-group" data-bind="visible: !$root.lockTimeStamp">
+                                <input type="text" class="form-control" id="timestamp" placeholder="Enter timestamp"
+                                       data-bind="datePicker: timestamp, datepickerOptions: $root.datePickerOptions" />
+                                <div class="input-group-addon">(Local)</div>
+                                <span class="help-block" data-bind="validationMessage: timestamp"></span>
+                                <div class="margin-left margin-left-lg" data-bind="if: !$root.lockTimeStamp">
+                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
                                 </div>
-                                <div class="col-md-6">
-                                    <div class="margin-left margin-left-lg">
-                                        <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
+                            </div>
+                            <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>
+                            <div data-bind="if: $root.lockTimeStamp">
+                                <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="collapse: !createIncrementalTimeSeries() && !isIncrementalEntry()">
+                        <div class="form-group" data-bind="validationElement: tag">
+                            <label class="control-label">Tag</label>
+                            <div class="flex-grow">
+                                <div data-bind="css: { 'row': rollupValues().length }">
+                                    <div data-bind="css: { 'col-sm-6': rollupValues().length}">
+                                        <input type="text" class="form-control" id="tag" placeholder="Enter tag (optional)" data-bind="textInput: tag">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="form-group" data-bind="validationElement: tag">
-                        <label class="control-label">Tag</label>
-                        <div class="flex-grow">
-                            <div data-bind="css: { 'row': rollupValues().length }">
-                                <div data-bind="css: { 'col-sm-6': rollupValues().length}">
-                                    <input type="text" class="form-control" id="tag" placeholder="Enter tag (optional)" data-bind="textInput: tag">
-                                </div>
+                    <div data-bind="if: !isRollupEntry() && isIncrementalEntry() && $root.lockTimeStamp">
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle">
+                                <input id="showDetails" type="checkbox" data-bind="checked: $parent.showValuesPerNode">
+                                <label for="showDetails">Show values per node</label>
                             </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="control-label">Values</label>
                         <div class="flex-grow margin-top margin-top-sm">
-                            
-                            <div data-bind="if: !isRollupEntry()">
+                            <div data-bind="if: !isRollupEntry() && (!isIncrementalEntry() || !$root.lockTimeStamp)">
                                 <div data-bind="foreach: values">
                                     <div class="input-group margin-bottom margin-bottom-xs">
                                         <div class="form-control-static margin-right margin-right-sm aggregation-name" data-bind="text: $root.getValueName($index())">
@@ -74,6 +91,58 @@
                                         </a>
                                     </div>
                                 </div>
+                            </div>
+                            <div data-bind="if: isIncrementalEntry() && $root.lockTimeStamp && !isRollupEntry()">
+                                <table class="margin-top margin-bottom margin-right">
+                                    <thead>
+                                    <tr>
+                                        <th>&nbsp;</th>
+                                        <th class="text-center">Total Value</th>
+                                        <th class="text-center">Increment By</th>
+                                        <!-- ko foreach: nodesDetails -->
+                                        <th class="text-center" data-bind="text: 'Node ' + nodeTag, attr: { title: 'Database ID: ' + databaseID }, collapse: $root.showValuesPerNode"></th>
+                                        <!-- /ko -->
+                                        <th>&nbsp;</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <!-- ko foreach: values -->
+                                    <tr>
+                                        <td class="name-value">
+                                            <label class="form-control-static" data-bind="text: $root.getValueName($index())"></label>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control margin-left per-node-value" data-bind="textInput: value" disabled/>
+                                        </td>
+                                        <td data-bind="validationOptions: { insertMessages: false }, validationElement: delta">
+                                            <input type="number" class="form-control per-node-value" data-bind="numericInput: delta" />
+                                            <div data-bind="validationElement: delta">
+                                                <div class="help-block" data-bind="validationMessage: delta"></div>
+                                            </div>
+                                        </td>
+                                        <td class="delete-column" data-bind="visible: newValue">
+                                            <a title="Remove value" href="#" class="btn"
+                                               data-bind="click: $parent.removeValueData.bind($parent, $data), visible: $index() >= $parent.existingNumberOfValues">
+                                                <i class="icon-trash"></i>
+                                            </a>
+                                        </td>
+                                        <!-- ko foreach: $parent.nodesDetails -->
+                                        <td data-bind="collapse: $root.showValuesPerNode">
+                                            <div data-bind="collapse: !$parent.newValue()">
+                                                <div class="form-control text-muted per-node-value" data-bind="text: $root.getValueOnNode($index(), $parentContext.$index())"></div>
+                                            </div>
+                                        </td>
+                                        <!-- /ko -->
+                                        <td class="delete-column" data-bind="visible: !newValue()">
+                                            <a title="Remove value" href="#" class="btn"
+                                               data-bind="click: $parent.removeValueData.bind($parent, $data), visible: $index() >= $parent.existingNumberOfValues">
+                                                <i class="icon-trash"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <!-- /ko -->
+                                    </tbody>
+                                </table>
                             </div>
                             <div data-bind="if: rollupValues().length">
                                 <table class="margin-top margin-bottom">
@@ -152,7 +221,7 @@
                                 </div>
                             </div>
                             <span class="has-disable-reason" data-placement="right"
-                                  data-bind="attr: { 'data-original-title': maxNumberOfValuesReachedWarning() ? maxNumberOfValuesReachedWarning() : '' }">
+                                  data-bind="attr: { 'data-original-title': maxNumberOfValuesReachedWarning() || '' }">
                                 <button class="btn btn-default btn-sm" data-bind="click: addValue, disable: maxNumberOfValuesReachedWarning()">
                                     <i class="icon-plus"></i>
                                     <span>Add Value</span>

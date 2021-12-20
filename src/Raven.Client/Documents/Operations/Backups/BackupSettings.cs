@@ -145,6 +145,8 @@ namespace Raven.Client.Documents.Operations.Backups
         /// </summary>
         public string CustomServerUrl { get; set; }
 
+        public bool ForcePathStyle { get; set; }
+
         public S3Settings()
         {
         }
@@ -156,6 +158,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
             BucketName = settings.BucketName;
             CustomServerUrl = settings.CustomServerUrl;
+            ForcePathStyle = settings.ForcePathStyle;
             AwsRegionName = settings.AwsRegionName;
             AwsAccessKey = settings.AwsAccessKey;
             AwsSecretKey = settings.AwsSecretKey;
@@ -196,6 +199,9 @@ namespace Raven.Client.Documents.Operations.Backups
             if (other.CustomServerUrl != CustomServerUrl)
                 return false;
 
+            if (other.ForcePathStyle != ForcePathStyle)
+                return false;
+
             return true;
         }
 
@@ -204,6 +210,7 @@ namespace Raven.Client.Documents.Operations.Backups
             var djv = base.ToJson();
             djv[nameof(BucketName)] = BucketName;
             djv[nameof(CustomServerUrl)] = CustomServerUrl;
+            djv[nameof(ForcePathStyle)] = ForcePathStyle;
             return djv;
         }
     }

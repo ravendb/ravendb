@@ -153,6 +153,14 @@ namespace Sparrow.Json
             return context.GetLazyString(_buffer, _size, longLived: false);
         }
 
+        public LazyStringValue CloneOnSameContext()
+        {
+            if (_size == 0)
+                return _context.Empty;
+
+            return _context.GetLazyString(_buffer, _size, longLived: false);
+        }
+
         public bool HasStringValue => _string != null;
 
         [ThreadStatic]
@@ -943,6 +951,19 @@ namespace Sparrow.Json
 
             return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
         }
+
+        public bool StartsWith(ReadOnlySpan<byte> value)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+
+            return AsSpan().StartsWith(value);
+        }
+
 
         public bool StartsWith(string value, StringComparison comparisionType)
         {

@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class GetTimeSeriesOperation : GetTimeSeriesOperation<TimeSeriesEntry>
     {
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? @from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) : base(docId, timeseries, @from, to, start, pageSize)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? @from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false) : base(docId, timeseries, @from, to, start, pageSize, returnFullResults)
         {
         }
     }
@@ -25,12 +25,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly int _start, _pageSize;
         private readonly DateTime? _from, _to;
         private readonly Action<ITimeSeriesIncludeBuilder> _includes;
+        private readonly bool _returnFullResults;
 
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) 
-            : this(docId, timeseries, from, to, start, pageSize, includes: null)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, bool returnFullResults = false) 
+            : this(docId, timeseries, from, to, start, pageSize, includes: null, returnFullResults)
         { }
 
-        internal GetTimeSeriesOperation(string docId, string timeseries, DateTime? from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes)
+        internal GetTimeSeriesOperation(string docId, string timeseries, DateTime? from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes, bool returnFullResults = false)
         {
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
@@ -45,14 +46,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _from = from;
             _to = to;
             _includes = includes;
-
+            _returnFullResults = returnFullResults;
         }
 
 
         public RavenCommand<TimeSeriesRangeResult<TValues>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context,
             HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize, _includes);
+            return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize, _includes, _returnFullResults);
         }
 
         internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesRangeResult<TValues>>
@@ -61,9 +62,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly int _start, _pageSize;
             private readonly DateTime? _from, _to;
             private readonly Action<ITimeSeriesIncludeBuilder> _includes;
+            private readonly bool _returnFullResults;
 
-
-            public GetTimeSeriesCommand(string docId, string name, DateTime? @from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes)
+            public GetTimeSeriesCommand(string docId, string name, DateTime? @from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes, bool returnFullResults = false)
             {
                 _docId = docId;
                 _name = name;
@@ -72,6 +73,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 _from = from;
                 _to = to;
                 _includes = includes;
+                _returnFullResults = returnFullResults;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -115,9 +117,14 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     AddIncludesToRequest(pathBuilder, _includes);
                 }
 
-                var request = new HttpRequestMessage {Method = HttpMethod.Get};
+                if (_returnFullResults)
+                {
+                    pathBuilder.Append("&full=").Append(true);
+                }
 
                 url = pathBuilder.ToString();
+
+                var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
                 return request;
             }

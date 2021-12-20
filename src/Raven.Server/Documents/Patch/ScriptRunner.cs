@@ -422,6 +422,11 @@ namespace Raven.Server.Documents.Patch
                 return tsStats;
             }
 
+            private static readonly TimeSeriesStorage.AppendOptions AppendOptionsForScript = new TimeSeriesStorage.AppendOptions
+            {
+                AddNewNameToMetadata = false
+            };
+
             private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
                 AssertValidDatabaseContext("timeseries(doc, name).append");
@@ -500,7 +505,7 @@ namespace Raven.Server.Documents.Patch
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
                         new[] { toAppend }, 
-                        addNewNameToMetadata: false);
+                        AppendOptionsForScript);
 
                     if (DebugMode)
                     {
@@ -1368,7 +1373,8 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
-                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null);
+                //TODO: properly pass cancellation token
+                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null, token: default);
 
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);

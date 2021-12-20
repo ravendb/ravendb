@@ -13,7 +13,8 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
-    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>, ISessionDocumentTypedTimeSeries<TValues> where TValues : new()
+    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>,
+        ISessionDocumentTypedTimeSeries<TValues>, ISessionDocumentIncrementalTimeSeries, ISessionDocumentTypedIncrementalTimeSeries<TValues> where TValues : new()
     {
         private readonly AsyncSessionDocumentTimeSeries<TimeSeriesEntry> _asyncSessionTimeSeries;
 
@@ -27,26 +28,26 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, entity, name);
         }
 
-        public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
+        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, IEnumerable<double> values, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, values, tag);
         }
 
-        public void Append(DateTime timestamp, double value, string tag = null)
+        void ISessionDocumentAppendTimeSeriesBase.Append(DateTime timestamp, double value, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
 
-        public void Append(DateTime timestamp, TValues value, string tag = null)
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues value, string tag)
         {
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
 
-        public void Append(TimeSeriesEntry<TValues> entry)
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(TimeSeriesEntry<TValues> entry)
         {
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Value, entry.Tag);
         }
-        
+
         public TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
         {
             return Get(from, to, includes: null, start, pageSize);
@@ -57,7 +58,7 @@ namespace Raven.Client.Documents.Session
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, includes, start, pageSize));
         }
 
-        TimeSeriesEntry<TValues>[] ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
+        private TimeSeriesEntry<TValues>[] GetInternal(DateTime? from, DateTime? to, int start, int pageSize)
         {
             return AsyncHelpers.RunSync(() =>
             {
@@ -68,6 +69,11 @@ namespace Raven.Client.Documents.Session
 
                 return _asyncSessionTimeSeries.GetTypedFromCache<TValues>(from, to, null, start, pageSize);
             });
+        }
+
+        TimeSeriesEntry<TValues>[] ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
+        {
+            return GetInternal(from, to, start, pageSize);
         }
 
         TimeSeriesRollupEntry<TValues>[] ISessionDocumentRollupTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
@@ -87,17 +93,22 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Values, entry.Tag);
         }
 
-        public void Delete(DateTime? from = null, DateTime? to = null)
+        TimeSeriesEntry<TValues>[] ISessionDocumentTypedIncrementalTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
+        {
+            return GetInternal(from, to, start, pageSize);
+        }
+
+        void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime? from, DateTime? to)
         {
             _asyncSessionTimeSeries.Delete(from, to);
         }
 
-        public void Delete(DateTime at)
+        void ISessionDocumentDeleteTimeSeriesBase.Delete(DateTime at)
         {
             _asyncSessionTimeSeries.Delete(at);
         }
 
-        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
+        IEnumerator<TimeSeriesEntry> ITimeSeriesStreamingBase<TimeSeriesEntry>.Stream(DateTime? @from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesEntry>(from, to, offset));
         }
@@ -110,6 +121,31 @@ namespace Raven.Client.Documents.Session
         IEnumerator<TimeSeriesEntry<TValues>> ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.Stream(DateTime? from, DateTime? to, TimeSpan? offset)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetStream<TimeSeriesEntry<TValues>>(from, to, offset));
+        }
+
+        private void Increment(DateTime timestamp, IEnumerable<double> values)
+        {
+            _asyncSessionTimeSeries.Increment(timestamp, values);
+        }
+
+        void ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime timestamp, IEnumerable<double> values)
+        {
+            Increment(timestamp, values);
+        }
+
+        void ISessionDocumentIncrementTimeSeriesBase.Increment(IEnumerable<double> values)
+        {
+            Increment(DateTime.UtcNow, values);
+        }
+
+        void ISessionDocumentIncrementTimeSeriesBase.Increment(DateTime timestamp, double value)
+        {
+            Increment(timestamp, new[] { value });
+        }
+
+        void ISessionDocumentIncrementTimeSeriesBase.Increment(double value)
+        {
+            Increment(DateTime.UtcNow, new[] { value });
         }
     }
 }

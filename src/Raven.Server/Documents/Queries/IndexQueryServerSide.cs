@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -156,7 +157,7 @@ namespace Raven.Server.Documents.Queries
                     var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                     result.Offset = start;
                     result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
-                        ? Math.Min(start, result.Start)
+                        ? Math.Max(start, result.Start)
                         : start;
                 }
 

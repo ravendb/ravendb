@@ -562,7 +562,7 @@ namespace Raven.Server.Utils
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe bool TryConvertStringValue(string value, out object output)
+        internal static unsafe bool TryConvertStringValue(string value, out object output)
         {
             output = null;
 

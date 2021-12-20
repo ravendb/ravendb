@@ -150,6 +150,10 @@ class statistics extends viewModelBase {
         const view = new indexStalenessReasons(this.activeDatabase(), indexName);
         app.showBootstrapDialog(view);
     }
+
+    refreshStats() {
+        this.fetchStats();
+    }
 }
 
 export = statistics;

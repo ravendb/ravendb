@@ -1862,18 +1862,24 @@ namespace SlowTests.Client.TimeSeries.Policies
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await WaitForPolicyRunner(database);
 
-                using (var session = store.OpenSession())
+                List<string> tsNames = default;
+                await WaitForValueAsync(() =>
                 {
-                    var doc = session.Load<User>("users/karmel");
-                    var tsNames = session.Advanced.GetTimeSeriesFor(doc);
-                    Assert.True(tsNames.Count == 4, 
-                        $"Wrong number of timeseries, expected 4 but got {tsNames.Count} : {string.Join(',', tsNames)}");
+                    using (var session = store.OpenSession())
+                    {
+                        var doc = session.Load<User>("users/karmel");
+                        tsNames = session.Advanced.GetTimeSeriesFor(doc);
+                        return tsNames.Count;
+                    }
+                }, expectedVal: 4, timeout: 10_000);
 
-                    Assert.Equal(rawName, tsNames[0]);
-                    Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);
-                    Assert.Equal($"{rawName}@{p2.Name}", tsNames[2]);
-                    Assert.Equal($"{rawName}@{p3.Name}", tsNames[3]);
-                }
+                Assert.True(tsNames.Count == 4,
+                    $"Wrong number of timeseries, expected 4 but got {tsNames.Count} : {string.Join(',', tsNames)}");
+
+                Assert.Equal(rawName, tsNames[0]);
+                Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);
+                Assert.Equal($"{rawName}@{p2.Name}", tsNames[2]);
+                Assert.Equal($"{rawName}@{p3.Name}", tsNames[3]);
             }
         }
     }

@@ -276,6 +276,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public bool ElasticSearchConnectionStringsUpdated { get; set; }
 
+            public bool PostreSQLConfigurationUpdated { get; set; }
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
@@ -348,6 +350,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ElasticSearchEtlsUpdated)
                     json[nameof(ElasticSearchEtlsUpdated)] = ElasticSearchEtlsUpdated;
+
+                if (PostreSQLConfigurationUpdated)
+                    json[nameof(PostreSQLConfigurationUpdated)] = PostreSQLConfigurationUpdated;
 
                 return json;
             }
@@ -423,6 +428,10 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ElasticSearchEtlsUpdated)
                     sb.AppendLine("- ElasticSearch ETLs");
+
+                if (PostreSQLConfigurationUpdated)
+                    sb.AppendLine("- PostgreSQL Integration");
+
 
                 if (sb.Length == 0)
                     return string.Empty;

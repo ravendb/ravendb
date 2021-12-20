@@ -30,7 +30,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             {
                 var databaseTask = kvp.Value;
 
-                if (databaseTask.IsCompletedSuccessfully == false)
+                if (databaseTask == null || databaseTask.IsCompletedSuccessfully == false)
                     continue;
 
                 yield return databaseTask.Result;

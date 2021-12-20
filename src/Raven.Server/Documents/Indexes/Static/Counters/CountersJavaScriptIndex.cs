@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private const string MapPrefix = "counters.";
 
-        public CountersJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
-            : base(definition, configuration, MapPrefix, Constants.Counters.All)
+        public CountersJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+            : base(definition, configuration, MapPrefix, Constants.Counters.All, indexVersion)
         {
         }
     }

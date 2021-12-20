@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -390,6 +392,24 @@ namespace FastTests
                     Assert.True(false, PrintBackupStatus(status));
                 }
             }
+        }
+        
+        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, TimeSpan? timeout = null)
+        {
+            var restoredDatabaseName = GetDatabaseName();
+
+            Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = Directory.GetDirectories(backupPath).First(), 
+                DatabaseName = restoredDatabaseName
+            }, timeout);
+
+            return GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => restoredDatabaseName, 
+                CreateDatabase = false, 
+                DeleteDatabaseOnDispose = true
+            });
         }
     }
 }

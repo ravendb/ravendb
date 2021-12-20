@@ -1474,7 +1474,7 @@ namespace Raven.Client.Documents.Indexes
                         Out("dynamic, ");
                     }
                     Out("dynamic>)(");
-                    if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
+                    if (methodInfo.Name == nameof(ILoadCommonApiForIndexes.LoadDocument))
                     {
                         var type = methodInfo.GetGenericArguments()[0];
 
@@ -1602,6 +1602,11 @@ namespace Raven.Client.Documents.Indexes
                         // exists on both the server side and the client side
                         Out("this");
                     }
+                    else if (typeof(NoTrackingCommonApiForIndexes).IsAssignableFrom(expression.Type))
+                    {
+                        Out("this.");
+                        Out(nameof(AbstractCommonApiForIndexes.NoTracking));
+                    }
                     else if (isDictionaryObject)
                     {
                         Visit(expression);
@@ -1667,11 +1672,11 @@ namespace Raven.Client.Documents.Indexes
                         }
                         Out("Where");
                         break;
-                    case nameof(AbstractIndexCreationTask.LoadDocument):
-                        Out(nameof(AbstractIndexCreationTask.LoadDocument));
+                    case nameof(ILoadCommonApiForIndexes.LoadDocument):
+                        Out(nameof(ILoadCommonApiForIndexes.LoadDocument));
                         break;
-                    case nameof(AbstractIndexCreationTask.LoadCompareExchangeValue):
-                        Out(nameof(AbstractIndexCreationTask.LoadCompareExchangeValue));
+                    case nameof(ILoadCompareExchangeApiForIndexes.LoadCompareExchangeValue):
+                        Out(nameof(ILoadCompareExchangeApiForIndexes.LoadCompareExchangeValue));
                         break;
                     default:
                         Out(node.Method.Name);
@@ -1752,7 +1757,7 @@ namespace Raven.Client.Documents.Indexes
                 Out("\", StringComparison.Ordinal)");
             }
 
-            if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
+            if (node.Method.Name == nameof(ILoadCommonApiForIndexes.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
                 _loadDocumentTypes.Add(type);
@@ -1770,11 +1775,11 @@ namespace Raven.Client.Documents.Indexes
 
                     var argument = node.Arguments[1];
                     if (argument.NodeType != ExpressionType.Constant)
-                        throw new InvalidOperationException($"Invalid argument in {nameof(AbstractIndexCreationTask.LoadDocument)}. String constant was expected but was '{argument.NodeType}' with value '{argument}'.");
+                        throw new InvalidOperationException($"Invalid argument in {nameof(ILoadCommonApiForIndexes.LoadDocument)}. String constant was expected but was '{argument.NodeType}' with value '{argument}'.");
                 }
                 else
                 {
-                    throw new NotSupportedException($"Unknown overload of {nameof(AbstractIndexCreationTask.LoadDocument)} method");
+                    throw new NotSupportedException($"Unknown overload of {nameof(ILoadCommonApiForIndexes.LoadDocument)} method");
                 }
             }
 

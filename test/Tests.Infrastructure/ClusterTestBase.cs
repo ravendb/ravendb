@@ -459,7 +459,7 @@ namespace Tests.Infrastructure
             return stores;
         }
 
-        private List<DocumentStore> GetDocumentStores(List<RavenServer> nodes, string database, bool disableTopologyUpdates, X509Certificate2 certificate = null)
+        public List<DocumentStore> GetDocumentStores(List<RavenServer> nodes, string database, bool disableTopologyUpdates, X509Certificate2 certificate = null)
         {
             var stores = new List<DocumentStore>();
             foreach (var node in nodes)

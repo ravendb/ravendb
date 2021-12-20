@@ -793,6 +793,14 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
 
         var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
 
+        var escapedRe = "\\\\(?:x[0-9a-fA-F]{2}|" + // hex
+            "u[0-9a-fA-F]{4}|" + // unicode
+            "u{[0-9a-fA-F]{1,6}}|" + // es6 unicode
+            "[0-2][0-7]{0,2}|" + // oct
+            "3[0-7][0-7]?|" + // oct
+            "[4-7][0-7]?|" + //oct
+            ".)";
+
         var clausesKeywords = (
             "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
         );
@@ -878,10 +886,12 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
             end : "\\*/"
         }, {
             token : "string",           // " string
-            regex : '"[^"]*"?'
+            regex : '"(?=.)',
+            next  : "qqstring"
         }, {
             token : "string",           // ' string
-            regex : "'[^']*'?"
+            regex : "'(?=.)",
+            next  : "qstring"
         }, {
             token : "string",           // ` string (apache drill)
             regex : "`[^`]*`?"
@@ -942,6 +952,38 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
 
         this.$rules = {
             "start" : commonRules.concat(startRule),
+            "qqstring" : [
+                {
+                    token : "constant.language.escape",
+                    regex : escapedRe
+                }, {
+                    token : "string",
+                    regex : "\\\\$",
+                    consumeLineEnd  : true
+                }, {
+                    token : "string",
+                    regex : '"|$',
+                    next  : "start"
+                }, {
+                    defaultToken: "string"
+                }
+            ],
+            "qstring" : [
+                {
+                    token: "constant.language.escape",
+                    regex: escapedRe
+                }, {
+                    token: "string",
+                    regex: "\\\\$",
+                    consumeLineEnd: true
+                }, {
+                    token: "string",
+                    regex: "'|$",
+                    next: "no_regex"
+                }, {
+                    defaultToken: "string"
+                }
+            ],
             "whereFunction" : commonRules.concat(whereFunctionsRules).map(function (rule) {
                 return {
                     token: rule.token + ".whereFunction",
@@ -992,14 +1034,13 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
     exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules","ace/worker/worker_client"], function(require, exports, module) {
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/javascript","ace/mode/rql_highlight_rules"], function(require, exports, module) {
     "use strict";
 
     var oop = require("../lib/oop");
     var TextMode = require("./text").Mode;
     var JsMode = require("./javascript").Mode;
     var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
-    var WorkerClient = require("../worker/worker_client").WorkerClient;
 
     var Mode = function() {
         this.HighlightRules = RqlHighlightRules;
@@ -1009,21 +1050,6 @@ ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/
             "js-": JsMode
         });
         this.prefixRegexps = [/[a-zA-Z_0-9@'"\\\/\$\-\u00A2-\uFFFF=!<>]/];
-
-        this.createWorker = function(session) {
-            var worker = new WorkerClient(["ace"], "ace/mode/rql_worker", "RqlWorker");
-            worker.attachToDocument(session.getDocument());
-
-            worker.on("annotate", function(results) {
-                session.setAnnotations(results.data);
-            });
-
-            worker.on("terminate", function() {
-                session.clearAnnotations();
-            });
-
-            return worker;
-        };
     };
     oop.inherits(Mode, TextMode);
 

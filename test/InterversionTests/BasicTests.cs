@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -24,6 +27,47 @@ namespace InterversionTests
             AssertStore(await getStoreTask407);
             AssertStore(await getStoreTask408);
             AssertStore(GetDocumentStore());
+        }
+
+        [Theory]
+        [InlineData("5.2.3")]
+        [InlineData("5.3.0-nightly-20211107-0402")]
+        public async Task SubscriptionTest(string version)
+        {
+            using (var store = await GetDocumentStoreAsync(version))
+            {
+                var id = store.Subscriptions.Create<User>();
+                
+                await using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxDocsPerBatch = 2
+                }))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/1");
+                        session.Store(new User(), "user/2");
+                        session.Store(new User(), "user/3");
+                        session.Store(new User(), "user/4");
+                        session.Store(new User(), "user/5");
+                        session.Store(new User(), "user/6");
+                        session.SaveChanges();
+                    }
+
+                    var con1Docs = new List<string>();
+                    
+                    var t = subscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            con1Docs.Add(item.Id);
+                        }
+                    });
+
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count == 6), 6000);
+                }
+            }
         }
 
         private static void AssertStore(IDocumentStore store)

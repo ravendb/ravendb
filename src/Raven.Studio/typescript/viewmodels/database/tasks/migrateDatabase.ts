@@ -121,7 +121,8 @@ class migrateDatabase extends viewModelBase {
 
         popoverUtils.longWithHover($(".migrator-path small"),
             {
-                content: 'The <strong>Raven.Migrator</strong> executable can be found in the <strong>Tools</strong> package (for version v4.x)<br>downloaded from <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website'
+                content: `<small>For RavenDB version 4.x and up, the <strong>Raven.Migrator</strong> executable can be found in the <strong>Tools</strong> package.<br>
+                          The Tools package can be downloaded from the <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website.</small>`
             });
 
         popoverUtils.longWithHover($(".migrate-gridfs small"),

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,6 +10,7 @@ namespace Raven.Server.Commercial
     public static class LicenseValidator
     {
         private const int TypeBitsToShift = 5;
+        private const int Mask = 0x1F;
 
         private static readonly string[] Terms =
         {
@@ -18,7 +19,8 @@ namespace Raven.Server.Commercial
             "externalReplication", "delayedExternalReplication", "ravenEtl", "sqlEtl", "highlyAvailableTasks",
             "pullReplicationAsHub", "pullReplicationAsSink", "encryptedBackup", "letsEncryptAutoRenewal", "cloud",
             "documentsCompression", "timeSeriesRollupsAndRetention", "additionalAssembliesNuget",
-            "monitoringEndpoints", "olapEtl", "readOnlyCertificates"
+            "monitoringEndpoints", "olapEtl", "readOnlyCertificates",
+            "tcpDataCompression", "concurrentSubscriptions", "elasticSearchEtl", "powerBI", "postgreSqlIntegration"
         };
 
         private enum ValueType : byte
@@ -58,38 +60,26 @@ namespace Raven.Server.Commercial
 
                 while (ms.Position < buffer.Length)
                 {
-                    var token = ms.ReadByte();
-                    var index = token & 0x1F;
-                    object val;
-                    var curr = (ValueType)(token >> TypeBitsToShift);
-                    switch (curr)
+                    var licensePropertyExists = TryGetTermIndexAndType(br, out string licenseProperty, out ValueType type);
+
+                    object val = type switch
                     {
-                        case ValueType.False:
-                            val = false;
-                            break;
-                        case ValueType.True:
-                            val = true;
-                            break;
-                        case ValueType.Int8:
-                            val = (int)br.ReadByte();
-                            break;
-                        case ValueType.Int32:
-                            val = br.ReadInt32();
-                            break;
-                        case ValueType.Date:
-                            val = FromDosDate(br.ReadUInt16());
-                            break;
-                        case ValueType.String:
-                            var valLength = (int)br.ReadByte();
-                            val = Encoding.UTF8.GetString(br.ReadBytes(valLength));
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        ValueType.False => false,
+                        ValueType.True => true,
+                        ValueType.Int8 => (int)br.ReadByte(),
+                        ValueType.Int32 => br.ReadInt32(),
+                        ValueType.Date => FromDosDate(br.ReadUInt16()),
+                        ValueType.String => Encoding.UTF8.GetString(br.ReadBytes((int)br.ReadByte())),
+                        _ => throw new ArgumentOutOfRangeException(),
+                    };
+
+                    if (licensePropertyExists == false)
+                    {
+                        //new license property
+                        continue;
                     }
 
-                    if (index >= Terms.Length)
-                        continue; // new field, just skip
-                    result[Terms[index]] = val;
+                    result[licenseProperty] = val;
                 }
 
                 var attributesLen = ms.Position;
@@ -115,6 +105,33 @@ namespace Raven.Server.Commercial
 
                 return result;
             }
+        }
+
+        private static bool TryGetTermIndexAndType(BinaryReader br, out string licenseProperty, out ValueType type)
+        {
+            var token = br.ReadByte();
+            var index = token & Mask;
+            if (index == Mask)
+            {
+                //extended term
+                br.ReadByte(); //discard legacy value
+                ushort val = br.ReadUInt16();
+                index = val & 0x1FFF;
+                type = (ValueType)(val >> (8 + TypeBitsToShift));
+            }
+            else
+            {
+                type = (ValueType)(token >> TypeBitsToShift);
+            }
+
+            if (index >= Terms.Length)
+            {
+                licenseProperty = default;
+                return false;
+            }
+
+            licenseProperty = Terms[index];
+            return true;
         }
 
         private class Keys

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -143,6 +144,9 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditLockModeCommand)] = 52_000,
             [nameof(PutRollingIndexCommand)] = 52_000,
+
+            [nameof(EditPostgreSqlConfigurationCommand)] = 53_000,
+            [nameof(RecordBatchSubscriptionDocumentsCommand)] = 53_000,
         };
 
         public static bool CanPutCommand(string command)
@@ -155,11 +159,20 @@ namespace Raven.Server.ServerWide
 
         static ClusterCommandsVersionManager()
         {
-            MyCommandsVersion = _currentClusterMinimalVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+            MyCommandsVersion = Enumerable.Max(ClusterCommandsVersions.Values);
+        }
+
+        public static void ThrowInvalidClusterVersion(int version)
+        {
+            throw new InvalidOperationException($"Can't set cluster version '{version}' that is higher then my version '{MyCommandsVersion}', " +
+                                                $"this is an indication that your are running in a mixed cluster and this node is not with the latest version.");
         }
 
         public static void SetClusterVersion(int version)
         {
+            if (MyCommandsVersion < version)
+                ThrowInvalidClusterVersion(version);
+
             int currentVersion;
             while (true)
             {

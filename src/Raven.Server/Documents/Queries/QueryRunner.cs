@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Queries
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, isStreaming, token);
 
             _currentlyRunningQueries.TryAdd(executingQueryInfo);
-
+            
             return new QueryMarker(this, executingQueryInfo);
         }
 

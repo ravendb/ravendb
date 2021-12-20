@@ -39,6 +39,8 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     $EMBEDDED_BUILD_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "build")
     $EMBEDDED_SERVER_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "contentFiles", "any", "any")
     
+    $LIB_ZSTD_DIR = [io.path]::combine($projectDir, "libs", "libzstd", "*")
+    
     $NETSTANDARD_TARGET = "netstandard2.0"
     $NET461_TARGET = "net461"
     
@@ -53,6 +55,7 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR_NET461 -Force
 
     Copy-Item $nuspec -Destination $EMBEDDED_NUSPEC
+    Copy-Item $LIB_ZSTD_DIR -Destination $EMBEDDED_SERVER_OUT_DIR
 
     $embeddedCsproj = Join-Path -Path $EMBEDDED_SRC_DIR -ChildPath "Raven.Embedded.csproj";
     

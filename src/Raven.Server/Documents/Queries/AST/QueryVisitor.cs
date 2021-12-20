@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitLoad(q.Load);
             }
 
-            if (q.Select != null)
+            if (q.Select != null && q.Select.Count > 0)
             {
                 VisitSelect(q.Select, q.IsDistinct);
             }

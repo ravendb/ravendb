@@ -4,6 +4,23 @@ import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
 
+
+class copyFeature implements columnPreviewFeature {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string) {
+        $tooltip.on("click", ".copy", () => {
+            copyToClipboard.copy(valueProvider(), "Item has been copied to clipboard", document.querySelector(containerSelector));
+
+            $(".copy", $tooltip).addClass("btn-success");
+            $(".copy span", $tooltip)
+                .html("Copied!")
+        });
+    }
+    
+    syntax() {
+        return '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
+    }
+}
+
 class columnPreviewPlugin<T> {
 
     private grid: virtualGrid<T>;
@@ -12,14 +29,21 @@ class columnPreviewPlugin<T> {
     private previewVisible = false;
     private $tooltip: JQuery;
     private currentValue: any;
-
+    private currentElement: any;
+    
+    private features: columnPreviewFeature[] = [new copyFeature()];
+    
     static localDateFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
     
-    private static defaultMarkupProvider(value: any, wrapValue: boolean = true) {
-        const copySyntax = '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
+    constructor() {
+        _.bindAll(this, "defaultMarkupProvider");
+    }
+    
+    private defaultMarkupProvider(value: any, column: virtualColumn, wrapValue: boolean = true) {
+        const featuresSyntax = this.features.map(f => f.syntax(column, value)).join("");
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
             const dateAsMoment = value as moment.Moment;
@@ -37,16 +61,18 @@ class columnPreviewPlugin<T> {
                             <div class="data-label">Relative: </div>
                             <div class="data-value">${fullDuration}</div>
                         </div>
-                    </div>` + copySyntax;
+                    </div>` + featuresSyntax;
         } else {
-            return wrapValue ? `<pre><code class="white-space-pre">${value}</code></pre>${copySyntax}` :
-                               `${value}${copySyntax}`;
+            return wrapValue ? `<pre><code class="white-space-pre">${value}</code></pre>${featuresSyntax}` :
+                               `${value}${featuresSyntax}`;
         }
     }
 
     install(containerSelector: string, tooltipSelector: string,
             previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject,
-                                     onValueProvided: (value: any, valueToCopy?: any, wrapValue?: boolean) => void) => void) {
+                                     onValueProvided: (value: any, valueToCopy?: any, wrapValue?: boolean) => void) => void, opts?: {
+            additionalFeatures?: columnPreviewFeature[];
+        }) {
         const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
@@ -57,15 +83,15 @@ class columnPreviewPlugin<T> {
 
         this.grid = grid;
         
-        const markupProvider = columnPreviewPlugin.defaultMarkupProvider;
+        if (opts?.additionalFeatures?.length > 0) {
+            this.features.push(...opts.additionalFeatures);
+        }
         
-        this.$tooltip.on("click", ".copy", () => {
-            copyToClipboard.copy(this.currentValue, "Item has been copied to clipboard", document.querySelector(containerSelector));
-            
-            $(".copy", this.$tooltip).addClass("btn-success");
-            $(".copy span", this.$tooltip)
-                .html("Copied!")
-        });
+        const markupProvider = this.defaultMarkupProvider;
+
+        for (const feature of this.features) {
+            feature.install(this.$tooltip, () => this.currentValue, () => this.currentElement, containerSelector);
+        }
 
         $(containerSelector).on("mouseenter", ".cell", e => {
             const [element, column] = this.findItemAndColumn(e);
@@ -74,9 +100,10 @@ class columnPreviewPlugin<T> {
                     this.previewVisible = true;
 
                     previewContextProvider(element, column, e, (value, valueToCopy, wrapValue) => {
-                        const markup = markupProvider(value, wrapValue);
+                        const markup = markupProvider(value, column, wrapValue);
                         this.show(markup, e);
                         this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
+                        this.currentElement = element;
                     });
                 }
             }, columnPreviewPlugin.delay);
@@ -137,10 +164,14 @@ class columnPreviewPlugin<T> {
         if (left + computedWidth < parentWidth) {
             this.$tooltip
                 .css('left', left + 'px')
-                .css('right', '');
+                .css('right', '')
+                .css("max-width", '');
         } else {
-            const right = parentWidth - left - $cell.outerWidth();
+            const outerWidth = $cell.outerWidth();
+            const right = parentWidth - left - outerWidth;
+            
             this.$tooltip
+                .css("max-width", (left + outerWidth) + "px")
                 .css('left', '')
                 .css('right', right + 'px');
         }

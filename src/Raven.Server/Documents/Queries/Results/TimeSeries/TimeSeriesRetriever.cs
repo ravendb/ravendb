@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -31,6 +32,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private readonly DocumentsOperationContext _context;
 
         private Dictionary<string, Document> _loadedDocuments;
+        private readonly CancellationToken _token;
 
         private Dictionary<LazyStringValue, object> _bucketByTag;
 
@@ -58,11 +60,13 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             [AggregationType.Average] = null
         };
 
-        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments,
+            CancellationToken token)
         {
             _context = context;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
+            _token = token;
 
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
@@ -107,9 +111,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 rangeSpec.InitializeFullRange(from, to);
             }
 
-            var reader = groupByTimePeriod == null
-                ? new TimeSeriesReader(_context, documentId, _source, from, to, offset)
-                : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
+            ITimeSeriesReader reader = groupByTimePeriod == null
+                ? new TimeSeriesReader(_context, documentId, _source, from, to, offset, _token)
+                : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue(), _token);
 
             _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
 
@@ -232,7 +236,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly)
+                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly || IsLastDuplicate(it.Segment.Summary, aggregationHolder))
                         {
                             foreach (var value in AggregateIndividualItems(it.Segment.Values))
                             {
@@ -773,6 +777,11 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
+        private static bool IsLastDuplicate(TimeSeriesValuesSegment segment, AggregationHolder aggregationHolder)
+        {
+            return segment.Version.ContainsLastValueDuplicate && aggregationHolder.Contains(AggregationType.Last);
+        }
+
         private (long Count, DateTime Start, DateTime End) GetStatsAndRemoveQuotesIfNeeded(string documentId)
         {
             var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
@@ -905,15 +914,15 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        public class TimeSeriesRetrieverResult
+        public class TimeSeriesStreamingRetrieverResult
         {
             public IEnumerable<DynamicJsonValue> Stream;
             public DynamicJsonValue Metadata;
         }
 
-        public TimeSeriesRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
+        public TimeSeriesStreamingRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
         {
-            var result = new TimeSeriesRetrieverResult
+            var result = new TimeSeriesStreamingRetrieverResult
             {
                 Stream = array,
                 Metadata = new DynamicJsonValue()
