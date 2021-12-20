@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.Queries
         public bool AddTimeSeriesNames;
 
         public bool IsStream;
+        public  string ClientQueryId;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
@@ -104,6 +105,8 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 result = JsonDeserializationServer.IndexQuery(json);
+                if (httpContext.Request.Query.TryGetValue("clientQueryId", out var v))
+                    result.ClientQueryId = v[0];
 
                 if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                     result.PageSize = int.MaxValue;
@@ -202,6 +205,9 @@ namespace Raven.Server.Documents.Queries
                                     result.QueryParameters = await context.ReadForMemoryAsync(stream, "query parameters");
                                 }
                                 continue;
+                            case "clientQueryId":
+                                result.ClientQueryId = item.Value[0];
+                                break;
                             case "waitForNonStaleResults":
                                 result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
                                 break;
