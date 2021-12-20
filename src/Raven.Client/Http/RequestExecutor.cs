@@ -680,8 +680,10 @@ namespace Raven.Client.Http
             }
         }
 
-        private void UpdateTopologyCallback(object _)
+        private void UpdateTopologyCallback(object state)
         {
+            Guid? applicationIdentifier = (Guid?)state;
+
             var time = DateTime.UtcNow;
             if (time - _lastReturnedResponse <= TimeSpan.FromMinutes(5))
                 return;
@@ -706,7 +708,12 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode) { TimeoutInMs = 0, DebugTag = "timer-callback" }).ConfigureAwait(false);
+                    await UpdateTopologyAsync(new UpdateTopologyParameters(serverNode)
+                    {
+                        TimeoutInMs = 0,
+                        DebugTag = "timer-callback",
+                        ApplicationIdentifier = applicationIdentifier
+                    }).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -743,7 +750,7 @@ namespace Raven.Client.Http
                         ApplicationIdentifier = applicationIdentifier
                     }).ConfigureAwait(false);
 
-                    InitializeUpdateTopologyTimer();
+                    InitializeUpdateTopologyTimer(applicationIdentifier);
                     _topologyTakenFromNode = serverNode;
                     return;
                 }
@@ -782,7 +789,7 @@ namespace Raven.Client.Http
             {
                 if (TryLoadFromCache(context))
                 {
-                    InitializeUpdateTopologyTimer();
+                    InitializeUpdateTopologyTimer(applicationIdentifier);
                     return;
                 }
             }
@@ -847,7 +854,7 @@ namespace Raven.Client.Http
             return cleanUrls;
         }
 
-        private void InitializeUpdateTopologyTimer()
+        private void InitializeUpdateTopologyTimer(Guid? applicationIdentifier)
         {
             if (_updateTopologyTimer != null)
                 return;
@@ -857,7 +864,7 @@ namespace Raven.Client.Http
                 if (_updateTopologyTimer != null)
                     return;
 
-                _updateTopologyTimer = new Timer(UpdateTopologyCallback, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+                _updateTopologyTimer = new Timer(UpdateTopologyCallback, applicationIdentifier, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
             }
         }
 
