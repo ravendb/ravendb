@@ -34,9 +34,11 @@ namespace SlowTests.Rolling
         {
         }
 
-        private Task CreateData(IDocumentStore store)
+        private async Task CreateData(IDocumentStore store)
         {
-            return store.Maintenance.SendAsync(new CreateSampleDataOperation());
+            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+            var res = await WaitForDocumentInClusterAsync<Order>(store.GetRequestExecutor().TopologyNodes, "orders/830-A", predicate: null, TimeSpan.FromSeconds(15));
+            Assert.True(res);
         }
 
         [Fact]
@@ -105,7 +107,6 @@ namespace SlowTests.Rolling
                             violation.AppendLine($"finishing {index} must be zero but is {dec}");
                     };
                 }
-
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
                 {
                     var t = ContinuouslyModifyDocuments(store, cts.Token);
@@ -176,7 +177,7 @@ namespace SlowTests.Rolling
                     {
                         var dec = Interlocked.Decrement(ref count);
                         if (dec != 0)
-                            violation.AppendLine($"finishing {index} must be zero but is {dec}");
+                            violation.AppendLine($"finishing {index} must be zero but is {dec} @ {server.ServerStore.NodeTag}");
                     };
                 }
 

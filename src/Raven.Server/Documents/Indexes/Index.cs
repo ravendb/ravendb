@@ -1022,15 +1022,13 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (Exception e)
                     {
+                        _rollingCompletionTask = null;
+
                         // we need to retry
                         ScheduleIndexingRun();
 
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
-                    }
-                    finally
-                    {
-                        _rollingCompletionTask = null;
                     }
                 });
 
@@ -1401,14 +1399,12 @@ namespace Raven.Server.Documents.Indexes
                         while (true)
                         {
 
-                            var result = WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                            WaitHandle.WaitAny(new [] {_mre.WaitHandle, _rollingEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
                             _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
                             
                             if (_indexDisabled)
                                 return;
                             
-                            _mre.Reset();
-
                             var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
 
                             if (replaceStatus == ReplaceStatus.Succeeded)
@@ -1416,9 +1412,11 @@ namespace Raven.Server.Documents.Indexes
 
                             if (replaceStatus == ReplaceStatus.NotNeeded)
                             {
-                                if (result != 0)
+                                if (_mre.IsSet == false)
                                     break;
                             }
+
+                            _mre.Reset();
 
                             Thread.Sleep(500); // replace will be re-tried
                         }
