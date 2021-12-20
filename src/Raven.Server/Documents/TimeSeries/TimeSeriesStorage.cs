@@ -898,8 +898,6 @@ namespace Raven.Server.Documents.TimeSeries
                 _name = name;
 
                 FromReplication = fromReplicationChangeVector != null;
-                if (context.LastDatabaseChangeVector == null) 
-                    _tss.GenerateChangeVector(context, fromReplicationChangeVector);
             }
 
             public TimeSeriesSegmentHolder(
