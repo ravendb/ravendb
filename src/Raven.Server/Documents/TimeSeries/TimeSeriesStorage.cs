@@ -724,7 +724,6 @@ namespace Raven.Server.Documents.TimeSeries
                 if (holder.LoadCurrentSegment())
                 {
                     // should never happen 
-                    Debug.Assert(false, "Trying to insert a new segment, but load one with overlapping ranges ");
                     return false;
                 }
 
