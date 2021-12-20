@@ -475,6 +475,48 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
+        [Theory]
+        [InlineData(@"timeseries(id(this), args.timeseries).increment(new Date(args.timestamp), args.values);")]
+        [InlineData(@"timeseries(id(this), args.timeseries).increment(args.values);")]
+        public async Task CanIncrementTimeSeriesByPatch_WithoutTimestamp(string script)
+        {
+            double[] values = { 59d };
+            const string timeseries = "INC:Downloads";
+            const string documentId = "users/ayende";
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Oren" }, documentId);
+                    await session.SaveChangesAsync();
+
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = script,
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "timestamp", baseline.AddMinutes(1) },
+                                { "values", values }
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var val = (await session.IncrementalTimeSeriesFor(documentId, timeseries)
+                            .GetAsync(DateTime.MinValue, DateTime.MaxValue))
+                        .Single();
+                    Assert.Equal(values, val.Values);
+                }
+            }
+        }
+
         class GetRangeOfTimestampByPatchCases : IEnumerable<object[]>
         {
             private readonly int[][] _startEndIndexes = { new[] { 4, 7 }, new[] { 0, 3 }, new[] { 0, 9 }, new[] { 5, 9 }, new[] { 0, 0 }, new[] { 2, 2 }, new[] { 9, 9 }, };
