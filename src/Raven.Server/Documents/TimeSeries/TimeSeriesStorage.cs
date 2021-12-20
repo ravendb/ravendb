@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.TimeSeries
                             deleted = readOnlySegment.NumberOfLiveEntries;
                             holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AppendDeadSegment(newSegment, changeVectorFromReplication: remoteChangeVector);
+                            holder.AppendDeadSegment(newSegment, conflictStatusIsUpdate: conflictStatus == ConflictStatus.Update, changeVectorFromReplication: remoteChangeVector);
                             if (updateMetadata)
                             {
                                 // in case this deleted segment was the only segment that exists for this TS
@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            var count = holder.AppendExistingSegment(newSegment, changeVectorFromReplication: remoteChangeVector);
+                            var count = holder.AppendExistingSegment(newSegment, conflictStatusIsUpdate: conflictStatus == ConflictStatus.Update, changeVectorFromReplication: remoteChangeVector);
                             if (count == 0 && updateMetadata)
                             {
                                 // this ts was completely deleted
@@ -676,11 +676,11 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (holder.LoadCurrentSegment() == false)
                 {
-                    holder.AppendToNewSegment(segment, baseline, changeVectorFromReplication: changeVector);
+                    holder.AppendToNewSegment(segment, baseline, conflictStatusIsUpdate: true, changeVector: changeVector);
                     return true;
                 }
 
-                holder.AppendExistingSegment(segment, changeVectorFromReplication: changeVector);
+                holder.AppendExistingSegment(segment, conflictStatusIsUpdate: true, changeVectorFromReplication: changeVector);
                 return true;
             }
 
@@ -708,7 +708,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                holder.AppendToNewSegment(segment, baseline, changeVectorFromReplication: changeVector);
+                holder.AppendToNewSegment(segment, baseline, conflictStatusIsUpdate: changeVector != null, changeVector: changeVector);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
@@ -935,14 +935,19 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateCountOfExistingStats(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
             }
 
-            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment, string changeVectorFromReplication = null)
+            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment, bool conflictStatusIsUpdate = false, string changeVectorFromReplication = null)
             {
                 if (newValueSegment.RecomputeRequired)
                     newValueSegment = newValueSegment.Recompute(_context.Allocator);
 
-                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
-                changeVectorFromReplication ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
-                _currentChangeVector = changeVectorFromReplication;
+                if (conflictStatusIsUpdate)
+                {
+                    _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                    changeVectorFromReplication ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+                    _currentChangeVector = changeVectorFromReplication;
+                }
+                else
+                    (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
                 ValidateSegment(newValueSegment);
                 if (newValueSegment.NumberOfLiveEntries == 0)
@@ -972,11 +977,16 @@ namespace Raven.Server.Documents.TimeSeries
                 return count;
             }
 
-            public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment, string changeVectorFromReplication = null)
+            public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment, bool conflictStatusIsUpdate = false, string changeVectorFromReplication = null)
             {
-                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
-                changeVectorFromReplication ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
-                _currentChangeVector = changeVectorFromReplication;
+                if (conflictStatusIsUpdate)
+                {
+                    _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                    changeVectorFromReplication ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+                    _currentChangeVector = changeVectorFromReplication;
+                }
+                else
+                    (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
                 ValidateSegment(newValueSegment);
                 MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
@@ -999,16 +1009,19 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment, _collection, BaselineDate);
             }
 
-            public void AppendToNewSegment(TimeSeriesValuesSegment newSegment, DateTime baseline, string changeVectorFromReplication = null)
+            public void AppendToNewSegment(TimeSeriesValuesSegment newSegment, DateTime baseline, bool conflictStatusIsUpdate = false, string changeVector = null)
             {
-                ValidateSegment(newSegment);
-
                 BaselineDate = EnsureMillisecondsPrecision(baseline);
                 SliceHolder.SetBaselineToKey(BaselineDate);
 
-                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
-                changeVectorFromReplication ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
-                _currentChangeVector = changeVectorFromReplication;
+                if (conflictStatusIsUpdate)
+                {
+                    _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                    changeVector ??= _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+                    _currentChangeVector = changeVector;
+                }
+                else
+                    (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate, newSegment.NumberOfLiveEntries);
                 _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkSegmentForPolicy(_context, SliceHolder, baseline, _currentChangeVector, newSegment.NumberOfLiveEntries);
@@ -1036,11 +1049,34 @@ namespace Raven.Server.Documents.TimeSeries
 
             public void AppendToNewSegment(SingleResult item)
             {
+                BaselineDate = EnsureMillisecondsPrecision(item.Timestamp);
+                SliceHolder.SetBaselineToKey(BaselineDate);
+
                 var newSegment = new TimeSeriesValuesSegment(SliceHolder.SegmentBuffer.Ptr, MaxSegmentSize);
                 newSegment.Initialize(item.Values.Length);
                 newSegment.Append(_context.Allocator, 0, item.Values.Span, SliceHolder.TagAsSpan(item.Tag), item.Status);
 
-                AppendToNewSegment(newSegment, item.Timestamp);
+                ValidateSegment(newSegment);
+
+                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate, 1);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, BaselineDate, item.Status);
+
+                (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
+
+                using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
+                using (Table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(SliceHolder.TimeSeriesKeySlice);
+                    tvb.Add(Bits.SwapBytes(_currentEtag));
+                    tvb.Add(cv);
+                    tvb.Add(newSegment.Ptr, newSegment.NumberOfBytes);
+                    tvb.Add(SliceHolder.CollectionSlice);
+                    tvb.Add(_context.GetTransactionMarker());
+
+                    Table.Insert(tvb);
+                }
+
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment, _collection, BaselineDate);
             }
 
             public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
