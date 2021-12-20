@@ -1295,7 +1295,8 @@ namespace Raven.Server.Documents.TimeSeries
             string documentId,
             string collection,
             string name,
-            IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement)
+            IEnumerable<TimeSeriesOperation.IncrementOperation> toIncrement,
+            AppendOptions options = null)
         {
             if (TimeSeriesHandler.CheckIfIncrementalTs(name) == false)
                 throw new InvalidOperationException("Cannot perform increment operations on Non Incremental Time Series");
@@ -1305,7 +1306,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var holder = new SingleResult();
 
-            return AppendTimestamp(context, documentId, collection, name, toIncrement.SelectMany(ToResult));
+            return AppendTimestamp(context, documentId, collection, name, toIncrement.SelectMany(ToResult), options);
 
 
             IEnumerable<SingleResult> ToResult(TimeSeriesOperation.IncrementOperation element)
