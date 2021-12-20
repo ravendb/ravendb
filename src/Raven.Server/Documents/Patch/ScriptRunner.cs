@@ -593,7 +593,8 @@ namespace Raven.Server.Documents.Patch
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
-                        new[] { toIncrement });
+                        new[] { toIncrement },
+                        AppendOptionsForScript);
 
                     if (DebugMode)
                     {
