@@ -36,6 +36,13 @@ namespace Raven.Client.Documents.Queries
         /// Gets or sets the skipped results
         /// </summary>
         public int SkippedResults { get; set; }
+        
+        /// <summary>
+        /// The number of results (filtered or matches)
+        /// that were scanned by the query. This is relevant
+        /// only if you are using a filter clause in the query.
+        /// </summary>
+        public int? ScannedResults { get; set; }
 
         /// <summary>
         /// Highlighter results (if requested).
@@ -72,6 +79,7 @@ namespace Raven.Client.Documents.Queries
                 IncludedPaths = IncludedPaths,
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
+                ScannedResults = ScannedResults,
                 TotalResults = TotalResults,
                 LongTotalResults = LongTotalResults,
                 Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),

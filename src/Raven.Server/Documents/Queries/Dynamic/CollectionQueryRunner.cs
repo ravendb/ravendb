@@ -141,13 +141,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var totalResults = new Reference<int>();
                 var skippedResults = new Reference<long>();
+                var scannedResults = new Reference<int>();
                 IEnumerator<Document> enumerator;
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, token);
-                    
-                    documents.SkippedResults = skippedResults;
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents,
+                        includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand,
+                        includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, scannedResults, skippedResults, token);
+
                     enumerator = documents.GetEnumerator();
                 }
                 else
@@ -157,7 +159,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, token);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope,
+                                context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, scannedResults,
+                                skippedResults, token);
 
                             return documents;
                         },
@@ -252,6 +256,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
                 resultToFill.LongTotalResults = resultToFill.TotalResults;
                 resultToFill.SkippedResults = Convert.ToInt32(skippedResults.Value);
+                resultToFill.ScannedResults = scannedResults.Value;
 
                 if (query.Offset != null || query.Limit != null)
                 {
