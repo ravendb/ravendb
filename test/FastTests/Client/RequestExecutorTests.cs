@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Tests.Core.Utils.Entities;
@@ -33,8 +34,10 @@ namespace FastTests.Client
             {
                 Server = leader,
                 ReplicationFactor = clusterSize,
-                ModifyDocumentStore = s =>
+                ModifyDocumentStore = str =>
                 {
+                    IDocumentStore s = str;
+
                     s.OnBeforeRequest += (sender, args) =>
                     {
                         if (urlRegex.IsMatch(args.Url) == false)

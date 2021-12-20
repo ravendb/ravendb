@@ -22,13 +22,12 @@
                         <div class="panel-body">
                             <div class="form-group">
                                 <div>
-                                    <label class="control-label">Point in Time<br/>
-                                        <small class="text-muted">(local time)</small>
-                                    </label>
+                                    <label class="control-label">Point in Time</label>
                                 </div>
-                                <div style="position: relative" data-bind="validationElement: model.date">
-                                    <input class="form-control"
+                                <div class="input-group" style="position: relative" data-bind="validationElement: model.date">
+                                    <input class="form-control" placeholder="Enter local time"
                                            data-bind="datePicker: model.date, datepickerOptions: datePickerOptions"/>
+                                    <div class="input-group-addon">(local)</div>
                                     <span class="help-block" data-bind="validationMessage: model.date"></span>
                                 </div>
                             </div>

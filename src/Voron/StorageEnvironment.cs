@@ -686,7 +686,7 @@ namespace Voron
                     if (flags == TransactionFlags.ReadWrite)
                     {
                         tx.CurrentTransactionHolder = _currentWriteTransactionHolder;
-                        tx.AfterCommitWhenNewReadTransactionsPrevented += AfterCommitWhenNewReadTransactionsPrevented;
+                        tx.AfterCommitWhenNewTransactionsPrevented += AfterCommitWhenNewTransactionsPrevented;
                     }
 
                     ActiveTransactions.Add(tx);
@@ -752,6 +752,11 @@ namespace Voron
         private void ThrowCurrentlyDisposing()
         {
             throw new ObjectDisposedException("The environment " + Options.BasePath + " is currently being disposed");
+        }
+
+        private void ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(LowLevelTransaction llt)
+        {
+            throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}");
         }
 
         internal void WriteTransactionStarted()
@@ -849,24 +854,29 @@ namespace Voron
         }
 
         public event Action<LowLevelTransaction> NewTransactionCreated;
-        public event Action<LowLevelTransaction> AfterCommitWhenNewReadTransactionsPrevented;
+        public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
         internal void TransactionAfterCommit(LowLevelTransaction tx)
         {
             if (ActiveTransactions.Contains(tx) == false)
+            {
+                if (tx.Committed && tx.FlushedToJournal)
+                    ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(tx);
+
                 return;
+            }
 
             using (PreventNewTransactions())
             {
-                Journal.Applicator.OnTransactionCommitted(tx);
-                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-                Journal.UpdateCacheForJournalSnapshots();
-
-                tx.OnAfterCommitWhenNewReadTransactionsPrevented();
-
                 if (tx.Committed && tx.FlushedToJournal)
                     Interlocked.Exchange(ref _transactionsCounter, tx.Id);
 
                 State = tx.State;
+
+                Journal.Applicator.OnTransactionCommitted(tx);
+                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
+                Journal.UpdateCacheForJournalSnapshots();
+
+                tx.OnAfterCommitWhenNewTransactionsPrevented();
             }
         }
 

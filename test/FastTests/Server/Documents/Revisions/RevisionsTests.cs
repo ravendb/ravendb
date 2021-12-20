@@ -1735,12 +1735,12 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public void CanGetRevisionsCountFor()
+        public async Task CanGetRevisionsCountFor()
         {
             var company = new Company {Name = "Company Name"};
             using (var store = GetDocumentStore())
             {
-                RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database).Wait();
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 using (var session = store.OpenSession())
                 {

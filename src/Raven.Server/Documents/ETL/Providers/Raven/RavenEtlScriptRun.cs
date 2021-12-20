@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
             {
-                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, null, null);
+                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, appends: null, deletes: null);
                 timeSeriesOperations.Add(timeSeriesName, timeSeriesOperation);
             }
 

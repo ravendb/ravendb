@@ -391,9 +391,10 @@ namespace Voron.Impl.Scratch
             {
                 return _parent._freePagesBySize.Keys.ToDictionary(size => size, size =>
                 {
-                    var list = _parent._freePagesBySize[size].Last;
+                    if (_parent._freePagesBySize.TryGetValue(size, out var pendingPages) == false)
+                        return -1;
 
-                    var value = list?.Value;
+                    var value = pendingPages.Last?.Value;
                     if (value == null)
                         return -1;
 
@@ -403,7 +404,20 @@ namespace Voron.Impl.Scratch
 
             internal List<PageFromScratchBuffer> GetFirst10AllocatedPages()
             {
-                return _parent._allocatedPages.Take(10).Select(x => x.Value).ToList();
+                var pages = new List<PageFromScratchBuffer>();
+
+                foreach (var key in _parent._allocatedPages.Keys)
+                {
+                    if (_parent._allocatedPages.TryGetValue(key, out var pageFromScratchBuffer) == false)
+                        continue;
+
+                    pages.Add(pageFromScratchBuffer);
+
+                    if (pages.Count == 10)
+                        break;
+                }
+
+                return pages;
             }
         }
     }

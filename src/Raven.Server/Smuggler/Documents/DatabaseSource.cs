@@ -253,7 +253,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var document in _database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, collectionName, etag, long.MaxValue))
                 {
-                    yield return document.current;
+                    yield return document.Current;
                 }
             }
         }

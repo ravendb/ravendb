@@ -57,7 +57,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
 
-        public bool CompressionSupport { get; set; }
+        public LicensedFeatures LicensedFeatures { get; set; }
 
         public DetailedReplicationHubAccess ReplicationHubAccess;
 
@@ -176,6 +176,20 @@ namespace Raven.Client.ServerWide.Tcp
                 ProtocolVersion = version;
             }
 
+            internal SupportedFeatures(SupportedFeatures source)
+            {
+                ProtocolVersion = source.ProtocolVersion;
+                Ping = source.Ping;
+                None = source.None;
+                Drop = source.Drop;
+                Subscription = source.Subscription;
+                Cluster = source.Cluster;
+                Heartbeats = source.Heartbeats;
+                TestConnection = source.TestConnection;
+                Replication = source.Replication;
+                DataCompression = source.DataCompression;
+            }
+
             public PingFeatures Ping { get; set; }
             public NoneFeatures None { get; set; }
             public DropFeatures Drop { get; set; }
@@ -239,6 +253,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool ClusterTransaction;
                 public bool PullReplication;
                 public bool TimeSeries;
+                public bool IncrementalTimeSeries;
             }
         }
 
@@ -367,7 +382,8 @@ namespace Raven.Client.ServerWide.Tcp
                             PullReplication = true,
                             TimeSeries = true,
                             CaseInsensitiveCounters = true,
-                            ClusterTransaction = true
+                            ClusterTransaction = true,
+                            IncrementalTimeSeries = true
                         }
                     },
                     [ReplicationWithTimeSeries] = new SupportedFeatures(ReplicationWithTimeSeries)
@@ -463,6 +479,13 @@ namespace Raven.Client.ServerWide.Tcp
             OutOfRange,
             NotSupported,
             Supported
+        }
+
+        public class NegotiationResponse
+        {
+            public int Version;
+
+            public LicensedFeatures LicensedFeatures;
         }
 
         public static SupportedStatus OperationVersionSupported(OperationTypes operationType, int version, out int current)

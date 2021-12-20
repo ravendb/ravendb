@@ -23,8 +23,10 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -382,6 +384,24 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WritePropertyName(nameof(databaseRecord.ElasticSearchEtls));
                             WriteElasticSearchEtls(databaseRecord.ElasticSearchEtls);
                         }
+
+                        if (databaseRecord.Integrations != null)
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.Integrations));
+
+                            _writer.WriteStartObject();
+
+                            if (databaseRecordItemType.Contain(DatabaseRecordItemType.PostgreSQLIntegration))
+                            {
+                                _writer.WritePropertyName(nameof(databaseRecord.Integrations.PostgreSql));
+                                WritePostgreSqlConfiguration(databaseRecord.Integrations.PostgreSql);
+                            }
+
+                            _writer.WriteEndObject();
+                        }
+
+                        
 
                         break;
                 }
@@ -778,6 +798,16 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndObject();
             }
 
+            private void WritePostgreSqlConfiguration(PostgreSqlConfiguration postgreSqlConfig)
+            {
+                if (postgreSqlConfig == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, postgreSqlConfig.ToJson());
+            }
+
             public ValueTask DisposeAsync()
             {
                 _writer.WriteEndObject();
@@ -1046,17 +1076,25 @@ namespace Raven.Server.Smuggler.Documents
 
                 using (tombstone)
                 {
-                    _context.Write(Writer, new DynamicJsonValue
+                    unsafe
                     {
-                        ["Key"] = tombstone.LowerId,
-                        [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
-                        [nameof(Tombstone.Collection)] = tombstone.Collection,
-                        [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
-                        [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
-                        [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
-                        [nameof(Tombstone.Etag)] = tombstone.Etag,
-                        [nameof(Tombstone.LastModified)] = tombstone.LastModified,
-                    });
+                        using (var escapedId = _context.GetLazyString(tombstone.LowerId.Buffer, tombstone.LowerId.Size))
+                        {
+                            _context.Write(Writer, new DynamicJsonValue
+                            {
+                                ["Key"] = escapedId,
+                                [nameof(Tombstone.Type)] = tombstone.Type.ToString(),
+                                [nameof(Tombstone.Collection)] = tombstone.Collection,
+                                [nameof(Tombstone.Flags)] = tombstone.Flags.ToString(),
+                                [nameof(Tombstone.ChangeVector)] = tombstone.ChangeVector,
+                                [nameof(Tombstone.DeletedEtag)] = tombstone.DeletedEtag,
+                                [nameof(Tombstone.Etag)] = tombstone.Etag,
+                                [nameof(Tombstone.LastModified)] = tombstone.LastModified,
+                            });
+
+
+                        }
+                    }
 
                     await Writer.MaybeFlushAsync();
                 }

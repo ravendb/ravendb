@@ -1858,17 +1858,17 @@ loadToOrders(partitionBy(key), orderData);
                         new ElasticSearchIndex
                         {
                             IndexName = "Orders", 
-                            IndexIdProperty = "Id"
+                            DocumentIdProperty = "Id"
                         },
                         new ElasticSearchIndex
                         {
                             IndexName = "OrderLines", 
-                            IndexIdProperty = "OrderId"
+                            DocumentIdProperty = "OrderId"
                         },
                         new ElasticSearchIndex
                         {
                             IndexName = "Users", 
-                            IndexIdProperty = "UserId"
+                            DocumentIdProperty = "UserId"
                         }
                     },
                     Transforms =

@@ -13,7 +13,15 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceTag { get; set; }
 
         public string SourceMachineName { get; set; }
-        
+
+        public ReplicationType ReplicationsType { get; set; }
+
+        public enum ReplicationType
+        {
+            // External here as the default value to handle older servers, which aren't sending this field.
+            External,
+            Internal
+        }
     }
 
     public class ReplicationInitialRequest

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -29,6 +30,8 @@ namespace Raven.Client.Documents
     public interface IDocumentStore : IDisposalNotification
     {
         X509Certificate2 Certificate { get; }
+
+        IHiLoIdGenerator HiLoIdGenerator { get; }
 
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
 
@@ -49,6 +52,10 @@ namespace Raven.Client.Documents
         event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         event EventHandler<FailedRequestEventArgs> OnFailedRequest;
+
+        event EventHandler<BeforeRequestEventArgs> OnBeforeRequest;
+
+        event EventHandler<SucceedRequestEventArgs> OnSucceedRequest;
 
         event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated;
 

@@ -1,3 +1,17 @@
+<div class="row margin-bottom" data-bind="collapse: useCustomS3Host">
+    <div class="col-xs-offset-12 col-sm-offset-6 col-lg-offset-4">
+        <div class="toggle margin-left">
+            <input id="s3ForcePathStyle" type="checkbox" data-bind="checked: forcePathStyle">
+            <label for="s3ForcePathStyle">Force path style</label>
+            <small data-toggle="tooltip" 
+                   data-animation="true" 
+                   title="Whether to force path style URLs for S3 objects (e.g., https://{Server-URL}/{Bucket-Name} instead of {https://{Bucket-Name}.{Server-URL})">
+                <i class="icon-info text-info"></i>
+            </small>
+        </div>
+    </div>
+</div>
+
 <div class="row margin-bottom" data-bind="validationElement: customServerUrl, collapse: useCustomS3Host">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">
         Custom server URL <i class="required"></i>

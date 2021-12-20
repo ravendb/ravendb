@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             base.OnInitialization();
 
-            _reduceKeyProcessor = new ReduceKeyProcessor(Definition.GroupByFields.Count, _unmanagedBuffersPool);
+            _reduceKeyProcessor = new ReduceKeyProcessor(Definition.GroupByFields.Count, _unmanagedBuffersPool, Definition.Version);
         }
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()

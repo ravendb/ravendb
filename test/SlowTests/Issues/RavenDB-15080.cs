@@ -5,7 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
@@ -186,8 +189,9 @@ namespace SlowTests.Issues
                 });
                 await Task.WhenAll(t1, t2);
 
-                EnsureReplicating(storeA, storeB);
-                EnsureReplicating(storeB, storeA);
+                Assert.True(EnsureReplicating(storeA, storeB, out var errMsg), errMsg);
+                Assert.True(EnsureReplicating(storeB, storeA, out errMsg), errMsg);
+
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
             }
@@ -631,5 +635,77 @@ namespace SlowTests.Issues
             }
             return builder.ToString();
         }
+
+        private bool EnsureReplicating(IDocumentStore src, IDocumentStore dst, out string errorMsg)
+        {
+            errorMsg = string.Empty;
+
+            var id = "marker/" + Guid.NewGuid();
+            using (var s = src.OpenSession())
+            {
+                s.Store(new { }, id);
+                s.SaveChanges();
+            }
+
+            if (WaitForDocumentToReplicate<object>(dst, id, 15 * 1000) != null)
+                return true;
+
+            var sb = new StringBuilder()
+                .AppendLine($"Failed to replicate from '{src.Database}' to '{dst.Database}'");
+
+            var replicationLoader = GetDocumentDatabaseInstanceFor(src).Result.ReplicationLoader;
+            var outgoingFailureInfo = replicationLoader.OutgoingFailureInfo.ToList();
+            if (outgoingFailureInfo.Count > 0)
+            {
+                sb.AppendLine($"{src.Database} Outgoing Failure Info : ");
+                foreach (var e in outgoingFailureInfo)
+                {
+                    sb.AppendLine(string.Join(", ", e.Value.Errors.Select(x => x.Message)));
+                }
+            }
+
+            foreach (var store in new []{src, dst})
+            {
+                var stats = store.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
+                var incoming = stats.Incoming.FirstOrDefault();
+                if (incoming != null)
+                {
+                    sb.AppendLine($"{store.Database} Incoming Performance Stats : ");
+                    foreach (var s in incoming.Performance)
+                    {
+                        sb.AppendLine(ToString(s));
+                    }
+                }
+
+                var outgoing = stats.Outgoing.FirstOrDefault();
+                if (outgoing != null)
+                {
+                    sb.AppendLine($"{store.Database} Outgoing Performance Stats : ");
+                    foreach (var s in outgoing.Performance)
+                    {
+                        sb.AppendLine(ToString(s));
+                    }
+                }
+            }
+
+            errorMsg = sb.ToString();
+
+            return false;
+        }
+
+        private static string ToString(IncomingReplicationPerformanceStats s) =>
+            $"Id : {s.Id}, " +
+            $"DocumentReadCount : {s.Network.DocumentReadCount}, " +
+            $"CounterReadCount : {s.Network.CounterReadCount}, " +
+            $"InputCount : {s.Network.InputCount}, " +
+            $"ReceivedLastEtag : {s.ReceivedLastEtag}, " +
+            $"Errors : [{string.Join(", ", s.Errors?.Select(e => e.Error) ?? Array.Empty<string>())}]";
+
+        private static string ToString(OutgoingReplicationPerformanceStats s) =>
+            $"Id : {s.Id}, " +
+            $"DocumentOutputCount : {s.Network.DocumentOutputCount}, " +
+            $"CounterOutputCount : {s.Network.CounterOutputCount}, " +
+            $"SendLastEtag : {s.SendLastEtag}, " +
+            $"Errors : [{string.Join(", ", s.Errors?.Select(e => e.Error) ?? Array.Empty<string>())}]";
     }
 }

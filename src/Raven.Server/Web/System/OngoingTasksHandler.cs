@@ -194,7 +194,7 @@ namespace Raven.Server.Web.System
 
         private OngoingTaskPullReplicationAsHub GetPullReplicationAsHubTaskInfo(ClusterTopology clusterTopology, ExternalReplication ex)
         {
-            var connectionResult = Database.ReplicationLoader.GetExternalReplicationDestination(ex.TaskId);
+            var connectionResult = Database.ReplicationLoader.GetPullReplicationDestination(ex.TaskId, ex.Database);
             var tag = Server.ServerStore.NodeTag; // we can't know about pull replication tasks on other nodes.
 
             return new OngoingTaskPullReplicationAsHub
@@ -222,9 +222,9 @@ namespace Raven.Server.Web.System
                 {
                     connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
                 }
-                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnection(subscriptionState.SubscriptionId, out var _))
+                else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(subscriptionState.SubscriptionId, out var connectionsState))
                 {
-                    connectionStatus = OngoingTaskConnectionStatus.Active;
+                    connectionStatus = connectionsState.IsSubscriptionActive()? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
                 }
                 else
                 {
@@ -1249,6 +1249,16 @@ namespace Raven.Server.Web.System
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                             var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
+                            OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
+                            if (tag != ServerStore.NodeTag)
+                            {
+                                connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+                            }
+                            else if (Database.SubscriptionStorage.TryGetRunningSubscriptionConnectionsState(key, out var connectionsState))
+                            {
+                                connectionStatus = connectionsState.IsSubscriptionActive() ? OngoingTaskConnectionStatus.Active : OngoingTaskConnectionStatus.NotActive;
+                            }
+
                             var subscriptionStateInfo = new OngoingTaskSubscription
                             {
                                 TaskName = subscriptionState.SubscriptionName,
@@ -1265,11 +1275,10 @@ namespace Raven.Server.Web.System
                                 {
                                     NodeTag = tag,
                                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                }
+                                },
+                                TaskConnectionStatus = connectionStatus
                             };
-
-                            // Todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
-
+                            
                             await WriteResult(context, subscriptionStateInfo);
                             break;
 

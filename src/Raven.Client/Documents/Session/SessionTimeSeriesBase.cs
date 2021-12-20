@@ -124,6 +124,44 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        public void Increment(DateTime timestamp, IEnumerable<double> values)
+        {
+            if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
+                Session.DeletedEntities.Contains(documentInfo.Entity))
+                ThrowDocumentAlreadyDeletedInSession(DocId, Name);
+
+            var op = new TimeSeriesOperation.IncrementOperation()
+            {
+                Timestamp = timestamp.EnsureUtc(),
+                Values = values is double[] doubleValues ? doubleValues : values.ToArray()
+            };
+
+            if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeriesWithIncrements, Name), out var command))
+            {
+                var tsCmd = (IncrementalTimeSeriesBatchCommandData)command;
+                tsCmd.TimeSeries.Increment(op);
+            }
+            else
+            {
+                Session.Defer(new IncrementalTimeSeriesBatchCommandData(DocId, Name, increments: new List<TimeSeriesOperation.IncrementOperation> { op }));
+            }
+        }
+
+        public void Increment(IEnumerable<double> values)
+        {
+            Increment(DateTime.UtcNow, values);
+        }
+
+        public void Increment(DateTime timestamp, double value)
+        {
+            Increment(timestamp, new [] {value});
+        }
+
+        public void Increment( double value)
+        {
+            Increment(DateTime.UtcNow, new [] { value });
+        }
+
         private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string timeseries)
         {
             throw new InvalidOperationException($"Can't modify timeseries {timeseries} of document {documentId}, the document was already deleted in this session.");

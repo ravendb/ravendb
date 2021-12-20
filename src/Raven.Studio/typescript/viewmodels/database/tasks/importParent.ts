@@ -22,7 +22,7 @@ class importParent {
                     route: 'databases/tasks/import/migrateRavenDB',
                     moduleId: 'viewmodels/database/tasks/migrateRavenDbDatabase',
                     title: 'Import database from another RavenDB',
-                    tabName: "From RavenDB",
+                    tabName: "From RavenDB Server",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().migrateRavenDbDatabaseUrl,
                     requiredAccess: "DatabaseReadWrite"
@@ -31,7 +31,7 @@ class importParent {
                     route: 'databases/tasks/import/csv',
                     moduleId: 'viewmodels/database/tasks/importCollectionFromCsv',
                     title: 'Import collection from CSV file',
-                    tabName: "From CSV file",
+                    tabName: "From CSV File",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().importCollectionFromCsv,
                     requiredAccess: "DatabaseReadWrite"
@@ -49,7 +49,7 @@ class importParent {
                     route: 'databases/tasks/import/migrate',
                     moduleId: 'viewmodels/database/tasks/migrateDatabase',
                     title: 'Migrate database',
-                    tabName: "From other",
+                    tabName: "From NoSQL",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().migrateDatabaseUrl,
                     requiredAccess: "DatabaseReadWrite"

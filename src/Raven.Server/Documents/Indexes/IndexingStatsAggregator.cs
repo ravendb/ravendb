@@ -5,6 +5,7 @@ using Lucene.Net.Index;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
+using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils.Stats;
 using Sparrow.Server.Exceptions;
@@ -120,6 +121,8 @@ namespace Raven.Server.Documents.Indexes
 
         public int NumberOfKeptReduceErrors => _stats.NumberOfKeptReduceErrors;
 
+        public int TombstoneDeleteSuccesses => _stats.TombstoneDeleteSuccesses;
+
         public void AddAllocatedBytes(long sizeInBytes)
         {
             _stats.AllocatedBytes = new Size(sizeInBytes);
@@ -208,6 +211,15 @@ namespace Raven.Server.Documents.Indexes
             _stats.ReferenceDetails.ReferenceSuccesses++;
         }
 
+        public void RecordTombstoneDeleteSuccess()
+        {
+            _stats.TombstoneDeleteSuccesses++;
+
+            _stats.CleanupDetails ??= new CleanupRunDetails();
+
+            _stats.CleanupDetails.DeleteSuccesses++;
+        }
+
         public void RecordMapError()
         {
             _stats.MapErrors++;
@@ -227,12 +239,48 @@ namespace Raven.Server.Documents.Indexes
             _stats.IndexingOutputs++;
         }
 
-        public void RecordMapCompletedReason(string reason)
+        public void RecordBatchCompletedReason(IndexingWorkType type, string reason)
+        {
+            switch (type)
+            {
+                case IndexingWorkType.Cleanup:
+                    RecordCleanupCompletedReason(reason);
+                    break;
+                case IndexingWorkType.References:
+                    RecordReferenceCompletedReason(reason);
+                    break;
+                case IndexingWorkType.Map:
+                    RecordMapCompletedReason(reason);
+                    break;
+                case IndexingWorkType.None:
+                case IndexingWorkType.Reduce:
+                    throw new ArgumentOutOfRangeException(nameof(type) + " doesn't support stopping batch.", type, null);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+        }
+
+        private void RecordMapCompletedReason(string reason)
         {
             if (_stats.MapDetails == null)
                 _stats.MapDetails = new MapRunDetails();
 
             _stats.MapDetails.BatchCompleteReason = reason;
+        }
+
+        private void RecordReferenceCompletedReason(string reason)
+        {
+            if (_stats.ReferenceDetails == null)
+                _stats.ReferenceDetails = new ReferenceRunDetails();
+
+            _stats.ReferenceDetails.BatchCompleteReason = reason;
+        }
+
+        private void RecordCleanupCompletedReason(string reason)
+        {
+            _stats.CleanupDetails ??= new CleanupRunDetails();
+
+            _stats.CleanupDetails.BatchCompleteReason = reason;
         }
 
         public void RecordReduceTreePageModified(bool isLeaf)

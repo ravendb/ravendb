@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.Subscriptions.SubscriptionProcessor;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -53,9 +54,7 @@ namespace Raven.Server.Documents.Handlers
                     Query = tryout.Query
                 };
 
-                var fetcher = new SubscriptionDocumentsFetcher(Database, int.MaxValue, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
-
+                
                 var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
 
                 if (Enum.TryParse(
@@ -89,9 +88,17 @@ namespace Raven.Server.Documents.Handlers
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
 
+                var processor = new TestDocumentsSubscriptionProcessor(Server.ServerStore, Database, state, sub.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                processor.AddScript(patch);
+
+                using (processor)
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (Database.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
+                using (clusterOperationContext.OpenReadTransaction())
                 using (context.OpenReadTransaction())
                 {
+                    processor.InitializeForNewBatch(clusterOperationContext, context, includeCmd);
+
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
@@ -100,7 +107,10 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
                         var lastEtag = startEtag;
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, startEtag))
+                        
+                        processor.SetStartEtag(startEtag);
+
+                        foreach (var itemDetails in processor.GetBatch())
                         {
                             if (itemDetails.Doc.Data != null)
                             {
@@ -213,6 +223,36 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/debug/subscriptions/resend", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetSubscriptionResend()
+        {
+            var subscriptionName = GetStringQueryString("name");
+
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var subscriptionState = Database
+                    .SubscriptionStorage
+                    .GetSubscriptionFromServerStore(subscriptionName);
+
+                if (subscriptionState == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
+                var items = SubscriptionStorage.GetResendItems(context, Database.Name, subscriptionState.SubscriptionId);
+
+                writer.WriteStartObject();
+                writer.WriteArray("Active", subscriptionConnections.GetActiveBatches());
+                writer.WriteComma();
+                writer.WriteArray("Results", items.Select(i => i.ToJson()), context);
+                writer.WriteEndObject();
+            }
+        }
+
         [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, CorsMode = CorsMode.Cluster)]
         public async Task GetSubscriptionConnectionDetails()
         {
@@ -228,16 +268,24 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var state = Database.SubscriptionStorage.GetSubscriptionConnection(context, subscriptionName);
+                var subscriptionConnections = Database.SubscriptionStorage.GetSubscriptionConnectionsState(context, subscriptionName);
 
-                var subscriptionConnectionDetails = new SubscriptionConnectionDetails
+                SubscriptionConnectionsDetails details;
+
+                if (subscriptionConnections == null)
                 {
-                    ClientUri = state?.Connection?.ClientUri,
-                    Strategy = state?.Connection?.Strategy
-                };
+                    details = new SubscriptionConnectionsDetails()
+                    {
+                        Results = new List<SubscriptionConnectionDetails>(),
+                        SubscriptionMode = "None"
+                    };
+                }
+                else
+                {
+                    details = subscriptionConnections.GetSubscriptionConnectionsDetails();
+                }
 
-                context.Write(writer, subscriptionConnectionDetails.ToJson());
-                return;
+                context.Write(writer, details.ToJson());
             }
         }
 
@@ -294,6 +342,7 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
                         [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
                         ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
+                        ["Connections"] = GetSubscriptionConnectionsJson(x.Connections),
                         ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
                         {
                             ["State"] = new DynamicJsonValue()
@@ -347,6 +396,14 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private static DynamicJsonArray GetSubscriptionConnectionsJson(List<SubscriptionConnection> subscriptionList)
+        {
+            if (subscriptionList == null)
+                return new DynamicJsonArray();
+
+            return new DynamicJsonArray(subscriptionList.Select(s => GetSubscriptionConnectionJson(s)));
+        }
+
         private static DynamicJsonValue GetSubscriptionConnectionJson(SubscriptionConnection x)
         {
             if (x == null)
@@ -381,18 +438,30 @@ namespace Raven.Server.Documents.Handlers
         {
             var subscriptionId = GetLongQueryString("id", required: false);
             var subscriptionName = GetStringQueryString("name", required: false);
-
+            var workerId = GetStringQueryString("workerId", required: false);
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = Database
                     .SubscriptionStorage
                     .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
-
+                
                 if (subscription != null)
                 {
-                    if (Database.SubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId,
-                            new SubscriptionClosedException("Dropped by API request")) == false)
+                    bool result;
+                    if (string.IsNullOrEmpty(workerId) == false)
+                    {
+                        result = Database.SubscriptionStorage.DropSingleSubscriptionConnection(subscription.SubscriptionId, workerId,
+                            new SubscriptionClosedException($"Connection with Id {workerId} dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
+                    }
+                    else 
+                    {
+                       result = Database.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
+                           new SubscriptionClosedException($"Dropped by API request (request ip:{HttpContext.Connection.RemoteIpAddress}, cert:{HttpContext.Connection.ClientCertificate?.Thumbprint})", canReconnect: false));
+                    }
+
+                    if (result == false)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return Task.CompletedTask;

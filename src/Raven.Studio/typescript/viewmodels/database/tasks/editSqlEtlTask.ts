@@ -172,9 +172,9 @@ class sqlTaskTestMode {
 class editSqlEtlTask extends viewModelBase {
 
     static readonly scriptNamePrefix = "Script_";
-
-    enableTestArea = ko.observable<boolean>(false);
+    static isApplyToAll = ongoingTaskSqlEtlTransformationModel.isApplyToAll;
     
+    enableTestArea = ko.observable<boolean>(false);
     test: sqlTaskTestMode;
     
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
@@ -199,7 +199,8 @@ class editSqlEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
-    
+
+    collections = collectionsTracker.default.collections;
     collectionNames: KnockoutComputed<string[]>;
     
     showAdvancedOptions = ko.observable<boolean>(false);
@@ -212,7 +213,6 @@ class editSqlEtlTask extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("useConnectionString",
-                                   "useCollection",
                                    "testConnection",
                                    "removeTransformationScript",
                                    "cancelEditedTransformation",
@@ -598,10 +598,6 @@ class editSqlEtlTask extends viewModelBase {
     /********************************************/
     /*** Transformation Script Actions Region ***/
     /********************************************/
-
-    useCollection(collectionToUse: string) {
-        this.editedTransformationScriptSandbox().collection(collectionToUse);
-    }
     
     addNewTransformation() {
         this.transformationScriptSelectedForEdit(null);
@@ -678,17 +674,28 @@ class editSqlEtlTask extends viewModelBase {
         }
     }
 
-    createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
+    createCollectionNameAutoCompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
+            let result;
             const key = collectionText();
 
-            const options = this.collectionNames();
+            const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
+
+            const usedOptions = usedCollections().filter(k => k !== key);
+
+            const filteredOptions = _.difference(options, usedOptions);
 
             if (key) {
-                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
             } else {
-                return options;
+                result = filteredOptions;
             }
+
+            if (!_.includes(this.editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskSqlEtlTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskSqlEtlTransformationModel.applyToAllCollectionsText);
+            }
+            
+            return result;
         });
     }
     

@@ -155,7 +155,7 @@ class sqlMigration {
             case "MySQL":
                 return "MySQL Server (MySql.Data.MySqlClient)";
             case "NpgSQL":
-                return "PostgreSQL Server (Npgsql)";
+                return "PostgreSQL (Npgsql)";
             case "Oracle":
                 return "Oracle Database (Oracle.ManagedDataAccess.Client)";
             default:

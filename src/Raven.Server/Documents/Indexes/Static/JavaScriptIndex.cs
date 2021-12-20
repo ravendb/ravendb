@@ -26,8 +26,14 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public sealed class JavaScriptIndex : AbstractJavaScriptIndex
     {
-        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
-            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode())
+        public const string NoTracking = "noTracking";
+
+        public const string Load = "load";
+
+        public const string CmpXchg = "cmpxchg";
+
+        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
+            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode(), indexVersion)
         {
         }
 
@@ -111,13 +117,18 @@ function map(name, lambda) {
                 }
 
                 operation.Analyze(_engine);
-                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
-                {
-                    collectionNames = new HashSet<CollectionName>();
-                    ReferencedCollections.Add(mapCollection, collectionNames);
-                }
 
-                collectionNames.UnionWith(mapReferencedCollections[i].ReferencedCollections);
+                var referencedCollections = mapReferencedCollections[i].ReferencedCollections;
+                if (referencedCollections.Count > 0)
+                {
+                    if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                    {
+                        collectionNames = new HashSet<CollectionName>();
+                        ReferencedCollections.Add(mapCollection, collectionNames);
+                    }
+
+                    collectionNames.UnionWith(referencedCollections);
+                }
 
                 if (mapReferencedCollections[i].HasCompareExchangeReferences)
                     CollectionsWithCompareExchangeReferences.Add(mapCollection);
@@ -196,7 +207,7 @@ function map(name, lambda) {
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
 
-        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode)
+        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode, long indexVersion)
         {
             Definition = definition;
 
@@ -229,7 +240,7 @@ function map(name, lambda) {
 
                 ProcessMaps(definitions, resolver, maps, mapReferencedCollections, out var collectionFunctions);
 
-                ProcessReduce(definition, definitions, resolver);
+                ProcessReduce(definition, definitions, resolver, indexVersion);
 
                 ProcessFields(definition, collectionFunctions);
             }
@@ -249,18 +260,18 @@ function map(name, lambda) {
             return mappingFunctions;
         }
 
-        internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration)
+        internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
-                    return new JavaScriptIndex(definition, configuration);
+                    return new JavaScriptIndex(definition, configuration, indexVersion);
 
                 case IndexSourceType.TimeSeries:
-                    return new TimeSeriesJavaScriptIndex(definition, configuration);
+                    return new TimeSeriesJavaScriptIndex(definition, configuration, indexVersion);
 
                 case IndexSourceType.Counters:
-                    return new CountersJavaScriptIndex(definition, configuration);
+                    return new CountersJavaScriptIndex(definition, configuration, indexVersion);
 
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
@@ -306,7 +317,7 @@ function map(name, lambda) {
             OutputFields = fields.ToArray();
         }
 
-        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver)
+        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, long indexVersion)
         {
             var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
             if (reduceObj != null && reduceObj.IsObject())
@@ -314,7 +325,7 @@ function map(name, lambda) {
                 var reduceAsObj = reduceObj.AsObject();
                 var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                 var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver) { ReduceString = definition.Reduce };
+                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver, indexVersion) { ReduceString = definition.Reduce };
                 GroupByFields = ReduceOperation.GetReduceFieldsNames();
                 Reduce = ReduceOperation.IndexingFunction;
             }
@@ -361,8 +372,14 @@ function map(name, lambda) {
         {
             OnInitializeEngine(_engine);
 
-            _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
-            _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
+            var loadFunc = new ClrFunctionInstance(_engine, JavaScriptIndex.Load, LoadDocument);
+
+            ObjectInstance noTrackingObject = new ObjectInstance(_engine);
+            noTrackingObject.FastAddProperty(JavaScriptIndex.Load, loadFunc, false, false, false);
+            _engine.SetValue(JavaScriptIndex.NoTracking, noTrackingObject);
+
+            _engine.SetValue(JavaScriptIndex.Load, loadFunc);
+            _engine.SetValue(JavaScriptIndex.CmpXchg, new ClrFunctionInstance(_engine, JavaScriptIndex.CmpXchg, LoadCompareExchangeValue));
             _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
             _engine.SetValue("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
 

@@ -8,7 +8,7 @@
             <h4 class="modal-title" data-bind="visible: totalDocCount === 0">No documents to delete</h4>
         </div>
         <div class="modal-body">
-            <div data-bind="visible: totalDocCount > 0" class="margin-top">
+            <div data-bind="visible: totalDocCount > 0" class="margin-top word-break">
                 <p>
                     <span>You're deleting </span>
                     <strong data-bind="text: totalDocCount.toLocaleString() + (hasMore ? '+' : '')"></strong>

@@ -8,15 +8,14 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails> {
+    execute(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails> {
         return this.getConnectionDetails()
             .fail((response: JQueryXHR) => {
                 this.reportError(`Failed to get connection details`, response.responseText, response.statusText);
             });
     }
 
-    private getConnectionDetails(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails> {
-
+    private getConnectionDetails(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails> {
         const url = endpoints.databases.subscriptions.subscriptionsConnectionDetails;
         const args = { id: this.taskId, name: this.taskName };
 

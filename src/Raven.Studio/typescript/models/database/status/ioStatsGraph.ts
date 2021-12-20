@@ -1439,7 +1439,7 @@ class ioStatsGraph {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `IOStats-of-${this.statsNameProvider()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+            exportFileName = `IOStats-for-${this.statsNameProvider()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof IOMetricsRecentStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];

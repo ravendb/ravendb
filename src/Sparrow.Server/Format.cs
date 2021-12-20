@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Server.Utils;
 
@@ -66,10 +67,19 @@ namespace Sparrow.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToBase64Unpadded(this Guid guid)
         {
+            var span = MemoryMarshal.CreateSpan(ref guid, 1);
+            return ToBase64Unpadded(MemoryMarshal.Cast<Guid, byte>(span));
+        }
+
+        public static string ToBase64Unpadded(Span<byte> bytes)
+        {
+            if (bytes.Length != 16)
+                throw new ArgumentException("Expected buffer to be exactly 16 bytes long");
             string result = new string(' ', 22);
             fixed (char* pChars = result)
+            fixed(byte* pBytes = bytes)
             {
-                int size = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&guid, 0, 16);
+                int size = Base64.ConvertToBase64ArrayUnpadded(pChars, pBytes, 0, 16);
                 Debug.Assert(size == 22);
             }
 

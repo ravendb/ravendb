@@ -8,8 +8,8 @@ class fileDownloader {
     }
 
     private static createLinkAndStartDownload(blob: Blob, filename: string, domCacheElementName: string) {
-        if (navigator && navigator.msSaveBlob) {
-            navigator.msSaveBlob(blob, filename);
+        if (navigator && (navigator as any).msSaveBlob) {
+            (navigator as any).msSaveBlob(blob, filename);
         } else {
             const blobUrl = URL.createObjectURL(blob);
             const a = document.createElement('a');

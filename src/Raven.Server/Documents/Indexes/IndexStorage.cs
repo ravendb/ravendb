@@ -87,14 +87,14 @@ namespace Raven.Server.Documents.Indexes
             ReferencesForCompareExchange = new CompareExchangeReferences();
         }
 
-        public void Initialize(StorageEnvironment environment)
+        public void Initialize(DocumentDatabase documentDatabase, StorageEnvironment environment)
         {
             _environment = environment;
 
-            CreateSchema();
+            CreateSchema(documentDatabase);
         }
 
-        private unsafe void CreateSchema()
+        private unsafe void CreateSchema(DocumentDatabase documentDatabase)
         {
             _errorsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
@@ -126,6 +126,9 @@ namespace Raven.Server.Documents.Indexes
                     using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice tmpSlice))
                         statsTree.Add(IndexSchema.CreatedTimestampSlice, tmpSlice);
                 }
+
+                using (Slice.From(context.Allocator, documentDatabase.DbBase64Id, out var dbId))
+                    statsTree.Add(IndexSchema.DatabaseIdSlice, dbId);
 
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTree);
                 tx.InnerTransaction.CreateTree(IndexSchema.EtagsTombstoneTree);
@@ -887,6 +890,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public static string ReadDatabaseId(string name, StorageEnvironment environment)
+        {
+            using (var tx = environment.ReadTransaction())
+            {
+                var statsTree = tx.ReadTree(IndexSchema.StatsTree);
+                if (statsTree == null)
+                    throw new InvalidOperationException($"Index '{name}' does not contain 'Stats' tree.");
+
+                var result = statsTree.Read(IndexSchema.DatabaseIdSlice);
+                if (result == null)
+                    return null; // backward compatibility
+
+                return result.Reader.ReadString(result.Reader.Length);
+            }
+        }
+
         public static IndexSourceType ReadIndexSourceType(string name, StorageEnvironment environment)
         {
             using (var tx = environment.ReadTransaction())
@@ -993,6 +1012,8 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice TypeSlice;
 
+            public static readonly Slice DatabaseIdSlice;
+
             public static readonly Slice SourceTypeSlice;
 
             public static readonly Slice CreatedTimestampSlice;
@@ -1032,6 +1053,7 @@ namespace Raven.Server.Documents.Indexes
                 using (StorageEnvironment.GetStaticContext(out var ctx))
                 {
                     Slice.From(ctx, "Type", ByteStringType.Immutable, out TypeSlice);
+                    Slice.From(ctx, "DatabaseId", ByteStringType.Immutable, out DatabaseIdSlice);
                     Slice.From(ctx, "SourceType", ByteStringType.Immutable, out SourceTypeSlice);
                     Slice.From(ctx, "CreatedTimestamp", ByteStringType.Immutable, out CreatedTimestampSlice);
                     Slice.From(ctx, "MapAttempts", ByteStringType.Immutable, out MapAttemptsSlice);

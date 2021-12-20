@@ -154,6 +154,8 @@ class createDatabase extends dialogViewModelBase {
         this.encryptionSection.syncQrCode();
         this.setupDisableReasons("#savingKeyData");
         
+        $('.restore [data-toggle="tooltip"]').tooltip();
+        
         popoverUtils.longWithHover($(".resource-type-label small"),
             {
                 content: 'RavenFS files will be saved as documents with attachments in <strong>@files</strong> collection.'

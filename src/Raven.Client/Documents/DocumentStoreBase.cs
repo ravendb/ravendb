@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -54,6 +55,8 @@ namespace Raven.Client.Documents
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
 
         public abstract IDisposable DisableAggressiveCaching(string database = null);
+
+        public abstract IHiLoIdGenerator HiLoIdGenerator { get; }
 
         public abstract string Identifier { get; set; }
 

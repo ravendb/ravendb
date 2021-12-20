@@ -26,6 +26,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// If the client currently cannot open the subscription because it is used by another client but it will wait for that client
         /// to complete and keep attempting to gain the subscription
         /// </summary>
-        WaitForFree
+        WaitForFree,
+
+        Concurrent
     }
 }

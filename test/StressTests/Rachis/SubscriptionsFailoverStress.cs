@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Esprima.Ast;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -10,6 +12,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -40,6 +43,138 @@ namespace StressTests.Rachis
                         .ConfigureAwait(false);
                 }
                 await session.SaveChangesAsync().ConfigureAwait(false);
+            }
+        }
+
+        private static async Task GenerateNewDocuments(IDocumentStore store, int start)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = start; i < start + 10; i++)
+                {
+                    await session.StoreAsync(new User() {Name = "John" + i, Count = 3}, "Users/" + i);
+                }
+                await session.SaveChangesAsync().ConfigureAwait(false);
+            }
+        }
+
+        private static async Task ModifyDocuments(IDocumentStore store, int start)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = start; i < start + 10; i++)
+                {
+                    var user = await session.LoadAsync<User>("Users/" + i);
+                    if (user == null)
+                        continue;
+
+                    user.Age++;
+                }
+                await session.SaveChangesAsync();
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionFailoverWhileModifying()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var cts = new CancellationTokenSource();
+            try
+            {
+                var cluster = await CreateRaftCluster(3);
+                using (var store = GetDocumentStore(new Options
+                {
+                    Server = cluster.Leader,
+                    ReplicationFactor = 3
+                }))
+                {
+                    var generateTask = Task.Run(async () =>
+                    {
+                        var newDocs = 0;
+                        var modifiedDocs = 0;
+                        var killed = false;
+                        while (newDocs < 1000)
+                        {
+                            await GenerateNewDocuments(store, newDocs);
+                            await Task.Delay(1000);
+                            await ModifyDocuments(store, modifiedDocs);
+                            newDocs += 10;
+                            modifiedDocs += 3;
+
+                            if (killed == false && newDocs > 600)
+                            {
+                                await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Leader);
+                                killed = true;
+                            }
+                        }
+                    });
+
+                    var subscriptionName = await store.Subscriptions.CreateAsync<User>(options: new SubscriptionCreationOptions {Query = "from Users where Count > 0"});
+
+                    var strategy = SubscriptionOpeningStrategy.Concurrent;
+                    var w1 = CreateWorker(store, subscriptionName, strategy, cts.Token);
+                    var w2 = CreateWorker(store, subscriptionName, strategy, cts.Token);
+                    var w3 = CreateWorker(store, subscriptionName, strategy, cts.Token);
+
+                    await generateTask;
+
+                    await AssertWaitForTrueAsync(async () =>
+                    {
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            var result = await session.Query<User>().Where(u => u.Count > 0).ToListAsync(token: cts.Token);
+                            return result.Count == 0;
+                        }
+                    }, timeout: 60_000);
+                }
+            }
+            finally
+            {
+                cts.Cancel();
+            }
+        }
+
+        private static long _batchCount;
+        private static async Task CreateWorker(DocumentStore store, string subscriptionName, SubscriptionOpeningStrategy strategy = SubscriptionOpeningStrategy.WaitForFree, CancellationToken token = default)
+        {
+            while (token.IsCancellationRequested == false)
+            {
+                try
+                {
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
+                    {
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
+                        MaxDocsPerBatch = 5,
+                        MaxErroneousPeriod = TimeSpan.FromSeconds(5),
+                        Strategy = strategy,
+                    }))
+                    {
+                        await subscription.Run((async batch =>
+                        {
+                            if (Interlocked.Increment(ref _batchCount) % 11 == 0)
+                                throw new InvalidOperationException("Random sub failure before");
+                          
+                            using (var session = batch.OpenAsyncSession())
+                            {
+                                foreach (var item in batch.Items)
+                                {
+                                    item.Result.Count--;
+                                }
+
+                                await session.SaveChangesAsync(token);
+                            }
+
+                            if (Interlocked.Increment(ref _batchCount) % 7 == 0)
+                                throw new InvalidOperationException("Random sub failure after");
+
+                        }));
+                    }
+                }
+                catch
+                {
+                    await Task.Delay(500, token);
+                }
             }
         }
 

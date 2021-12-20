@@ -481,7 +481,7 @@ class connectionStrings extends viewModelBase {
         this.spinners.test(true);
         elasticConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
 
-        elasticConnectionString.testConnection(urlToTest)
+        elasticConnectionString.testConnection(this.activeDatabase(), urlToTest)
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);

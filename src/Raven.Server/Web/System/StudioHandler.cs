@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Server.Commercial;
@@ -152,6 +153,18 @@ namespace Raven.Server.Web.System
         [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task StudioAuthError()
         {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var authStatus = feature?.Status;
+            
+            if (authStatus == RavenServer.AuthenticationStatus.ClusterAdmin ||
+                authStatus == RavenServer.AuthenticationStatus.Operator ||
+                authStatus == RavenServer.AuthenticationStatus.Allowed)
+            {
+                HttpContext.Response.Headers["Location"] = "/studio/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
+                return Task.CompletedTask;
+            }
+            
             var error = GetStringQueryString("err");
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
@@ -697,7 +710,7 @@ namespace Raven.Server.Web.System
         public Task RavenRoot()
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.MovedPermanently;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
 
             return Task.CompletedTask;
         }

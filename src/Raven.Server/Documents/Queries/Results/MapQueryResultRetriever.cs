@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Includes;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
+        public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state, CancellationToken token)
         {
             using (RetrieverScope?.Start())
             {
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
                 if (FieldsToFetch.IsProjection)
-                    return GetProjection(input, scoreDoc, id, state);
+                    return GetProjection(input, scoreDoc, id, state, token);
 
                 using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
                 {

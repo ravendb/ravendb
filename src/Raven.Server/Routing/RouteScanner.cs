@@ -19,7 +19,7 @@ namespace Raven.Server.Routing
     /// </summary>
     public class RouteScanner
     {
-        public readonly static List<RouteInformation> DebugRoutes = Scan(attr =>
+        public static readonly List<RouteInformation> DebugRoutes = Scan(attr =>
             {
                 var isDebugEndpoint = attr.IsDebugInformationEndpoint && attr.Path.Contains("info-package") == false;
 
@@ -27,7 +27,10 @@ namespace Raven.Server.Routing
                     return false;
 
                 return isDebugEndpoint;
-            }).Values.ToList();
+        })
+            .Values
+            .Where(x => x.Method != "OPTIONS")
+            .ToList();
 
         public readonly static Dictionary<string, RouteInformation> AllRoutes = Scan();
 

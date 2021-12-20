@@ -11,7 +11,6 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using Size = Sparrow.Size;
@@ -29,7 +28,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private AmazonS3Client _client;
         private readonly string _bucketName;
-
+        private readonly bool _usingCustomServerUrl;
         public readonly string RemoteFolderName;
 
         public readonly string Region;
@@ -38,7 +37,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             if (s3Settings == null)
                 throw new ArgumentNullException(nameof(s3Settings));
-            if (configuration == null) 
+            if (configuration == null)
                 throw new ArgumentNullException(nameof(configuration));
 
             if (string.IsNullOrWhiteSpace(s3Settings.AwsAccessKey))
@@ -64,7 +63,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
             else
             {
+                _usingCustomServerUrl = true;
                 config.UseHttp = true;
+                config.ForcePathStyle = s3Settings.ForcePathStyle;
                 config.ServiceURL = s3Settings.CustomServerUrl;
             }
 
@@ -310,12 +311,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public void TestConnection()
-        {
-            AsyncHelpers.RunSync(TestConnectionAsync);
-        }
-
-        private async Task TestConnectionAsync()
+        public async Task TestConnectionAsync()
         {
             await AssertBucketLocationAsync();
 
@@ -330,31 +326,39 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         private async Task AssertBucketPermissionsAsync()
         {
-            var aclResponse = await _client.GetACLAsync(_bucketName, _cancellationToken);
-            var permissions = aclResponse
-                .AccessControlList
-                .Grants
-                .Select(x => x.Permission.Value)
-                .ToHashSet();
-
-            if (permissions.Contains("FULL_CONTROL") == false && permissions.Contains("WRITE"))
+            using (var cancellationToken = new CancellationTokenSource(5000))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token, _cancellationToken))
             {
-                throw new InvalidOperationException(
-                    $"Can't create an object in bucket '{_bucketName}', " +
-                    $"when permission is set to '{string.Join(", ", permissions)}'");
+                var aclResponse = await _client.GetACLAsync(_bucketName, cts.Token);
+                var permissions = aclResponse
+                    .AccessControlList
+                    .Grants
+                    .Select(x => x.Permission.Value)
+                    .ToHashSet();
+
+                if (permissions.Contains("FULL_CONTROL") == false && permissions.Contains("WRITE"))
+                {
+                    throw new InvalidOperationException(
+                        $"Can't create an object in bucket '{_bucketName}', " +
+                        $"when permission is set to '{string.Join(", ", permissions)}'");
+                }
             }
         }
 
         private async Task AssertBucketLocationAsync()
         {
-            var bucketLocationResponse = await _client.GetBucketLocationAsync(_bucketName, _cancellationToken);
-            var bucketLocation = bucketLocationResponse.Location.Value;
-            if (string.IsNullOrEmpty(bucketLocation))
-                bucketLocation = "us-east-1";
-
-            if (bucketLocation.Equals(Region, StringComparison.OrdinalIgnoreCase) == false)
+            using (var cancellationToken = new CancellationTokenSource(5000))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token, _cancellationToken))
             {
-                throw new InvalidOperationException($"AWS location is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
+                var bucketLocationResponse = await _client.GetBucketLocationAsync(_bucketName, cts.Token);
+                var bucketLocation = bucketLocationResponse.Location.Value;
+                if (_usingCustomServerUrl == false && string.IsNullOrEmpty(bucketLocation))
+                    bucketLocation = "us-east-1"; // relevant only for AWS
+
+                if (bucketLocation.Equals(Region, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    throw new InvalidOperationException($"AWS location is set to '{Region}', but the bucket named: '{_bucketName}' is located in: {bucketLocation}");
+                }
             }
         }
 

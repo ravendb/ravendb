@@ -35,6 +35,7 @@ namespace Raven.Client.Documents.Commands.Batches
         ForceRevisionCreation, 
         Counters,
         TimeSeries,
+        TimeSeriesWithIncrements,
         TimeSeriesBulkInsert,
         TimeSeriesCopy,
 

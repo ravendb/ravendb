@@ -1415,12 +1415,23 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasElasticSearchEtl != false)
+            if (LicenseStatus.HasElasticSearchEtl)
                 return;
 
-            // TODO arek
-            //const string message = "Your current license doesn't include the ElasticSearch ETL feature";
-            //throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+            const string message = "Your current license doesn't include the ElasticSearch ETL feature";
+            throw GenerateLicenseLimit(LimitType.ElasticSearchEtl, message);
+        }
+
+        public void AssertCanAddConcurrentDataSubscriptions()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasConcurrentDataSubscriptions)
+                return;
+
+            const string message = "Your current license doesn't include the Concurrent Subscriptions feature";
+            throw GenerateLicenseLimit(LimitType.ConcurrentSubscriptions, message);
         }
 
         public void AssertCanAddOlapEtl()
@@ -1480,6 +1491,46 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include the SNMP monitoring feature";
             GenerateLicenseLimit(LimitType.Snmp, details, addNotification: true);
+            return false;
+        }
+
+        public bool CanUsePostgreSqlIntegration(bool withNotification)
+        {
+            if (IsValid(out _) == false)
+                return false;
+
+            var value = LicenseStatus.HasPostgreSqlIntegration;
+            if (withNotification == false)
+                return value;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.PostgreSqlIntegration);
+                return true;
+            }
+
+            const string details = "Your current license doesn't include the PostgreSql integration feature";
+            GenerateLicenseLimit(LimitType.PostgreSqlIntegration, details, addNotification: true);
+            return false;
+        }
+
+        public bool CanUsePowerBi(bool withNotification, out LicenseLimitException licenseLimitException)
+        {
+            if (IsValid(out licenseLimitException) == false)
+                return false;
+
+            var value = LicenseStatus.HasPowerBI;
+            if (withNotification == false)
+                return value;
+
+            if (value)
+            {
+                DismissLicenseLimit(LimitType.PowerBI);
+                return true;
+            }
+            
+            const string details = "Your current license doesn't include the Power BI feature";
+            licenseLimitException = GenerateLicenseLimit(LimitType.PowerBI, details, addNotification: true);
             return false;
         }
 

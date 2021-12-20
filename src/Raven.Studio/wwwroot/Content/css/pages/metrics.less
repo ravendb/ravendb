@@ -89,6 +89,9 @@ rect.pane {
         .progressStripes {
             color: fadeout(@gray-lighter, 90%);
         }
+        .stripeTextColor {
+            color: lighten(@gray-lighter, 10%);
+        }
         
         .tracks {
             .replication {
@@ -158,7 +161,7 @@ rect.pane {
                 color: @color-2-2;
             }
             .connectionActive {
-                color: @color-1-1;
+                color: @color-1-2;
             }
             .batch {
                 color: @color-3;
@@ -174,6 +177,9 @@ rect.pane {
             }
             .connectionRejected {
                 color: darken(red, 5%);
+            }
+            .connectionErrorBackground {
+                color: @black;
             }
             .aggregatedBatchesInfo {
                 color: @color-4-3;

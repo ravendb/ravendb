@@ -10,7 +10,6 @@ import querySyntax = require("viewmodels/database/query/querySyntax");
 import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 import queryCommand = require("commands/database/query/queryCommand");
-import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import document = require("models/database/documents/document");
@@ -42,8 +41,10 @@ import spatialQueryMap = require("viewmodels/database/query/spatialQueryMap");
 import popoverUtils = require("common/popoverUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
+import rqlLanguageService = require("common/rqlLanguageService");
+import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 
-type queryResultTab = "results" | "explanations" | "timings" | "graph";
+type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -109,9 +110,21 @@ class perCollectionIncludes {
     }
 }
 
+type includedRevisionItem = {
+    changeVector: string;
+    sourceDocument: string;
+    lastModified: string;
+    revision: string;
+}
+
+class includedRevisions {
+    total = ko.observable<number>(0);
+    items: Array<includedRevisionItem> = [];
+}
+
 class query extends viewModelBase {
 
-    static readonly timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+    static readonly dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
     static readonly recentQueryLimit = 6;
     static readonly recentKeyword = 'Recent Query';
@@ -125,6 +138,8 @@ class query extends viewModelBase {
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     static lastQueryNotExecuted = new Map<string, string>();
+
+    static readonly maxSpatialResultsToFetch = 5000;
     
     autoOpenGraph: boolean = false;
 
@@ -188,6 +203,7 @@ class query extends viewModelBase {
     queryFetcher = ko.observable<fetcherType>();
     explanationsFetcher = ko.observable<fetcherType>();
     effectiveFetcher = this.queryFetcher;
+    includedRevisionsFetcher = ko.observable<fetcherType>();
     
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
@@ -200,8 +216,9 @@ class query extends viewModelBase {
     graphTabIsDirty = ko.observable<boolean>(true);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
+    includesRevisionsCache = ko.observable<includedRevisions>(new includedRevisions());
     highlightsCache = ko.observableArray<highlightSection>([]);
-    explanationsCache = new Map<string, explanationItem>();
+    explanationsCache: explanationItem[] = [];
     totalExplanations = ko.observable<number>(0);
     timings = ko.observable<Raven.Client.Documents.Queries.Timings.QueryTimings>();
 
@@ -222,7 +239,12 @@ class query extends viewModelBase {
     isSpatialQuery = ko.observable<boolean>();
     spatialMap = ko.observable<spatialQueryMap>();
     showMapView: KnockoutComputed<boolean>;
-    totalNumberOfMarkers = ko.observable<number>(0);
+    numberOfMarkers = ko.observable<number>(0);
+    numberOfMarkersText: KnockoutComputed<string>;
+    spatialResultsOnMapText: KnockoutComputed<string>;
+    hasMoreSpatialResultsForMap = ko.observable<boolean>(false);
+    allSpatialResultsItems = ko.observableArray<document>([]);
+    failedToGetResultsForSpatial = ko.observable<boolean>(false);
         
     timeSeriesGraphs = ko.observableArray<timeSeriesPlotDetails>([]);
     timeSeriesTables = ko.observableArray<timeSeriesTableDetails>([]);
@@ -230,7 +252,7 @@ class query extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<document>();
 
     hasEditableIndex: KnockoutComputed<boolean>;
-    queryCompleter: queryCompleter;
+    languageService: rqlLanguageService;
     queryHasFocus = ko.observable<boolean>();
 
     editIndexUrl: KnockoutComputed<string>;
@@ -240,7 +262,6 @@ class query extends viewModelBase {
     rawJsonUrl = ko.observable<string>();
     csvUrl = ko.observable<string>();
 
-    isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
     queriedIndex: KnockoutComputed<string>;
@@ -259,6 +280,11 @@ class query extends viewModelBase {
     showFanOutWarning = ko.observable<boolean>(false);
 
     $downloadForm: JQuery;
+    
+    spinners = {
+        isLoadingSpatialResults: ko.observable<boolean>(false),
+        isLoading: ko.observable<boolean>(false)
+    };
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -282,8 +308,9 @@ class query extends viewModelBase {
 
     constructor() {
         super();
+
+        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Select");
         
-        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
@@ -292,10 +319,10 @@ class query extends viewModelBase {
 
         this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
             "goToHighlightsTab", "goToIncludesTab", "goToGraphTab", "toggleResults", "goToTimeSeriesTab", "plotTimeSeries",
-            "closeTimeSeriesTab", "goToSpatialMapTab");
+            "closeTimeSeriesTab", "goToSpatialMapTab", "loadMoreSpatialResultsToMap", "goToIncludesRevisionsTab");
     }
 
-    private initObservables() {
+    private initObservables(): void {
         this.queriedIndex = ko.pureComputed(() => {
             const stats = this.queryStats();
             if (!stats)
@@ -452,7 +479,7 @@ class query extends viewModelBase {
             eventsCollector.default.reportEvent("query", "toggle-cache");
         });
 
-        this.isLoading.extend({ rateLimit: 100 });
+        this.spinners.isLoading.extend({ rateLimit: 100 });
 
         const criteria = this.criteria();
 
@@ -507,9 +534,17 @@ class query extends viewModelBase {
             const currentTab = this.currentTab();
             return currentTab !== 'timings' && currentTab !== 'graph' && !this.showTimeSeriesGraph() && !this.showMapView();
         });
+
+        this.spatialResultsOnMapText = ko.pureComputed(() => 
+            this.hasMoreSpatialResultsForMap() ? `Showing first ${this.numberOfMarkers().toLocaleString()} results on map.` : "");
+
+        this.numberOfMarkersText = ko.pureComputed(() => {
+            const markersNumber = this.numberOfMarkers().toLocaleString();
+            return this.hasMoreSpatialResultsForMap() ? markersNumber + "+" : markersNumber;
+        });
     }
 
-    private initValidation() {
+    private initValidation(): void {
         this.querySaveName.extend({
             required: true
         });
@@ -553,7 +588,7 @@ class query extends viewModelBase {
         }
     }
 
-    attached() {
+    attached(): void {
         super.attached();
 
         this.createKeyboardShortcut("ctrl+enter", () => this.runQuery(), query.ContainerSelector);
@@ -589,7 +624,7 @@ class query extends viewModelBase {
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true,
-            detectTimeSeries: true, 
+            detectTimeSeries: true,
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
                 if (type === "plot") {
                     const newChart = new timeSeriesPlotDetails([{ documentId, value, name}]);
@@ -628,12 +663,21 @@ class query extends viewModelBase {
             }));
         
         this.explanationsFetcher(() => {
-           const allExplanations = Array.from(this.explanationsCache.values());
+           const allExplanations = this.explanationsCache;
            
            return $.when({
                items: allExplanations.map(x => new document(x)),
                totalResultCount: allExplanations.length
            });
+        });
+
+        this.includedRevisionsFetcher(() => {
+            const revisionItems = this.includesRevisionsCache().items;
+
+            return $.when({
+                items: revisionItems.map(x => new document(x)),
+                totalResultCount: revisionItems.length
+            });
         });
         
         this.columnsSelector.init(grid,
@@ -644,6 +688,8 @@ class query extends viewModelBase {
                     return documentsProvider.findColumns(w, r);
                 } else if (tab === "explanations") {
                     return this.explanationsColumns(grid);
+                } else if (tab === "revisions") {
+                    return this.revisionsColumns(grid);
                 } else if (tab instanceof timeSeriesTableDetails) {
                     return this.getTimeSeriesColumns(grid, tab);
                 } else {
@@ -701,18 +747,35 @@ class query extends viewModelBase {
                 const value = column.getCellValue(doc);
                 showPreview(value);
             }
+            
+            if (this.currentTab() === "revisions" && column.header === "Last Modified") {
+                const rawValue = (doc as any);
+                onValue(moment.utc(rawValue.lastModified), rawValue.lastModified);
+            }
         });
         
         this.queryHasFocus(true);
         
         this.timingsGraph.syncLegend();
+        
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+        
+        this.criteria().queryText.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
     }
     
-    private initTabTooltip() {
+    detached() {
+        super.detached();
+        
+        this.languageService.dispose();
+    }
+
+    private initTabTooltip(): void {
         $('.tab-info[data-toggle="tooltip"]').tooltip();
     }
     
-    private getQueriedIndexInfo() {
+    private getQueriedIndexInfo(): void {
         const indexName = this.queriedIndex();
         if (!indexName) {
             this.queriedIndexInfo(null);
@@ -742,7 +805,7 @@ class query extends viewModelBase {
 
         const formatTimeSeriesDate = (input: string) => {
             const dateToFormat = moment.utc(input);
-            return dateToFormat.format(query.timeSeriesFormat) + "Z";
+            return dateToFormat.format(query.dateTimeFormat) + "Z";
         };
         
         switch (timeSeriesQueryResult.detectResultType(tab.value)) {
@@ -770,22 +833,42 @@ class query extends viewModelBase {
         }
     }
     
-    private explanationsColumns(grid: virtualGridController<any>) {
+    private explanationsColumns(grid: virtualGridController<any>): virtualColumn[] {
         return [
-            new actionColumn<explanationItem>(grid, doc => this.showExplanationDetails(doc), "Show", `<i class="icon-preview"></i>`, "72px",
-            {
+            new actionColumn<explanationItem>(grid, doc => this.showExplanationDetails(doc), "Show", `<i class="icon-preview"></i>`, "72px", {
                 title: () => 'Show detailed explanation'
             }),
             new textColumn<explanationItem>(grid, x => x.id, "Id", "30%"),
             new textColumn<explanationItem>(grid, x => x.explanations.map(x => x.split("\n")[0]).join(", "), "Explanation", "50%")
         ];
     }
+
+    private revisionsColumns(grid: virtualGridController<any>): virtualColumn[] {
+        return [
+            new actionColumn<includedRevisionItem>(grid, x => this.showRevisionDetails(x.revision), "Show", `<i class="icon-preview"></i>`, "72px", {
+                    title: () => 'Show revision preview'
+                }),
+            new textColumn<includedRevisionItem>(grid, x => x.revision, "Revision", "15%"),
+            new hyperlinkColumn<includedRevisionItem>(grid, x => x.sourceDocument, x => appUrl.forEditDoc(x.sourceDocument, this.activeDatabase()), "Source Document", "25%", {
+                    sortable: "string"
+                }),
+            new textColumn<includedRevisionItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.lastModified, query.dateTimeFormat), "Last Modified", "25%", {
+                    sortable: "string"
+                }),
+            new textColumn<includedRevisionItem>(grid, x => x.changeVector, "Change Vector", "25%") 
+        ];
+    }
     
-    private showExplanationDetails(details: explanationItem) {
+    private showExplanationDetails(details: explanationItem): void {
         app.showBootstrapDialog(new showDataDialog("Explanation for: " + details.id, details.explanations.join("\r\n"), "plain"));
     }
 
-    private loadSavedQueries() {
+    private showRevisionDetails(revisionDocument: string): void {
+        const text = JSON.stringify(revisionDocument, null, 4);
+        app.showBootstrapDialog(new showDataDialog("Revision item", text, "javascript"));
+    }
+
+    private loadSavedQueries(): void {
         const db = this.activeDatabase();
 
         this.savedQueries(savedQueriesStorage.getSavedQueries(db));
@@ -806,7 +889,7 @@ class query extends viewModelBase {
             });
     }
 
-    selectInitialQuery(indexNameOrRecentQueryHash: string) {
+    selectInitialQuery(indexNameOrRecentQueryHash: string): void {
         if (!indexNameOrRecentQueryHash) {
             return;
         } else if (this.indexes().find(i => i.Name === indexNameOrRecentQueryHash) ||
@@ -828,7 +911,7 @@ class query extends viewModelBase {
         }
     }
 
-    runQueryOnIndex(indexName: string) {
+    runQueryOnIndex(indexName: string): void {
         this.criteria().setSelectedIndex(indexName);
 
         if (this.isCollectionQuery() && this.criteria().indexEntries()) {
@@ -847,11 +930,12 @@ class query extends viewModelBase {
         this.updateUrl(url);
     }
 
-    runQuery(optionalSavedQueryName?: string) {
+    runQuery(optionalSavedQueryName?: string): void {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
         
+        this.allSpatialResultsItems([]);
         this.timeSeriesGraphs([]);
         this.timeSeriesTables([]);
         
@@ -861,8 +945,9 @@ class query extends viewModelBase {
         this.effectiveFetcher = this.queryFetcher;
         this.currentTab("results");
         this.includesCache.removeAll();
+        this.includesRevisionsCache(new includedRevisions());
         this.highlightsCache.removeAll();
-        this.explanationsCache.clear();
+        this.explanationsCache.length = 0;
         this.timings(null);
         this.showFanOutWarning(false);
         
@@ -877,7 +962,7 @@ class query extends viewModelBase {
         const disableCache = !this.cacheEnabled();
 
         if (criteria.queryText()) {
-            this.isLoading(true);
+            this.spinners.isLoading(true);
 
             const database = this.activeDatabase();
 
@@ -895,7 +980,7 @@ class query extends viewModelBase {
             } catch (error) {
                 // it may throw when unable to compute query parameters, etc.
                 messagePublisher.reportError("Unable to run the query", error.message, null, false);
-                this.isLoading(false);
+                this.spinners.isLoading(false);
                 return;
             }
 
@@ -908,7 +993,7 @@ class query extends viewModelBase {
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
-                                
+                
                 // Note: 
                 // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution
                 // If we ask browser to report the 304 state then 'response content' is empty 
@@ -917,7 +1002,7 @@ class query extends viewModelBase {
                 
                 command.execute()
                     .always(() => {
-                        this.isLoading(false);
+                        this.spinners.isLoading(false);
                     })
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
@@ -1014,8 +1099,16 @@ class query extends viewModelBase {
                             resultsTask.resolve(queryResults);
                             this.queryStats(queryResults.additionalResultInfo);
                             this.onIncludesLoaded(queryResults.includes);
-                            this.onHighlightingsLoaded(queryResults.highlightings);
-                            this.onExplanationsLoaded(queryResults.explanations);
+                            if (queryResults.includesRevisions) {
+                                this.onIncludesRevisionsLoaded(queryResults.includesRevisions);    
+                            }
+                            if (queryResults.highlightings) {
+                                this.onHighlightingsLoaded(queryResults.highlightings);
+                            }
+                            
+                            if (queryResults.explanations) {
+                                this.onExplanationsLoaded(queryResults.explanations, queryResults.items);
+                            }
                             this.onTimingsLoaded(queryResults.timings);
                             this.onSpatialLoaded(queryResults);
                         }
@@ -1052,7 +1145,7 @@ class query extends viewModelBase {
         }
     }
     
-    explainIndex() {
+    explainIndex(): void {
         new explainQueryCommand(this.criteria().queryText(), this.activeDatabase())
             .execute()
             .done(explanationResult => {
@@ -1060,7 +1153,7 @@ class query extends viewModelBase {
             });
     }
 
-    saveQueryToLocalStorage() {
+    saveQueryToLocalStorage(): void {
         if (this.inSaveMode()) {
             eventsCollector.default.reportEvent("query", "save");
 
@@ -1090,12 +1183,12 @@ class query extends viewModelBase {
         }
     }
     
-    private saveQueryOptions(criteria: queryCriteria) {
+    private saveQueryOptions(criteria: queryCriteria): void {
         this.queriedFieldsOnly(criteria.showFields());
         this.queriedIndexEntries(criteria.indexEntries());
     }
     
-    private saveQueryToStorage(criteria: storedQueryDto) {
+    private saveQueryToStorage(criteria: storedQueryDto): void {
         criteria.name = this.querySaveName();
         this.saveToStorage(criteria, false);
         this.querySaveName(null);
@@ -1103,13 +1196,13 @@ class query extends viewModelBase {
         messagePublisher.reportSuccess("Query saved successfully");
     }
 
-    private saveRecentQueryToStorage(criteria: storedQueryDto, optionalSavedQueryName?: string) {
+    private saveRecentQueryToStorage(criteria: storedQueryDto, optionalSavedQueryName?: string): void {
         const name = optionalSavedQueryName || this.getRecentQueryName();
         criteria.name = name;
         this.saveToStorage(criteria, !optionalSavedQueryName);
     }
 
-    private saveToStorage(criteria: storedQueryDto, isRecent: boolean) {
+    private saveToStorage(criteria: storedQueryDto, isRecent: boolean): void {
         criteria.recentQuery = isRecent;
         this.appendQuery(criteria);
         savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
@@ -1118,11 +1211,11 @@ class query extends viewModelBase {
         this.loadSavedQueries();
     }
 
-    showFirstItemInPreviewArea() {
+    showFirstItemInPreviewArea(): void {
         this.previewItem(savedQueriesStorage.getSavedQueries(this.activeDatabase())[0]);
     }
     
-    appendQuery(criteria: storedQueryDto) {
+    appendQuery(criteria: storedQueryDto): void {
         if (criteria.recentQuery) {
             const existing = this.savedQueries().find(query => query.hash === criteria.hash);
             
@@ -1144,7 +1237,7 @@ class query extends viewModelBase {
         }
     }
 
-    private removeLastRecentQueryIfMoreThanLimit() {
+    private removeLastRecentQueryIfMoreThanLimit(): void {
         this.savedQueries()
             .filter(x => x.recentQuery)
             .filter((_, idx) => idx >= query.recentQueryLimit)
@@ -1156,16 +1249,16 @@ class query extends viewModelBase {
         return type !== "unknown" ? query.recentKeyword + " (" + collectionIndexName + ")" : query.recentKeyword;
     }
 
-    previewQuery(item: storedQueryDto) {
+    previewQuery(item: storedQueryDto): void {
         this.previewItem(item);
     }
 
-    useQueryItem(item: storedQueryDto) {
+    useQueryItem(item: storedQueryDto): void {
         this.previewItem(item);
         this.useQuery();
     }
 
-    useQuery() {
+    useQuery(): void {
         const queryDoc = this.criteria();
         const previewItem = this.previewItem();
         queryDoc.copyFrom(previewItem);
@@ -1178,7 +1271,7 @@ class query extends viewModelBase {
         this.runQuery(previewItem.recentQuery ? null : previewItem.name);
     }
 
-    removeQuery(item: storedQueryDto) {
+    removeQuery(item: storedQueryDto): void {
         this.confirmationMessage("Query", `Are you sure you want to delete query '${generalUtils.escapeHtml(item.name)}'?`, {
             buttons: ["Cancel", "Delete"],
             html: true
@@ -1196,24 +1289,52 @@ class query extends viewModelBase {
             });
     }
     
-    private onExplanationsLoaded(explanations: dictionary<Array<string>>) {
-        _.forIn(explanations, (doc, id) => {
-            this.explanationsCache.set(id, {
-               id: id,
-                explanations: doc
+    /*
+    The rules are:
+    - scan through results and pick matching explanations - remove from map after pushing to results
+    - if key wasn't found in explanations - ignore and skip
+    - iterate through remaining items - push them in any order - we already did our best to sort that
+     */
+    private onExplanationsLoaded(explanations: dictionary<Array<string>>, results: document[]) {
+        const remainingItems = new Map(Object.keys(explanations).map(x => [x, explanations[x]]));
+        
+        const itemsToCache: explanationItem[] = [];
+        results.forEach(result => {
+            const id = result.getId();
+            const list = remainingItems.get(id);
+            if (list) {
+                itemsToCache.push({
+                    id,
+                    explanations: list
+                });
+                remainingItems.delete(id);
+            }
+        });
+
+        remainingItems.forEach((value, id) => {
+            itemsToCache.push({
+                id,
+                explanations: value
             });
         });
         
-        this.totalExplanations(this.explanationsCache.size);
+        // scan existing cache for duplicates
+        const newIds = new Set<string>(itemsToCache.map(x => x.id));
+        this.explanationsCache = this.explanationsCache.filter(x => !newIds.has(x.id));
+        
+        // and push new cached items
+        this.explanationsCache.push(...itemsToCache);
+        
+        this.totalExplanations(this.explanationsCache.length);
     }
     
-    private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings) {
+    private onTimingsLoaded(timings: Raven.Client.Documents.Queries.Timings.QueryTimings): void {
         this.timings(timings);
     }
     
-    private onIncludesLoaded(includes: dictionary<any>) {
+    private onIncludesLoaded(includes: dictionary<any>): void {
         _.forIn(includes, (doc, id) => {
-            const metadata = doc['@metadata'];
+            const metadata = doc["@metadata"];
             const collection = (metadata ? metadata["@collection"] : null) || "@unknown";
             
             let perCollectionCache = this.includesCache().find(x => x.name === collection);
@@ -1228,8 +1349,25 @@ class query extends viewModelBase {
             cache.total(cache.items.size);
         });
     }
+
+    private onIncludesRevisionsLoaded(includesRevisionsFromQuery: Array<any>): void {
+        const mappedItems = includesRevisionsFromQuery.map(x => {
+            const metadata = x.Revision["@metadata"];
+            const lastModified = metadata ? metadata["@last-modified"] : null;
+
+            return {
+                revision: x.Revision,
+                lastModified: lastModified,
+                sourceDocument: x.Id,
+                changeVector: x.ChangeVector
+            };
+        });
+
+        this.includesRevisionsCache().items.push(...mappedItems);
+        this.includesRevisionsCache().total(this.includesRevisionsCache().items.length);
+    }
     
-    private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>) {
+    private onHighlightingsLoaded(highlightings: dictionary<dictionary<Array<string>>>): void {
         _.forIn(highlightings, (value, fieldName) => {
             let existingPerFieldCache = this.highlightsCache().find(x => x.fieldName() === fieldName);
 
@@ -1257,67 +1395,17 @@ class query extends viewModelBase {
         });
     }
     
-    private onSpatialLoaded(queryResults: pagedResultExtended<document>) {
+    private onSpatialLoaded(queryResults: pagedResultExtended<document>): void {
         this.isSpatialQuery(false);
-        let markersCount = 0;
         
         const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
         if (spatialProperties && queryResults.items.length) {
             this.isSpatialQuery(true);
-
-            // Each spatial markers model will contain the layer of markers per spatial properties pair
-            const spatialMarkersLayers: spatialMarkersLayerModel[] = [];
-            const spatialCirclesLayer: spatialCircleModel[] = [];
-            const spatialPolygonsLayer: spatialPolygonModel[] = [];
-
-            for (let i = 0; i < spatialProperties.length; i++) {
-                const latitudeProperty = spatialProperties[i].LatitudeProperty;
-                const longitudeProperty = spatialProperties[i].LongitudeProperty;
-
-                let pointsArray: geoPointInfo[] = [];
-                for (let i = 0; i < queryResults.items.length; i++) {
-                    const item = queryResults.items[i];
-                    const flatItem = generalUtils.flattenObj(item, "");
-                    
-                    const latitudeValue = _.get(flatItem, latitudeProperty) as number;
-                    const longitudeValue = _.get(flatItem, longitudeProperty) as number;
-                    
-                    if (latitudeValue != null && longitudeValue != null) {
-                        const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
-                        pointsArray.push(point);
-                        markersCount++;
-                    }
-                }
-
-                const layer = new spatialMarkersLayerModel(latitudeProperty, longitudeProperty, pointsArray);
-                spatialMarkersLayers.push(layer);
-            }
-
-            this.totalNumberOfMarkers(markersCount);
-
-            const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
-            for (let i = 0; i < spatialShapes.length; i++) {
-                const shape = spatialShapes[i];
-                switch (shape.Type) {
-                    case "Circle": {
-                        const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
-                        spatialCirclesLayer.push(circle);
-                    }
-                        break;
-                    case "Polygon": {
-                        const polygon = new spatialPolygonModel(shape as Raven.Server.Documents.Indexes.Spatial.Polygon);
-                        spatialPolygonsLayer.push(polygon);
-                    }
-                        break;
-                }
-            }
-            
-            const spatialMapView = new spatialQueryMap(spatialMarkersLayers, spatialCirclesLayer, spatialPolygonsLayer);
-            this.spatialMap(spatialMapView);
+            this.allSpatialResultsItems([]);
         }
     }
     
-    plotTimeSeries() {
+    plotTimeSeries(): void {
         const selection = this.gridController().getSelectedItems();
         
         const timeSeries: timeSeriesPlotItem[] = [];
@@ -1352,11 +1440,11 @@ class query extends viewModelBase {
         }
     }
 
-    refresh() {
+    refresh(): void {
         this.gridController().reset(true);
     }
     
-    openQueryStats() {
+    openQueryStats(): void {
         //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
         const totalResultsFormatted = this.totalResultsForUi().toLocaleString() + (this.hasMoreUnboundedResults() ? "+" : "");
@@ -1364,24 +1452,24 @@ class query extends viewModelBase {
         app.showBootstrapDialog(viewModel);
     }
 
-    private updateBrowserUrl(criteria: queryCriteria) {
+    private updateBrowserUrl(criteria: queryCriteria): void {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
         this.updateUrl(queryUrl);
     }
 
-    runRecentQuery(storedQuery: storedQueryDto) {
+    runRecentQuery(storedQuery: storedQueryDto): void {
         eventsCollector.default.reportEvent("query", "run-recent");
 
         const criteria = this.criteria();
 
         criteria.updateUsing(storedQuery);
 
-        this.runQuery();
+        this.runQuery(storedQuery.name);
     }
 
-    getRecentQuerySortText(sorts: string[]) {
+    getRecentQuerySortText(sorts: string[]): string {
         if (sorts.length > 0) {
             return sorts
                 .map(s => querySort.fromQuerySortString(s).toHumanizedString())
@@ -1391,7 +1479,7 @@ class query extends viewModelBase {
         return "";
     }
 
-    deleteDocsMatchingQuery() {
+    deleteDocsMatchingQuery(): void {
         eventsCollector.default.reportEvent("query", "delete-documents");
 
         const db = this.activeDatabase();
@@ -1409,7 +1497,7 @@ class query extends viewModelBase {
             });
     }
 
-    syntaxHelp() {
+    syntaxHelp(): void {
         const viewmodel = new querySyntax();
         app.showBootstrapDialog(viewmodel);
     }
@@ -1427,20 +1515,32 @@ class query extends viewModelBase {
             });
     }
     
-    goToResultsTab() {
+    goToResultsTab(): void {
         this.currentTab("results");
         this.effectiveFetcher = this.queryFetcher;
 
         // since we merge records based on fragments
-        // remove all existing highlights when going back to 
-        // 'results' tab
+        // remove all existing highlights & included revisions when going back to 'results' tab
         this.highlightsCache.removeAll();
+        this.includesRevisionsCache(new includedRevisions());
+
+        this.explanationsCache.length = 0;
+        this.totalExplanations(0);
         
         this.columnsSelector.reset();
         this.refresh();
     }
     
-    goToIncludesTab(includes: perCollectionIncludes) {
+    goToIncludesRevisionsTab(): void {
+        this.currentTab("revisions");
+        
+        this.effectiveFetcher = this.includedRevisionsFetcher;
+
+        this.columnsSelector.reset();
+        this.refresh();
+    }
+    
+    goToIncludesTab(includes: perCollectionIncludes): void {
         this.currentTab(includes);
         
         this.effectiveFetcher = ko.observable<fetcherType>(() => {
@@ -1454,7 +1554,7 @@ class query extends viewModelBase {
         this.refresh();
     }
     
-    goToExplanationsTab() {
+    goToExplanationsTab(): void {
         this.currentTab("explanations");
         this.effectiveFetcher = this.explanationsFetcher;
         
@@ -1462,7 +1562,7 @@ class query extends viewModelBase {
         this.refresh();
     }
 
-    goToHighlightsTab(highlight: highlightSection) {
+    goToHighlightsTab(highlight: highlightSection): void {
         this.currentTab(highlight);
 
         const itemsFlattened = _.flatMap(Array.from(highlight.data.values()), items => items);
@@ -1477,13 +1577,13 @@ class query extends viewModelBase {
         this.refresh();
     }
 
-    goToTimingsTab() {
+    goToTimingsTab(): void {
         this.currentTab("timings");
         
         this.timingsGraph.draw(this.timings());
     }
     
-    goToGraphTab() {
+    goToGraphTab(): void {
         this.currentTab("graph");
         if (this.graphTabIsDirty()) {
             this.graphQueryResults.clear();
@@ -1497,11 +1597,93 @@ class query extends viewModelBase {
         }
     }
 
-    goToSpatialMapTab() {
-        this.currentTab(this.spatialMap());
+    goToSpatialMapTab(): void {
+        if (!this.showMapView()) {
+            this.loadMoreSpatialResultsToMap();
+        }
+    }
+    
+    loadMoreSpatialResultsToMap(): void {
+        this.spinners.isLoadingSpatialResults(true);
+        this.failedToGetResultsForSpatial(false);
+
+        const command = new queryCommand(this.activeDatabase(),
+                                         this.allSpatialResultsItems().length,
+                                         query.maxSpatialResultsToFetch + 1,
+                                         this.criteria().clone(),
+                                         !this.cacheEnabled());
+        command.execute()
+            .done((queryResults: pagedResultExtended<document>) => {
+                const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;
+                this.populateSpatialMap(queryResults, spatialProperties);
+                this.currentTab(this.spatialMap());
+            })
+            .fail(() => this.failedToGetResultsForSpatial(true))
+            .always(() => this.spinners.isLoadingSpatialResults(false));
     }
 
-    goToTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {
+    private populateSpatialMap(queryResults: pagedResultExtended<document>, spatialProperties: any): void {
+        // Each spatial markers model will contain the layer of markers per spatial properties pair 
+        const spatialMarkersLayers: spatialMarkersLayerModel[] = [];
+        const spatialCirclesLayer: spatialCircleModel[] = [];
+        const spatialPolygonsLayer: spatialPolygonModel[] = [];
+
+        let markersCount = 0;
+        this.hasMoreSpatialResultsForMap(false);
+
+        if (queryResults.items.length === query.maxSpatialResultsToFetch + 1) {
+            queryResults.items.length--;
+            this.hasMoreSpatialResultsForMap(true);
+        }
+
+        this.allSpatialResultsItems.push(...queryResults.items);
+
+        for (let i = 0; i < spatialProperties.length; i++) {
+            const latitudeProperty = spatialProperties[i].LatitudeProperty;
+            const longitudeProperty = spatialProperties[i].LongitudeProperty;
+
+            let pointsArray: geoPointInfo[] = [];
+            for (let i = 0; i < this.allSpatialResultsItems().length; i++) {
+                const item = this.allSpatialResultsItems()[i];
+
+                const latitudeValue = _.get(item, latitudeProperty) as number;
+                const longitudeValue = _.get(item, longitudeProperty) as number;
+
+                if (latitudeValue != null && longitudeValue != null) {
+                    const point: geoPointInfo = { Latitude: latitudeValue, Longitude: longitudeValue, PopupContent: item };
+                    pointsArray.push(point);
+                    markersCount++;
+                }
+            }
+
+            const layer = new spatialMarkersLayerModel(latitudeProperty, longitudeProperty, pointsArray);
+            spatialMarkersLayers.push(layer);
+        }
+
+        this.numberOfMarkers(markersCount);
+
+        const spatialShapes = queryResults.additionalResultInfo.SpatialShapes;
+        for (let i = 0; i < spatialShapes.length; i++) {
+            const shape = spatialShapes[i];
+            switch (shape.Type) {
+                case "Circle": {
+                    const circle = new spatialCircleModel(shape as Raven.Server.Documents.Indexes.Spatial.Circle);
+                    spatialCirclesLayer.push(circle);
+                }
+                    break;
+                case "Polygon": {
+                    const polygon = new spatialPolygonModel(shape as Raven.Server.Documents.Indexes.Spatial.Polygon);
+                    spatialPolygonsLayer.push(polygon);
+                }
+                    break;
+            }
+        }
+        
+        const spatialMapView = new spatialQueryMap(spatialMarkersLayers, spatialCirclesLayer, spatialPolygonsLayer);
+        this.spatialMap(spatialMapView);
+    }
+
+    goToTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails): void {
         this.currentTab(tab);
         this.resultsExpanded(true);
 
@@ -1509,7 +1691,7 @@ class query extends viewModelBase {
             this.effectiveFetcher = ko.observable<fetcherType>(() => {
                 return $.when({
                     items: tab.value.Results.map(x => new document(x)),
-                    totalResultCount: tab.value.Count
+                    totalResultCount: tab.value.Results.length
                 });
             });
 
@@ -1518,7 +1700,7 @@ class query extends viewModelBase {
         }
     }
 
-    closeTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {
+    closeTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails): void {
         if (this.currentTab() === tab) {
             this.goToResultsTab();
         }
@@ -1532,25 +1714,27 @@ class query extends viewModelBase {
         }
     }
 
-    toggleResults() {
+    toggleResults(): void {
         this.resultsExpanded.toggle();
         this.gridController().reset(true);
         this.graphQueryResults.onResize();
         if (this.currentTab() === this.spatialMap()) {
             this.spatialMap().onResize();
+            this.allSpatialResultsItems([]);
+            this.loadMoreSpatialResultsToMap();
         }
     }
 
-    exportCsvVisibleColumns() {
+    exportCsvVisibleColumns(): void {
         const columns = this.columnsSelector.getSimpleColumnsFields();
         this.exportCsvInternal(columns);
     }
 
-    exportCsvFull() {
+    exportCsvFull(): void {
         this.exportCsvInternal();
     }
 
-    private exportCsvInternal(columns?: string[]) {
+    private exportCsvInternal(columns?: string[]): void {
         eventsCollector.default.reportEvent("query", "export-csv");
 
         let args: { format: string, debug?: string, field?: string[] };

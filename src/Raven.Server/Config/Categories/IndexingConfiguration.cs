@@ -279,10 +279,16 @@ namespace Raven.Server.Config.Categories
         public bool IndexEmptyEntries { get; set; }
 
         [Description("Indicates how error indexes should behave on database startup when they are loaded. By default they are not started.")]
-        [DefaultValue(IndexStartupBehavior.Default)]
+        [DefaultValue(ErrorIndexStartupBehaviorType.Default)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
+        public ErrorIndexStartupBehaviorType ErrorIndexStartupBehavior { get; set; }
+
+        [Description("Indicates how indexes should behave on database startup when they are loaded. By default they are started immediately.")]
+        [DefaultValue(IndexStartupBehaviorType.Default)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.IndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public IndexStartupBehaviorType IndexStartupBehavior { get; set; }
 
         [Description("Limits the number of concurrently running and processing indexes on the server. Default: null (no limit)")]
         [DefaultValue(null)]
@@ -340,6 +346,19 @@ namespace Raven.Server.Config.Categories
 
         public Lazy<AnalyzerFactory> DefaultSearchAnalyzerType { get; private set; }
 
+        [Description("EXPERT: Allows to open an index without checking if current Database ID matched the one for which index was created.")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.SkipDatabaseIdValidationOnIndexOpening", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool SkipDatabaseIdValidationOnIndexOpening { get; set; }
+
+        [Description("Time since last query after which when cleanup is executed additional items will be released (e.g. readers).")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
@@ -363,11 +382,19 @@ namespace Raven.Server.Config.Categories
             DefaultSearchAnalyzerType = new Lazy<AnalyzerFactory>(() => IndexingExtensions.GetAnalyzerType("@default", DefaultSearchAnalyzer, resourceName));
         }
 
-        public enum IndexStartupBehavior
+        public enum ErrorIndexStartupBehaviorType
         {
             Default,
             Start,
             ResetAndStart
         }
+
+        public enum IndexStartupBehaviorType
+        {
+            Default,
+            Immediate,
+            Pause,
+            Delay
     }
+}
 }

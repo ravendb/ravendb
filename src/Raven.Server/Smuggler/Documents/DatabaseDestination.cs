@@ -27,6 +27,7 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -574,12 +575,12 @@ namespace Raven.Server.Smuggler.Documents
                 if (ClusterTransactionCommand.IsAtomicGuardKey(key, out var docId))
                 {
                     var ctx = _documentContextHolder.GetContextForRead();
-
-                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector);
+                    
+                    var doc = _database.DocumentsStorage.Get(ctx, docId, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.Id);
                     if (doc == null)
                         return;
 
-                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = docId, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector)});
+                    _clusterTransactionCommands.Push(new BatchRequestParser.CommandData {Id = doc.Id, Document = doc.Data, Type = CommandType.PUT, OriginalChangeVector = ctx.GetLazyString(doc.ChangeVector)});
                 }
                 else
                 {
@@ -591,7 +592,7 @@ namespace Raven.Server.Smuggler.Documents
                     await SendAddOrUpdateCommandsAsync(_context);
 
                 if (_clusterTransactionCommands.Length >= BatchSize)
-                    await SendClusterTransactionsAsync(_context);
+                    await SendClusterTransactionsAsync();
             }
 
             public async ValueTask WriteTombstoneKeyAsync(string key)
@@ -610,44 +611,52 @@ namespace Raven.Server.Smuggler.Documents
                 using (_documentContextHolder)
                 using (_clusterTransactionCommands)
                 {
-                    await SendClusterTransactionsAsync(_context);
+                    await SendClusterTransactionsAsync();
                     await SendAddOrUpdateCommandsAsync(_context);
                     await SendRemoveCommandsAsync(_context);
                 }
             }
 
-            private async ValueTask SendClusterTransactionsAsync(JsonOperationContext context)
+            private async ValueTask SendClusterTransactionsAsync()
             {
                 if (_clusterTransactionCommands.Length == 0)
                     return;
 
-                using (_database.ClusterTransactionWaiter.CreateTask(out var taskId))
+                var parsedCommands = _clusterTransactionCommands.GetArraySegment();
+
+                var raftRequestId = RaftIdGenerator.NewId();
+                var options = new ClusterTransactionCommand.ClusterTransactionOptions(string.Empty, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
+                var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
+
+                var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
+                clusterTransactionCommand.FromBackup = true;
+
+                var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                for (int i = 0; i < _clusterTransactionCommands.Length; i++)
                 {
-                    var parsedCommands = _clusterTransactionCommands.GetArraySegment();
-
-                    var raftRequestId = RaftIdGenerator.NewId();
-                    var options = new ClusterTransactionCommand.ClusterTransactionOptions(taskId, disableAtomicDocumentWrites: false, ClusterCommandsVersionManager.CurrentClusterMinimalVersion);
-                    var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
-
-                    var clusterTransactionCommand = new ClusterTransactionCommand(_database.Name, _database.IdentityPartsSeparator, topology, parsedCommands, options, raftRequestId);
-                    clusterTransactionCommand.FromBackup = true;
-
-                    var clusterTransactionResult = await _database.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                    for (int i = 0; i < _clusterTransactionCommands.Length; i++)
-                    { 
-                        _clusterTransactionCommands[i].Document.Dispose();
-                        _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
-                    }
-             
-                    _clusterTransactionCommands.Clear();
-                    _documentContextHolder.Reset();
-
-                    if (clusterTransactionResult.Result is List<string> errors)
-                        throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}"); //TODO
-
-                    await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
-                    await _database.ClusterTransactionWaiter.WaitForResults(taskId, _token);
+                    _clusterTransactionCommands[i].Document.Dispose();
+                    _clusterTransactionCommands[i].OriginalChangeVector.Dispose();
                 }
+
+                _clusterTransactionCommands.Clear();
+                _documentContextHolder.Reset();
+
+                if (clusterTransactionResult.Result is List<string> errors)
+                    throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
+
+                await _database.ServerStore.Cluster.WaitForIndexNotification(clusterTransactionResult.Index);
+
+                //When restoring from snapshot the database doesn't exist yet and we cannot rely on the DocumentDatabase to execute the database cluster transaction commands
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext writeContext))
+                using (writeContext.OpenWriteTransaction())
+                using (var rawDatabaseRecord = _database.ServerStore.Cluster.ReadRawDatabaseRecord(writeContext, _database.Name, out _))
+                {
+                    if (rawDatabaseRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress)
+                    {
+                        await _database.ExecuteClusterTransaction(writeContext);
+                    }
+                }
+                await _database.RachisLogIndexNotifications.WaitForIndexNotification(clusterTransactionResult.Index, _token);
             }
 
             private async ValueTask SendAddOrUpdateCommandsAsync(JsonOperationContext context)
@@ -655,7 +664,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_compareExchangeAddOrUpdateCommands.Count == 0)
                     return;
 
-                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
+                var addOrUpdateResult = await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeAddOrUpdateCommands, context, RaftIdGenerator.DontCareId));
                 foreach (var command in _compareExchangeAddOrUpdateCommands)
                 {
                     command.Value.Dispose();
@@ -669,7 +678,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (_compareExchangeRemoveCommands.Count == 0)
                     return;
-                await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
+                await _database.ServerStore.SendToLeaderAsync(context, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeRemoveCommands, context, RaftIdGenerator.DontCareId));
                 _compareExchangeRemoveCommands.Clear();
             }
 
@@ -1098,6 +1107,14 @@ namespace Raven.Server.Smuggler.Documents
 
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.ClientConfigurationUpdated = true;
+                }
+
+                if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring PostgreSQL integration from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditPostgreSqlConfigurationCommand(databaseRecord.Integrations.PostgreSql, _database.Name, RaftIdGenerator.DontCareId)));
+                    progress.PostreSQLConfigurationUpdated = true;
                 }
 
                 if (databaseRecord.UnusedDatabaseIds != null && databaseRecord.UnusedDatabaseIds.Count > 0)

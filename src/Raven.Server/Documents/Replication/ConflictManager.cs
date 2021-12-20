@@ -67,32 +67,64 @@ namespace Raven.Server.Documents.Replication
                     Flags = flags
                 };
 
-                if (TryResolveConflictByScript(
-                    documentsContext,
-                    conflictedDoc))
-                    return;
-
-                if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
+                if (IsSameCollection(documentsContext, id, conflictedDoc.Collection))
                 {
-                    var conflicts = new List<DocumentConflict>
+                    if (TryResolveConflictByScript(
+                        documentsContext,
+                        conflictedDoc))
+                        return;
+
+                    if (_database.ReplicationLoader.ConflictSolverConfig?.ResolveToLatest ?? true)
                     {
-                        conflictedDoc.Clone()
-                    };
-                    conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
+                        var conflicts = new List<DocumentConflict>
+                        {
+                            conflictedDoc.Clone()
+                        };
+                        conflicts.AddRange(_database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id));
 
-                    var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
-                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
-                    if (local != null)
-                        conflicts.Add(local);
+                        var localDocumentTuple = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, false);
+                        var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
+                        if (local != null)
+                            conflicts.Add(local);
 
-                    var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
+                        var resolved = _conflictResolver.ResolveToLatest(conflicts);
+                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
 
-                    return;
+                        return;
+                    }
                 }
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             }
+        }
+
+        private bool IsSameCollection(DocumentsOperationContext documentsContext, string id, string collection)
+        {
+            var existing = _database.DocumentsStorage.GetDocumentOrTombstone(documentsContext, id, throwOnConflict: false);
+
+            if (existing.Document != null)
+            {
+                if (existing.Document.TryGetMetadata(out BlittableJsonReaderObject metadata) == false)
+                    return true;
+                metadata.TryGetMember(Client.Constants.Documents.Metadata.Collection, out object res);
+                return res == null ?
+                    string.Equals(collection, Client.Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase) :
+                    string.Equals(collection, res.ToString(), StringComparison.OrdinalIgnoreCase);
+            }
+            if (existing.Tombstone != null)
+            {
+                if (string.Equals(existing.Tombstone.Collection,collection, StringComparison.OrdinalIgnoreCase))
+                    return true;
+                if (existing.Tombstone.Collection == null)
+                    return string.Equals(collection, Client.Constants.Documents.Collections.EmptyCollection, StringComparison.OrdinalIgnoreCase);
+            }
+            else
+            {
+                var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, id);
+                //compare to the original document
+                return string.Equals(conflicts.First().Collection, collection, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
         }
 
         public static void AssertChangeVectorNotNull(string conflictedChangeVector)
