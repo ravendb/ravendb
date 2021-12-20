@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.TimeSeries
                             deleted = readOnlySegment.NumberOfLiveEntries;
                             holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AppendDeadSegment(newSegment, changeVectorFromReplication: conflictStatus == ConflictStatus.Update ? remoteChangeVector : null);
+                            holder.AppendDeadSegment(newSegment, changeVectorFromReplication: remoteChangeVector);
                             if (updateMetadata)
                             {
                                 // in case this deleted segment was the only segment that exists for this TS
@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            var count = holder.AppendExistingSegment(newSegment, changeVectorFromReplication: conflictStatus == ConflictStatus.Update ? remoteChangeVector : null);
+                            var count = holder.AppendExistingSegment(newSegment, changeVectorFromReplication: remoteChangeVector);
                             if (count == 0 && updateMetadata)
                             {
                                 // this ts was completely deleted
@@ -724,7 +724,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                holder.AppendToNewSegment(segment, baseline, changeVector);
+                holder.AppendToNewSegment(segment, baseline);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
