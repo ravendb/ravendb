@@ -538,22 +538,36 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("timeseries(doc, name).increment");
 
+                const string signature1Args = "timeseries(doc, name).increment(values)";
                 const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
 
-                if(args.Length != 2)
-                    throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature2Args}");
+                string signature;
+                DateTime timestamp;
+                JsValue valuesArg;
 
-                string signature = signature2Args;
+                switch (args.Length)
+                {
+                    case 1:
+                        signature = signature1Args;
+                        timestamp = DateTime.UtcNow.EnsureMilliseconds();
+                        valuesArg = args[0];
+                        break;
+                    case 2:
+                        signature = signature2Args;
+                        timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+                        valuesArg = args[1];
+                        break;
+                    default:
+                        throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}");
+                }
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
                 string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
-                var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
                 try
                 {
-                    var valuesArg = args[1];
                     Memory<double> values;
                     if (valuesArg.IsArray())
                     {
