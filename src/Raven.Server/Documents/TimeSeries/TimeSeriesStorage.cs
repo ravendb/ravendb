@@ -360,6 +360,7 @@ namespace Raven.Server.Documents.TimeSeries
                     baseline = nextSegment.Value;
                 }
 
+
                 if (deleted == 0)
                     return null; // nothing happened, the deletion request was out of date
 
@@ -383,7 +384,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (baseline > to)
                         return false; // we got to the end
 
-                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, remoteChangeVector))
+                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline))
                     {
                         if (holder.LoadCurrentSegment() == false)
                             return false;
@@ -397,9 +398,11 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
+                        ConflictStatus conflictStatus = ConflictStatus.AlreadyMerged;
                         if (remoteChangeVector != null)
                         {
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
+                            conflictStatus = ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector);
+                            if (conflictStatus == ConflictStatus.AlreadyMerged)
                             {
                                 // the deleted range is older than this segment, so we don't touch this segment
                                 return false;
@@ -421,7 +424,7 @@ namespace Raven.Server.Documents.TimeSeries
                             deleted = readOnlySegment.NumberOfLiveEntries;
                             holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AppendDeadSegment(newSegment);
+                            holder.AppendDeadSegment(newSegment, changeVectorFromReplication: conflictStatus == ConflictStatus.Update ? remoteChangeVector : null);
                             if (updateMetadata)
                             {
                                 // in case this deleted segment was the only segment that exists for this TS
@@ -461,7 +464,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            var count = holder.AppendExistingSegment(newSegment);
+                            var count = holder.AppendExistingSegment(newSegment, changeVectorFromReplication: conflictStatus == ConflictStatus.Update ? remoteChangeVector : null);
                             if (count == 0 && updateMetadata)
                             {
                                 // this ts was completely deleted
@@ -721,13 +724,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.LoadCurrentSegment())
-                {
-                    // should never happen 
-                    return false;
-                }
-
-                holder.AppendToNewSegment(segment, baseline);
+                holder.AppendToNewSegment(segment, baseline, changeVector);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
@@ -817,17 +814,12 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
-                var prevLastTimestamp = prevSegment.GetLastTimestamp(prevBaseline);
+                var last = prevSegment.GetLastTimestamp(prevBaseline);
 
-                if (canUpdateExistingSegment)
-                {
-                    // in case of an update, we must accept only segments that their baseline equals to the existing segment baseline
-                    // and their last timestamp greater or equal to last timestamp of existing segment
-                    // by that, we can ensure we will not lose values in case of a split or delete
-                    return baseline > prevBaseline || myLastTimestamp < prevLastTimestamp;
-                }
+                if (canUpdateExistingSegment && baseline == prevBaseline && last == myLastTimestamp)
+                    return false;
 
-                return prevLastTimestamp >= baseline;
+                return last >= baseline;
             }
         }
 
@@ -897,6 +889,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _name = name;
 
                 FromReplication = fromReplicationChangeVector != null;
+                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
             }
 
             public TimeSeriesSegmentHolder(
