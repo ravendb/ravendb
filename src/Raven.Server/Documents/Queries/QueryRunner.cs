@@ -187,6 +187,8 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
+            if (query.Metadata.FilterScript != null)
+                throw new InvalidQueryException("Facet query does not support a filter clause.", query.Metadata.QueryText, query.QueryParameters);
 
             Exception lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
