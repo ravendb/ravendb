@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -1273,6 +1274,67 @@ namespace FastTests.Corax
                 } while (read != 0);
 
                 Assert.Equal((setSize / 3), count);
+            }
+        }
+
+        [Fact]
+        public void BigContainsTest()
+        {
+            var ids = ArrayPool<long>.Shared.Rent(2048);
+            var random = new Random(1000);
+            var strings = new string[]
+            {
+                "ing", "hehe", "sad", "mac", "iej", "asz", "yk", "rav", "endb", "co", "rax", "mix", "ture", "net", "fram", "work", "th", "is", " ", "gre", "at", "te",
+                "st"
+            };
+
+            string GetRandomText()
+            {
+                var l = strings.Length;
+                int l_new_word = random.Next(l);
+                if (l_new_word is 0)
+                    l_new_word = 1;
+                var sb = new StringBuilder();
+                for (int i = 0; i < l_new_word; i++)
+                {
+                    sb.Append(strings[random.Next(0, l)]);
+                }
+
+                return sb.ToString();
+            }
+
+            try
+            {
+                var list = Enumerable.Range(0, 128_000).Select(x => new IndexSingleEntry() { Id = $"entry/{x}", Content = GetRandomText() }).ToList();
+
+                IndexEntries(list);
+                using var searcher = new IndexSearcher(Env);
+
+
+                {
+                    var match = searcher.ContainsQuery("Content", "ing");
+                    int read;
+                    int whole = 0;
+                    while ((read = match.Fill(ids)) != 0)
+                    {
+                        whole += read;
+                        foreach (var id in ids)
+                        {
+                            searcher.GetReaderFor(id).Read(ContentIndex, out var value);
+                            Assert.True(Encoding.UTF8.GetString(value).Contains("ing"));
+                        }
+                    }
+
+                    Assert.Equal(list.Count(x => x.Content.Contains("ing")), whole);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                ArrayPool<long>.Shared.Return(ids);
             }
         }
     }
