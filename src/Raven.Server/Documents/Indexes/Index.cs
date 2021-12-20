@@ -1418,7 +1418,7 @@ namespace Raven.Server.Documents.Indexes
 
                             _mre.Reset();
 
-                            Thread.Sleep(500); // replace will be re-tried
+                            _indexingProcessCancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)); // replace will be re-tried
                         }
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);
