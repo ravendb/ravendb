@@ -211,6 +211,93 @@ namespace SlowTests.Rolling
             }
         }
 
+        [Fact]
+        public async Task EditRollingIndexMultipleTimesWhileDocumentsModified()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStoreForRollingIndexes(
+                       new Options
+                       {
+                           Server = cluster.Leader, 
+                           ReplicationFactor = 3,
+                       }))
+            {
+                await CreateData(store);
+
+                await store.ExecuteIndexAsync(new MyRollingIndex());
+
+                WaitForIndexingInTheCluster(store, store.Database);
+
+                await VerifyHistory(cluster, store);
+
+                var count = 0L;
+                var violation = new StringBuilder();
+                var mre = new ManualResetEventSlim();
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var indexStore = database.IndexStore;
+
+                    indexStore.ForTestingPurposesOnly().BeforeRollingIndexStart = index => mre.Wait(index.IndexingProcessCancellationToken);
+
+                    indexStore.ForTestingPurposesOnly().OnRollingIndexStart = index =>
+                    {
+                        if (index.Name != "ReplacementOf/MyRollingIndex")
+                            return;
+
+                        var inc = Interlocked.Increment(ref count);
+                        if (inc > 1)
+                            violation.AppendLine($"{index} started concurrently (count: {inc})");
+                    };
+                    indexStore.ForTestingPurposesOnly().BeforeRollingIndexFinished = index =>
+                    {
+                        var dec = Interlocked.Decrement(ref count);
+                        if (dec != 0)
+                            violation.AppendLine($"finishing {index} must be zero but is {dec} @ {server.ServerStore.NodeTag}");
+                    };
+                }
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+                {
+                    var t = ContinuouslyModifyDocuments(store, cts.Token);
+                    try
+                    {
+                        try
+                        {
+                            await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+                            await store.ExecuteIndexAsync(new MyEditedRollingIndex2());
+                            await store.ExecuteIndexAsync(new MyEditedRollingIndex());
+                            await store.ExecuteIndexAsync(new MyEditedRollingIndex2());
+                        }
+                        finally
+                        {
+                            mre.Set();
+                        }
+                        
+                        WaitForIndexingInTheCluster(store, store.Database);
+
+                        var v = violation.ToString();
+                        Assert.True(string.IsNullOrEmpty(v), v);
+
+                        await VerifyHistory(cluster, store);
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            cts.Cancel();
+                            await t;
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        }
+
         private async Task ContinuouslyModifyDocuments(IDocumentStore store, CancellationToken token)
         {
             while (token.IsCancellationRequested == false)
@@ -870,6 +957,24 @@ namespace SlowTests.Rolling
                                     order.Company,
                                     order.Employee
                                 };
+
+                DeploymentMode = IndexDeploymentMode.Rolling;
+            }
+
+            public override string IndexName => nameof(MyRollingIndex);
+        }
+
+        private class MyEditedRollingIndex2 : AbstractIndexCreationTask<Order>
+        {
+            public MyEditedRollingIndex2()
+            {
+                Map = orders => from order in orders
+                    select new
+                    {
+                        order.Company,
+                        order.Employee,
+                        order.ShipTo
+                    };
 
                 DeploymentMode = IndexDeploymentMode.Rolling;
             }
