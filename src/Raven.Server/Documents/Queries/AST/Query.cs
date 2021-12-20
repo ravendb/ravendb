@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Queries.AST
         public string UpdateBody;
         public ValueExpression Offset;
         public ValueExpression Limit;
+        public ValueExpression ScanLimit;
 
         public bool TryAddFunction(DeclaredFunction func)
         {
@@ -85,7 +86,7 @@ namespace Raven.Server.Documents.Queries.AST
                 if (expr.Path.Compound.Count == 0 && expr.OrderBy == null && expr.Where == null)
                     return;
 
-                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
+                throw new InvalidQueryException($"Alias {alias} is already in use on a different 'With' clause",
                     QueryText);
             }
 

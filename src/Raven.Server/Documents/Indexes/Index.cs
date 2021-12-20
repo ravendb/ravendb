@@ -3097,8 +3097,9 @@ namespace Raven.Server.Documents.Indexes
                                     fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                                 }
 
-                                var totalResults = new Reference<int>();
-                                var skippedResults = new Reference<int>();
+                                Reference<int> totalResults = new Reference<int>();
+                                Reference<int> skippedResults = new Reference<int>();
+                                Reference<int> scannedResults = new Reference<int>();
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase,  queryContext.Documents, query.Metadata.RevisionIncludes);
@@ -3154,6 +3155,7 @@ namespace Raven.Server.Documents.Indexes
                                         fieldsToFetch,
                                         totalResults,
                                         skippedResults,
+                                        scannedResults,
                                         retriever,
                                         queryContext.Documents,
                                         GetOrAddSpatialField,
@@ -3167,6 +3169,7 @@ namespace Raven.Server.Documents.Indexes
                                         fieldsToFetch,
                                         totalResults,
                                         skippedResults,
+                                        scannedResults,
                                         retriever,
                                         queryContext.Documents,
                                         GetOrAddSpatialField,
@@ -3256,7 +3259,12 @@ namespace Raven.Server.Documents.Indexes
                                 resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                                 resultToFill.LongTotalResults = resultToFill.TotalResults;
                                 resultToFill.SkippedResults = skippedResults.Value;
+                                resultToFill.ScannedResults = scannedResults.Value;
                                 resultToFill.IncludedPaths = query.Metadata.Includes;
+                                if (query.Metadata.FilterScript != null)
+                                {
+                                    resultToFill.ScannedResults = scannedResults.Value;
+                                }
                             }
                         }
 

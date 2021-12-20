@@ -43,8 +43,26 @@ namespace FastTests.Issues
                 Assert.Equal("Jane", emp.Name);
             }
             
-      
+            // scan results
+            using (var s = store.OpenSession())
+            {
+                var emp = s.Advanced.RawQuery<Employee>("from Employees filter Active = false")
+                    .Statistics(out var stats)
+                    .SingleOrDefault();
+                Assert.Equal("Mark", emp.Name);
+                Assert.Equal(3, stats.ScannedResults);
+            }
             
+            // scan limit
+            using (var s = store.OpenSession())
+            {
+                var emp = s.Advanced.RawQuery<Employee>("from Employees filter Active = true scan_limit 1")
+                    .Statistics(out var stats)
+                    .SingleOrDefault();
+                Assert.Equal("Jane", emp.Name);
+                Assert.Equal(1, stats.ScannedResults);
+            }
+
             // parameters
             using (var s = store.OpenSession())
             {
@@ -145,6 +163,26 @@ namespace FastTests.Issues
             {
                 var emp = s.Advanced.RawQuery<Employee>("from Employees where Active = true filter Name = 'Jane'").SingleOrDefault();
                 Assert.Equal("Jane", emp.Name);
+            }
+            
+            // scan results
+            using (var s = store.OpenSession())
+            {
+                var emp = s.Advanced.RawQuery<Employee>("from Employees order by Name filter Active = false")
+                    .Statistics(out var stats)
+                    .SingleOrDefault();
+                Assert.Equal("Mark", emp.Name);
+                Assert.Equal(4, stats.ScannedResults);
+            }
+            
+            // scan limit
+            using (var s = store.OpenSession())
+            {
+                var emp = s.Advanced.RawQuery<Employee>("from Employees order by Name desc filter Active = true scan_limit 1")
+                    .Statistics(out var stats)
+                    .SingleOrDefault();
+                Assert.Equal("Sandra", emp.Name);
+                Assert.Equal(1, stats.ScannedResults);
             }
             
             // parameters
