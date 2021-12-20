@@ -111,7 +111,7 @@ class identities extends viewModelBase {
 
     clientVersion = viewModelBase.clientVersion;
 
-    serverIdentitySepartor = ko.observable<string>();
+    serverIdentitySeparator = ko.observable<string>();
     databaseIdentitySeparator = ko.observable<string>();
     effectiveIdentitySeparator: KnockoutComputed<string>;
     
@@ -125,7 +125,7 @@ class identities extends viewModelBase {
         this.filter.throttle(500).subscribe(() => this.filterIdentities());
         
         this.effectiveIdentitySeparator = ko.pureComputed(() =>
-            this.databaseIdentitySeparator() || this.serverIdentitySepartor() || identity.defaultIdentitySeparator)
+            this.databaseIdentitySeparator() || this.serverIdentitySeparator() || identity.defaultIdentitySeparator)
     }
     
     private filterIdentities(): void {
@@ -135,11 +135,17 @@ class identities extends viewModelBase {
     private fetchIdentitySeparator() {
         const serverClientConfigurationTask = new getGlobalClientConfigurationCommand()
             .execute()
-            .done(dto => this.serverIdentitySepartor(dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator));
+            .done(dto => {
+                const separator = dto ? (dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator) : null;
+                this.serverIdentitySeparator(separator);
+             });
 
         const databaseClientConfigurationTask = new getClientConfigurationCommand(this.activeDatabase())
             .execute()
-            .done((dto) => this.databaseIdentitySeparator(dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator));
+            .done((dto) => {
+                const separator = dto ? (dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator) : null;
+                this.databaseIdentitySeparator(separator);
+             });
 
         return $.when<any>(serverClientConfigurationTask, databaseClientConfigurationTask);
     }
