@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.TimeSeries
                             deleted = readOnlySegment.NumberOfLiveEntries;
                             holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
                             holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                            holder.AppendDeadSegment(newSegment, fromUpdateStatus: conflictStatus == ConflictStatus.Update, changeVectorFromReplication: remoteChangeVector);
+                            holder.AppendDeadSegment(newSegment, fromUpdateStatus: true, changeVectorFromReplication: remoteChangeVector);
                             if (updateMetadata)
                             {
                                 // this ts was completely deleted
@@ -668,7 +668,7 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesValuesSegment segment,
             DateTime baseline)
         {
-            if (IsOverlapping(context, key, collectionName, segment, baseline))
+            if (EnsureNoOverlap(context, key, collectionName, segment, baseline) == false)
                 return false;
 
             using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithBaseline(baseline))
@@ -706,6 +706,7 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesValuesSegment segment,
             DateTime baseline)
         {
+
             if (IsOverlapping(context, key, collectionName, segment, baseline))
                 return false;
 
@@ -831,10 +832,6 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
                 var last = prevSegment.GetLastTimestamp(prevBaseline);
-
-                if (baseline == prevBaseline && last == myLastTimestamp)
-                    return false;
-
                 return last >= baseline;
             }
         }
