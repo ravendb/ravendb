@@ -50,6 +50,17 @@ namespace Voron.Data.CompactTrees
             public void Reset()
             {
                 _tree.PushPage(_tree._state.RootPage, ref _cursor);
+
+                ref var cState = ref _cursor;
+                ref var state = ref cState._stk[cState._pos];
+
+                while (!state.Header->PageFlags.HasFlag(CompactPageFlags.Leaf))
+                {
+                    var next = GetValue(ref state, 0);
+                    _tree.PushPage(next, ref cState);
+
+                    state = ref cState._stk[cState._pos];
+                }
             }
 
             public bool MoveNext(out Slice key, out long value)
