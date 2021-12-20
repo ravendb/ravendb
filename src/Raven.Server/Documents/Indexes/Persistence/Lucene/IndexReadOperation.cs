@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
 
@@ -174,6 +174,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 skippedResults.Value++;
                                 continue;
                             }
+
+                            if (scannedDocuments.Value == query.ScanLimit)
+                            {
+                                break;
+                            }
+                            scannedDocuments.Value++;
+
                             object self = filterScriptRun.Translate(documentsContext, doc);
                             using(queryTimings?.For(nameof(QueryTimingsScope.Names.JavaScript)))
                             using (var result = filterScriptRun.Run(documentsContext, documentsContext, "execute", new[]{self, query.QueryParameters}, queryTimings))
@@ -267,7 +274,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
 
-                    if (returnedResults >= pageSize)
+                    if (returnedResults >= pageSize || scannedDocuments.Value == query.ScanLimit)
                         break;
 
                     Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
@@ -376,7 +383,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public ExplanationResult Explanation;
         }
 
-        public IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, Reference<int> scannedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var method = query.Metadata.Query.Where as MethodExpression;
 
