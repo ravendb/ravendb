@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (result is null)
                 yield break;
 
-            
+
             var ids = ArrayPool<long>.Shared.Rent(query.Metadata.OrderBy?.Length == 0 ? BufferSize : CoraxGetPageSize(_indexSearcher, BufferSize));
 
             int read = 0;
@@ -103,21 +103,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     read = result.Fill(ids);
                     readCounter += read;
                 }
-
-                if (result is SortingMatch or SortingMultiMatch == false)
-                {
-                    while (read != 0)
-                    {
-                        read = result.Fill(ids);
-                        readCounter += read;
-                    }
-                }
-                else
-                {
-                    totalResults.Value = Convert.ToInt32(readCounter);
-                }
-
-                skippedResults.Value = 0;
+                
+                totalResults.Value = Convert.ToInt32(readCounter);
             }
 
             ArrayPool<long>.Shared.Return(ids);
@@ -408,7 +395,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             if (skippedResults is not null)
                 skippedResults.Value = 0;
-
         }
 
         public override void Dispose()

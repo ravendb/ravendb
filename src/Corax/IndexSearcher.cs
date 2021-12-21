@@ -9,6 +9,8 @@ using Voron.Data.Sets;
 using Voron.Data.Containers;
 using Corax.Queries;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using Voron.Data.CompactTrees;
 using Sparrow;
 using static Corax.Queries.SortingMatch;
@@ -32,11 +34,11 @@ namespace Corax
         /// way than reference algorithms. 
         /// </summary>
         public bool ForceNonAccelerated { get; set; }
-        
+
         public const int TakeAll = -1;
 
         public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
-        
+
         public long NumberOfEntries => _transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
 
         internal ByteStringContext Allocator => _transaction.Allocator;
@@ -72,7 +74,7 @@ namespace Corax
         {
             return GetReaderFor(_transaction, ref _lastPage, id);
         }
-        
+
         public static IndexEntryReader GetReaderFor(Transaction transaction, ref Page page, long id)
         {
             var data = Container.MaybeGetFromSamePage(transaction.LowLevelTransaction, ref page, id).ToSpan();
@@ -107,7 +109,7 @@ namespace Corax
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return TermMatch.CreateEmpty();
-            
+
             return TermQuery(terms, term, fieldId);
         }
 
@@ -175,6 +177,7 @@ namespace Corax
 
                     currentTerms = termsToProcess;
                 }
+
                 return MultiTermMatch.Create(stack[0]);
             }
 
@@ -183,13 +186,30 @@ namespace Corax
         
         public MultiTermMatch StartWithQuery(string field, string startWith, int fieldId = NonAnalyzer)
         {
-            // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
+            return PrefixSuffixQuery<StartWithTermProvider>(field, startWith, fieldId);
+        }
+
+        public MultiTermMatch EndsWithQuery(string field, string endsWith, int fieldId = NonAnalyzer)
+        {
+            return PrefixSuffixQuery<EndsWithTermProvider>(field, endsWith, fieldId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private MultiTermMatch PrefixSuffixQuery<TTermProvider>(string field, string term, int fieldId = NonAnalyzer)
+            where TTermProvider : ITermProvider
+        {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, startWith)));
+            if (typeof(TTermProvider) == typeof(StartWithTermProvider))
+                return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
+            
+            if (typeof(TTermProvider) == typeof(EndsWithTermProvider))
+                return MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(_transaction.Allocator, new EndsWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
+
+            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
         public MultiTermMatch ContainsQuery(string field, string containsTerm)
@@ -200,22 +220,26 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm)));
+            return MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator,
+                new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm)));
         }
 
-        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
+        public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+            int take = TakeAll)
             where TInner : IQueryMatch
         {
             return OrderBy<TInner, AscendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
-        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
+        public SortingMatch OrderByDescending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+            int take = TakeAll)
             where TInner : IQueryMatch
         {
             return OrderBy<TInner, DescendingMatchComparer>(in set, fieldId, entryFieldType, take);
         }
 
-        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, int take = TakeAll)
+        public SortingMatch OrderBy<TInner, TComparer>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+            int take = TakeAll)
             where TInner : IQueryMatch
             where TComparer : IMatchComparer
         {
@@ -236,7 +260,7 @@ namespace Corax
         }
 
         public SortingMatch OrderByScore<TInner>(in TInner set, int take = TakeAll)
-            where TInner : IQueryMatch    
+            where TInner : IQueryMatch
         {
             return Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
         }
@@ -248,30 +272,30 @@ namespace Corax
             return Create(new SortingMatch<TInner, TComparer>(this, set, comparer, take));
         }
 
-        public SortingMatch OrderByCustomOrder<TInner>(in TInner set, int fieldId, 
-                delegate*<IndexSearcher, int, long, long, int> compareByIdFunc,
-                delegate*<long, long, int> compareLongFunc,
-                delegate*<double, double, int> compareDoubleFunc,
-                delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, int> compareSequenceFunc,
-                MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence, 
-                int take = TakeAll)
-            where TInner : IQueryMatch     
+        public SortingMatch OrderByCustomOrder<TInner>(in TInner set, int fieldId,
+            delegate*<IndexSearcher, int, long, long, int> compareByIdFunc,
+            delegate*<long, long, int> compareLongFunc,
+            delegate*<double, double, int> compareDoubleFunc,
+            delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, int> compareSequenceFunc,
+            MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
+            int take = TakeAll)
+            where TInner : IQueryMatch
         {
             // Federico: I don't even really know if we are going to find a use case for this. However, it was built for the purpose
             //           of showing that it is possible to build any custom group of functions. Why would we want to do this instead
             //           of just building a TComparer, I dont know. But for now the `CustomMatchComparer` can be built like this from
             //           static functions. 
             return Create(new SortingMatch<TInner, CustomMatchComparer>(
-                                    this, set, 
-                                    new CustomMatchComparer(
-                                        this, fieldId,
-                                        compareByIdFunc,
-                                        compareLongFunc,
-                                        compareDoubleFunc,
-                                        compareSequenceFunc,
-                                        entryFieldType
-                                        ),
-                                    take));
+                this, set,
+                new CustomMatchComparer(
+                    this, fieldId,
+                    compareByIdFunc,
+                    compareLongFunc,
+                    compareDoubleFunc,
+                    compareSequenceFunc,
+                    entryFieldType
+                ),
+                take));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -434,11 +458,13 @@ namespace Corax
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
+
         public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, long value, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldNotEqualsMatch(set, this, fieldId, value, take));
         }
+
         public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, double value, int take = TakeAll)
             where TInner : IQueryMatch
         {
@@ -450,11 +476,13 @@ namespace Corax
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
         }
+
         public UnaryMatch Between<TInner>(in TInner set, int fieldId, long value1, long value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldBetweenMatch(set, this, fieldId, value1, value2, take));
         }
+
         public UnaryMatch Between<TInner>(in TInner set, int fieldId, double value1, double value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
@@ -466,17 +494,19 @@ namespace Corax
         {
             return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
+
         public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, long value1, long value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, long>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
+
         public UnaryMatch NotBetween<TInner>(in TInner set, int fieldId, double value1, double value2, int take = TakeAll)
             where TInner : IQueryMatch
         {
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldNotBetweenMatch(set, this, fieldId, value1, value2, take));
         }
-        
+
         //TODO PERF Search
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ReadOnlySpan<byte> EncodeTerm(string term, int fieldId)
@@ -498,7 +528,6 @@ namespace Corax
             if (typeof(TScoreFunction) == typeof(TermFrequencyScoreFunction))
             {
                 return BoostingMatch.WithTermFrequency(this, match, (TermFrequencyScoreFunction)(object)scoreFunction);
-
             }
             else if (typeof(TScoreFunction) == typeof(ConstantScoreFunction))
             {
@@ -512,7 +541,7 @@ namespace Corax
 
         public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
-        {            
+        {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
@@ -526,7 +555,7 @@ namespace Corax
                     var term1 = Boost(TermQuery(terms, inTerms[i * 2]), scoreFunction);
                     var term2 = Boost(TermQuery(terms, inTerms[i * 2 + 1]), scoreFunction);
                     stack[i] = Or(term1, term2);
-                }                    
+                }
 
                 if (inTerms.Count % 2 == 1)
                 {
@@ -549,9 +578,10 @@ namespace Corax
 
                     currentTerms = termsToProcess;
                 }
+
                 return MultiTermMatch.Create(stack[0]);
             }
-            
+
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<InTermProvider>.Create(
                     this, new InTermProvider(this, field, inTerms), scoreFunction));
@@ -560,18 +590,43 @@ namespace Corax
         public MultiTermMatch StartWithQuery<TScoreFunction>(string field, string startWith, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
+            return PrefixSuffixQuery<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction);
+        }
+        
+        public MultiTermMatch EndsWithQuery<TScoreFunction>(string field, string endsWith, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
+        {
+            return PrefixSuffixQuery<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction);
+        }
+
+        private MultiTermMatch PrefixSuffixQuery<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
+            where TTermProvider : ITermProvider
+        {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
             var terms = fields.CompactTreeFor(field);
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(
-                MultiTermBoostingMatch<StartWithTermProvider>.Create(
-                    this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, 0, startWith), scoreFunction));
+            if (typeof(TTermProvider) == typeof(StartWithTermProvider))
+            {
+                return MultiTermMatch.Create(
+                    MultiTermBoostingMatch<StartWithTermProvider>.Create(
+                        this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
+            }
+
+            if (typeof(TTermProvider) == typeof(EndsWithTermProvider))
+            {
+                return MultiTermMatch.Create(
+                    MultiTermBoostingMatch<EndsWithTermProvider>.Create(
+                        this, new EndsWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
+            }
+            
+            return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
-        public MultiTermMatch ContainsQuery<TScoreFunction>(string field, string containsTerm, TScoreFunction scoreFunction)
+        private MultiTermMatch ContainsQuery<TScoreFunction>(string field, string containsTerm, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
@@ -583,6 +638,189 @@ namespace Corax
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<ContainsTermProvider>.Create(
                     this, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm), scoreFunction));
+        }
+
+        public IQueryMatch SearchQuery(string field, string searchTerm, SearchOperator @operator, int analyzerId)
+        {
+             ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
+            
+            var analyzer = _analyzers[analyzerId] ?? throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
+            analyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
+            
+            var buffer = QueryContext.MatchesPool.Rent(outputSize + Unsafe.SizeOf<Token>() * tokenSize);
+            Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
+            Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize));
+
+            var encoded = encodeBufferOriginal;
+            var tokens = tokensBufferOriginal;
+
+            analyzer.Execute(term, ref encoded, ref tokens);
+            IQueryMatch match = null;
+            foreach (var token in tokens)
+            {
+                var word = encoded.Slice(token.Offset, (int)token.Length);
+                SearchMatchOptions mode = SearchMatchOptions.Exact;
+                if (searchTerm[0] is '*') 
+                    mode |= SearchMatchOptions.EndsWith;
+                if (searchTerm[^1] is '*')
+                    mode |= SearchMatchOptions.StartsWith;
+                if (mode.HasFlag(SearchMatchOptions.StartsWith | SearchMatchOptions.EndsWith))
+                    mode = SearchMatchOptions.Contains;
+
+                var encodedString = Encodings.Utf8.GetString(word);
+                switch (mode)
+                {
+                    case SearchMatchOptions.Exact:
+                        if (match is null)
+                        {
+                            match = TermQuery(field, encodedString, NonAnalyzer);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, TermQuery(field, encodedString))
+                            : And(match, TermQuery(field, encodedString));
+                        break;
+                    case SearchMatchOptions.StartsWith:
+                        if (match is null)
+                        {
+                            match = StartWithQuery(field, encodedString);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, StartWithQuery(field, encodedString))
+                            : And(match, StartWithQuery(field, encodedString));
+                        break;
+                    case SearchMatchOptions.EndsWith:
+                        if (match is null)
+                        {
+                            match = EndsWithQuery(field, encodedString);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, EndsWithQuery(field, encodedString))
+                            : And(match, EndsWithQuery(field, encodedString));
+                        break;
+                    case SearchMatchOptions.Contains:
+                        if (match is null)
+                        {
+                            match = ContainsQuery(field, encodedString);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, ContainsQuery(field, encodedString))
+                            : And(match, ContainsQuery(field, encodedString));
+                        break;
+                    default:
+                        throw new InvalidExpressionException("Unknown flag inside Search match.");
+                }
+            }
+            
+            QueryContext.MatchesPool.Return(buffer);
+            return match;
+        }
+
+        public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, SearchOperator @operator, int analyzerId)
+            where TScoreFunction : IQueryScoreFunction
+        {
+            ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
+            
+            var analyzer = _analyzers[analyzerId] ?? throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
+            analyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
+            
+            var buffer = QueryContext.MatchesPool.Rent(outputSize + Unsafe.SizeOf<Token>() * tokenSize);
+            Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
+            Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize));
+
+            var encoded = encodeBufferOriginal;
+            var tokens = tokensBufferOriginal;
+
+            analyzer.Execute(term, ref encoded, ref tokens);
+            IQueryMatch match = null;
+            foreach (var token in tokens)
+            {
+                var word = encoded.Slice(token.Offset, (int)token.Length);
+                SearchMatchOptions mode = SearchMatchOptions.Exact;
+                if (searchTerm[0] is '*') 
+                    mode |= SearchMatchOptions.EndsWith;
+                if (searchTerm[^1] is '*')
+                    mode |= SearchMatchOptions.StartsWith;
+                if (mode.HasFlag(SearchMatchOptions.StartsWith | SearchMatchOptions.EndsWith))
+                    mode = SearchMatchOptions.Contains;
+
+                var encodedString = Encodings.Utf8.GetString(word);
+                switch (mode)
+                {
+                    case SearchMatchOptions.Exact:
+                        if (match is null)
+                        {
+                            match = TermQuery(field, encodedString, NonAnalyzer);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, TermQuery(field, encodedString))
+                            : And(match, TermQuery(field, encodedString));
+                        break;
+                    case SearchMatchOptions.StartsWith:
+                        if (match is null)
+                        {
+                            match = StartWithQuery(field, encodedString, scoreFunction);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, StartWithQuery(field, encodedString, scoreFunction))
+                            : And(match, StartWithQuery(field, encodedString, scoreFunction));
+                        break;
+                    case SearchMatchOptions.EndsWith:
+                        if (match is null)
+                        {
+                            match = EndsWithQuery(field, encodedString, scoreFunction);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, EndsWithQuery(field, encodedString, scoreFunction))
+                            : And(match, EndsWithQuery(field, encodedString, scoreFunction));
+                        break;
+                    case SearchMatchOptions.Contains:
+                        if (match is null)
+                        {
+                            match = ContainsQuery(field, encodedString, scoreFunction);
+                            continue;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, ContainsQuery(field, encodedString, scoreFunction))
+                            : And(match, ContainsQuery(field, encodedString, scoreFunction));
+                        break;
+                    default:
+                        throw new InvalidExpressionException("Unknown flag inside Search match.");
+                }
+            }
+            
+            QueryContext.MatchesPool.Return(buffer);
+            return match;
+        }
+
+        [Flags]
+        private enum SearchMatchOptions
+        {
+            Exact = 0,
+            StartsWith = 1,
+            EndsWith = 2,
+            Contains = 4
+        }
+
+
+        public enum SearchOperator
+        {
+            Or,
+            And
         }
 
         public BoostingMatch Boost<TInner>(TInner match, IQueryScoreFunction scoreFunction)
@@ -602,12 +840,13 @@ namespace Corax
             }
         }
 
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ReadOnlySpan<byte> EncodeTerm(Slice term, int fieldId)
         {
             return fieldId == NonAnalyzer ? term.AsReadOnlySpan() : KeywordEncodeTerm(term.AsSpan(), fieldId);
         }
-        
+
         //todo maciej: notice this is very inefficient. We need to improve it in future. 
         // Only for KeywordTokenizer
         [SkipLocalsInit]
@@ -632,7 +871,7 @@ namespace Corax
 
             return encoded;
         }
-        
+
         public void Dispose()
         {
             if (_ownsTransaction)
