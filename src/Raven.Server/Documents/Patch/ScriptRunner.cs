@@ -469,24 +469,8 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     var valuesArg = args[1];
-                    Memory<double> values;
-                    if (valuesArg.IsArray())
-                    {
-                        var jsValues = valuesArg.AsArray();
-                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
-                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
-                    }
-                    else if (valuesArg.IsNumber())
-                    {
-                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
-                        valuesBuffer[0] = valuesArg.AsNumber();
-                        values = new Memory<double>(valuesBuffer, 0, 1);
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
-                    }
+
+                    GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
 
                     var tss = _database.DocumentsStorage.TimeSeriesStorage;
                     var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
@@ -568,24 +552,7 @@ namespace Raven.Server.Documents.Patch
                 double[] valuesBuffer = null;
                 try
                 {
-                    Memory<double> values;
-                    if (valuesArg.IsArray())
-                    {
-                        var jsValues = valuesArg.AsArray();
-                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
-                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
-                    }
-                    else if (valuesArg.IsNumber())
-                    {
-                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
-                        valuesBuffer[0] = valuesArg.AsNumber();
-                        values = new Memory<double>(valuesBuffer, 0, 1);
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
-                    }
+                    GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
 
                     var tss = _database.DocumentsStorage.TimeSeriesStorage;
                     var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
@@ -628,6 +595,27 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return Undefined.Instance;
+            }
+
+            private void GetTimeSeriesValues(JsValue valuesArg, ref double[] valuesBuffer, string signature, out Memory<double> values)
+            {
+                if (valuesArg.IsArray())
+                {
+                    var jsValues = valuesArg.AsArray();
+                    valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                    FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                    values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
+                }
+                else if (valuesArg.IsNumber())
+                {
+                    valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                    valuesBuffer[0] = valuesArg.AsNumber();
+                    values = new Memory<double>(valuesBuffer, 0, 1);
+                }
+                else
+                {
+                    throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
+                }
             }
 
             private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
