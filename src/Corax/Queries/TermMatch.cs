@@ -454,7 +454,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return _inspectFunc(ref this);
+            return _inspectFunc is null ? QueryInspectionNode.NotInitializedInspectionNode(nameof(TermMatch)) : _inspectFunc(ref this);
         }
 
         string DebugView => Inspect().ToString();
