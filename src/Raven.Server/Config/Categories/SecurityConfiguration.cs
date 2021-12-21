@@ -17,6 +17,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Security.DisableHttpsRedirection", ConfigurationEntryScope.ServerWideOnly)]
         public bool DisableHttpsRedirection { get; set; }
+        
+        [Description("Disable HTTP Strict Transport Security")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Security.DisableHsts", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableHsts { get; set; }
 
         [Description("The path to a folder where RavenDB will store the access audit logs")]
         [DefaultValue(null)]

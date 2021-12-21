@@ -74,6 +74,14 @@ namespace Raven.Server.Web.System
 
         public const string ZipFileName = "Raven.Studio.zip";
 
+        private const string DefaultHstsValue = "max-age=31536000";
+        private static IList<string> HstsExcludedHosts = new List<string>
+        {
+            "localhost",
+            "127.0.0.1", // ipv4
+            "[::1]" // ipv6
+        };
+
         private static string _zipFilePath;
         private static long _zipFileLastChangeTicks;
 
@@ -332,6 +340,18 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["X-Frame-Options"] = "DENY";
             HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
             HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            
+            var isSecuredServer = ServerStore.Server.Certificate?.Certificate != null;
+            
+            if (isSecuredServer && Server.Configuration.Security.DisableHsts == false)
+            {
+                var host = HttpContext.Request.Host.Host;
+
+                if (HstsExcludedHosts.Contains(host) == false)
+                {
+                    HttpContext.Response.Headers["strict-transport-security"] = DefaultHstsValue;
+                }
+            }
         }
 
         private async Task LoadFilesIntoCache()
