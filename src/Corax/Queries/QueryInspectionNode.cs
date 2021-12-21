@@ -16,6 +16,8 @@ namespace Corax.Queries
             Children = children ?? new List<QueryInspectionNode>();
         }
 
+        public static QueryInspectionNode NotInitializedInspectionNode(string nameOperation) => new($"Not initialized: {nameOperation}");
+
         public override string ToString()
         {
             return ToString(this, 0);
