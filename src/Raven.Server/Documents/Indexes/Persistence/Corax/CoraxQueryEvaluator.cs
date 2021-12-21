@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private IndexQueryServerSide _query;
         private const int TakeAll = -1;
-        
+
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
 
@@ -38,10 +38,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             _fieldsToFetch = fieldsToFetch;
             _query = query;
-            var match = _query.Metadata.Query.Where is null ? _searcher.AllEntries() : Evaluate(query.Metadata.Query.Where, false, take);
 
-            if (query.Metadata.OrderBy != null)
+
+            var match = _query.Metadata.Query.Where is null
+                ? _searcher.AllEntries()
+                : Evaluate(query.Metadata.Query.Where, false, take);
+
+            if (query.Metadata.OrderBy is not null)
                 match = OrderBy(match, query.Metadata.Query.OrderBy, take);
+
             return match;
         }
 
@@ -64,12 +69,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     switch (expressionType)
                     {
                         case MethodType.StartsWith:
-                            fieldName = GetField((FieldExpression)methodExpression.Arguments[0]);
+                            fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.StartWithQuery(fieldName,
                                 ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
+                        case MethodType.EndsWith:
+                            fieldName = GetField(methodExpression.Arguments[0]);
+                            fieldId = GetFieldIdInIndex(fieldName);
+                            return _searcher.EndsWithQuery(fieldName,
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take);
+                        case MethodType.Search:
+                            return SearchMethod(methodExpression);
                         default:
                             throw new NotImplementedException($"Method {nameof(methodExpression)} is not implemented.");
                     }
@@ -86,6 +98,51 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             throw new EvaluateException($"Evaluation failed in {nameof(CoraxQueryEvaluator)}.");
+        }
+
+        [SkipLocalsInit]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private IQueryMatch SearchMethod(MethodExpression expression)
+        {
+            var fieldName = $"search({GetField(expression.Arguments[0])})";
+            var fieldId = GetFieldIdInIndex(fieldName);
+            IndexSearcher.SearchOperator @operator = IndexSearcher.SearchOperator.Or;
+            string searchTerm;
+
+
+            if (expression.Arguments.Count is < 2 or > 3)
+                throw new InvalidQueryException($"Invalid amount of parameter in {nameof(MethodType.Search)}.");
+
+            if (expression.Arguments[1] is not ValueExpression searchParam)
+                throw new InvalidQueryException($"You need to pass value in second argument of {nameof(MethodType.Search)}.");
+
+            //STRUCTURE: <NAME><SEARCH_VALUE><OPERATOR>
+            if (searchParam.Value is ValueTokenType.Parameter)
+            {
+                if (_query.QueryParameters.TryGet(searchParam.Token.Value, out searchTerm) == false)
+                    throw new InvalidQueryException($"Cannot find {searchParam.Token.Value} in query.");
+            }
+            else
+            {
+                searchTerm = searchParam.Token.Value;
+            }
+
+            if (expression.Arguments.Count is not 3)
+                return _searcher.SearchQuery(fieldName, searchTerm, @operator, fieldId);
+
+
+            if (expression.Arguments[2] is not FieldExpression operatorType)
+                throw new InvalidQueryException($"Expected AND or OR in third argument of {nameof(MethodType.Search)}.");
+
+            @operator = operatorType.FieldValue.ToLowerInvariant() switch
+            {
+                "and" => IndexSearcher.SearchOperator.And,
+                "or" => IndexSearcher.SearchOperator.Or,
+                _ => throw new InvalidQueryException($"Expected AND or OR in third argument of {nameof(MethodType.Search)}.")
+            };
+
+
+            return _searcher.SearchQuery(fieldName, searchTerm, @operator, fieldId);
         }
 
         private IQueryMatch BinaryEvaluator(BinaryExpression expression, bool isNegated, int take)
@@ -115,16 +172,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var isRightUnary = IsUnary(right);
 
             //After those conditions we are in AND clause
-            if (isLeftUnary == false && isRightUnary == false)
-                return _searcher.And(Evaluate(expression.Left, isNegated, take), Evaluate(expression.Right, isNegated, take));
 
-            if (isLeftUnary && isRightUnary)
-                return EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated, take), right, isNegated, take);
-
-            if (isLeftUnary && isRightUnary is false)
-                return EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated, take), left, isNegated, take);
-
-            return EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated, take), right, isNegated, take);
+            return (isLeftUnary, isRightUnary) switch
+            {
+                (false, false) => _searcher.And(Evaluate(expression.Left, isNegated, take), Evaluate(expression.Right, isNegated, take)),
+                (true, true) => EvaluateUnary(right.Operator, EvaluateUnary(left.Operator, _searcher.AllEntries(), left, isNegated, take), right, isNegated, take),
+                (true, false) => EvaluateUnary(left.Operator, Evaluate(expression.Right, isNegated, take), left, isNegated, take),
+                _ => EvaluateUnary(right.Operator, Evaluate(expression.Left, isNegated, take), right, isNegated, take)
+            };
         }
 
         private IQueryMatch EvaluateUnary(OperatorType type, in IQueryMatch previousMatch, BinaryExpression value, bool isNegated, int take)
@@ -288,11 +343,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private bool IsUnary(BinaryExpression binaryExpression) => binaryExpression is not null && binaryExpression.IsRangeOperation;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string GetField(FieldExpression f)
+        private string GetField(QueryExpression queryExpression) => queryExpression switch
         {
-            return _query.Metadata.GetIndexFieldName(f, _query.QueryParameters).Value;
-        }
-        
+            FieldExpression fieldExpression => _query.Metadata.GetIndexFieldName(fieldExpression, _query.QueryParameters).Value,
+            ValueExpression valueExpression => valueExpression.Token.Value,
+            _ => throw new InvalidDataException("Unknown type for now.")
+        };
+
         private IQueryMatch OrderBy(IQueryMatch match, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orders, int take)
         {
             switch (orders.Count)
@@ -320,6 +377,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     {
                         throw new InvalidQueryException($"The expression used in the ORDER BY clause is wrong.");
                     }
+
                     var firstId = GetFieldIdInIndex(GetField(first));
                     var firstTypeField = OrderTypeFieldConverter(firstOrder.FieldType);
                     var secondId = GetFieldIdInIndex(GetField(second));
@@ -327,19 +385,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     return (firstOrder.Ascending, secondOrder.Ascending) switch
                     {
-                        (true, true) => SortingMultiMatch.Create(_searcher, match, 
+                        (true, true) => SortingMultiMatch.Create(_searcher, match,
                             new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
                             new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField)),
-                    
-                        (false, true) => SortingMultiMatch.Create(_searcher, match, 
+
+                        (false, true) => SortingMultiMatch.Create(_searcher, match,
                             new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
                             new SortingMatch.AscendingMatchComparer(_searcher, secondId, secondTypeField)),
-                    
-                        (true, false) => SortingMultiMatch.Create(_searcher, match, 
+
+                        (true, false) => SortingMultiMatch.Create(_searcher, match,
                             new SortingMatch.AscendingMatchComparer(_searcher, firstId, firstTypeField),
                             new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField)),
-                    
-                        (false, false) => SortingMultiMatch.Create(_searcher, match, 
+
+                        (false, false) => SortingMultiMatch.Create(_searcher, match,
                             new SortingMatch.DescendingMatchComparer(_searcher, firstId, firstTypeField),
                             new SortingMatch.DescendingMatchComparer(_searcher, secondId, secondTypeField))
                     };
@@ -438,7 +496,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _ => throw new InvalidQueryException("Maximum amount of comparers in ORDER BY clause is 8.")
             };
         }
-        
+
         public void Dispose()
         {
             _allocator?.Dispose();

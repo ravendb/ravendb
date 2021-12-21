@@ -838,11 +838,11 @@ namespace FastTests.Corax
             {
                 var match1 = searcher.AllEntries();
                 var match2 = searcher.LessThan(match1, ContentIndex, 25D);
-                
+
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
-                    while (--read >= 0)
-                        qids.Add(searcher.GetIdentityFor(ids[read]));
+                while (--read >= 0)
+                    qids.Add(searcher.GetIdentityFor(ids[read]));
 
                 foreach (IndexSingleEntryDouble indexSingleEntryDouble in list)
                 {
@@ -996,7 +996,7 @@ namespace FastTests.Corax
                 Assert.Equal(0, match.Fill(ids));
             }
         }
-
+        
         [Fact]
         public void SimpleWildcardStatement()
         {
@@ -1041,6 +1041,12 @@ namespace FastTests.Corax
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                var match = searcher.EndsWithQuery("Content", "ing", default(ConstantScoreFunction));
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(2, match.Fill(ids));
             }
         }
 
@@ -1210,7 +1216,7 @@ namespace FastTests.Corax
                         results.Add(searcher.GetIdentityFor(ids[i]));
                     }
                 } while (read != 0);
-                
+
                 Assert.Equal((setSize / 3), count);
             }
 
