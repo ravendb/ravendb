@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public MultiGetCommand CreateRequest(List<GetRequest> requests)
         {
-            return new MultiGetCommand(_session.RequestExecutor, requests);
+            return new MultiGetCommand(_session.RequestExecutor, requests, _session.SessionInfo);
         }
 
         public void SetResult(BlittableArrayResult result)
