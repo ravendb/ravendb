@@ -167,6 +167,7 @@ namespace Raven.Server.Web.System
             
             var error = GetStringQueryString("err");
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+            SetupSecurityHeaders();
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
 
@@ -290,6 +291,8 @@ namespace Raven.Server.Web.System
                 }
             }
 
+            SetupSecurityHeaders();
+            
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
             if (await ServeFromCache(serverRelativeFileName))
                 return;
@@ -322,6 +325,13 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
 
             await HttpContext.Response.WriteAsync(message);
+        }
+
+        private void SetupSecurityHeaders()
+        {
+            HttpContext.Response.Headers["X-Frame-Options"] = "DENY";
+            HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+            HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
         }
 
         private async Task LoadFilesIntoCache()
