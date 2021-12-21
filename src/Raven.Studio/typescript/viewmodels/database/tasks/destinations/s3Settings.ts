@@ -70,6 +70,8 @@ class s3Settings extends amazonSettings {
     }
     
     initValidation() {
+        super.initAmazonValidation();
+        
         /* Bucket name must :
             - be at least 3 and no more than 63 characters long.
             - be a series of one or more labels. 
