@@ -55,7 +55,9 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int TransformationErrorCount;
 
-        public string BatchCompleteReason;
+        public string BatchTransformationCompleteReason;
+
+        public string BatchStopReason;
 
         public string ChangeVector;
 

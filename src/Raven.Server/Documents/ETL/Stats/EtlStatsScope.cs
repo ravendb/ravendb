@@ -131,7 +131,9 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string ChangeVector => _stats.ChangeVector;
 
-        public string BatchCompleteReason => _stats.BatchCompleteReason;
+        public string BatchTransformationCompleteReason => _stats.BatchTransformationCompleteReason;
+
+        public string BatchStopReason => _stats.BatchStopReason;
 
         public Size BatchSize => _stats.BatchSize;
 
@@ -193,14 +195,19 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public abstract TEtlPerformanceOperation ToPerformanceOperation(string name);
 
-        public void RecordBatchCompleteReason(string reason)
+        public void RecordBatchTransformationCompleteReason(string reason)
         {
-            _stats.BatchCompleteReason = reason;
+            _stats.BatchTransformationCompleteReason = reason;
         }
 
-        public bool HasBatchCompleteReason()
+        public bool HasBatchTransformationCompleteReason()
         {
-            return string.IsNullOrEmpty(_stats.BatchCompleteReason) == false;
+            return string.IsNullOrEmpty(_stats.BatchTransformationCompleteReason) == false;
+        }
+
+        public void RecordBatchStopReason(string reason)
+        {
+            _stats.BatchStopReason = reason;
         }
 
         public void RecordTransformationError()
