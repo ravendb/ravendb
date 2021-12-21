@@ -136,15 +136,15 @@ class identities extends viewModelBase {
         const serverClientConfigurationTask = new getGlobalClientConfigurationCommand()
             .execute()
             .done(dto => {
-                const separator = dto ? (dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator) : null;
-                this.serverIdentitySeparator(separator);
+                const serverSeparator = dto ? (dto.Disabled ? null : (dto.IdentityPartsSeparator || identity.defaultIdentitySeparator)) : null;
+                this.serverIdentitySeparator(serverSeparator);
              });
 
         const databaseClientConfigurationTask = new getClientConfigurationCommand(this.activeDatabase())
             .execute()
             .done((dto) => {
-                const separator = dto ? (dto.Disabled ? null : dto.IdentityPartsSeparator || identity.defaultIdentitySeparator) : null;
-                this.databaseIdentitySeparator(separator);
+                const databaseSeparator = dto ? (dto.Disabled ? null : (dto.IdentityPartsSeparator || identity.defaultIdentitySeparator)) : null;
+                this.databaseIdentitySeparator(databaseSeparator);
              });
 
         return $.when<any>(serverClientConfigurationTask, databaseClientConfigurationTask);
