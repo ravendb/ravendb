@@ -41,7 +41,9 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Size BatchSize { get; set; }
 
-        public string BatchCompleteReason { get; set; }
+        public string BatchTransformationCompleteReason { get; set; }
+
+        public string BatchStopReason { get; set; }
 
         public int TransformationErrorCount { get; set; }
 
