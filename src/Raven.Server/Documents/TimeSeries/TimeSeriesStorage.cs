@@ -368,7 +368,6 @@ namespace Raven.Server.Documents.TimeSeries
                     baseline = nextSegment.Value;
                 }
 
-
                 if (deleted == 0)
                     return null; // nothing happened, the deletion request was out of date
 
@@ -392,13 +391,13 @@ namespace Raven.Server.Documents.TimeSeries
                     if (baseline > to)
                         return false; // we got to the end
 
-                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline))
+                    using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, remoteChangeVector))
                     {
                         if (holder.LoadCurrentSegment() == false)
                             return false;
 
                         // we need to get the next segment before the actual remove, since it might lead to a split
-                        next = TryGetNextBaseline();
+                        next = BaselineOfNextSegment(slicer.TimeSeriesKeySlice, slicer.TimeSeriesPrefixSlice, table, baseline);
 
                         var readOnlySegment = holder.ReadOnlySegment;
                         var end = readOnlySegment.GetLastTimestamp(baseline);
@@ -425,17 +424,21 @@ namespace Raven.Server.Documents.TimeSeries
 
                         newSegment.Initialize(numberOfValues);
 
-                        // TODO: RavenDB-14851 manipulating segments as a whole must be done carefully in a distributed env
-                        // if (baseline >= from && end <= to) // entire segment can be deleted
-                        // {
-                        //     // update properly the start/end of the time-series
-                        //     holder.AddNewValue(baseline, new double[readOnlySegment.NumberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                        //     holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[readOnlySegment.NumberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                        //     holder.AppendDeadSegment(newSegment);
-                        //
-                        //     removeOccurred = true;
-                        //     return true;
-                        // }
+                        if (canDeleteEntireSegment && readOnlySegment.NumberOfLiveEntries > 1)
+                        {
+                            deleted = readOnlySegment.NumberOfLiveEntries;
+                            holder.AddNewValue(baseline, new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            holder.AddNewValue(readOnlySegment.GetLastTimestamp(baseline), new double[numberOfValues], Slices.Empty.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
+                            holder.AppendDeadSegment(newSegment);
+                            if (updateMetadata)
+                            {
+                                // in case this deleted segment was the only segment that exists for this TS
+                                // we need to remove its name from the metadata
+                                RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+                            }
+
+                            return true;
+                        }
 
                         var segmentChanged = false;
                         using (var enumerator = readOnlySegment.GetEnumerator(context.Allocator))
@@ -478,20 +481,20 @@ namespace Raven.Server.Documents.TimeSeries
                         return end < to;
                     }
                 }
-
-                DateTime? TryGetNextBaseline()
-                {
-                    var offset = slicer.TimeSeriesKeySlice.Size - sizeof(long);
-                    *(long*)(slicer.TimeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
-
-                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, 0))
-                    {
-                        return GetBaseline(tvh.Reader);
-                    }
-
-                    return null;
-                }
             }
+        }
+
+        private DateTime? BaselineOfNextSegment(Slice key, Slice prefix, Table table, DateTime baseline)
+        {
+            var offset = key.Size - sizeof(long);
+            *(long*)(key.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
+
+            foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(prefix, key, 0))
+            {
+                return GetBaseline(tvh.Reader);
+            }
+
+            return null;
         }
 
         private static DateTime GetBaseline(TableValueReader reader)
@@ -652,21 +655,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (status == ConflictStatus.Update)
                 {
-                    // TODO: RavenDB-14851 currently this is not working as expected, and cause values to disappear
-                    // we can put the segment directly only if the incoming segment doesn't overlap with any existing one
-                    // using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
-                    // {
-                    //     if (IsOverlapWithHigherSegment(prefix) == false)
-                    //     {
-                    //         var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
-                    //         var readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-                    //         Stats.UpdateCountOfExistingStats(context, documentId, name, collectionName, -readOnlySegment.NumberOfLiveEntries);
-                    //
-                    //         AppendEntireSegment();
-                    //
-                    //         return true;
-                    //     }
-                    // }
+                    return AppendEntireSegment(context, key, documentId, name, collectionName, changeVector, segment, baseline);
                 }
 
                 return false;
@@ -677,6 +666,12 @@ namespace Raven.Server.Documents.TimeSeries
 
         public bool TryAppendEntireSegmentFromSmuggler(DocumentsOperationContext context, Slice key, CollectionName collectionName, TimeSeriesItem item)
         {
+            if (item.Segment.NumberOfLiveEntries == 0)
+            {
+                // in case of a dead segment we need to update the stats properly
+                return AppendEntireSegment(context, key, item.DocId, context.GetLazyStringForFieldWithCaching(item.Name), collectionName, null, item.Segment, item.Baseline);
+            }
+
             // we will generate new change vector, so we pass null here
             return TryPutSegmentDirectly(context, key, item.DocId, context.GetLazyStringForFieldWithCaching(item.Name), collectionName, null, item.Segment, item.Baseline);
         }
@@ -691,45 +686,26 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesValuesSegment segment,
             DateTime baseline)
         {
-
             if (IsOverlapping(context, key, collectionName, segment, baseline))
                 return false;
 
             // if this segment isn't overlap with any other we can put it directly
-            ValidateSegment(segment);
-            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
-
-            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
+            using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                Stats.UpdateStats(context, slicer, collectionName, segment, baseline, segment.NumberOfLiveEntries);
-
-                var newEtag = _documentsStorage.GenerateNextEtag();
-                changeVector ??= _documentsStorage.GetNewChangeVector(context, newEtag);
-
-                _documentDatabase.TimeSeriesPolicyRunner?.MarkSegmentForPolicy(context, slicer, baseline, changeVector, segment.NumberOfLiveEntries);
-
-                if (segment.NumberOfLiveEntries == 0)
+                if (holder.LoadCurrentSegment())
                 {
-                    MarkSegmentAsPendingDeletion(context, collectionName.Name, newEtag);
+                    // if we got here it means that `IsOverlapping` is false
+                    // but a segment with matching ranges exists 
+                    // so we should append to this segment instead of creating a new one
+                    return false;
                 }
 
-                using (Slice.From(context.Allocator, changeVector, out Slice cv))
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(key);
-                    tvb.Add(Bits.SwapBytes(newEtag));
-                    tvb.Add(cv);
-                    tvb.Add(segment.Ptr, segment.NumberOfBytes);
-                    tvb.Add(slicer.CollectionSlice);
-                    tvb.Add(context.GetTransactionMarker());
-
-                    table.Set(tvb);
-                }
+                holder.AppendToNewSegment(segment, baseline);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
                     CollectionName = collectionName.Name,
-                    ChangeVector = changeVector,
+                    ChangeVector = holder.ChangeVector,
                     DocumentId = documentId,
                     Name = name,
                     Type = TimeSeriesChangeTypes.Put,
@@ -738,17 +714,90 @@ namespace Raven.Server.Documents.TimeSeries
                 });
             }
 
-            EnsureStatsAndDataIntegrity(context, documentId, name, segment);
-
             return true;
         }
 
-        private bool IsOverlapping(
+        private bool AppendEntireSegment(DocumentsOperationContext context,
+            Slice key,
+            string documentId,
+            string name,
+            CollectionName collectionName,
+            string changeVector,
+            TimeSeriesValuesSegment segment,
+            DateTime baseline)
+        {
+            if (IsOverlapping(context, key, collectionName, segment, baseline, canUpdateExistingSegment: true))
+                return false;
+
+            using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
+            {
+                if (holder.LoadCurrentSegment() == false)
+                    holder.AppendToNewSegment(segment, baseline, changeVectorFromReplication: changeVector);
+                else
+                    holder.AppendExistingSegment(segment, changeVectorFromReplication: changeVector);
+
+
+                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+                {
+                    CollectionName = collectionName.Name,
+                    ChangeVector = holder.ChangeVector,
+                    DocumentId = documentId,
+                    Name = name,
+                    Type = TimeSeriesChangeTypes.Put,
+                    From = DateTime.MinValue,
+                    To = DateTime.MaxValue
+                });
+
+                return true;
+            }
+
+        }
+
+        public bool EnsureNoOverlap(
             DocumentsOperationContext context,
             Slice key,
             CollectionName collectionName,
             TimeSeriesValuesSegment segment,
             DateTime baseline)
+        {
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+            using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
+            {
+                return (IsOverlapWithHigherSegment(prefix) || IsOverlapWithLowerSegment(prefix)) == false;
+            }
+
+            bool IsOverlapWithHigherSegment(Slice prefix)
+            {
+                var lastTimestamp = segment.GetLastTimestamp(baseline);
+                var nextSegmentBaseline = BaselineOfNextSegment(key, prefix, table, baseline);
+                return lastTimestamp >= nextSegmentBaseline;
+            }
+
+            bool IsOverlapWithLowerSegment(Slice prefix)
+            {
+                TableValueReader tvr;
+                using (Slice.From(context.Allocator, key.Content.Ptr, key.Size, ByteStringType.Immutable, out var lastKey))
+                {
+                    *(long*)(lastKey.Content.Ptr + lastKey.Size - sizeof(long)) = Bits.SwapBytes(baseline.Ticks / 10_000);
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(prefix, lastKey, out tvr, excludeValueFromSeek: true) == false)
+                    {
+                        return false;
+                    }
+                }
+
+                var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
+                var last = prevSegment.GetLastTimestamp(prevBaseline);
+                return last >= baseline;
+            }
+        }
+
+        public bool IsOverlapping(
+                    DocumentsOperationContext context,
+                    Slice key,
+                    CollectionName collectionName,
+                    TimeSeriesValuesSegment segment,
+                    DateTime baseline,
+                    bool canUpdateExistingSegment = false)
         {
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
             using (Slice.From(context.Allocator, key.Content.Ptr, key.Size - sizeof(long), ByteStringType.Immutable, out var prefix))
@@ -759,7 +808,7 @@ namespace Raven.Server.Documents.TimeSeries
             bool IsOverlapWithHigherSegment(Slice prefix)
             {
                 var lastTimestamp = segment.GetLastTimestamp(baseline);
-                var nextSegmentBaseline = BaselineOfNextSegment(table, prefix, key, baseline);
+                var nextSegmentBaseline = BaselineOfNextSegment(key, prefix, table, baseline);
                 return lastTimestamp >= nextSegmentBaseline;
             }
 
@@ -777,43 +826,18 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var prevSegment = TableValueToSegment(ref tvr, out var prevBaseline);
-                var last = prevSegment.GetLastTimestamp(prevBaseline);
-                return last >= baseline;
-            }
-        }
+                var prevLastTimestamp = prevSegment.GetLastTimestamp(prevBaseline);
 
-        private static DateTime? BaselineOfNextSegment(TimeSeriesSegmentHolder segmentHolder, DateTime myDate)
-        {
-            var table = segmentHolder.Table;
-            var prefix = segmentHolder.SliceHolder.TimeSeriesPrefixSlice;
-            var key = segmentHolder.SliceHolder.TimeSeriesKeySlice;
-
-            return BaselineOfNextSegment(table, prefix, key, myDate);
-        }
-
-        private static DateTime? BaselineOfNextSegment(Table table, Slice prefix, Slice key, DateTime myDate)
-        {
-            if (table.SeekOnePrimaryKeyWithPrefix(prefix, key, out var reader))
-            {
-                var currentKey = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out var keySize);
-                var baseline = Bits.SwapBytes(
-                    *(long*)(currentKey + keySize - sizeof(long))
-                );
-                var date = new DateTime(baseline * 10_000);
-                if (date > myDate)
-                    return date;
-
-                foreach (var (_, holder) in table.SeekByPrimaryKeyPrefix(prefix, key, 0))
+                if (canUpdateExistingSegment)
                 {
-                    currentKey = holder.Reader.Read((int)TimeSeriesTable.TimeSeriesKey, out keySize);
-                    baseline = Bits.SwapBytes(
-                        *(long*)(currentKey + keySize - sizeof(long))
-                    );
-                    return new DateTime(baseline * 10_000);
+                    // in case of an update, we must accept only segments that their baseline equals to the existing segment baseline
+                    // and their last timestamp greater or equal to last timestamp of existing segment
+                    // by that, we can ensure we will not lose values in case of a split or delete
+                    return baseline > prevBaseline || myLastTimestamp < prevLastTimestamp;
                 }
-            }
 
-            return null;
+                return prevLastTimestamp >= baseline;
+            }
         }
 
         public class SegmentSummary
@@ -884,7 +908,8 @@ namespace Raven.Server.Documents.TimeSeries
                 SliceHolder.CreateSegmentBuffer();
 
                 FromReplication = fromReplicationChangeVector != null;
-                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
+                if (context.LastDatabaseChangeVector == null)
+                    _tss.GenerateChangeVector(context, fromReplicationChangeVector); // update the database change vector
             }
 
             public TimeSeriesSegmentHolder(
@@ -907,7 +932,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 BaselineDate = allocator.CurrentBaseline;
                 allocator.CreateSegmentBuffer();
-                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
+                if (context.LastDatabaseChangeVector == null)
+                    _tss.GenerateChangeVector(context, fromReplicationChangeVector); // update the database change vector
             }
 
             private void Initialize()
@@ -940,9 +966,10 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateCountOfExistingStats(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
             }
 
-            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
+            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment, string changeVectorFromReplication = null)
             {
-                (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
+                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                _currentChangeVector = changeVectorFromReplication ?? _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
 
                 ValidateSegment(newValueSegment);
                 if (newValueSegment.NumberOfLiveEntries == 0)
@@ -967,20 +994,20 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment, _collection, BaselineDate);
 
                 return count;
             }
 
-            public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment)
+            public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment, string changeVectorFromReplication = null)
             {
-                (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
+                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                _currentChangeVector = changeVectorFromReplication ?? _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
 
                 ValidateSegment(newValueSegment);
                 MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
 
                 ReduceCountBeforeAppend();
-                //TODO: unused code, check if the number of modified entries is correct
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, ReadOnlySegment.NumberOfLiveEntries);
 
                 using (Table.Allocate(out var tvb))
@@ -995,24 +1022,26 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment, _collection, BaselineDate);
             }
 
-            public void AppendToNewSegment(SingleResult item)
+            public void AppendToNewSegment(TimeSeriesValuesSegment newSegment, DateTime baseline, string changeVectorFromReplication = null)
             {
-                BaselineDate = EnsureMillisecondsPrecision(item.Timestamp);
-                SliceHolder.SetBaselineToKey(BaselineDate);
-
-                var newSegment = new TimeSeriesValuesSegment(SliceHolder.SegmentBuffer.Ptr, MaxSegmentSize);
-                newSegment.Initialize(item.Values.Length);
-                newSegment.Append(_context.Allocator, 0, item.Values.Span, SliceHolder.TagAsSpan(item.Tag), item.Status);
-
                 ValidateSegment(newSegment);
 
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate, 1);
-                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, BaselineDate, item.Status);
+                BaselineDate = EnsureMillisecondsPrecision(baseline);
+                SliceHolder.SetBaselineToKey(BaselineDate);
 
-                (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
+                _currentEtag = _tss._documentsStorage.GenerateNextEtag();
+                _currentChangeVector = changeVectorFromReplication ?? _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+
+                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate, newSegment.NumberOfLiveEntries);
+                _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkSegmentForPolicy(_context, SliceHolder, baseline, _currentChangeVector, newSegment.NumberOfLiveEntries);
+
+                if (newSegment.NumberOfLiveEntries == 0)
+                {
+                    MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
+                }
 
                 using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (Table.Allocate(out TableValueBuilder tvb))
@@ -1027,7 +1056,16 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Insert(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment, _collection, BaselineDate);
+            }
+
+            public void AppendToNewSegment(SingleResult item)
+            {
+                var newSegment = new TimeSeriesValuesSegment(SliceHolder.SegmentBuffer.Ptr, MaxSegmentSize);
+                newSegment.Initialize(item.Values.Length);
+                newSegment.Append(_context.Allocator, 0, item.Values.Span, SliceHolder.TagAsSpan(item.Tag), item.Status);
+
+                AppendToNewSegment(newSegment, item.Timestamp);
             }
 
             public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
@@ -1343,7 +1381,7 @@ namespace Raven.Server.Documents.TimeSeries
             var slicer = segmentHolder.SliceHolder;
 
             var lastTimestamp = segment.GetLastTimestamp(segmentHolder.BaselineDate);
-            var nextSegmentBaseline = BaselineOfNextSegment(segmentHolder, current.Timestamp) ?? DateTime.MaxValue;
+            var nextSegmentBaseline = BaselineOfNextSegment(slicer.TimeSeriesKeySlice, slicer.TimeSeriesPrefixSlice, segmentHolder.Table, segmentHolder.BaselineDate) ?? DateTime.MaxValue;
 
             TimeSeriesValuesSegment newSegment = default;
             newValueFetched = false;
@@ -1417,7 +1455,8 @@ namespace Raven.Server.Documents.TimeSeries
             // steps, and move the actual values as we do so
 
             var originalBaseline = timeSeriesSegment.BaselineDate;
-            var nextSegmentBaseline = BaselineOfNextSegment(timeSeriesSegment, current.Timestamp) ?? DateTime.MaxValue;
+            var slicer = timeSeriesSegment.SliceHolder;
+            var nextSegmentBaseline = BaselineOfNextSegment(slicer.TimeSeriesKeySlice, slicer.TimeSeriesPrefixSlice, timeSeriesSegment.Table, originalBaseline) ?? DateTime.MaxValue;
             var segmentToSplit = timeSeriesSegment.ReadOnlySegment;
             var segmentChanged = false;
             var additionalValueSize = Math.Max(0, current.Values.Length - timeSeriesSegment.ReadOnlySegment.NumberOfValues);
@@ -1499,7 +1538,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     var retryAppend = current != null;
 
-                    if (retryAppend && 
+                    if (retryAppend &&
                         EnsureNumberOfValues(newNumberOfValues, ref current) &&
                         current.Timestamp < nextSegmentBaseline)
                     {
@@ -1634,7 +1673,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             // if the document is in conflict, that's fine
             // we will recreate '@timeseries' in metadata when the conflict is resolved
-            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false); 
+            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false);
             if (doc == null)
                 return;
 
@@ -1655,7 +1694,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Documents.Metadata.TimeSeries] = new[] {tsName}
+                            [Constants.Documents.Metadata.TimeSeries] = new[] { tsName }
                         }
                     };
                 }
@@ -1770,7 +1809,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
             }
         }
-        
+
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
@@ -1779,12 +1818,12 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
             {
                 var item = CreateDeletedRangeItem(context, ref result.Reader);
-                if(item.Etag > toEtag)
+                if (item.Etag > toEtag)
                     yield break;
                 yield return item;
             }
         }
-        
+
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -1798,7 +1837,7 @@ namespace Raven.Server.Documents.TimeSeries
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
             {
                 var item = CreateDeletedRangeItem(context, ref result.Reader);
-                if(item.Etag > toEtag)
+                if (item.Etag > toEtag)
                     yield break;
                 yield return item;
             }
@@ -1862,7 +1901,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take) =>
             GetTimeSeries(context, etag, long.MaxValue, take);
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag ,long take = long.MaxValue)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
@@ -1872,16 +1911,16 @@ namespace Raven.Server.Documents.TimeSeries
                     yield break;
 
                 var item = CreateTimeSeriesItem(context, ref result.Reader);
-                if(item.Etag > toEtag)
+                if (item.Etag > toEtag)
                     yield break;
-                
+
                 yield return item;
             }
         }
 
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take) =>
-            GetTimeSeriesFrom(context, collection, etag, long.MaxValue, take);   
-        
+            GetTimeSeriesFrom(context, collection, etag, long.MaxValue, take);
+
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -1899,7 +1938,7 @@ namespace Raven.Server.Documents.TimeSeries
                     yield break;
 
                 var item = CreateTimeSeriesItem(context, ref result.Reader);
-                if(item.Etag > toEtag)
+                if (item.Etag > toEtag)
                     yield break;
 
                 yield return item;
@@ -2122,7 +2161,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
         }
-        
+
         public long GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -2144,9 +2183,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
         }
-        
+
         [Conditional("DEBUG")]
-        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment)
+        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment, CollectionName collectionName, DateTime baseline)
         {
             if (context.Transaction.InnerTransaction.IsWriteTransaction == false)
                 return;
@@ -2203,6 +2242,11 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     var noNaN = segment.YieldAllValues(context, baseline: default, includeDead: false).All(x => x.Values.ToArray().All(y => double.IsNaN(y) == false));
                     Debug.Assert(noNaN, "Rollup has NaN");
+                }
+
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithBaseline(baseline))
+                {
+                    Debug.Assert(tss.EnsureNoOverlap(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline), "Segment is overlapping another segment");
                 }
             }
         }
