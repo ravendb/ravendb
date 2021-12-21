@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
@@ -13,10 +14,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseLongCount()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanUseLongCount(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenSession())
                 {
@@ -45,10 +47,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanUseLongCountAsync()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task CanUseLongCountAsync(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var s = store.OpenAsyncSession())
                 {

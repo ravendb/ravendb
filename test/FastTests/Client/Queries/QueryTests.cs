@@ -137,7 +137,7 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public  void Query_CreateClausesForQueryDynamically(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -183,7 +183,7 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

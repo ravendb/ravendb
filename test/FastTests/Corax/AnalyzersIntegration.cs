@@ -23,13 +23,13 @@ public class AnalyzersIntegration : RavenTestBase
         using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
         {
             using var session = store.OpenSession();
-            session.Store(new Record(){Data = storedValue});
+            session.Store(new Record() { Data = storedValue });
             session.SaveChanges();
         }
         {
             using var session = store.OpenSession();
             var items = session.Query<Record>().Where(x => x.Data == "tester").ToList();
-            
+
             Assert.NotNull(items);
             Assert.NotEqual(0, items.Count);
             Assert.Equal(storedValue, items.First().Data);
@@ -37,7 +37,7 @@ public class AnalyzersIntegration : RavenTestBase
         {
             using var session = store.OpenSession();
             var items = session.Query<Record>().Where(x => x.Data == "tEstEr").ToList();
-            
+
             Assert.NotNull(items);
             Assert.NotEqual(0, items.Count);
             Assert.Equal(storedValue, items.First().Data);
@@ -48,7 +48,7 @@ public class AnalyzersIntegration : RavenTestBase
     [SearchEngineClassData(SearchEngineType.Corax)]
     public void RavenStandardAnalyzer(string searchEngineType)
     {
-        var valuesToStore = new[] { "PoINt oF tHe IMPLemeNTation", "tHiS IS TesT" };
+        var valuesToStore = new[] { "PoINt oF tHe IMPLemeNTation", "tHiS IS TesTion" };
         using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
         {
             using var session = store.OpenSession();
@@ -57,23 +57,14 @@ public class AnalyzersIntegration : RavenTestBase
             session.SaveChanges();
         }
         {
-            var notImplementedException = false;
             using var session = store.OpenSession();
-            try
-            {
-                var items = session.Query<Record>().Search(x => x.Data, "tester").ToList();
-            }
-            catch
-            {
-                //Remove this after search implementation.
-                notImplementedException = true;
-            }
-
-            Assert.True(notImplementedException);
+            var items = session.Query<Record>().Search(x => x.Data, "*tion").ToList();
+            WaitForUserToContinueTheTest(store);
+            Assert.Equal(2, items.Count);
         }
         {
             using var session = store.OpenSession();
-            var raw = session.Advanced.RawQuery<Record>("from index 'Auto/Records/BySearch(Data)' where 'search(Data)' = 'test'").ToList();
+            var raw = session.Advanced.RawQuery<Record>("from index 'Auto/Records/BySearch(Data)' where 'search(Data)' = 'testion'").ToList();
             Assert.NotNull(raw);
             Assert.NotEqual(0, raw.Count);
             Assert.Equal(valuesToStore[1], raw.First().Data);

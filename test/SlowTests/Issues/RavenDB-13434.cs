@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanUseSplitOptionInSearchQuery()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanUseSplitOptionInSearchQuery(string searchEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {
