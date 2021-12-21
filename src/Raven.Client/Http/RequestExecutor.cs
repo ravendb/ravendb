@@ -981,7 +981,8 @@ namespace Raven.Client.Http
                     new UpdateTopologyParameters(chosenNode)
                     {
                         TimeoutInMs = 0, 
-                        DebugTag = "refresh-topology-header"
+                        DebugTag = "refresh-topology-header",
+                        ApplicationIdentifier = GlobalApplicationIdentifier
                     });
             }
 
