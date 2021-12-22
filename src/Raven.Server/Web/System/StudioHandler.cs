@@ -163,7 +163,7 @@ namespace Raven.Server.Web.System
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var authStatus = feature?.Status;
-            
+
             if (authStatus == RavenServer.AuthenticationStatus.ClusterAdmin ||
                 authStatus == RavenServer.AuthenticationStatus.Operator ||
                 authStatus == RavenServer.AuthenticationStatus.Allowed)
@@ -172,7 +172,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Redirect;
                 return Task.CompletedTask;
             }
-            
+
             var error = GetStringQueryString("err");
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
             SetupSecurityHeaders();
@@ -300,7 +300,7 @@ namespace Raven.Server.Web.System
             }
 
             SetupSecurityHeaders();
-            
+
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
             if (await ServeFromCache(serverRelativeFileName))
                 return;
@@ -340,9 +340,9 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["X-Frame-Options"] = "DENY";
             HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
             HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
-            
+
             var isSecuredServer = ServerStore.Server.Certificate?.Certificate != null;
-            
+
             if (isSecuredServer && Server.Configuration.Security.DisableHsts == false)
             {
                 var host = HttpContext.Request.Host.Host;
