@@ -79,7 +79,7 @@
         "durandal": "^2.2.0",
         "eonasdan-bootstrap-datetimepicker": "4.17.47",
         "favico.js": "^0.3.10",
-        "jquery": "^2.2.4",
+        "jquery": "^3.5.0",
         "jquery-blockui": "^2.7.0",
         "jquery-fullscreen-plugin": "^1.1.5",
         "jszip": "^3.7.1",
