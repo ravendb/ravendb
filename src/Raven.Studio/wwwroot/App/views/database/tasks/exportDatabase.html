@@ -108,7 +108,7 @@
                 <div class="row" data-bind="collapse: encryptOutput">
                     <div class="col-sm-12 col-lg-6" data-bind="with: $root.encryptionSection">
                         <div class="margin-left margin-left-lg">
-                            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                            <div data-bind="compose: $root.setupEncryptionKeyView"></div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +169,7 @@
                             </div>
                         </div>
                         <div data-bind="with: model.databaseModel">
-                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
+                            <div data-bind="compose: $root.smugglerDatabaseRecordView"></div>
                         </div>
                     </div>
                     <div class="flex-horizontal" data-bind="with: $root">

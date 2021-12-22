@@ -5,6 +5,9 @@ import indexProgress = require("models/database/index/indexProgress");
 import finishRollingCommand = require("commands/database/index/finishRollingCommand");
 
 class forceParallelDeploymentConfirm extends dialogViewModelBase {
+
+    view = require("views/database/indexes/forceParallelDeploymentConfirm.html");
+    
     localNodeTag: string;
     indexName: string;
     canForceCurrentNode: boolean;

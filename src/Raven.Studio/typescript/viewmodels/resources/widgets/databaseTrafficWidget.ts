@@ -11,6 +11,8 @@ import widget = require("viewmodels/resources/widgets/widget");
 
 class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Raven.Server.Dashboard.Cluster.Notifications.DatabaseTrafficWatchPayload, 
     perNodeStatItems<trafficWatchItem>, trafficWatchItem> {
+
+    view = require("views/resources/widgets/databaseTrafficWidget.html");
     
     getType(): Raven.Server.Dashboard.Cluster.ClusterDashboardNotificationType {
         return "DatabaseTraffic";

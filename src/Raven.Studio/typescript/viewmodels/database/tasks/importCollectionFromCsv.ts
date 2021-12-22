@@ -68,7 +68,9 @@ class csvConfiguration {
     }
 }
 
-class importCollectionFromCsv extends viewModelBase {  
+class importCollectionFromCsv extends viewModelBase {
+
+    view = require("views/database/tasks/importCollectionFromCsv.html");
    
     private static readonly filePickerTag = "#importCsvFilePicker";
     csvConfig: csvConfiguration = new csvConfiguration();

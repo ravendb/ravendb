@@ -18,6 +18,8 @@ import databaseStorageWidget = require("viewmodels/resources/widgets/databaseSto
 import databaseTrafficWidget = require("viewmodels/resources/widgets/databaseTrafficWidget");
 import databaseOverviewWidget = require("viewmodels/resources/widgets/databaseOverviewWidget");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import Packery = require("packery");
+import Draggabilly = require("draggabilly");
 
 interface savedWidgetsLayout {
     widgets: savedWidget[];
@@ -34,11 +36,13 @@ interface savedWidget {
 
 class clusterDashboard extends viewModelBase {
 
+    view = require("views/resources/clusterDashboard.html");
+
     static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
     
     private static readonly nodeColors = ["#2f9ef3", "#945ab5", "#f06582", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
     
-    private packery: PackeryStatic;
+    private packery: Packery;
     resizeObserver: ResizeObserver;
     initialized = ko.observable<boolean>(false);
     readonly currentServerNodeTag: string;
@@ -70,7 +74,7 @@ class clusterDashboard extends viewModelBase {
     }
     
     private initPackery() {
-        this.packery = new Packery( ".masonry-grid", {
+        this.packery = new Packery(".masonry-grid", { 
             itemSelector: ".cluster-dashboard-item",
             percentPosition: true,
             initialLayout: false,

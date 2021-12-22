@@ -597,7 +597,7 @@ namespace Raven.Server.Commercial
 
                 if (item.Certificate.Thumbprint == certificate.Thumbprint)
                 {
-                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.PrivateKey).Private);
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
                     store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] { new X509CertificateEntry(x509Certificate) });
                     continue;
                 }

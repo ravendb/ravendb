@@ -5,6 +5,8 @@ import generalUtils = require("common/generalUtils");
 
 class threadStackTrace extends dialogViewModelBase {
 
+    view = require("views/manage/threadStackTrace.html");
+    
     threadId = ko.observable<number>();
     threadName = ko.observable<string>();
     threadType = ko.observable<string>();

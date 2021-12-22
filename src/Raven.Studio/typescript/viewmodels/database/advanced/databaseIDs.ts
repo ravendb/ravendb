@@ -8,6 +8,8 @@ import changeVectorUtils = require("common/changeVectorUtils");
 
 class databaseIDs extends viewModelBase {
 
+    view = require("views/database/advanced/databaseIDs.html");
+
     isForbidden = ko.observable<boolean>(false);
     
     databaseID = ko.observable<string>();

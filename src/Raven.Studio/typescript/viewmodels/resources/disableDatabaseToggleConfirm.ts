@@ -3,6 +3,8 @@ import database = require("models/resources/database");
 
 class disableDatabaseToggleConfirm extends confirmViewModelBase<confirmDialogResult> {
 
+    view = require("views/resources/disableDatabaseToggleConfirm.html");
+
     desiredAction = ko.observable<string>();
     deletionText: string;
     confirmDeletionText: string;

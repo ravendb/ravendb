@@ -2,8 +2,12 @@ import generateSecretCommand = require("commands/database/secrets/generateSecret
 import distributeSecretCommand = require("commands/database/secrets/distributeSecretCommand");
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
+import moment = require("moment");
+import { QRCode } from "qrcodejs";
 
 abstract class setupEncryptionKey {
+
+    setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
     
     protected readonly key: KnockoutObservable<string>;
     private readonly keyConfirmation: KnockoutObservable<boolean>;

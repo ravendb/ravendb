@@ -200,7 +200,7 @@ define(function(require, exports, module) {
                 }, {
                     token: "string",
                     regex: "'|$",
-                    next: "no_regex"
+                    next: "start"
                 }, {
                     defaultToken: "string"
                 }

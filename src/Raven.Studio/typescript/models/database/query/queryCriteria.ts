@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import genUtils = require("common/generalUtils");
 import queryUtil = require("common/queryUtil");
+import moment = require("moment");
 
 class queryCriteria {
 

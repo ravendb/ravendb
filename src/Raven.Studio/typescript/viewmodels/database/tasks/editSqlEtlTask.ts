@@ -26,6 +26,7 @@ import testSqlReplicationCommand = require("commands/database/tasks/testSqlRepli
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import { highlight, languages } from "prismjs";
 
 class sqlTaskTestMode {
     
@@ -119,7 +120,7 @@ class sqlTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');
@@ -170,6 +171,9 @@ class sqlTaskTestMode {
 }
 
 class editSqlEtlTask extends viewModelBase {
+
+    view = require("views/database/tasks/editSqlEtlTask.html");
+    connectionStringView = require("views/database/settings/connectionStringSql.html");
 
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskSqlEtlTransformationModel.isApplyToAll;

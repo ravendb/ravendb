@@ -1,5 +1,6 @@
 import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class rollupDataModel {
     first: timeSeriesValue;

@@ -23,6 +23,8 @@ type compactListItem = {
 
 class compactDatabaseDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/compactDatabaseDetails.html");
+
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(false);
 

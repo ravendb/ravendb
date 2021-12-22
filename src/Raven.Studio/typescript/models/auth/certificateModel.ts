@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
-import genUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class certificateModel {
 
@@ -85,7 +85,7 @@ class certificateModel {
                 return null;
             }
 
-            return moment.utc().add(validPeriod, this.validityPeriodUnitsLabel()).format();
+            return moment.utc().add(validPeriod, this.validityPeriodUnitsLabel() as any).format();
         });
         
         this.validityPeriodUnitsLabel = ko.pureComputed(

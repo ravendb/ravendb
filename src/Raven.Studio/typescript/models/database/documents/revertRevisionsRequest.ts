@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import moment = require("moment");
+
 type timeMagnitude = "minutes" | "hours" | "days";
 
 class revertRevisionsRequest {

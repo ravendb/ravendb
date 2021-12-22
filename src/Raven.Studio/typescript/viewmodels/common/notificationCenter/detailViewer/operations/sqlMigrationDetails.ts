@@ -38,6 +38,8 @@ class migrationListItem {
 
 class sqlMigrationDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/sqlMigrationDetails.html");
+
     detailsVisible = ko.observable<boolean>(false);
     tail = ko.observable<boolean>(true);
 

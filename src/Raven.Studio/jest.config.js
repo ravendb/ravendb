@@ -9,6 +9,7 @@ module.exports = {
         'jsx',
         'json'
     ],
+    "testRegex": [ "(/__tests__/.*|(\\.|/)(spec))\\.[jt]sx?$" ],
     'transform': {
         '.*\.tsx?$': 'ts-jest'
     },

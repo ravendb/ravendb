@@ -5,6 +5,7 @@ import eventsCollector = require("common/eventsCollector");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import databasesManager = require("common/shell/databasesManager");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import { highlight, languages } from "prismjs";
 
 type jsConsolePatchOption = "Server" | "Database";
 type consoleJsSampleDto = {
@@ -50,6 +51,8 @@ class adminJsConsole extends viewModelBase {
     static readonly allPatchOptions: Array<jsConsolePatchOption> = ["Server", "Database"];
     static readonly predefinedSamples = ko.observableArray<consoleJsSampleDto>([]);
 
+    view = require("views/manage/adminJsConsole.html");
+
     model = ko.observable<adminJsModel>();
     executionResult = ko.observable<string>();
     previewItem = ko.observable<consoleJsSampleDto>();
@@ -87,7 +90,7 @@ class adminJsConsole extends viewModelBase {
                 return "";
             }
 
-            return Prism.highlight(item.code, (Prism.languages as any).javascript);
+            return highlight(item.code, languages.javascript, "js");
         });
         this.filteredScripts = ko.pureComputed(() => {
             let text = this.filters.searchText();

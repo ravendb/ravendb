@@ -17,6 +17,8 @@ type positionAndSizes = {
 }
 
 class storageReport extends viewModelBase {
+
+    view = require("views/database/status/storageReport.html");
     
     accessManager = accessManager.default.databasesView;
 

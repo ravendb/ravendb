@@ -6,8 +6,11 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import { highlight, languages } from "prismjs";
 
 class visualizerTreeExplorer extends dialogViewModelBase {
+
+    view = require("views/database/indexes/visualizer/visualizerTreeExplorer.html");
 
     private tableItems: Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.Documents.Indexes.Debugging.MapResultInLeaf>>();
@@ -41,7 +44,7 @@ class visualizerTreeExplorer extends dialogViewModelBase {
                     const value = column.getCellValue(details);
                     if (!_.isUndefined(value)) {
                         const json = JSON.stringify(value, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        const html = highlight(json, languages.javascript, "js");
                         onValue(html, json);
                     }
                 });

@@ -1,16 +1,17 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
 import app = require("durandal/app");
-import cola = require("cola");
 import document = require("models/database/documents/document");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import graphHelper = require("common/helpers/graph/graphHelper");
+import { d3adaptor, Link, Node, ID3StyleLayoutAdaptor, Layout } from "webcola";
+import d3 = require("d3");
 
-interface debugGraphOutputNodeWithLayout extends debugGraphOutputNode, cola.Node {
-    fixed: boolean;
+interface debugGraphOutputNodeWithLayout extends debugGraphOutputNode, Node {
+    fixed: number;
 }
 
-interface debugGraphOutputEdge extends cola.Link<debugGraphOutputNodeWithLayout> {
+interface debugGraphOutputEdge extends Link<debugGraphOutputNodeWithLayout> {
     payload: any;
     name: string;
     cacheKey: string;
@@ -30,7 +31,7 @@ class graphQueryResults {
     private height: number;
     private svg: d3.Selection<void>;
     private zoom: d3.behavior.Zoom<void>;
-    private d3cola: cola.D3StyleLayoutAdaptor;
+    private d3cola: ID3StyleLayoutAdaptor & Layout;
     private mousePressed: boolean = false;
 
     private edgesContainer: d3.Selection<void>;
@@ -99,7 +100,7 @@ class graphQueryResults {
         this.nodesContainer = transform.append("g")
             .attr("class", "nodes");
 
-        this.d3cola = cola.d3adaptor();
+        this.d3cola = d3adaptor();
 
         this.d3cola.on('tick', () => {
             this.updateElementDecorators();
@@ -194,7 +195,7 @@ class graphQueryResults {
                 hasMouseDown = mouseEvent.button === 0; // left mouse button
                 
                 // lock node position
-                d.fixed = true;
+                d.fixed = 1;
                 d3.select(this.parentNode).classed("locked", true);
             })
             .on("mouseup", d => {

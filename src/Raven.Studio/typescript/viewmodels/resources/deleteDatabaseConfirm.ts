@@ -4,6 +4,9 @@ import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 
 class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
+
+    view = require("views/resources/deleteDatabaseConfirm.html");
+    
     private isKeepingFiles = ko.observable<boolean>(true);
     private encryptedCount: number;
 

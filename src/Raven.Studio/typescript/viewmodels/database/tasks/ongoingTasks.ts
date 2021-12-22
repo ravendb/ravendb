@@ -27,6 +27,9 @@ import accessManager = require("common/shell/accessManager");
 import generalUtils = require("common/generalUtils");
 
 class ongoingTasks extends viewModelBase {
+
+    view = require("views/database/tasks/ongoingTasks.html");
+    databaseGroupLegendView = require("views/partial/databaseGroupLegend.html");
     
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
@@ -400,7 +403,7 @@ class ongoingTasks extends viewModelBase {
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskReplicationSinkListModel(dto));
         
-        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
+        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as unknown as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
         this.mergeReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks);

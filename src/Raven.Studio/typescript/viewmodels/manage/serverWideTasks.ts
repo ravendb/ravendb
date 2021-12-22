@@ -11,6 +11,9 @@ import toggleServerWideTaskCommand = require("commands/serverWide/tasks/toggleSe
 import createServerWideTask = require("viewmodels/manage/createServerWideTask");
 
 class serverWideTasks extends viewModelBase {
+
+    view = require("views/manage/serverWideTasks.html");
+    
     serverWideBackupTasks = ko.observableArray<serverWideBackupListModel>();
     serverWideExternalReplicationTasks = ko.observableArray<serverWideExternalReplicationListModel>();
    

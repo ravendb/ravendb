@@ -5,7 +5,7 @@ import accessManager = require("common/shell/accessManager");
 function aboutItem() {
     return new leafMenuItem({
         route: 'about',
-        moduleId: 'viewmodels/shell/about',
+        moduleId: require('viewmodels/shell/about'),
         title: 'About',
         tooltip: "About",
         nav: true,
@@ -17,7 +17,7 @@ function aboutItem() {
 function serverDashboard() {
     return new leafMenuItem({
         route: ["", "dashboard"],
-        moduleId: 'viewmodels/resources/serverDashboard',
+        moduleId: require('viewmodels/resources/serverDashboard'),
         title: 'Server Dashboard',
         tooltip: "Server Dashboard",
         nav: true,
@@ -29,7 +29,7 @@ function serverDashboard() {
 function clusterDashboard() {
     return new leafMenuItem({
         route: "clusterDashboard",
-        moduleId: 'viewmodels/resources/clusterDashboard',
+        moduleId: require('viewmodels/resources/clusterDashboard'),
         title: 'Cluster Dashboard',
         tooltip: "Cluster Dashboard",
         nav: true, // todo - this needs issue RavenDB-16618 to work...

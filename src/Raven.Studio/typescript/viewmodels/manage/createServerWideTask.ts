@@ -5,6 +5,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createServerWideTask extends dialogViewModelBase {
 
+    view = require("views/manage/createServerWideTask.html");
+
     newServerWideReplicationTask() {
         eventsCollector.default.reportEvent("serverWideExternalReplication", "new");
         const url = appUrl.forEditServerWideExternalReplication();

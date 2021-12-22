@@ -8,6 +8,8 @@ import router = require("plugins/router");
 
 class transactionCommandsDetails extends abstractOperationDetails {
 
+    view: any = null; 
+    
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
 

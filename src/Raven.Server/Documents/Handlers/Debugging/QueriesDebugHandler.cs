@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -14,11 +15,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public Task KillQuery()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
-            var id = GetLongQueryString("id");
+            string clientQueryId = GetStringQueryString("clientQueryId");
+            ExecutingQueryInfo query;
 
-            var query = Database.QueryRunner.CurrentlyRunningQueries
-                .FirstOrDefault(x => x.IndexName == name && x.QueryId == id);
+            if (clientQueryId != null)
+            {
+                query = Database.QueryRunner.CurrentlyRunningQueries
+                    .FirstOrDefault(x => x.QueryInfo is IndexQueryServerSide q && q.ClientQueryId == clientQueryId);
+            }
+            else
+            {
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
+                var id = GetLongQueryString("id");
+
+                query = Database.QueryRunner.CurrentlyRunningQueries
+                    .FirstOrDefault(x => x.IndexName == name && x.QueryId == id);
+            }
 
             if (query == null)
             {

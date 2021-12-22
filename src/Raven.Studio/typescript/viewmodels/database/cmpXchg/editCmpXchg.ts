@@ -151,6 +151,8 @@ class editorInfo {
 
 class editCmpXchg extends viewModelBase {
 
+    view = require("views/database/cmpXchg/editCmpXchg.html");
+    
     cmpXchUrl = ko.pureComputed(() => this.appUrls.cmpXchg());
 
     key = ko.observable<string>("");

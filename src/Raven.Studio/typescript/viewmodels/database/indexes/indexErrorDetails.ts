@@ -2,6 +2,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class indexErrorDetails extends dialogViewModelBase {
 
+    view = require("views/database/indexes/indexErrorDetails.html");
+
     private indexErrors: Array<IndexErrorPerDocument>;
     private currentIndex = ko.observable<number>();
 

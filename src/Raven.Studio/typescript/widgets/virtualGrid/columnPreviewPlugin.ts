@@ -3,6 +3,7 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 
 class copyFeature implements columnPreviewFeature {

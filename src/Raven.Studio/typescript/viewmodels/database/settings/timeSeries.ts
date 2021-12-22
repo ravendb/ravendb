@@ -12,6 +12,8 @@ import popoverUtils = require("common/popoverUtils");
 
 class timeSeries extends viewModelBase {
 
+    view = require("views/database/settings/timeSeries.html");
+
     perCollectionConfigurations = ko.observableArray<timeSeriesConfigurationEntry>([]);
     isSaveEnabled: KnockoutComputed<boolean>;
     collections = collectionsTracker.default.collections;

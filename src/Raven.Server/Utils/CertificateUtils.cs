@@ -397,7 +397,7 @@ namespace Raven.Server.Utils
 
             //Take the SHA2-256 hash of the DER ASN.1 encoded value
             byte[] digest;
-            using (var sha2 = new SHA256Managed())
+            using (var sha2 = SHA256.Create())
             {
                 digest = sha2.ComputeHash(subjectPublicKeyInfo);
             }

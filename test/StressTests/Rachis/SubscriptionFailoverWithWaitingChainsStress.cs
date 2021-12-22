@@ -364,7 +364,7 @@ namespace StressTests.Rachis
             {
                 await DropSubscriptions(databaseName, SubscriptionsCount, cluster, token);
 
-                if (await mainTcs.Task.WaitAsync(1000))
+                if (await mainTcs.Task.WaitWithoutExceptionAsync(1000))
                     break;
             }
 

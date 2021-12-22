@@ -54,11 +54,20 @@ import studioSetting = require("common/settings/studioSetting");
 import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import connectionStatus from "models/resources/connectionStatus";
 
 class shell extends viewModelBase {
 
     private router = router;
+    view = require("views/shell.html");
+    usageStatsView = require("views/usageStats.html");
+    
+    notificationCenterView = require("views/notifications/notificationCenter.html");
+    graphHelperView = require("views/common/graphHelper.html");
+    
     static studioConfigDocumentId = "Raven/StudioConfig";
+    
+    static showConnectionLost = connectionStatus.showConnectionLost;
 
     notificationCenter = notificationCenter.instance;
     
@@ -110,19 +119,6 @@ class shell extends viewModelBase {
     
     private onBootstrapFinishedTask = $.Deferred<void>();
     
-    static showConnectionLost = ko.pureComputed(() => {
-        const serverWideWebSocket = changesContext.default.serverNotifications();
-        
-        if (!serverWideWebSocket) {
-            return false;
-        }
-        
-        const errorState = serverWideWebSocket.inErrorState();
-        const ignoreError = serverWideWebSocket.ignoreWebSocketConnectionError();
-        
-        return errorState && !ignoreError;
-    });
-
     constructor() {
         super();
 
@@ -312,8 +308,9 @@ class shell extends viewModelBase {
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
                     content: authenticationInfo,
-                    placement: 'top'
-                });
+                    placement: 'top',
+                    sanitize: false
+                } as PopoverOptions);
         }
         
         if (!this.clientCertificate()) {

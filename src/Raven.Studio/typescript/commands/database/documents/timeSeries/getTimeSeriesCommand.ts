@@ -2,6 +2,8 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
+import moment = require("moment");
+
 
 class getTimeSeriesCommand extends commandBase {
     

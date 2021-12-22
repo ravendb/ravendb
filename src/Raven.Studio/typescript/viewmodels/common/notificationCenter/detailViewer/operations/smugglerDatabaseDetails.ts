@@ -27,6 +27,9 @@ type uploadListItem = {
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/operations/smugglerDatabaseDetails.html");
+    
     private sizeFormatter = generalUtils.formatBytesToSize;
 
     static extractingDataStageName = "Extracting data";

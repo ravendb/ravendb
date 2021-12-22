@@ -124,7 +124,7 @@ loadToOrders(partitionBy(key),
             Assert.Equal(1, files.Length);
 
             await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(mentorTag));
-            Assert.True(await mentorNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
+            Assert.True(await mentorNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
                 $"Removed node {mentorTag} wasn't move to passive state ({mentorNode.ServerStore.Engine.CurrentState})");
 
             var store2 = stores.First(s => s != store);

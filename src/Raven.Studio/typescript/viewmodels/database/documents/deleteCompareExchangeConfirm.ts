@@ -3,6 +3,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class deleteCompareExchangeConfirm extends dialogViewModelBase {
 
+    view = require("views/database/documents/deleteCompareExchangeConfirm.html");
+
     private itemKeys = ko.observableArray<string>();
     
     title: string;

@@ -40,8 +40,12 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCustomAnalyzersCommand = require("commands/database/settings/getCustomAnalyzersCommand");
 import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyzers/getServerWideCustomAnalyzersCommand");
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
+import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 class editIndex extends viewModelBase {
+    
+    view = require('views/database/indexes/editIndex.html');
 
     static readonly $body = $("body");
     static readonly ContainerSelector = ".edit-index";
@@ -154,7 +158,7 @@ class editIndex extends viewModelBase {
             const source = this.selectedSourcePreview();
             
             if (source) {
-                return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
+                return '<pre class="form-control sourcePreview">' + highlight(source.code(), languages.csharp, "csharp") + '</pre>';
             }
             
             const hasAdditionalSources = this.editedIndex().additionalSources().length > 0;
@@ -808,7 +812,7 @@ class editIndex extends viewModelBase {
                 }
             });
 
-            dialog.show(deleteViewModel);
+            app.showBootstrapDialog(deleteViewModel);
         }
     }
 

@@ -12,10 +12,13 @@ import validationHelpers = require("viewmodels/common/validationHelpers");
 import documentPreviewer = require("models/database/documents/documentPreviewer");
 import queryUtil = require("common/queryUtil");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
+import { highlight, languages } from "prismjs";
 
 type testTabType = "preview" | "loaded" | "modified" | "deleted" | "output";
 
 class patchTester extends viewModelBase {
+    
+    view: any = null;
 
     private db: KnockoutObservable<database>;
 
@@ -108,7 +111,7 @@ class patchTester extends viewModelBase {
                 return "";
             } else {
                 const json = JSON.stringify(value, null, 4);
-                return Prism.highlight(json, (Prism.languages as any).javascript);
+                return highlight(json, languages.javascript, "js");
             }
         });
     }

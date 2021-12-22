@@ -10,6 +10,8 @@ import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/
 
 class editServerWideCustomSorter extends viewModelBase {
 
+    view = require("views/manage/editServerWideCustomSorter.html");
+
     editedServerWideSorter = ko.observable<customSorter>();
 
     usedSorterNames = ko.observableArray<string>([]);

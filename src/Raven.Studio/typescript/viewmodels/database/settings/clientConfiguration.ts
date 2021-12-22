@@ -8,6 +8,9 @@ import eventsCollector = require("common/eventsCollector");
 import accessManager = require("common/shell/accessManager");
 
 class clientConfiguration extends viewModelBase {
+
+    view = require("views/database/settings/clientConfiguration.html");
+    
     model: clientConfigurationModel;
     globalModel: clientConfigurationModel;
     hasGlobalConfiguration = ko.observable<boolean>(false);

@@ -4,6 +4,8 @@ import performanceHint = require("common/notifications/models/performanceHint");
 
 abstract class abstractPerformanceHintDetails extends dialogViewModelBase {
 
+    footerPartialView = require("views/common/notificationCenter/detailViewer/performanceHint/footerPartial.html");
+    
     protected readonly hint: performanceHint;
     protected readonly dismissFunction: () => void;
 

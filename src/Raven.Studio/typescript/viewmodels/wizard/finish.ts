@@ -17,6 +17,8 @@ type messageItem = {
 
 class finish extends setupStep {
 
+    view = require("views/wizard/finish.html");
+
     configurationTask: JQueryDeferred<void>;
     completedWithSuccess = ko.observable<boolean>();
     

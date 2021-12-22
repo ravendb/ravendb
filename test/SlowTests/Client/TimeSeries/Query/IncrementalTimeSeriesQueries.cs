@@ -120,11 +120,13 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private struct StockPrice
         {
+#pragma warning disable CS0649
             [TimeSeriesValue(0)] public double Open;
             [TimeSeriesValue(1)] public double Close;
             [TimeSeriesValue(2)] public double High;
             [TimeSeriesValue(3)] public double Low;
             [TimeSeriesValue(4)] public double Volume;
+#pragma warning restore CS0649
         }
 
         [Fact]

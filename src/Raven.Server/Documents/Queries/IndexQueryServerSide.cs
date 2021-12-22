@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
@@ -84,6 +83,7 @@ namespace Raven.Server.Documents.Queries
         public bool AddTimeSeriesNames;
 
         public bool IsStream;
+        public string ClientQueryId;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
@@ -97,6 +97,7 @@ namespace Raven.Server.Documents.Queries
             QueryMetadataCache cache,
             RequestTimeTracker tracker,
             bool addSpatialProperties = false,
+            string clientQueryId = null,
             DocumentDatabase database = null,
             QueryType queryType = QueryType.Select)
         {
@@ -104,6 +105,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 result = JsonDeserializationServer.IndexQuery(json);
+                result.ClientQueryId = clientQueryId;
 
                 if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                     result.PageSize = int.MaxValue;
@@ -170,7 +172,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string overrideQuery = null)
+        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, bool addSpatialProperties = false, string clientQueryId = null, string overrideQuery = null)
         {
             IndexQueryServerSide result = null;
             try
@@ -185,7 +187,8 @@ namespace Raven.Server.Documents.Queries
                     Query = Uri.UnescapeDataString(actualQuery),
                     // all defaults which need to have custom value
                     Start = start,
-                    PageSize = pageSize
+                    PageSize = pageSize,
+                    ClientQueryId = clientQueryId
                 };
 
                 foreach (var item in httpContext.Request.Query)
@@ -223,7 +226,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0, addSpatialProperties);
-                
+
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
