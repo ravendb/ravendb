@@ -3,7 +3,7 @@
     "name": "Raven.Studio",
     "scripts": {
         "webpack": "npm run fix-packages && webpack --config webpack.config.js",
-        "restore": "node scripts/restore.js",
+        "restore": "npm run typings",
         "compile": "npm run webpack",
         "typings": "node scripts/typings.js",
         "antlr4ts": "antlr4ts languageService/grammar/BaseRqlLexer.g4 -visitor -no-listener languageService/grammar/BaseRqlParser.g4 -o languageService/src/generated/",
