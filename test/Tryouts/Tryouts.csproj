@@ -99,9 +99,9 @@
     <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00014" />
     <PackageReference Include="BenchmarkDotNet" Version="0.13.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="MimeKitLite" Version="2.15.1" />
+    <PackageReference Include="MimeKitLite" Version="3.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="SharpCompress" Version="0.30.0" />
+    <PackageReference Include="SharpCompress" Version="0.30.1" />
   </ItemGroup>
   <Target Name="PlatformMessage" AfterTargets="Build">
     <Message Text="Building for platform: $(Platform)" Importance="high" />
