@@ -1300,6 +1300,9 @@ namespace Raven.Server.ServerWide
             // delete all values linked to database record - for subscription, etl etc.
             CleanupDatabaseRelatedValues(context, items, databaseName, serverStore);
 
+            //remove the database from all certificate's permissions
+            DeleteDatabaseFromCertificatePermissions(context, databaseName);
+
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
 
@@ -1646,6 +1649,45 @@ namespace Raven.Server.ServerWide
             finally
             {
                 NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private static void DeleteDatabaseFromCertificatePermissions(TransactionOperationContext context, string database)
+        {
+            try
+            {
+                var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+                foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+                {
+                    var blittable = GetCertificate(context, result.Value).Cert;
+
+                    if (blittable.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) == false)
+                        throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.Thumbprint)}' from {nameof(CertificateDefinition)}");
+                    
+                    if (blittable.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
+                        throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.PublicKeyPinningHash)}' from {nameof(CertificateDefinition)}");
+                    
+                    if (blittable.TryGet(nameof(CertificateDefinition.Permissions), out BlittableJsonReaderObject permissions) == false)
+                        throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.Permissions)}' from {nameof(CertificateDefinition)}");
+
+                    using (Slice.From(context.Allocator, thumbprint.ToLower(), out var thumbprintSlice))
+                    using (Slice.From(context.Allocator, hash, out var hashSlice))
+                    {
+                        int index = permissions.GetPropertyIndex(database);
+                        if (index > -1)
+                        {
+                            permissions.Modifications ??= new DynamicJsonValue();
+                            permissions.Modifications.Removals = new HashSet<int>() { index };
+                            var updated = context.ReadObject(blittable, "cert/updated");
+                            UpdateCertificate(certTable, thumbprintSlice, hashSlice, updated);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                //NotifyValueChanged(context, type, index); //TODO stav: is needed?
             }
         }
 
