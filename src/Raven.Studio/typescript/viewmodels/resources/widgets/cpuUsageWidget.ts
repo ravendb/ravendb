@@ -6,6 +6,8 @@ import abstractChartsWebsocketWidget = require("viewmodels/resources/widgets/abs
 
 class cpuUsageWidget extends abstractChartsWebsocketWidget<Raven.Server.Dashboard.Cluster.Notifications.CpuUsagePayload, cpuUsage> {
 
+    view = require("views/resources/widgets/cpuUsageWidget.html");
+    
     ravenChart: lineChart;
     serverChart: lineChart;
     

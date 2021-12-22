@@ -9,6 +9,8 @@ import registration = require("viewmodels/shell/registration");
 
 class licenseLimitDetails extends dialogViewModelBase {
 
+    view = require("views/common/notificationCenter/detailViewer/licenseLimitDetails.html");
+
     protected readonly licenseLimitNotification: recentLicenseLimitError | alert;
     protected readonly dismissFunction: () => void;
     licenseStatus = license.licenseStatus;

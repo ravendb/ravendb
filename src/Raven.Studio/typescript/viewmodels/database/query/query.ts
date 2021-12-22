@@ -43,6 +43,8 @@ import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
 import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -125,6 +127,8 @@ class includedRevisions {
 class query extends viewModelBase {
 
     static readonly dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+
+    view = require("views/database/query/query.html");
 
     static readonly recentQueryLimit = 6;
     static readonly recentKeyword = 'Recent Query';
@@ -723,7 +727,7 @@ class query extends viewModelBase {
             const showPreview = (value: any) => {
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
                 }
             };

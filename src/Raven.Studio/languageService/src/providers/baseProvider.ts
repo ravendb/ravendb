@@ -3,8 +3,7 @@ import { CandidateRule, CandidatesCollection } from "antlr4-c3/out/src/CodeCompl
 export type QuerySource = "index" | "collection" | "unknown";
 export type QuoteType = "None" | "Single" | "Double";
 
-
-const ident = x => x;
+const ident = (x: any) => x;
 
 export function filterTokens<T>(text: string, candidates: T[], extractor: (val: T) => string = ident) {
     if (text.trim().length == 0 || candidates.length === 0) {

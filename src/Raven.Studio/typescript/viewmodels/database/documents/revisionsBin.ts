@@ -4,6 +4,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsBinEntryCommand = require("commands/database/documents/getRevisionsBinEntryCommand");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 import document = require("models/database/documents/document");
 
@@ -14,9 +15,12 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import { highlight, languages } from "prismjs";
 
 class revisionsBin extends viewModelBase {
 
+    view = require("views/database/documents/revisionsBin.html");
+    
     dirtyResult = ko.observable<boolean>(false);
     dataChanged: KnockoutComputed<boolean>;
     selectedItemsCount: KnockoutComputed<number>;
@@ -121,7 +125,7 @@ class revisionsBin extends viewModelBase {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {
                         const json = JSON.stringify(value, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        const html = highlight(json, languages.javascript, "js");
                         onValue(html, json);
                     }
                 }

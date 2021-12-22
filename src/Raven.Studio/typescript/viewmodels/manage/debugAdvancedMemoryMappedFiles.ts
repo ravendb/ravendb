@@ -5,6 +5,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import getDebugMemoryStatsCommand = require("commands/database/debug/getDebugMemoryStatsCommand");
+import { highlight, languages } from "prismjs";
 
 type memoryMappingItem = {
     Directory: string;
@@ -17,6 +18,8 @@ type memoryMappingItem = {
 }
 
 class memoryMappedFiles extends viewModelBase {
+
+    view = require("views/manage/debugAdvancedMemoryMappedFiles.html");
 
     allData = ko.observable<memoryMappingItem[]>();
     filteredData = ko.observable<memoryMappingItem[]>();
@@ -119,7 +122,7 @@ class memoryMappedFiles extends viewModelBase {
                                     e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Total Mapped") {
                 const json = JSON.stringify(entry.Mappings, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                const html = highlight(json, languages.javascript, "js");
                 onValue(html, json);
             } else {
                 const value = column.getCellValue(entry);

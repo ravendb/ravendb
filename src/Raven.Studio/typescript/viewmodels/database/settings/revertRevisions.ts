@@ -4,8 +4,11 @@ import revertRevisionsCommand = require("commands/database/documents/revertRevis
 import revertRevisionsRequest = require("models/database/documents/revertRevisionsRequest");
 import notificationCenter = require("common/notifications/notificationCenter");
 import appUrl = require("common/appUrl");
+import moment = require("moment");
 
 class revertRevisions extends viewModelBase {
+    
+    view = require("views/database/settings/revertRevisions.html");
 
     model = new revertRevisionsRequest();
     revisionsUrl: KnockoutComputed<string>;

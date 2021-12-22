@@ -4,6 +4,8 @@ import serverBuildReminder = require("common/storage/serverBuildReminder");
 
 class latestBuildReminder extends dialogViewModelBase {
 
+    view = require("views/common/latestBuildReminder.html");
+
     public dialogTask = $.Deferred();
     mute = ko.observable<boolean>(false);
 

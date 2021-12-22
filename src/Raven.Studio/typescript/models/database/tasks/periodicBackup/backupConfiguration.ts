@@ -8,11 +8,11 @@ import ftpSettings = require("viewmodels/database/tasks/destinations/ftpSettings
 import getBackupLocationCommand = require("commands/database/tasks/getBackupLocationCommand");
 import getServerWideBackupLocationCommand = require("commands/serverWide/tasks/getServerWideBackupLocationCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
-import backupSettings = require("backupSettings");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import snapshot = require("models/database/tasks/periodicBackup/snapshot");
 import encryptionSettings = require("models/database/tasks/periodicBackup/encryptionSettings");
 import generalUtils = require("common/generalUtils");
+import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 
 abstract class backupConfiguration {
 

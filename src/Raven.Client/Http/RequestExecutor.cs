@@ -1369,7 +1369,7 @@ namespace Raven.Client.Http
                     {
                         builder.Append("a certificate is required. ");
                     }
-                    else if (Certificate.PrivateKey != null)
+                    else if (Certificate.HasPrivateKey)
                     {
                         builder.Append(Certificate.FriendlyName).Append(" does not have permission to access it or is unknown. ");
                     }
@@ -1945,7 +1945,9 @@ namespace Raven.Client.Http
 
                 try
                 {
+#pragma warning disable SYSLIB0014 // Type or member is obsolete
                     var servicePoint = ServicePointManager.FindServicePoint(new Uri(url));
+#pragma warning restore SYSLIB0014 // Type or member is obsolete
                     servicePoint.ConnectionLimit = DefaultConnectionLimit;
                     servicePoint.MaxIdleTime = -1;
                 }

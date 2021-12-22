@@ -27,6 +27,8 @@ class runningRecording {
 
 class debugAdvancedRecordTransactionCommands extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedRecordTransactionCommands.html");
+    
     private highlightDatabase: string;
     
     databaseNames = ko.observableArray<string>([]);
@@ -38,9 +40,6 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
     runningTasks = ko.observableArray<runningRecording>([]);
     
     validationGroup: KnockoutValidationGroup;
-    
-    // marker for parent router
-    static preventParentGrow = true;
 
     outputFilePathOptions = ko.observableArray<string>([]);
     

@@ -11,6 +11,9 @@ import saveDatabaseRecordCommand = require("commands/resources/saveDatabaseRecor
 import genUtils = require("common/generalUtils");
 
 class databaseRecord extends viewModelBase {
+
+    view = require("views/database/advanced/databaseRecord.html");
+    
     isDocumentCollapsed = ko.observable<boolean>(false);
     forceFold: boolean = true;
     

@@ -11,6 +11,8 @@ import editCustomAnalyzer = require("viewmodels/database/settings/editCustomAnal
 
 class editServerWideCustomAnalyzer extends viewModelBase {
 
+    view = require("views/manage/editServerWideCustomAnalyzer.html");
+
     editedServerWideAnalyzer = ko.observable<customAnalyzer>();
     usedAnalyzerNames = ko.observableArray<string>([]);
     isAddingNewAnalyzer = ko.observable<boolean>();

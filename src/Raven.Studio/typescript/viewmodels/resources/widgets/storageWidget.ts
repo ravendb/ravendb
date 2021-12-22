@@ -41,6 +41,9 @@ class perNodeStorageStats {
 }
 
 class storageWidget extends websocketBasedWidget<Raven.Server.Dashboard.Cluster.Notifications.StorageUsagePayload> {
+
+    view = require("views/resources/widgets/storageWidget.html");
+    
     nodeStats = ko.observableArray<perNodeStorageStats>([]);
 
     sizeFormatter = generalUtils.formatBytesToSize;

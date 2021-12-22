@@ -5,6 +5,8 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 
 class deleteCollection extends dialogViewModelBase {
     
+    view = require("views/database/documents/deleteCollection.html");
+    
     private deletionStarted = false;    
     isAllDocuments: boolean;
     hasHiloDocuments: boolean;

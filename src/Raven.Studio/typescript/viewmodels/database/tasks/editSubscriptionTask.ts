@@ -22,6 +22,7 @@ import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import rqlLanguageService = require("common/rqlLanguageService");
+import { highlight, languages } from "prismjs";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -40,6 +41,8 @@ class perCollectionIncludes {
 class editSubscriptionTask extends viewModelBase {
 
     languageService: rqlLanguageService;
+    view = require("views/database/tasks/editSubscriptionTask.html");
+
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
@@ -259,7 +262,7 @@ class editSubscriptionTask extends viewModelBase {
                             onValue(formattedValue, value);
                         } else {
                             const json = JSON.stringify(value, null, 4);
-                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
                         }
                     }

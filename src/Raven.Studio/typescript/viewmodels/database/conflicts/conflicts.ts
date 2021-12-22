@@ -21,6 +21,8 @@ import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
+import { highlight, languages } from "prismjs";
 
 class conflictItem {
     
@@ -37,7 +39,7 @@ class conflictItem {
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
-            this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
+            this.formattedValue(highlight(json, languages.javascript, "js"));
             this.deletedMarker(false);
             this.changeVector(changeVectorUtils.formatChangeVector(dto.ChangeVector, useLongChangeVectorFormat));
         } else {
@@ -58,6 +60,8 @@ class conflictItem {
 }
 
 class conflicts extends viewModelBase {
+
+    view = require("views/database/conflicts/conflicts.html");
 
     hasDetailsLoaded = ko.observable<boolean>(false);
     detailsVisible = ko.observable<boolean>(false);

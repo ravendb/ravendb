@@ -4,6 +4,7 @@ import d3 = require("d3");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import colorsManager = require("common/colorsManager");
 import genUtils = require("common/generalUtils");
+import moment = require("moment");
 
 interface graphData {
     pointSeries: graphSeries<dataPoint>[];
@@ -212,6 +213,8 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
 }
 
 class timeSeriesPlotDetails extends viewModelBase {
+
+    view = require("views/common/timeSeriesPlotDetails.html");
     
     private readonly margin = {
         top: 40,

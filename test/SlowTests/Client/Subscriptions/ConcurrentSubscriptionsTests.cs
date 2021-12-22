@@ -992,7 +992,9 @@ namespace SlowTests.Client.Subscriptions
 
         private class ResendListResult
         {
+#pragma warning disable CS0649
             public List<SubscriptionStorage.ResendItem> Results;
+#pragma warning restore CS0649
         }
 
         private class User

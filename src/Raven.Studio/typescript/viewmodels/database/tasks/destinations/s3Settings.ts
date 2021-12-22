@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class s3Settings extends amazonSettings {
+    
+    view = require("views/database/tasks/destinations/s3Settings.html");
+    
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();

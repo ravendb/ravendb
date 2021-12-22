@@ -8,6 +8,9 @@ import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/
 import deleteServerWideCustomSorterCommand = require("commands/serverWide/sorters/deleteServerWideCustomSorterCommand");
 
 class serverWideCustomSorters extends viewModelBase {
+
+    view = require("views/manage/serverWideCustomSorters.html");
+    
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);
 
     addUrl = ko.pureComputed(() => appUrl.forEditServerWideCustomSorter());

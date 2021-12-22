@@ -22,6 +22,7 @@ import accessManager = require("common/shell/accessManager");
 import getServerCertificateRenewalDateCommand = require("commands/auth/getServerCertificateRenewalDateCommand");
 import fileImporter = require("common/fileImporter");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -30,6 +31,8 @@ interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefini
 }
 
 class certificates extends viewModelBase {
+
+    view = require("views/manage/certificates.html");
 
     spinners = {
         processing: ko.observable<boolean>(false)

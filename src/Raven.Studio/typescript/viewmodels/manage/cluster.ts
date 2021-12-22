@@ -21,6 +21,8 @@ import generalUtils = require("common/generalUtils");
 
 class cluster extends viewModelBase {
 
+    view = require("views/manage/cluster.html");
+
     private graph = new clusterGraph();
 
     topology = clusterTopologyManager.default.topology;

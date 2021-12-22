@@ -1,5 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import moment = require("moment");
+
 class timeHelpers {
 
     // don't make this method public, instead create field for given time period

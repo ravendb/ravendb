@@ -4,6 +4,8 @@ import listHostsForCertificateCommand = require("commands/wizard/listHostsForCer
 import fileImporter = require("common/fileImporter");
 
 class certificate extends setupStep {
+
+    view = require("views/wizard/certificate.html");
  
     passwordInputVisible: KnockoutComputed<boolean>;
     

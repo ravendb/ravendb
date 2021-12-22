@@ -1,8 +1,11 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import copyToClipboard = require("common/copyToClipboard");
+import { highlight, languages } from "prismjs";
 
 class conflictResolutionScriptSyntax extends dialogViewModelBase {
 
+    view = require("views/database/settings/conflictResolutionScriptSyntax.html");
+    
     dialogContainer: Element;
     
     static readonly sampleScript = `// The following variables are available in script context:
@@ -30,7 +33,7 @@ return docs[0];
     }
     
     scriptHtml = ko.pureComputed(() => {
-        return Prism.highlight(conflictResolutionScriptSyntax.sampleScript, (Prism.languages as any).javascript);
+        return highlight(conflictResolutionScriptSyntax.sampleScript, languages.javascript, "js");
     });
 
 }

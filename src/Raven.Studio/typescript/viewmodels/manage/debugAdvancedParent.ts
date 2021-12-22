@@ -1,9 +1,15 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import appUrl = require("common/appUrl");
 import durandalRouter = require("plugins/router");
-import accessManager = require("common/shell/accessManager");
 
 class debugAdvanced {
+    
+    view = require("views/manage/debugAdvancedParent.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     router: DurandalRootRouter;
     
     growContainer = ko.observable<boolean>(true);
@@ -13,7 +19,7 @@ class debugAdvanced {
             .map([
                 {
                     route: 'admin/settings/debug/advanced/threadsRuntime',
-                    moduleId: 'viewmodels/manage/debugAdvancedThreadsRuntime',
+                    moduleId: require('viewmodels/manage/debugAdvancedThreadsRuntime'),
                     title: 'Threads Runtime Info',
                     tabName: "Threads Runtime Info",
                     nav: true,
@@ -22,7 +28,7 @@ class debugAdvanced {
                 },
                 {
                     route: 'admin/settings/debug/advanced/memoryMappedFiles',
-                    moduleId: 'viewmodels/manage/debugAdvancedMemoryMappedFiles',
+                    moduleId: require('viewmodels/manage/debugAdvancedMemoryMappedFiles'),
                     title: 'Memory Mapped Files',
                     tabName: "Memory Mapped Files",
                     nav: true,
@@ -31,7 +37,7 @@ class debugAdvanced {
                 },
                 {
                     route: 'admin/settings/debug/advanced/observerLog',
-                    moduleId: 'viewmodels/manage/debugAdvancedObserverLog',
+                    moduleId: require('viewmodels/manage/debugAdvancedObserverLog'),
                     title: 'Cluster Observer Log',
                     tabName: "Cluster Observer Log",
                     nav: true,
@@ -40,7 +46,7 @@ class debugAdvanced {
                 },
                 {
                     route: 'admin/settings/debug/advanced/recordTransactionCommands',
-                    moduleId: 'viewmodels/manage/debugAdvancedRecordTransactionCommands',
+                    moduleId: require('viewmodels/manage/debugAdvancedRecordTransactionCommands'),
                     title: 'Record Transaction Commands',
                     tabName: "Record Transaction Commands",
                     nav: true,
@@ -49,7 +55,7 @@ class debugAdvanced {
                 },
                 {
                     route: 'admin/settings/debug/advanced/replayTransactionCommands',
-                    moduleId: 'viewmodels/manage/debugAdvancedReplayTransactionCommands',
+                    moduleId: require('viewmodels/manage/debugAdvancedReplayTransactionCommands'),
                     title: 'Replay Transaction Commands',
                     tabName: "Replay Transaction Commands",
                     nav: true,
@@ -58,11 +64,6 @@ class debugAdvanced {
                 }
             ])
             .buildNavigationModel();
-
-        this.router.on("router:navigation:attached", (viewModel: viewModelBase) => {
-            const preventGrow = !!(viewModel.constructor as any).preventParentGrow;
-            this.growContainer(!preventGrow);
-        });
     }
 }
 

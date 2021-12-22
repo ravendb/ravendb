@@ -7,6 +7,8 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class replayTransactionCommandsDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/replayTransactionCommandsDetails.html");
+
     result: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.ClientCertificateGenerationResult>;
     progress: KnockoutObservable<Raven.Client.Documents.Operations.IndeterminateProgressCount>;
 

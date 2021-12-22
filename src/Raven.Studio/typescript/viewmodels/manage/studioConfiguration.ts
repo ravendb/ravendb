@@ -6,6 +6,8 @@ import jsonUtil = require("common/jsonUtil");
 
 class studioConfiguration extends viewModelBase {
 
+    view = require("views/manage/studioConfiguration.html");
+
     spinners = {
         save: ko.observable<boolean>(false)
     };

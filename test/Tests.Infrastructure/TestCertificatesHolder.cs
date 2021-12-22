@@ -35,9 +35,11 @@ namespace FastTests
 
         public sealed class TrackingX509Certificate2 : X509Certificate2
         {
+#pragma warning disable SYSLIB0026 // Type or member is obsolete
             public TrackingX509Certificate2()
             {
             }
+#pragma warning restore SYSLIB0026 // Type or member is obsolete
 
             public TrackingX509Certificate2(byte[] rawData)
                 : base(rawData)
