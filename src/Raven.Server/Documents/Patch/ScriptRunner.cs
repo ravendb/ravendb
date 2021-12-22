@@ -184,9 +184,9 @@ namespace Raven.Server.Documents.Patch
 
             return TimeSeriesRetriever.ParseDateTime(arg.AsString());
         }
-        
+
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
-        
+
         public class SingleRun
         {
             private readonly DocumentDatabase _database;
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Patch
 
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
-                
+
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Patch
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
-                        new[] { toAppend }, 
+                        new[] { toAppend },
                         AppendOptionsForScript);
 
                     if (DebugMode)
@@ -565,7 +565,8 @@ namespace Raven.Server.Documents.Patch
 
                     var toIncrement = new TimeSeriesOperation.IncrementOperation
                     {
-                        Values = values.ToArray(),
+                        Values = valuesBuffer,
+                        ValuesLength = values.Length,
                         Timestamp = timestamp
                     };
 
@@ -989,7 +990,7 @@ namespace Raven.Server.Documents.Patch
                         return boi.Blittable.ToString();
                     }
 
-                    using (var blittable =  JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, obj.AsObject()))
+                    using (var blittable = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, obj.AsObject()))
                     {
                         return blittable.ToString();
                     }
@@ -1127,20 +1128,20 @@ namespace Raven.Server.Documents.Patch
                 if (_docsCtx == null)
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
-            
+
             private JsValue IncludeRevisions(JsValue self, JsValue[] args)
             {
                 if (args == null)
                     return JsValue.Null;
 
                 IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                
+
                 foreach (JsValue arg in args)
                 {
                     switch (arg.Type)
                     {
                         case Types.String:
-                            if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
+                            if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime))
                             {
                                 IncludeRevisionByDateTimeBefore = dateTime.ToUniversalTime();
                                 continue;
@@ -1157,10 +1158,10 @@ namespace Raven.Server.Documents.Patch
                             break;
                     }
                 }
-                
+
                 return JsValue.Null;
             }
-            
+
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
@@ -1890,7 +1891,7 @@ namespace Raven.Server.Documents.Patch
                     return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
                 }
             }
-            
+
             private JsValue LoadDocumentInternal(string id)
             {
                 if (string.IsNullOrEmpty(id))

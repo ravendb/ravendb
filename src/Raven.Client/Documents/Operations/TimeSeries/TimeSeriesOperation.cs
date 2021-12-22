@@ -367,6 +367,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             public DateTime Timestamp;
             public double[] Values;
+            public int? ValuesLength;
 
             internal static IncrementOperation Parse(BlittableJsonReaderObject input)
             {

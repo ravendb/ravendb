@@ -1313,20 +1313,24 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 ValidateTimestamp(prevTimestamp, element.Timestamp);
                 prevTimestamp = element.Timestamp;
+                var valuesLength = element.ValuesLength ?? element.Values.Length;
 
                 holder.Timestamp = element.Timestamp.EnsureUtc().EnsureMilliseconds();
                 holder.Status = TimeSeriesValuesSegment.Live;
                 holder.Values = element.Values;
+                if (element.ValuesLength != null)
+                    holder.Values = holder.Values.Slice(0, (int)element.ValuesLength);
+
                 var firstPositive = element.Values[0] >= 0;
                 holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, firstPositive);
 
-                for (int i = 1; i < element.Values.Length; i++)
+                for (int i = 1; i < valuesLength; i++)
                 {
                     bool currentPositive = element.Values[i] >= 0;
                     if (firstPositive == currentPositive)
                         continue;
 
-                    foreach (var singleResult in RareMixedPositiveAndNegativeValues(context, element, holder))
+                    foreach (var singleResult in RareMixedPositiveAndNegativeValues(context, element, valuesLength, holder))
                     {
                         yield return singleResult;
                     }
@@ -1337,13 +1341,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private IEnumerable<SingleResult> RareMixedPositiveAndNegativeValues(DocumentsOperationContext context, TimeSeriesOperation.IncrementOperation element, SingleResult holder)
+        private IEnumerable<SingleResult> RareMixedPositiveAndNegativeValues(DocumentsOperationContext context, TimeSeriesOperation.IncrementOperation element, int valuesLength, SingleResult holder)
         {
             _tempHolder ??= new double[32];
-            Array.Copy(element.Values, _tempHolder, element.Values.Length);
+            Array.Copy(element.Values, _tempHolder, valuesLength);
+
             holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, positive: false);
 
-            for (int j = 0; j < element.Values.Length; j++)
+            for (int j = 0; j < valuesLength; j++)
             {
                 if (element.Values[j] >= 0)
                 {
@@ -1354,11 +1359,11 @@ namespace Raven.Server.Documents.TimeSeries
             yield return holder;
 
             holder.Tag = TryGetTimedCounterTag(context, _documentDatabase.DbBase64Id, positive: true);
-            Array.Copy(_tempHolder, element.Values, element.Values.Length);
+            Array.Copy(_tempHolder, element.Values, valuesLength);
 
             // to avoid replication loop we will return new increment operation just in case we have non zero values
             var nonZeroValues = 0;
-            for (int j = 0; j < element.Values.Length; j++)
+            for (int j = 0; j < valuesLength; j++)
             {
                 if (element.Values[j] <= 0)
                 {
@@ -1405,7 +1410,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (ToAppend.MoveNext() == false)
                 {
-                    if (_current != null) 
+                    if (_current != null)
                         Last = _current.Timestamp;
 
                     _current = null;
@@ -1413,7 +1418,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var time = EnsureMillisecondsPrecision(ToAppend.Current!.Timestamp);
-                if (_current == null) 
+                if (_current == null)
                     First = time;
 
                 _current = ToAppend.Current;
@@ -1438,7 +1443,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     if (ToAppend.MoveNext() == false)
                     {
-                        if (_current != null) 
+                        if (_current != null)
                             Last = _current.Timestamp;
 
                         _current = null;
@@ -1446,7 +1451,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
 
                     var time = EnsureMillisecondsPrecision(ToAppend.Current!.Timestamp);
-                    if (_current == null) 
+                    if (_current == null)
                         First = time;
 
                     _current ??= new SingleResult();
@@ -1536,7 +1541,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (FromReplication)
                     return;
-             
+
                 AssertNoNanValue(next);
             }
 
