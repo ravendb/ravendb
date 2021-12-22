@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class manualBackupListModel {
 

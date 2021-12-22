@@ -6,6 +6,8 @@ import eventsCollector = require("common/eventsCollector");
 
 class clientConfiguration extends viewModelBase {
 
+    view = require("views/manage/clientConfiguration.html");
+
     model: clientConfigurationModel;
     
     spinners = {

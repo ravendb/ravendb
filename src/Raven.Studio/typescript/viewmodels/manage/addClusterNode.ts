@@ -10,6 +10,8 @@ import popoverUtils = require("common/popoverUtils");
 
 class addClusterNode extends viewModelBase {
 
+    view = require("views/manage/addClusterNode.html");
+    
     model = new addClusterNodeModel();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();

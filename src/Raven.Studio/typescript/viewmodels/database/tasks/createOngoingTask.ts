@@ -5,6 +5,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createOngoingTask extends dialogViewModelBase {
 
+    view = require("views/database/tasks/createOngoingTask.html");
+
     newReplicationTask() {
         eventsCollector.default.reportEvent("ExternalReplication", "new");
         const url = appUrl.forEditExternalReplication(this.activeDatabase());

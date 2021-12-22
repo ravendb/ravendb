@@ -16,6 +16,7 @@ using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Platform.Win32
 {

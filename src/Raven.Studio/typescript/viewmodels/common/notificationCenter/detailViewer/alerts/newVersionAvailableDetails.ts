@@ -3,8 +3,11 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import alert = require("common/notifications/models/alert");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
+import moment = require("moment");
 
 class newVersionAvailableDetails extends abstractAlertDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails.html");
 
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);

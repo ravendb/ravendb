@@ -22,6 +22,7 @@ import queryUtil = require("common/queryUtil");
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import popoverUtils = require("common/popoverUtils");
+import moment = require("moment");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -54,6 +55,8 @@ class timeSeriesInfo {
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static pageSize = 100;
+    
+    view = require("views/database/timeSeries/editTimeSeries.html");
     
     documentId = ko.observable<string>();
     documentCollection = ko.observable<string>();
@@ -660,7 +663,7 @@ class editTimeSeries extends viewModelBase {
         const filterDialog = new filterTimeSeries(this.localStartDateInFilter(), this.localEndDateInFilter());
         
         app.showBootstrapDialog(filterDialog)
-            .done((filterDates: filterTimeSeriesDates) => {
+            .done((filterDates: filterTimeSeriesDates<moment.Moment>) => {
                 if (filterDates) {
                     this.localStartDateInFilter(filterDates.startDate || undefined);
                     this.localEndDateInFilter(filterDates.endDate || undefined);

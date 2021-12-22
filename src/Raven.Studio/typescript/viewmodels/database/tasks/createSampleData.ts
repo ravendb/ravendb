@@ -10,8 +10,11 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import { highlight, languages } from "prismjs";
 
 class createSampleData extends viewModelBase {
+    
+    view = require("views/database/tasks/createSampleData.html");
 
     classData = ko.observable<string>();
     canCreateSampleData = ko.observable<boolean>(false);
@@ -19,7 +22,7 @@ class createSampleData extends viewModelBase {
     classesVisible = ko.observable<boolean>(false);
 
     classDataFormatted = ko.pureComputed(() => {
-        return Prism.highlight(this.classData(), (Prism.languages as any).javascript);
+        return highlight(this.classData(), languages.javascript, "js");
     });
 
     constructor() {

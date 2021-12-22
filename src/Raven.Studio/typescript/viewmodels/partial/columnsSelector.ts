@@ -8,6 +8,7 @@ import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import generalUtils = require("common/generalUtils");
+import Sortable from "sortablejs";
 
 class columnItem {
 
@@ -132,6 +133,12 @@ class customColumnForm {
 
 class columnsSelector<T> {
 
+    view = require("views/partial/columnsSelector.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     static readonly storagePrefix = "custom-columns-";
     
     static readonly defaultWidth = "200px";
@@ -209,7 +216,7 @@ class columnsSelector<T> {
         const list = $(".columns-list-container .column-list")[0];
 
         // ReSharper disable once WrongExpressionStatement
-        const sort = new Sortable(list,
+        const sort = new Sortable(list as HTMLElement,
         {
             handle: ".column-rearrange",
             onEnd: (event: { oldIndex: number, newIndex: number }) => {

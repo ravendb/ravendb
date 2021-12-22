@@ -29,6 +29,7 @@ using Voron;
 using Voron.Data;
 using Xunit;
 using Xunit.Abstractions;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
 {
@@ -79,7 +80,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = RachisConsensuses[i + initialCount];
                 await leader.AddToClusterAsync(follower.Url);
-                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(timeout);
+                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;

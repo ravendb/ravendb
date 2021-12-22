@@ -30,8 +30,13 @@ import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import endpoints = require("endpoints");
+import moment = require("moment");
+
+import { highlight, languages } from "prismjs";
 
 class documents extends viewModelBase {
+    
+    view = require("views/database/documents/documents.html");
 
     static readonly copyLimit = 100;
     static readonly allDocumentCollectionName = "__all_docs";
@@ -246,11 +251,11 @@ class documents extends viewModelBase {
                     fullDocumentsProvider.resolvePropertyValue(doc, column, (v: any) => {
                         if (!_.isUndefined(v)) {
                             const json = JSON.stringify(v, null, 4);
-                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
                         }
                     }, error => {
-                        const html = Prism.highlight("Unable to generate column preview: " + error.toString(), (Prism.languages as any).javascript);
+                        const html = highlight("Unable to generate column preview: " + error.toString(), languages.javascript, "js");
                         onValue(html);
                     });
                 }

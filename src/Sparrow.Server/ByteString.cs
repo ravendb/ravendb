@@ -13,6 +13,7 @@ using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Sparrow.Server
 {

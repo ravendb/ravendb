@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class mapIndexSyntax extends dialogViewModelBase {
 
+    view = require("views/database/indexes/mapIndexSyntax.html");
+    
     dialogContainer: Element;
 
     compositionComplete() {

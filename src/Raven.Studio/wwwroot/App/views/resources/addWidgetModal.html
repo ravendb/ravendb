@@ -7,7 +7,7 @@
         <div class="modal-body">
             <div class="cluster-widgets-list" data-bind="foreach: widgets">
                 <div class="widget-item" data-bind="click: _.partial($root.addWidget, type), css: { disabled: !$root.canAddWidget(type) }">
-                    <img data-bind="attr: { src: 'Content/img/widgets/' + icon + '.svg' } " />
+                    <img data-bind="attr: { src: icon } " />
                     <div class="widget-name" data-bind="text: name"></div>
                 </div>
             </div>

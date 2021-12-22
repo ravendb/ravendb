@@ -3,6 +3,10 @@ import serverWideLiveIOStatsWebSocketClient = require("common/serverWideLiveIOSt
 import ioStatsGraph = require("models/database/status/ioStatsGraph");
 
 class serverWideIoStats extends viewModelBase {
+
+    view = require("views/manage/serverWideIoStats.html");
+    graphView = require("views/partial/ioStatsGraph.html");
+    
     private graph: ioStatsGraph;
     
     constructor() {

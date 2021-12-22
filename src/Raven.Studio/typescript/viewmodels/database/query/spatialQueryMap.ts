@@ -2,14 +2,22 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import { Control, IconOptions, MarkerClusterGroup, TileLayer } from "leaflet";
+import { Control, IconOptions, MarkerClusterGroup, Map, TileLayer } from "leaflet";
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
+import { highlight, languages } from "prismjs";
+
+import L = require("leaflet");
+import "leaflet.markercluster";
+
+const markerIcon = require("Content/img/leaflet/marker-icon.svg");
 
 class spatialQueryMap extends viewModelBase {
+
+    view = require("views/database/query/spatialQueryMap.html");
     
-    private map: L.Map;
+    private map: Map;
     
     markersLayers = ko.observableArray<spatialMarkersLayerModel>([]);
     circlesLayer = ko.observableArray<spatialCircleModel>([]);
@@ -41,7 +49,7 @@ class spatialQueryMap extends viewModelBase {
             documentMetadata.filterMetadata(metaDto);
 
             let text = JSON.stringify(docDto, null, 4);
-            text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
+            text = highlight(text, languages.javascript, "js");
 
             return `<div>
                           <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
@@ -53,7 +61,7 @@ class spatialQueryMap extends viewModelBase {
         const markersGroups: MarkerClusterGroup[] = [];
 
         const ravenMarker = L.icon({
-            iconUrl: 'Content/img/leaflet/marker-icon.svg',
+            iconUrl: markerIcon,
             iconSize: [35, 26],
             iconAnchor: [17, 22],
             popupAnchor: [5, -22],

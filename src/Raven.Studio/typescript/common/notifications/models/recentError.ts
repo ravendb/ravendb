@@ -2,6 +2,7 @@
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class recentError extends abstractNotification {
 

@@ -249,7 +249,7 @@
                         </div>
                         <hr />
                         <div data-bind="with: encryptionSection">
-                            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                            <div data-bind="compose: $root.setupEncryptionKeyView"></div>
                         </div>
                         <div class="bg-warning padding padding-sm small flex-horizontal">
                             <div>
@@ -267,11 +267,11 @@
             </div>
         </div>
     </div>
-    <div data-bind="compose: 'partial/backupDestinations.html'"></div>
+    <div data-bind="compose: $root.backupDestinationsView"></div>
 </form>
 
 <script type="text/html" id="test-connection-results-template">
     <div data-bind="with: testConnectionResult">
-        <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+        <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
     </div>
 </script>

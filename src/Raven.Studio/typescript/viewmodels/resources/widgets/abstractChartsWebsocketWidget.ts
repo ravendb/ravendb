@@ -3,6 +3,7 @@ import historyAwareNodeStats = require("models/resources/widgets/historyAwareNod
 import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import clusterDashboardWebSocketClient = require("common/clusterDashboardWebSocketClient");
 import lineChart = require("models/resources/clusterDashboard/lineChart");
+import moment = require("moment");
 
 abstract class abstractChartsWebsocketWidget<
     TPayload extends Raven.Server.Dashboard.Cluster.AbstractClusterDashboardNotification, 
@@ -10,7 +11,7 @@ abstract class abstractChartsWebsocketWidget<
     TConfig = unknown, 
     TState = unknown
     > extends websocketBasedWidget<TPayload, TConfig, TState> {
-
+    
     protected readonly throttledShowHistory: (date: Date) => void;
 
     protected charts: lineChart[] = [];

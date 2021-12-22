@@ -47,7 +47,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var djvCpu = new DynamicJsonValue
                 {
                     ["ProcessName"] = proc.ProcessName,
+#pragma warning disable CA1416 // Validate platform compatibility
                     ["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64(),
+#pragma warning restore CA1416 // Validate platform compatibility
                     ["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime,
                     ["TotalProcessorTime"] = proc.TotalProcessorTime,
                     ["UserProcessorTime"] = proc.UserProcessorTime
@@ -102,7 +104,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 AddValue(djv, "PriorityClass", () => proc.PriorityClass);
                 AddValue(djv, "PrivateMemorySize64", () => proc.PrivateMemorySize64);
                 AddValue(djv, "ProcessName", () => proc.ProcessName);
+#pragma warning disable CA1416 // Validate platform compatibility
                 AddValue(djv, "ProcessorAffinity", () => proc.ProcessorAffinity.ToInt64());
+#pragma warning restore CA1416 // Validate platform compatibility
                 AddValue(djv, "SessionId", () => proc.SessionId);
                 AddValue(djv, "StartInfo", () => proc.StartInfo);
                 AddValue(djv, "HandleCount", () => proc.HandleCount);
@@ -152,12 +156,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 AddValue(djv, "BasePriority", () => collection[i].BasePriority);
                 AddValue(djv, "CurrentPriority", () => collection[i].CurrentPriority);
                 AddValue(djv, "PriorityBoostEnabled", () => collection[i].PriorityBoostEnabled);
+#pragma warning disable CA1416 // Validate platform compatibility
                 AddValue(djv, "PriorityLevel", () => collection[i].PriorityLevel);
+#pragma warning restore CA1416 // Validate platform compatibility
                 AddValue(djv, "StartAddress", () => collection[i].StartAddress.ToInt64());
                 AddValue(djv, "ThreadState", () => collection[i].ThreadState);
                 AddValue(djv, "WaitReason", () => collection[i].WaitReason);
                 AddValue(djv, "PrivilegedProcessorTime", () => collection[i].PrivilegedProcessorTime);
+#pragma warning disable CA1416 // Validate platform compatibility
                 AddValue(djv, "StartTime", () => collection[i].StartTime);
+#pragma warning restore CA1416 // Validate platform compatibility
                 AddValue(djv, "TotalProcessorTime", () => collection[i].TotalProcessorTime);
                 AddValue(djv, "UserProcessorTime", () => collection[i].UserProcessorTime);
                 AddValue(djv, "Site", () => collection[i].Site);

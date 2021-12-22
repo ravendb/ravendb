@@ -21,6 +21,9 @@ import generalUtils = require("common/generalUtils");
 
 class importDatabaseFromFile extends viewModelBase {
 
+    view = require("views/database/tasks/importDatabaseFromFile.html");
+    smugglerDatabaseRecordView = require("views/database/tasks/smugglerDatabaseRecord.html");
+    
     private static readonly filePickerTag = "#importDatabaseFilePicker";
 
     model = new importDatabaseModel();

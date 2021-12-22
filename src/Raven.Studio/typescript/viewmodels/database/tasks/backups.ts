@@ -17,6 +17,9 @@ import accessManager = require("common/shell/accessManager");
 import getManualBackupCommand = require("commands/database/tasks/getManualBackupCommand");
 
 class backups extends viewModelBase {
+
+    view = require("views/database/tasks/backups.html");
+    legendView = require("views/partial/databaseGroupLegend.html");
     
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();

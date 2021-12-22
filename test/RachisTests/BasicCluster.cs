@@ -155,7 +155,7 @@ namespace RachisTests
                 lastIndex = etag;
             }
 
-            Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(15000));
+            Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitWithoutExceptionAsync(15000));
             using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -181,7 +181,7 @@ namespace RachisTests
 
             var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
             var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await waitForCommitIndexChange.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.True(await waitForCommitIndexChange.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(5)));
 
             using (b.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())

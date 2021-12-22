@@ -18,7 +18,7 @@ class rqlLanguageService {
         activeDatabase: KnockoutObservable<database>, 
         indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>,
         queryType: rqlQueryType) {
-        this.worker = new Worker("/studio/rql_worker.js");
+        this.worker = new Worker("/studio/assets/rql_worker.js");
         this.queryType = queryType;
         
         this.metadataProvider = new cachedMetadataProvider(new remoteMetadataProvider(activeDatabase, indexes));

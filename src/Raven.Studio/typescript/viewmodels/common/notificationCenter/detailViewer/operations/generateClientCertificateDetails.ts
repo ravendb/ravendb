@@ -7,6 +7,8 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 
 class generateClientCertificateDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/generateClientCertificateDetails.html");
+
     result: KnockoutObservable<Raven.Client.ServerWide.Operations.Certificates.ClientCertificateGenerationResult>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {

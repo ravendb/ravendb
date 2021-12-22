@@ -66,6 +66,8 @@ type certificateInfo = {
 
 class trafficWatch extends viewModelBase {
     
+    view = require("views/manage/trafficWatch.html");
+    
     static readonly usingHttps = location.protocol === "https:";
     
     static maxBufferSize = 200000;

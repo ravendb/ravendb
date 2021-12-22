@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class azureSettings extends backupSettings {
+
+    view = require("views/database/tasks/destinations/azureSettings.html");
+    
     storageContainer = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
     accountName = ko.observable<string>();

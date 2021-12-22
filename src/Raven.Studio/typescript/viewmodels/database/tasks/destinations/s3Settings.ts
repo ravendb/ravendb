@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class s3Settings extends amazonSettings {
+    
+    view = require("views/database/tasks/destinations/s3Settings.html");
+    
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();
@@ -70,6 +73,8 @@ class s3Settings extends amazonSettings {
     }
     
     initValidation() {
+        super.initAmazonValidation();
+        
         /* Bucket name must :
             - be at least 3 and no more than 63 characters long.
             - be a series of one or more labels. 

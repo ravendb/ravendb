@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class patchSyntax extends dialogViewModelBase {
+    
+    view = require("views/database/patch/patchSyntax.html");
 
     dialogContainer: Element;
     clientVersion = viewModelBase.clientVersion;

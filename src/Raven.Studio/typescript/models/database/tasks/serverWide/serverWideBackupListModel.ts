@@ -2,8 +2,8 @@
 import appUrl = require("common/appUrl");
 import serverWideTaskListModel = require("models/database/tasks/serverWide/serverWideTaskListModel"); 
 import generalUtils = require("common/generalUtils");
-import shell = require("viewmodels/shell");
 import getAllServerWideTasksCommand = require("commands/serverWide/tasks/getAllServerWideTasksCommand");
+import connectionStatus from "models/resources/connectionStatus";
 
 class serverWideBackupListModel extends serverWideTaskListModel {
 
@@ -85,7 +85,7 @@ class serverWideBackupListModel extends serverWideTaskListModel {
     }
 
     refreshBackupInfo(reportFailure: boolean) {
-        if (shell.showConnectionLost()) {
+        if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
         }

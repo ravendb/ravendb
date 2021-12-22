@@ -14,6 +14,8 @@ import getMigratorPathConfigurationCommand = require("commands/database/tasks/ge
 
 class migrateDatabase extends viewModelBase {
 
+    view = require("views/database/tasks/migrateDatabase.html");
+
     model = new migrateDatabaseModel();
     completer = defaultAceCompleter.completer();
     

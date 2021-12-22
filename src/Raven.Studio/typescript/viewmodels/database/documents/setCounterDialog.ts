@@ -7,7 +7,9 @@ type setCounterDialogSaveAction = (newCounter: boolean, counterName: string, new
                                    db: database, onCounterNameError: (error: string) => void) => JQueryPromise<CountersDetail>;
 
 class setCounterDialog extends dialogViewModelBase {
-   
+
+    view = require("views/database/documents/setCounterDialog.html");
+    
     private readonly saveAction: setCounterDialogSaveAction;
     
     createNewCounter = ko.observable<boolean>();

@@ -6,6 +6,8 @@ import messagePublisher = require("common/messagePublisher");
 
 class deleteDocuments extends dialogViewModelBase {
 
+    view = require("views/common/deleteDocuments.html");
+
     private documentIds = ko.observableArray<string>();
     private deletionStarted = false;
     deletionTask = $.Deferred<void>();

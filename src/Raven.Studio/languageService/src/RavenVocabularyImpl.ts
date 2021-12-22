@@ -1,9 +1,9 @@
 import { Vocabulary } from "antlr4ts/Vocabulary";
-import { RqlParser } from "./RqlParser";
+import { BaseRqlParser } from "./generated/BaseRqlParser";
 
 const keywordsRemap = new Map<number, string>();
-keywordsRemap.set(RqlParser.GROUP_BY, "group by");
-keywordsRemap.set(RqlParser.ORDER_BY, "order by");
+keywordsRemap.set(BaseRqlParser.GROUP_BY, "group by");
+keywordsRemap.set(BaseRqlParser.ORDER_BY, "order by");
 
 export class RavenVocabularyImpl implements Vocabulary {
     

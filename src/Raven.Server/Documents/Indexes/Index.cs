@@ -1007,6 +1007,8 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
+                DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeRollingIndexFinished?.Invoke(this);
+
                 // We may send the command multiple times so we need a new Id every time.
                 var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
                 _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command).ContinueWith(async t =>
@@ -1020,15 +1022,13 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch (Exception e)
                     {
+                        _rollingCompletionTask = null;
+
                         // we need to retry
                         ScheduleIndexingRun();
 
                         if (_logger.IsOperationsEnabled)
                             _logger.Operations($"Failed to send {nameof(PutRollingIndexCommand)} after finished indexing '{Definition.Name}' in node {nodeTag}.", e);
-                    }
-                    finally
-                    {
-                        _rollingCompletionTask = null;
                     }
                 });
 
@@ -1404,19 +1404,21 @@ namespace Raven.Server.Documents.Indexes
                             
                             if (_indexDisabled)
                                 return;
-
-                            _rollingEvent.Reset();
-
+                            
                             var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
 
                             if (replaceStatus == ReplaceStatus.Succeeded)
                                 return;
 
                             if (replaceStatus == ReplaceStatus.NotNeeded)
-                                break;
+                            {
+                                if (_mre.IsSet == false)
+                                    break;
+                            }
 
-                            Thread.Sleep(500); // replace will be re-tried
-                            _rollingEvent.Set();
+                            _mre.Reset();
+
+                            _indexingProcessCancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(500)); // replace will be re-tried
                         }
 
                         DocumentDatabase.IndexStore.ForTestingPurposes?.OnRollingIndexStart?.Invoke(this);

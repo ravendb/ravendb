@@ -2,8 +2,11 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import dialog = require("plugins/dialog");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import editTimeSeriesEntry = require("viewmodels/database/timeSeries/editTimeSeriesEntry");
+import moment = require("moment");
 
 class filterTimeSeries extends dialogViewModelBase {
+    
+    view = require("views/database/timeSeries/filterTimeSeries.html");
 
     setStartDate = ko.observable<boolean>(false);
     setEndDate = ko.observable<boolean>(false);
@@ -81,7 +84,7 @@ class filterTimeSeries extends dialogViewModelBase {
             const startDateFromDialog = this.setStartDate() ? this.startDateLocal() : null;
             const endDateFromDialog = this.setEndDate() ? this.endDateLocal() : null;
             
-            const filterDates: filterTimeSeriesDates = { startDate: startDateFromDialog, endDate: endDateFromDialog };
+            const filterDates: filterTimeSeriesDates<moment.Moment> = { startDate: startDateFromDialog, endDate: endDateFromDialog };
             dialog.close(this, filterDates);
         }
     }

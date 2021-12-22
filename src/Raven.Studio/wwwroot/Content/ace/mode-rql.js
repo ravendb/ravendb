@@ -979,7 +979,7 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
                 }, {
                     token: "string",
                     regex: "'|$",
-                    next: "no_regex"
+                    next: "start"
                 }, {
                     defaultToken: "string"
                 }

@@ -2,6 +2,8 @@ import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class generateReplicationCertificateConfirm extends dialogViewModelBase {
+
+    view = require("views/database/tasks/generateReplicationCertificateConfirm.html");
     
     validityInMonths = ko.observable<number>(12);
     

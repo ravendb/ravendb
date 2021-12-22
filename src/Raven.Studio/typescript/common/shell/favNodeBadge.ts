@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import Favico = require("Favico");
 
 class favNodeBadge {
 

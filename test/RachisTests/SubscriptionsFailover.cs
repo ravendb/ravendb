@@ -75,8 +75,8 @@ namespace RachisTests
 
                 (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCountInAck, reachedMaxDocCountInAckMre, usersCountInBatch, reachedMaxDocCountInBatchMre, batchSize);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
 
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
@@ -93,8 +93,8 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCountInBatch.Clear();
@@ -106,8 +106,8 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
             }
         }
@@ -141,8 +141,8 @@ namespace RachisTests
 
                 (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCountInAck, reachedMaxDocCountInAckMre, usersCountInBatch, reachedMaxDocCountInBatchMre, batchSize, numberOfConnections);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
 
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
@@ -156,8 +156,8 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCountInBatch.Clear();
@@ -169,8 +169,8 @@ namespace RachisTests
                 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
             }
         }
@@ -273,8 +273,8 @@ namespace RachisTests
 
                 (var subscription, var subsTask) = await CreateAndInitiateSubscription(store, defaultDatabase, usersCountInAck, reachedMaxDocCountInAckMre, usersCountInBatch, reachedMaxDocCountInBatchMre, 20, mentor: mentor);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"1. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCountInBatch.Clear();
@@ -286,8 +286,8 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"2. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
 
                 usersCountInBatch.Clear();
@@ -299,8 +299,8 @@ namespace RachisTests
 
                 await GenerateDocuments(store);
 
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
-                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInBatchMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in batch {usersCountInBatch.Count}/10");
+                Assert.True(await Task.WhenAny(subsTask, reachedMaxDocCountInAckMre.WaitAsync(_reasonableWaitTime)).WaitWithoutExceptionAsync(_reasonableWaitTime), $"3. Reached in ack {usersCountInAck.Count}/10");
                 Assert.False(subsTask.IsFaulted, subsTask?.Exception?.ToString());
             }
         }

@@ -250,7 +250,9 @@ namespace StressTests.Sparrow
                             // continue processing work items.
                             if (!Environment.HasShutdownStarted && !AppDomain.CurrentDomain.IsFinalizingForUnload())
                             {
+#pragma warning disable SYSLIB0006 // Type or member is obsolete
                                 Thread.ResetAbort();
+#pragma warning restore SYSLIB0006 // Type or member is obsolete
                             }
                         }
                     }

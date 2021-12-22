@@ -7,7 +7,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
     var statsItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/status',
-            moduleId: 'viewmodels/database/status/statistics',
+            moduleId: require('viewmodels/database/status/statistics'),
             title: 'Stats',
             nav: true,
             css: 'icon-stats',
@@ -15,7 +15,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/status/ioStats',
-            moduleId: 'viewmodels/database/status/ioStats',
+            moduleId: require('viewmodels/database/status/ioStats'),
             title: 'IO Stats',
             tooltip: "Displays IO metrics status",
             nav: true,
@@ -24,7 +24,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/status/storage/report',
-            moduleId: 'viewmodels/database/status/storageReport',
+            moduleId: require('viewmodels/database/status/storageReport'),
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,
@@ -33,7 +33,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: "virtual", // here we only redirect to global section with proper db set in url
-            moduleId: "virtual",
+            moduleId: () => {},
             title: 'Running Queries',
             nav: true,
             css: 'icon-stats-running-queries',
@@ -41,7 +41,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/status/ongoingTasksStats',
-            moduleId: 'viewmodels/database/status/ongoingTasksStats',
+            moduleId: require('viewmodels/database/status/ongoingTasksStats'),
             title: 'Ongoing Tasks Stats',
             nav: true,
             css: 'icon-replication-stats',
@@ -49,7 +49,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/status/debug*details',
-            moduleId: 'viewmodels/database/status/debug/statusDebug',
+            moduleId: null,
             title: 'Debug',
             nav: false,
             css: 'icon-debug'
