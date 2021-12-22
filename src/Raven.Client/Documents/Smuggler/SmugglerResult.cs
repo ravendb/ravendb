@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Smuggler
 {
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {
-        private readonly List<string> _messages;
+        private List<string> _messages;
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
 
@@ -59,6 +59,13 @@ namespace Raven.Client.Documents.Smuggler
                     return _messages.ToArray();
                 }
             }
+            private set
+            {
+                lock (this)
+                {
+                    _messages = value.ToList();
+                }
+            }
         }
 
         public void AddWarning(string message)
@@ -102,10 +109,7 @@ namespace Raven.Client.Documents.Smuggler
 
             var json = base.ToJson();
 
-            lock (this)
-            {
-                json[nameof(Messages)] = Messages.ToList();
-            }
+            json[nameof(Messages)] = Messages;
 
             json[nameof(Elapsed)] = Elapsed;
 
