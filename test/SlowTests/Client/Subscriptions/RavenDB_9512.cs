@@ -11,14 +11,14 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class RavenDB_9512:RavenTestBase
+    public class RavenDB_9512 : RavenTestBase
     {
         public RavenDB_9512(ITestOutputHelper output) : base(output)
         {
         }
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
-        
+
         [Fact]
         public async Task AbortWhenNoDocsLeft()
         {
@@ -29,19 +29,18 @@ namespace SlowTests.Client.Subscriptions
                     await session.StoreAsync(new User());
                     await session.SaveChangesAsync();
                 }
-                
+
                 var sn = await store.Subscriptions.CreateAsync<User>();
                 var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(sn)
                 {
                     CloseWhenNoDocsLeft = true,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
-                
+
                 var st = worker.Run(x => { });
-                
-                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(()=>st).WaitAsync(_reasonableWaitTime));
+
+                Assert.True(await Assert.ThrowsAsync<SubscriptionClosedException>(() => st).WaitWithoutExceptionAsync(_reasonableWaitTime));
             }
         }
-        
     }
 }

@@ -5,12 +5,12 @@ namespace Tests.Infrastructure
 {
     public static class TestExtensions
     {
-        public static async Task<bool> WaitAsync(this Task task, TimeSpan timeout)
+        public static async Task<bool> WaitWithoutExceptionAsync(this Task task, TimeSpan timeout)
         {
-            return await WaitAsync(task, (int)timeout.TotalMilliseconds).ConfigureAwait(false);
+            return await WaitWithoutExceptionAsync(task, (int)timeout.TotalMilliseconds).ConfigureAwait(false);
         }
 
-        public static async Task<bool> WaitAsync(this Task task, int timeout)
+        public static async Task<bool> WaitWithoutExceptionAsync(this Task task, int timeout)
         {
             var delay = Task.Delay(Math.Max(timeout, 1000));
             var result = await Task.WhenAny(task, delay).ConfigureAwait(false);

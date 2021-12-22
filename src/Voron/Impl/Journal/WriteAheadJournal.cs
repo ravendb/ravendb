@@ -33,6 +33,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Journal
 {

@@ -46,8 +46,8 @@ namespace Sparrow.Json
         public async ValueTask DisposeAsync()
         {
             DisposeInternal();
-            if (await FlushAsync().ConfigureAwait(false) > 0)
-                await _outputStream.FlushAsync().ConfigureAwait(false); // flush the output stream underlying stream as well
+
+            await FlushAsync().ConfigureAwait(false);
 
             _context.ReturnMemoryStream((MemoryStream)_stream);
         }

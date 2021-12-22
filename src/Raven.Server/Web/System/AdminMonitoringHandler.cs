@@ -126,7 +126,9 @@ namespace Raven.Server.Web.System
             var result = new CpuMetrics();
 
             using (var currentProcess = Process.GetCurrentProcess())
+#pragma warning disable CA1416 // Validate platform compatibility
                 result.AssignedProcessorCount = (int)Bits.NumberOfSetBits(currentProcess.ProcessorAffinity.ToInt64());
+#pragma warning restore CA1416 // Validate platform compatibility
 
             result.ProcessorCount = Environment.ProcessorCount;
 
