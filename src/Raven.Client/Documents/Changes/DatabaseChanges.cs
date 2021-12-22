@@ -573,6 +573,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         // we couldn't reconnect
                         NotifyAboutError(e);
+                        _tcs.TrySetException(e);
                         throw;
                     }
                 }
