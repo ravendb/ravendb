@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Graph;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -257,6 +259,93 @@ namespace SlowTests.Issues
                         return databaseRecord.Topology;
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task EnsureDatabaseDeletedFromCertificate()
+        {
+            var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);
+            var adminClusterCert = certificates.ClientCertificate1.Value;
+            var userCert = certificates.ClientCertificate2.Value;
+            
+            var databaseName = GetDatabaseName();
+            foreach (var node in nodes)
+            {
+                RegisterClientCertificate(certificates.ServerCertificate.Value, userCert, new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser, node);
+                RegisterClientCertificate(certificates.ServerCertificate.Value, adminClusterCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
+            }
+            
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 3,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = userCert,
+                ModifyDatabaseName = _ => databaseName,
+                DeleteDatabaseOnDispose = false
+            }))
+            {
+                await TrySavingDocument(store);
+            }
+
+            using (var store = new DocumentStore()
+            {
+                Database = databaseName,
+                Urls = new string[]{ leader.WebUrl },
+                Certificate = adminClusterCert
+            }.Initialize())
+            {
+                //check cert is saved with this db as expected
+                var cert = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(userCert.Thumbprint));
+                Assert.True(cert.Permissions.ContainsKey(databaseName));
+
+                //delete the database
+                var res = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
+                await WaitForRaftIndexToBeAppliedOnClusterNodes(res.RaftCommandIndex, nodes);
+
+                var actual = WaitForValue(GetTopologyCount, 0);
+                Assert.Equal(0, actual);
+
+                int GetTopologyCount()
+                {
+                    var count = 0;
+                    foreach (var node in nodes)
+                    {
+                        using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        using (var databaseRecord = node.ServerStore.Cluster.ReadRawDatabaseRecord(ctx, databaseName))
+                        {
+                            if (databaseRecord != null)
+                                count++;
+                        }
+                    }
+
+                    return count;
+                }
+
+                //create database with the same name as deleted one
+                var (index, servers) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl, adminClusterCert);
+                await WaitForRaftIndexToBeAppliedOnClusterNodes(index, servers);
+
+                //check db has been deleted from the permissions of cert
+                var changedCert = await store.Maintenance.Server.SendAsync(new GetCertificateOperation(userCert.Thumbprint));
+                Assert.False(changedCert.Permissions.ContainsKey(databaseName));
+            }
+            
+            //try accessing the new database with the old database certificate
+            using (var store = new DocumentStore()
+            {
+                Urls = new [] { leader.WebUrl },
+                Certificate = userCert,
+                Database = databaseName,
+            }.Initialize())
+            {
+                var requestExecutor = store.GetRequestExecutor(databaseName);
+                requestExecutor.RemoveHttpClient(); // reset to forget the previous connection
+
+                var ex = await Assert.ThrowsAsync<AuthorizationException>(async () => await TrySavingDocument((DocumentStore)store));
+                Assert.Contains($"Could not authorize access to {databaseName} using provided client certificate", ex.Message);
             }
         }
     }
