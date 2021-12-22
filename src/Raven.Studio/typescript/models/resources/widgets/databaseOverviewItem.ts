@@ -1,4 +1,6 @@
 
+import moment = require("moment");
+
 class databaseOverviewItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;

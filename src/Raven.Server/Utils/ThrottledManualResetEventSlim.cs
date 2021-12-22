@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -193,7 +192,6 @@ namespace Raven.Server.Utils
 
             if (_setCalled.Lower())
             {
-                Debugger.Break();
                 _mre.Set();
             }
 

@@ -8,7 +8,7 @@ class testElasticSearchEtlCommand extends commandBase {
     }  
 
     execute(): JQueryPromise<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.ElasticSearchEtlTestScriptResult> {
-        const url = endpoints.databases.elasticsearchEtl.adminEtlElasticsearchTest;
+        const url = endpoints.databases.elasticSearchEtl.adminEtlElasticsearchTest;
 
         return this.post<Raven.Server.Documents.ETL.Providers.ElasticSearch.Test.ElasticSearchEtlTestScriptResult>(url, JSON.stringify(this.payload), this.db)
             .fail((response: JQueryXHR) => {

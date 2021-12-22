@@ -25,6 +25,7 @@ import testRavenEtlCommand = require("commands/database/tasks/testRavenEtlComman
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
+import { highlight, languages } from "prismjs";
 
 type resultItem = {
     header: string;
@@ -114,7 +115,7 @@ class ravenTaskTestMode {
                             const metaDto = docDto["@metadata"];
                             documentMetadata.filterMetadata(metaDto);
                             const text = JSON.stringify(docDto, null, 4);
-                            this.loadedDocument(Prism.highlight(text, (Prism.languages as any).javascript));
+                            this.loadedDocument(highlight(text, languages.javascript, "js"));
                             this.loadedDocumentId(doc.getId());
 
                             $('.test-container a[href="#documentPreview"]').tab('show');
@@ -144,7 +145,7 @@ class ravenTaskTestMode {
                     this.testResults(simulationResult.Commands.map((command: Raven.Client.Documents.Commands.Batches.ICommandData): resultItem => {
 
                         const json = JSON.stringify(command, null, 4);
-                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        const html = highlight(json, languages.javascript, "js");
                         
                         return {
                             header: command.Type + " " + command.Id,
@@ -168,6 +169,9 @@ class ravenTaskTestMode {
 }
 
 class editRavenEtlTask extends viewModelBase {
+
+    view = require("views/database/tasks/editRavenEtlTask.html");
+    connectionStringView = require("views/database/settings/connectionStringRaven.html")
     
     static readonly scriptNamePrefix = "Script_";
     static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;

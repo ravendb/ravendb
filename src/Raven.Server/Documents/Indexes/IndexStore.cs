@@ -2535,6 +2535,7 @@ namespace Raven.Server.Documents.Indexes
             internal Action<string> AfterIndexCreation;
 
             internal Action<Index> OnRollingIndexFinished;
+            internal Action<Index> BeforeRollingIndexFinished;
             internal Action<Index> OnRollingIndexStart;
             internal Action<Index> BeforeRollingIndexStart;
             public TestingStuff(IndexStore parent)

@@ -2,6 +2,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class subscriptionQueryDefinitionPreview extends dialogViewModelBase {
+
+    view = require("views/database/status/subscriptionQueryDefinitionPreview.html");
     
     taskName = ko.observable<string>();
     query = ko.observable<string>();

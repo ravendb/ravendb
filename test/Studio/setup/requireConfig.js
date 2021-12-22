@@ -5,7 +5,6 @@ var require = {
         'jquery': studioWwwrootPrefix + 'lib/jquery/dist/jquery',
         'chai': studioWwwrootPrefix + 'lib/chai/chai',
         'utils': 'js/utils',
-        "moment": studioWwwrootPrefix + "lib/moment/moment",
         'ace': studioWwwrootPrefix + 'Content/ace',
         "d3": studioWwwrootPrefix + "lib/d3/d3",
         "rbush": studioWwwrootPrefix + "Content/rbush/rbush",

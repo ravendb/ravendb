@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
 import genUtils = require("common/generalUtils");
+import moment = require("moment");
 
 interface rqlTokensIndexInfo {
     update?: RegExpExecArray,

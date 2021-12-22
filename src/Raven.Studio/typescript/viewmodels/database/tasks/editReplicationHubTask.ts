@@ -12,7 +12,7 @@ import generateCertificateForReplicationCommand = require("commands/database/tas
 import replicationCertificateModel = require("models/database/tasks/replicationCertificateModel");
 import messagePublisher = require("common/messagePublisher");
 import fileDownloader = require("common/fileDownloader");
-import forge = require("forge/forge");
+import forge = require("node-forge");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import generateReplicationCertificateConfirm = require("viewmodels/database/tasks/generateReplicationCertificateConfirm");
 import fileImporter = require("common/fileImporter");
@@ -29,6 +29,8 @@ import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editReplicationHubTask extends viewModelBase {
 
+    view = require("views/database/tasks/editReplicationHubTask.html");
+    
     editedHubTask = ko.observable<ongoingTaskReplicationHubEditModel>();
     editedReplicationAccessItem = ko.observable<replicationAccessHubModel>(null);
 

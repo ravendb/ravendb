@@ -2,6 +2,7 @@
 import virtualNotification = require("common/notifications/models/virtualNotification");
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
+import moment = require("moment");
 
 class virtualDeleteByQuery extends virtualNotification {
     

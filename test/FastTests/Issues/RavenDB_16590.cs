@@ -68,6 +68,7 @@ namespace FastTests.Issues
                 "Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
                 "Indexing.ScratchSpaceLimitInMb",
+                "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
                 "Indexing.Throttling.TimeIntervalInMs",
                 "Indexing.TransactionSizeLimitInMb",
                 "Indexing.Static.SearchEngineType"

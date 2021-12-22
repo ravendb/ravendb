@@ -16,6 +16,8 @@ type gridItem = {
 
 class revertRevisionsDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/revertRevisionsDetails.html");
+    
     progress: KnockoutObservable<Raven.Client.Documents.Operations.Revisions.RevertResult>;
 
     private gridController = ko.observable<virtualGridController<gridItem>>();

@@ -9,6 +9,8 @@ import dialog = require("plugins/dialog");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class compactDatabaseDialog extends dialogViewModelBase {
+
+    view = require("views/resources/compactDatabaseDialog.html");
     
     database: databaseInfo;
     

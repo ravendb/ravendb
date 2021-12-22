@@ -4,6 +4,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class querySyntax extends dialogViewModelBase {
 
+    view = require("views/database/query/querySyntax.html");
+    
     dialogContainer: Element;
     clientVersion = viewModelBase.clientVersion;
 

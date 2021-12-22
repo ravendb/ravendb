@@ -2,6 +2,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 class etlScriptDefinitionPreview extends dialogViewModelBase {
+
+    view = require("views/database/status/etlScriptDefinitionPreview.html");
     
     taskName = ko.observable<string>();
     transformationName = ko.observable<string>();

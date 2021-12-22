@@ -16,6 +16,8 @@ import popoverUtils = require("common/popoverUtils");
 
 class revisions extends viewModelBase {
 
+    view = require("views/database/settings/revisions.html");
+
     defaultDocumentConfiguration = ko.observable<revisionsConfigurationEntry>();
     defaultConflictConfiguration = ko.observable<revisionsConfigurationEntry>();
     

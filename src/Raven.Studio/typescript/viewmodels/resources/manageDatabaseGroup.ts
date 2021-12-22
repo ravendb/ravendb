@@ -18,8 +18,13 @@ import messagePublisher = require("common/messagePublisher");
 import generalUtils = require("common/generalUtils");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 import jsonUtil = require("common/jsonUtil");
+import Sortable from "sortablejs";
 
 class manageDatabaseGroup extends viewModelBase {
+
+    view = require("views/resources/manageDatabaseGroup.html");
+    
+    legendView = require("views/partial/databaseGroupLegend.html");
 
     dynamicDatabaseDistribution = ko.observable<boolean>(false);
     nodes = ko.observableArray<databaseGroupNode>([]);
@@ -170,7 +175,7 @@ class manageDatabaseGroup extends viewModelBase {
 
         const list = $(".nodes-list .not-deleted-nodes")[0];
 
-        this.sortable = new Sortable(list,
+        this.sortable = new Sortable(list as HTMLElement,
             {
                 onEnd: (event: { oldIndex: number, newIndex: number }) => {
                     const nodes = this.nodes();

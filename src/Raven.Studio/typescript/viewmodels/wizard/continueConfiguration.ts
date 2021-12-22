@@ -3,6 +3,8 @@ import router = require("plugins/router");
 
 class continueConfiguration extends setupStep {
 
+    view = require("views/wizard/continueConfiguration.html");
+
      canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 

@@ -16,6 +16,8 @@ import constants = require("common/constants/constants");
 
 class eulaShell extends viewModelBase {
 
+    view = require("views/eulaShell.html");
+
     private router = router;
     studioLoadingFakeRequest: requestExecution;
     clientBuildVersion = ko.observable<clientBuildVersionDto>();

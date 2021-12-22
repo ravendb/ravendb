@@ -122,6 +122,8 @@ class patchList {
 }
 
 class patch extends viewModelBase {
+    
+    view = require("views/database/patch/patch.html");
 
     staleIndexBehavior = ko.observable("patchStale"); 
     staleTimeout = ko.observable<number>(60);
@@ -176,10 +178,6 @@ class patch extends viewModelBase {
     }
 
     private initValidation() {
-        this.patchSaveName.extend({
-            required: true
-        });
-        
         this.saveValidationGroup = ko.validatedObservable({
             patchSaveName: this.patchSaveName
         });

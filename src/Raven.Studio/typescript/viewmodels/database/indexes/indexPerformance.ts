@@ -12,6 +12,7 @@ import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
+import moment = require("moment");
 
 type rTreeLeaf = {
     minX: number;
@@ -151,6 +152,8 @@ class hitTest {
 class indexPerformance extends viewModelBase {
 
     /* static */
+    
+    view = require("views/database/indexes/indexPerformance.html");
 
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionIndexesWorkHeight = 22;

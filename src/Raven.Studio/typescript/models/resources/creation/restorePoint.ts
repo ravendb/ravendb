@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class restorePoint {
     dateTime: string;

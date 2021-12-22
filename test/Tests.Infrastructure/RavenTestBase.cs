@@ -232,7 +232,7 @@ namespace FastTests
                 .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
                 .ToList();
 
-            if (await Task.WhenAll(tasks).WaitAsync(timeout.Value))
+            if (await Task.WhenAll(tasks).WaitWithoutExceptionAsync(timeout.Value))
                 return;
 
             ThrowTimeoutException(nodes, tasks, index, timeout.Value);

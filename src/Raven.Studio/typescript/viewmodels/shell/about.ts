@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import buildInfo = require("models/resources/buildInfo");
@@ -11,8 +10,12 @@ import getConnectivityToLicenseServerCommand = require("commands/licensing/getCo
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
 import popoverUtils = require("common/popoverUtils");
+import app = require("durandal/app");
+import feedback from "viewmodels/shell/feedback";
 
 class about extends viewModelBase {
+
+    view = require("views/shell/about.html");
 
     accessManager = accessManager.default.aboutView;
     
@@ -28,7 +31,7 @@ class about extends viewModelBase {
     supportLabel = license.supportLabel;
     supportTableCssClass = license.supportTableCssClass;
     
-    clientVersion = shell.clientVersion;
+    clientVersion = viewModelBase.clientVersion;
     serverVersion = buildInfo.serverBuildVersion;
 
     developerLicense = license.developerLicense;
@@ -297,7 +300,8 @@ class about extends viewModelBase {
     }
 
     openFeedbackForm() {
-        shell.openFeedbackForm();
+        const dialog = new feedback(viewModelBase.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
     }
 
     checkConnectionToLicenseServer() {
@@ -331,5 +335,6 @@ class about extends viewModelBase {
             });
 }
 }
+
 
 export = about;

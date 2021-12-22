@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class glacierSettings extends amazonSettings {
+
+    view = require("views/database/tasks/destinations/glacierSettings.html");
+    
     vaultName = ko.observable<string>();
 
     targetOperation: string;

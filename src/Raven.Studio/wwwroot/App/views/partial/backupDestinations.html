@@ -204,7 +204,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div data-bind="compose: $data"></div>
+                        <div data-bind="compose: { model: $data }"></div>
                         <div data-bind="if: $parent.isServerWide()">
                             <div data-bind="template: { name: 'remote-folder-path' }"></div>
                         </div>
@@ -246,7 +246,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div data-bind="compose: $data"></div>
+                        <div data-bind="compose: { model: $data }"></div>
                         <div data-bind="if: $parent.isServerWide()">
                             <div data-bind="template: { name: 'remote-folder-path' }"></div>
                         </div>
@@ -288,7 +288,7 @@
                         <div data-bind="template: { name: 'backup-via-configuration-script' }"></div>
                     </div>
                     <div data-bind="collapse: !hasConfigurationScript()">
-                        <div data-bind="compose: $data"></div>
+                        <div data-bind="compose: { model: $data }"></div>
                         <div class="row margin-bottom" data-bind="if: $parent.isServerWide()">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4"></label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
@@ -316,7 +316,7 @@
 </div>
 
 <script type="text/html" id="backup-via-configuration-script">
-    <div data-bind="compose: 'partial/backupConfigurationScript.html'"></div>
+    <div data-bind="compose: $root.backupConfigurationView"></div>
 </script>
 
 <script type="text/html" id="remote-folder-path">

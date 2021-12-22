@@ -12,6 +12,8 @@ import eventsCollector = require("common/eventsCollector");
 
 class conflictResolution extends viewModelBase {
 
+    view = require("views/database/settings/conflictResolution.html");
+
     model = ko.observable<conflictResolutionModel>();
 
     collections: KnockoutObservableArray<collection>;

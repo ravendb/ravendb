@@ -9,8 +9,11 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import abstractAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/abstractAlertDetails");
 import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
+    
+    view = require("views/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails.html");
 
     currentDetails = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>();
     

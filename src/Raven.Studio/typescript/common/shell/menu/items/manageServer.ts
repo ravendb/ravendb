@@ -13,7 +13,7 @@ function getManageServerMenuItem() {
     const items: menuItem[] = [
         new leafMenuItem({
             route: 'admin/settings/cluster',
-            moduleId: "viewmodels/manage/cluster",
+            moduleId: require("viewmodels/manage/cluster"),
             title: "Cluster",
             nav: true,
             css: 'icon-cluster',
@@ -21,7 +21,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/addClusterNode',
-            moduleId: "viewmodels/manage/addClusterNode",
+            moduleId: require("viewmodels/manage/addClusterNode"),
             title: "Add Cluster Node",
             nav: false,
             dynamicHash: appUrl.forAddClusterNode,
@@ -29,7 +29,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
-            moduleId: 'viewmodels/manage/clientConfiguration',
+            moduleId: require("viewmodels/manage/clientConfiguration"),
             title: 'Client Configuration',
             nav: true,
             css: 'icon-client-configuration',
@@ -38,7 +38,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/studioConfiguration',
-            moduleId: 'viewmodels/manage/studioConfiguration',
+            moduleId: require("viewmodels/manage/studioConfiguration"),
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-studio-configuration',
@@ -47,7 +47,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
-            moduleId: "viewmodels/manage/adminJsConsole",
+            moduleId: require("viewmodels/manage/adminJsConsole"),
             title: "Admin JS Console",
             nav: true,
             css: 'icon-administrator-js-console',
@@ -56,7 +56,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/certificates',
-            moduleId: "viewmodels/manage/certificates",
+            moduleId: require("viewmodels/manage/certificates"),
             title: "Certificates",
             nav: true,
             css: 'icon-certificate',
@@ -65,7 +65,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideTasks',
-            moduleId: "viewmodels/manage/serverWideTasks",
+            moduleId: require("viewmodels/manage/serverWideTasks"),
             title: "Server-Wide Tasks",
             nav: true,
             css: 'icon-server-wide-tasks',
@@ -74,7 +74,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',
-            moduleId: "viewmodels/manage/editServerWideBackup",
+            moduleId: require("viewmodels/manage/editServerWideBackup"),
             title: "Edit Server-Wide Backup Task",
             nav: false,
             dynamicHash: appUrl.forEditServerWideBackup,
@@ -82,7 +82,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideExternalReplication',
-            moduleId: "viewmodels/manage/editServerWideExternalReplication",
+            moduleId: require("viewmodels/manage/editServerWideExternalReplication"),
             title: "Edit Server-Wide External Replication Task",
             nav: false,
             dynamicHash: appUrl.forEditServerWideExternalReplication,
@@ -90,7 +90,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomAnalyzers',
-            moduleId: "viewmodels/manage/serverWideCustomAnalyzers",
+            moduleId: require("viewmodels/manage/serverWideCustomAnalyzers"),
             title: "Server-Wide Analyzers",
             nav: true,
             css: 'icon-server-wide-custom-analyzers',
@@ -99,7 +99,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideCustomAnalyzer',
-            moduleId: "viewmodels/manage/editServerWideCustomAnalyzer",
+            moduleId: require("viewmodels/manage/editServerWideCustomAnalyzer"),
             title: "Edit Server-Wide Custom Analyzer",
             nav: false,
             dynamicHash: appUrl.forEditServerWideCustomAnalyzer,
@@ -107,7 +107,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/serverWideCustomSorters',
-            moduleId: "viewmodels/manage/serverWideCustomSorters",
+            moduleId: require("viewmodels/manage/serverWideCustomSorters"),
             title: "Server-Wide Sorters",
             nav: true,
             css: 'icon-server-wide-custom-sorters',
@@ -116,7 +116,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideCustomSorter',
-            moduleId: "viewmodels/manage/editServerWideCustomSorter",
+            moduleId: require("viewmodels/manage/editServerWideCustomSorter"),
             title: "Edit Server-Wide Custom Sorter",
             nav: false,
             dynamicHash: appUrl.forEditServerWideCustomSorter,
@@ -126,7 +126,7 @@ function getManageServerMenuItem() {
         new separatorMenuItem('Debug'),
         new leafMenuItem({
             route: 'admin/settings/adminLogs',
-            moduleId: 'viewmodels/manage/adminLogs',
+            moduleId: require("viewmodels/manage/adminLogs"),
             title: 'Admin Logs',
             nav: true,
             css: 'icon-admin-logs',
@@ -135,7 +135,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/trafficWatch',
-            moduleId: 'viewmodels/manage/trafficWatch',
+            moduleId: require("viewmodels/manage/trafficWatch"),
             title: 'Traffic Watch',
             nav: true,
             css: 'icon-traffic-watch',
@@ -144,7 +144,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
-            moduleId: 'viewmodels/manage/infoPackage',
+            moduleId: require('viewmodels/manage/infoPackage'),
             title: 'Gather Debug Info',
             nav: true,
             css: 'icon-gather-debug-information',
@@ -153,7 +153,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/storageReport',
-            moduleId: 'viewmodels/manage/storageReport',
+            moduleId: require('viewmodels/manage/storageReport'),
             title: 'Storage Report',
             tooltip: "Storage Report",
             nav: true,
@@ -163,7 +163,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/ioStats',
-            moduleId: 'viewmodels/manage/serverWideIoStats',
+            moduleId: require('viewmodels/manage/serverWideIoStats'),
             title: 'IO Stats',
             tooltip: "Displays IO metrics status",
             nav: true,
@@ -173,7 +173,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/captureStackTraces',
-            moduleId: 'viewmodels/manage/captureStackTraces',
+            moduleId: require('viewmodels/manage/captureStackTraces'),
             title: 'Stack Traces',
             nav: true,
             css: 'icon-stack-traces', 
@@ -182,7 +182,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',
-            moduleId: 'viewmodels/manage/runningQueries',
+            moduleId: require('viewmodels/manage/runningQueries'),
             title: 'Running Queries',
             nav: true,
             css: 'icon-manage-server-running-queries',
@@ -190,7 +190,7 @@ function getManageServerMenuItem() {
         }),
         new leafMenuItem({
             route: 'admin/settings/debug/advanced*details',
-            moduleId: 'viewmodels/manage/debugAdvancedParent',
+            moduleId: require('viewmodels/manage/debugAdvancedParent'),
             title: 'Advanced',
             nav: true,
             css: 'icon-debug-advanced',

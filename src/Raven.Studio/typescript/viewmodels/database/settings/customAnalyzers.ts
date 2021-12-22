@@ -12,6 +12,9 @@ import accessManager = require("common/shell/accessManager");
 
 
 class customAnalyzers extends viewModelBase {
+
+    view = require("views/database/settings/customAnalyzers.html");
+    
     analyzers = ko.observableArray<analyzerListItemModel>([]);
     serverWideAnalyzers = ko.observableArray<analyzerListItemModel>([]);
     

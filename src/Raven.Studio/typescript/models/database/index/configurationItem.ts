@@ -29,6 +29,7 @@ class configurationItem {
         "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
         "Indexing.ScratchSpaceLimitInMb",
         "Indexing.Throttling.TimeIntervalInMs",
+        "Indexing.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecutedInMin",
         "Indexing.TransactionSizeLimitInMb",
         "Indexing.Static.SearchEngineType"
     ];

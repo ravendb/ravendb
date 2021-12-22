@@ -4,6 +4,8 @@ import dumpIndexCommand = require("commands/database/index/dumpIndexCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 
 class dumpDialog extends dialogViewModelBase {
+    
+    view = require("views/database/indexes/dumpDialog.html");
 
     indexName = ko.observable<string>();
     

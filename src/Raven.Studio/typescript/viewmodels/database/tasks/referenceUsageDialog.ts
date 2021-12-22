@@ -3,6 +3,8 @@ import rootSqlTable = require("models/database/tasks/sql/rootSqlTable");
 import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class referenceUsageDialog extends dialogViewModelBase {
+
+    view = require("views/database/tasks/referenceUsageDialog.html");
     
     constructor(private table: rootSqlTable, private references: Array<sqlReference>, private action: (ref: sqlReference, action: sqlMigrationAction) => void,
                 private goToTableFunc: (targetTable: rootSqlTable) => void) {

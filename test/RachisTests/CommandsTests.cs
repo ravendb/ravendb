@@ -41,7 +41,7 @@ namespace RachisTests
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await waitForAllCommits.WaitAsync(LongWaitTime), "didn't commit in time");
+            Assert.True(await waitForAllCommits.WaitWithoutExceptionAsync(LongWaitTime), "didn't commit in time");
         }
 
         [Fact]
@@ -90,7 +90,7 @@ namespace RachisTests
                     lastIndex = leader.GetLastEntryIndex(context);
             }
             var waitForAllCommits = nonLeader.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-            Assert.True(await waitForAllCommits.WaitAsync(LongWaitTime), "didn't commit in time");
+            Assert.True(await waitForAllCommits.WaitWithoutExceptionAsync(LongWaitTime), "didn't commit in time");
 
             Assert.True(tasks.All(t => t.Status == TaskStatus.RanToCompletion), "Some commands didn't complete");
             DisconnectFromNode(leader);
@@ -99,7 +99,7 @@ namespace RachisTests
                 try
                 {
                     var task = leader.PutAsync(new TestCommand { Name = "test", Value = commandCount });
-                    Assert.True(await task.WaitAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
+                    Assert.True(await task.WaitWithoutExceptionAsync((int)leader.ElectionTimeout.TotalMilliseconds * 10));
                     await task;
                     Assert.True(false, "We should have gotten an error");
                 }

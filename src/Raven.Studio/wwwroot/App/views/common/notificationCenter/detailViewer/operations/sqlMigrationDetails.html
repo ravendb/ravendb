@@ -74,7 +74,7 @@
             </div>
             <pre class="margin-top migration-messages" data-bind="visible: detailsVisible, if: detailsVisible"><code data-bind="text: messagesJoined"></code></pre>
         </div>
-        <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/operations/footerPartial.html'">
+        <div class="modal-footer" data-bind="compose: $root.footerPartialView">
         </div>
     </div>
 </div>

@@ -6,6 +6,9 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 
 class dumpRawIndexDataDetails extends abstractOperationDetails {
+    
+    view = require("views/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails.html");
+    
     progress: KnockoutObservable<Raven.Server.Documents.Handlers.Admin.AdminIndexHandler.DumpIndexResult>;
 
     constructor(op: operation, notificationCenter: notificationCenter) {

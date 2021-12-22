@@ -29,6 +29,8 @@ class categoryInfo {
 }
 
 class databaseSettings extends viewModelBase {
+
+    view = require("views/database/settings/databaseSettings.html");
     
     allEntries = ko.observableArray<models.settingsEntry>([]);
     isAnyMatchingEntries: KnockoutComputed<boolean>;

@@ -34,6 +34,7 @@ using Voron.Schema;
 using Voron.Util;
 using Voron.Util.Conversion;
 using Constants = Voron.Global.Constants;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron
 {

@@ -3,10 +3,19 @@
 import getCronExpressionOccurrenceCommand = require("commands/database/tasks/getCronExpressionOccurrenceCommand");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
+import moment = require("moment");
+import cronstrue = require("cronstrue");
 
 type cronPeriod = "minute" | "hour" | "day" | "week" | "month" | "year" | "custom";
 
 class cronEditor {
+    
+    view = require("views/common/cronEditor.html");
+    
+    getView() {
+        return this.view;
+    }
+    
     targetField: KnockoutObservable<string>;
     
     static periods: cronPeriod[] = ["minute", "hour", "day", "week", "month", "year", "custom"];

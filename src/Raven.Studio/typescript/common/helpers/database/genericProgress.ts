@@ -1,5 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class genericProgress {
     processed = ko.observable<number>();
