@@ -74,6 +74,14 @@ namespace Raven.Server.Web.System
 
         public const string ZipFileName = "Raven.Studio.zip";
 
+        private const string DefaultHstsValue = "max-age=31536000";
+        private static IList<string> HstsExcludedHosts = new List<string>
+        {
+            "localhost",
+            "127.0.0.1", // ipv4
+            "[::1]" // ipv6
+        };
+
         private static string _zipFilePath;
         private static long _zipFileLastChangeTicks;
 
@@ -167,6 +175,7 @@ namespace Raven.Server.Web.System
             
             var error = GetStringQueryString("err");
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+            SetupSecurityHeaders();
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
 
@@ -290,6 +299,8 @@ namespace Raven.Server.Web.System
                 }
             }
 
+            SetupSecurityHeaders();
+            
             HttpContext.Response.Headers["Raven-Static-Served-From"] = "Cache";
             if (await ServeFromCache(serverRelativeFileName))
                 return;
@@ -322,6 +333,25 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
 
             await HttpContext.Response.WriteAsync(message);
+        }
+
+        private void SetupSecurityHeaders()
+        {
+            HttpContext.Response.Headers["X-Frame-Options"] = "DENY";
+            HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+            HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            
+            var isSecuredServer = ServerStore.Server.Certificate?.Certificate != null;
+            
+            if (isSecuredServer && Server.Configuration.Security.DisableHsts == false)
+            {
+                var host = HttpContext.Request.Host.Host;
+
+                if (HstsExcludedHosts.Contains(host) == false)
+                {
+                    HttpContext.Response.Headers["strict-transport-security"] = DefaultHstsValue;
+                }
+            }
         }
 
         private async Task LoadFilesIntoCache()

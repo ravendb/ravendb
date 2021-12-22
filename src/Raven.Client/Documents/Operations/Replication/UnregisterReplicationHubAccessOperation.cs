@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeUriString(_hubName)}&thumbprint={Uri.EscapeUriString(_thumbprint)}";
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeDataString(_hubName)}&thumbprint={Uri.EscapeDataString(_thumbprint)}";
 
                 var request = new HttpRequestMessage
                 {

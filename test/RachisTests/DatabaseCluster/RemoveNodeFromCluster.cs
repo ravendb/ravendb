@@ -50,7 +50,7 @@ namespace RachisTests.DatabaseCluster
 
                 //reconnect the removed node to the original cluster
                 leaderNode = await ActionWithLeader(leader => leader.ServerStore.AddNodeToClusterAsync(removed.WebUrl, removed.ServerStore.NodeTag));
-                Assert.True(await removed.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
+                Assert.True(await removed.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
                     "Removed node wasn't reconnected with the cluster.");
                 await removed.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, leaderNode.ServerStore.LastRaftCommitIndex);
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
@@ -372,7 +372,7 @@ namespace RachisTests.DatabaseCluster
 
                 //reconnect the removed node to the original cluster
                 var leaderNode = await ActionWithLeader(leader => leader.ServerStore.AddNodeToClusterAsync(removed.WebUrl, removed.ServerStore.NodeTag));
-                Assert.True(await removed.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
+                Assert.True(await removed.ServerStore.WaitForState(RachisState.Follower, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
                     "Removed node wasn't reconnected with the cluster.");
                 await removed.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, leaderNode.ServerStore.LastRaftCommitIndex);
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
@@ -418,7 +418,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     var followerTasks = Servers.Where(s => s != leader).Select(s => s.ServerStore.WaitForState(RachisState.Leader, cts.Token));
                     await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(leader.ServerStore.NodeTag));
-                    Assert.True(await Task.WhenAny(followerTasks).WaitAsync(TimeSpan.FromSeconds(30)));
+                    Assert.True(await Task.WhenAny(followerTasks).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)));
                 }
                 finally
                 {
@@ -446,7 +446,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(removed.ServerStore.NodeTag));
-                Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30)),
+                Assert.True(await removed.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
                     $"Removed node wasn't move to passive state ({removed.ServerStore.Engine.CurrentState})");
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));

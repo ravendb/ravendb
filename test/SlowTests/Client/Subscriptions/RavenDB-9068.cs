@@ -35,7 +35,7 @@ namespace SlowTests.Client.Subscriptions
                 cts.Cancel();
 
                 var task = Assert.ThrowsAnyAsync<Exception>(() => subscriptionTask);
-                Assert.True(await task.WaitAsync(_reasonableWaitTime));
+                Assert.True(await task.WaitWithoutExceptionAsync(_reasonableWaitTime));
                 var e = await task;
                 Assert.True(e is OperationCanceledException || e is TaskCanceledException);
 
@@ -45,7 +45,7 @@ namespace SlowTests.Client.Subscriptions
                 cts.Cancel();
 
                 task = Assert.ThrowsAnyAsync<Exception>(() => subscriptionTask);
-                Assert.True(await task.WaitAsync(_reasonableWaitTime));
+                Assert.True(await task.WaitWithoutExceptionAsync(_reasonableWaitTime));
                 e = await task;
                 Assert.True(e is OperationCanceledException || e is TaskCanceledException);
             }

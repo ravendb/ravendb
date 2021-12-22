@@ -715,7 +715,7 @@ namespace Tests.Infrastructure
                 }
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
@@ -825,7 +825,7 @@ namespace Tests.Infrastructure
             await WaitForClusterTopologyOnAllNodes(clusterNodes);
 
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitWithoutExceptionAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = "The leader has changed while waiting for cluster to become stable. All nodes status: ";
             if (condition == false)
             {

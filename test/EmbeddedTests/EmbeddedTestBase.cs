@@ -38,13 +38,13 @@ namespace EmbeddedTests
                 Directory.CreateDirectory(dataDirectory);
 
 #if DEBUG
-            var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Debug/net5.0/Raven.Server.runtimeconfig.json";
+            var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Debug/net6.0/Raven.Server.runtimeconfig.json";
             if (File.Exists(runtimeConfigPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Debug/net5.0/Raven.Server.runtimeconfig.json";
+                runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Debug/net6.0/Raven.Server.runtimeconfig.json";
 #else
-                var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Release/net5.0/Raven.Server.runtimeconfig.json";
+                var runtimeConfigPath = @"../../../../../src/Raven.Server/bin/x64/Release/net6.0/Raven.Server.runtimeconfig.json";
                 if (File.Exists(runtimeConfigPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Release/net5.0/Raven.Server.runtimeconfig.json";
+                    runtimeConfigPath = @"../../../../../src/Raven.Server/bin/Release/net6.0/Raven.Server.runtimeconfig.json";
 #endif
 
             var runtimeConfigFileInfo = new FileInfo(runtimeConfigPath);

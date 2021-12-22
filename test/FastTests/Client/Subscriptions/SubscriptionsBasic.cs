@@ -106,7 +106,7 @@ namespace FastTests.Client.Subscriptions
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                     }))
                     {
-                        Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() => secondSubscription.Run(x => { })).WaitAsync(_reasonableWaitTime));
+                        Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() => secondSubscription.Run(x => { })).WaitWithoutExceptionAsync(_reasonableWaitTime));
                     }
                 }
             }
@@ -599,7 +599,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() =>
                 {
                     return subscriptionTask;
-                }).WaitAsync(_reasonableWaitTime));
+                }).WaitWithoutExceptionAsync(_reasonableWaitTime));
 
                 store.Subscriptions.DropConnection(id);
 

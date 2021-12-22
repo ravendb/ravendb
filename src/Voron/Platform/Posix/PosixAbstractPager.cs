@@ -7,6 +7,7 @@ using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Platform.Posix
 {

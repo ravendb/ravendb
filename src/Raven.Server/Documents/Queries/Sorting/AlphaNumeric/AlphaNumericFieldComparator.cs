@@ -9,6 +9,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
