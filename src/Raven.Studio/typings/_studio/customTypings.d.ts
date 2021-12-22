@@ -24,14 +24,6 @@ declare module "qrcodejs" {
     export const QRCode: any;
 }
 
-/// forge 
-
-declare module "node-forge" {
-    namespace pki {
-        function certificateToAsn1(certificate: pki.Certificate): asn1.Asn1;
-    }
-}
-
 /// Favico
 ///
 /// Using *any* as official typings are broken
