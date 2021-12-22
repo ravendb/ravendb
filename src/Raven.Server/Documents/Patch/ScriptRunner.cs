@@ -17,7 +17,6 @@ using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -206,6 +205,7 @@ namespace Raven.Server.Documents.Patch
             public DateTime? IncludeRevisionByDateTimeBefore;
             public HashSet<string> CompareExchangeValueIncludes;
             private HashSet<string> _documentIds;
+            private CancellationToken _token;
 
             public bool ReadOnly
             {
@@ -1368,9 +1368,8 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
-                //TODO: properly pass cancellation token
-                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null, token: default);
-
+                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, loadedDocuments: null, token: _token);
+                
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);
 
@@ -1819,16 +1818,17 @@ namespace Raven.Server.Documents.Patch
             private JsValue[] _args = Array.Empty<JsValue>();
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)
             {
-                return Run(jsonCtx, docCtx, method, null, args, scope);
+                return Run(jsonCtx, docCtx, method, null, args, scope, token);
             }
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)
             {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
                 _scope = scope;
+                _token = token;
 
                 JavaScriptUtils.Reset(_jsonCtx);
 
