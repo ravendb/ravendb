@@ -318,8 +318,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                     Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, markerId, (u) => u.Id == markerId, Debugger.IsAttached ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(15)));
                 }
 
-                // TODO: RavenDB-16914
-                //  Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database));
+                Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, database), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
 
                 foreach (var server in cluster.Nodes)
                 {
