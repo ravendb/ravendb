@@ -899,7 +899,8 @@ namespace Raven.Server.Documents.TimeSeries
                 _name = name;
 
                 FromReplication = fromReplicationChangeVector != null;
-                _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
+                if (context.LastDatabaseChangeVector == null)
+                    _tss.GenerateChangeVector(_context, fromReplicationChangeVector); // update the database change vector
             }
 
             public TimeSeriesSegmentHolder(
@@ -914,10 +915,6 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 SliceHolder = new TimeSeriesSliceHolder(_context, docId, name, _collection.Name).WithBaseline(timeStamp);
                 SliceHolder.CreateSegmentBuffer();
-
-                FromReplication = fromReplicationChangeVector != null;
-                if (context.LastDatabaseChangeVector == null)
-                    _tss.GenerateChangeVector(context, fromReplicationChangeVector); // update the database change vector
             }
 
             public TimeSeriesSegmentHolder(
