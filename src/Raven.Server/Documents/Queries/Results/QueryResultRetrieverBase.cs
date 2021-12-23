@@ -390,7 +390,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                if (ReferenceEquals(newData, doc.Data) == false)
+                if (ReferenceEquals(newData, doc.Data) == false
+                    && doc.IgnoreDispose == false) // this is being referenced by the _loadedDocuments still...
                     doc.Data?.Dispose();
             }
             catch (Exception)
@@ -399,7 +400,14 @@ namespace Raven.Server.Documents.Queries.Results
                 throw;
             }
 
-            doc.Data = newData;
+            if (doc.IgnoreDispose)// this is being retained by the _loadedDocuments
+            {
+                doc = doc.CloneWith(context, newData);
+            }
+            else
+            {
+                doc.Data = newData;
+            }
             FinishDocumentSetup(doc, scoreDoc);
 
             return doc;
