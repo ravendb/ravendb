@@ -1105,21 +1105,8 @@ namespace Raven.Server.Documents.Replication
                     HashSet<LazyStringValue> docCountersToRecreate = null;
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
-
-                    var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                    var replicationItems = _replicationInfo.ReplicatedItems;
-                    tx.OnDispose += _ =>
-                    {
-                        if (tx.Committed == false)
-                            return;
-
-                        for (int i = 0; i < replicationItems.Length; i++)
-                        {
-                            replicationItems[i].Dispose();
-                        }
-                    };
-
-                    foreach (var item in replicationItems)
+                    
+                    foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         if (lastTransactionMarker != item.TransactionMarker)
                         {
