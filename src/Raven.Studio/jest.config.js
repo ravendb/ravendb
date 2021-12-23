@@ -15,5 +15,14 @@ module.exports = {
     },
     "setupFilesAfterEnv": [
       "jest-extended"
-    ]
+    ],
+    moduleDirectories: [
+        "node_modules",
+        "<rootDir>/typescript"
+    ],
+    moduleNameMapper: {
+        "^common/(.*)$": "<rootDir>/typescript/common/$1",
+        "^models/(.*)$": "<rootDir>/typescript/models/$1",
+        "^d3$": "<rootDir>/wwwroot/Content/custom_d3"
+    }
 }
