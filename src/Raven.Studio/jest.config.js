@@ -27,5 +27,9 @@ module.exports = {
         "^common/(.*)$": "<rootDir>/typescript/common/$1",
         "^models/(.*)$": "<rootDir>/typescript/models/$1",
         "^d3$": "<rootDir>/wwwroot/Content/custom_d3"
-    }
+    },
+    "reporters": [
+        "default",
+        "jest-junit"
+    ]
 }
