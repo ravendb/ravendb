@@ -1,14 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -24,6 +28,29 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class ServerWideDebugInfoPackageHandler : RequestHandler
     {
         private const string _serverWidePrefix = "server-wide";
+        internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
+        {
+            nameof(DatabaseRecord.DatabaseName),
+            nameof(DatabaseRecord.Encrypted),
+            nameof(DatabaseRecord.Disabled),
+            nameof(DatabaseRecord.EtagForBackup),
+            nameof(DatabaseRecord.DeletionInProgress),
+            nameof(DatabaseRecord.DatabaseState),
+            nameof(DatabaseRecord.Topology),
+            nameof(DatabaseRecord.ConflictSolverConfig),
+            nameof(DatabaseRecord.Sorters),
+            nameof(DatabaseRecord.Indexes),
+            nameof(DatabaseRecord.IndexesHistory),
+            nameof(DatabaseRecord.AutoIndexes),
+            nameof(DatabaseRecord.Revisions),
+            nameof(DatabaseRecord.RevisionsForConflicts),
+            nameof(DatabaseRecord.Expiration),
+            nameof(DatabaseRecord.Refresh),
+            nameof(DatabaseRecord.Client),
+            nameof(DatabaseRecord.Studio),
+            nameof(DatabaseRecord.TruncatedClusterTransactionCommandsCount),
+            nameof(DatabaseRecord.UnusedDatabaseIds),
+        };
 
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterWideInfoPackageForRemote()
@@ -47,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         await WriteServerInfo(archive, jsonOperationContext, localEndpointClient);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
-                            await WriteClusterWideDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName);
+                            WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext);
                             await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName);
                         }
 
@@ -226,7 +253,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                             continue;
                         
-                        await WriteClusterWideDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName, token);
+                        WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext, token);
 
                         if (rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
@@ -248,17 +275,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
-
-        private static async Task WriteClusterWideDatabaseInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
-            string databaseName, CancellationToken token = default)
-        {
-            var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>()
-            {
-                { "name", new Microsoft.Extensions.Primitives.StringValues(databaseName) }
-            };
-            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.ClusterWideDatabaseInfo, databaseName, endpointParameters,  token);
-        }
-
+        
         private static async Task WriteDatabaseInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
             string databaseName, CancellationToken token = default)
         {
@@ -309,6 +326,61 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
                 }
+            }
+        }
+
+        private async void WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            Debug.Assert(feature != null);
+            if (feature.CanAccess(databaseName, requireAdmin:true) == false)
+                return;
+
+            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(
+                new RouteInformation("", "/database-record", default, false, false, default, false), 
+                databaseName);
+            try
+            {
+                var entry = archive.CreateEntry(entryName);
+                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                using (var entryStream = entry.Open())
+                using (var writer = new BlittableJsonTextWriter(jsonOperationContext, entryStream))
+                {
+                    jsonOperationContext.Write(writer, GetDatabaseRecordForDebugPackage(transactionCtx, databaseName));
+                    writer.Flush();
+                    await entryStream.FlushAsync(token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
+            }
+        }
+        
+        public BlittableJsonReaderObject GetDatabaseRecordForDebugPackage(TransactionOperationContext context, string databaseName)
+        {
+            var databaseRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, databaseName);
+
+            if (databaseRecord == null)
+                throw new RavenException($"Couldn't fetch {nameof(DatabaseRecord)} from server for database '{databaseName}'");
+
+            var djv = new DynamicJsonValue();
+            foreach (string fld in FieldsThatShouldBeExposedForDebug)
+            {
+                if (databaseRecord.Raw.TryGetMember(fld, out var obj))
+                {
+                    djv[fld] = obj;
+                }
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonContext))
+            {
+                return jsonContext.ReadObject(djv, "databaserecord");
             }
         }
 

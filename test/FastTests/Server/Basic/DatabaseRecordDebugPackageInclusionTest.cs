@@ -20,20 +20,27 @@ namespace FastTests.Server.Basic
             {
                 nameof(DatabaseRecord.RavenConnectionStrings),
                 nameof(DatabaseRecord.SqlConnectionStrings),
+                nameof(DatabaseRecord.Settings),
+                nameof(DatabaseRecord.PeriodicBackups),
+                nameof(DatabaseRecord.ExternalReplications),
+                nameof(DatabaseRecord.SinkPullReplications),
+                nameof(DatabaseRecord.HubPullReplications),
+                nameof(DatabaseRecord.RavenEtls),
+                nameof(DatabaseRecord.SqlEtls),
             };
             
-            foreach (var safe in DatabaseRecordHandler.FieldsThatShouldBeExposedForDebug)
+            foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)
             {
                 Assert.False(sensitiveFieldsThatShouldNotBeExposedForDebug.Contains(safe),
-                    $"Can't have the field '{safe}' in both {nameof(sensitiveFieldsThatShouldNotBeExposedForDebug)} and {nameof(DatabaseRecordHandler.FieldsThatShouldBeExposedForDebug)}");
+                    $"Can't have the field '{safe}' in both {nameof(sensitiveFieldsThatShouldNotBeExposedForDebug)} and {nameof(ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)}");
             }
 
-            var allFields = DatabaseRecordHandler.FieldsThatShouldBeExposedForDebug.Concat(sensitiveFieldsThatShouldNotBeExposedForDebug).ToHashSet();
+            var allFields = ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug.Concat(sensitiveFieldsThatShouldNotBeExposedForDebug).ToHashSet();
 
             foreach (var prop in typeof(DatabaseRecord).GetFields())
             {
                 Assert.True(allFields.Contains(prop.Name),
-                    $"Field '{prop.Name}' in class {nameof(DatabaseRecord)} needs to be checked for being included in the debug package info at '{nameof(DatabaseRecordHandler.FieldsThatShouldBeExposedForDebug)}'");
+                    $"Field '{prop.Name}' in class {nameof(DatabaseRecord)} needs to be checked for being included in the debug package info at '{nameof(ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)}'");
             }
         }
     }
