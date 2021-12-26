@@ -550,8 +550,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     foreach (var item in ReplicatedItems)
                     {
-                        item.Document?.Dispose();
-                        item.CounterValues?.Dispose();
+                        item.Dispose();
                     }
 
                     ArrayPool<ReplicationItem>.Shared.Return(ReplicatedItems.Array, clearArray: true);
@@ -781,6 +780,8 @@ namespace Raven.Server.Documents.Replication
 
             public void Dispose()
             {
+                Document?.Dispose();
+                CounterValues?.Dispose();
                 if (Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                 {
                     KeyDispose.Dispose();
@@ -1276,20 +1277,7 @@ namespace Raven.Server.Documents.Replication
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
-                    var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                    var replicationItems = _replicationInfo.ReplicatedItems;
-                    tx.OnDispose += _ =>
-                    {
-                        if (tx.Committed == false)
-                            return;
-
-                        for (int i = 0; i < replicationItems.Count; i++)
-                        {
-                            replicationItems[i].Dispose();
-                        }
-                    };
-
-                    foreach (var item in replicationItems)
+                    foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         if (lastTransactionMarker != item.TransactionMarker)
                         {
