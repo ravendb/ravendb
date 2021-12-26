@@ -173,14 +173,14 @@ module.exports = (env, args) => {
                     test: /\.(ttf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
                     type: "asset",
                     generator: {
-                        filename: 'assets/fonts/[name].[hash:8][ext][query]',
+                        filename: 'assets/fonts/[name].[hash:8][ext]',
                     }
                 },
                 {
                     test: /\.(png|jpg|jpeg|gif|svg)$/,
                     type: "asset",
                     generator: {
-                        filename: 'assets/img/[name].[hash:8][ext][query]'
+                        filename: 'assets/img/[name].[hash:8][ext]'
                     }
                 }
             ]
