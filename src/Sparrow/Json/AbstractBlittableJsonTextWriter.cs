@@ -695,6 +695,7 @@ namespace Sparrow.Json
             try
             {
                 FlushInternal();
+                _stream.Flush();
             }
             catch (ObjectDisposedException)
             {
