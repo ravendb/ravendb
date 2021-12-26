@@ -13,6 +13,9 @@ module.exports = {
     'transform': {
         '.*\.tsx?$': 'ts-jest'
     },
+    "setupFiles": [
+        "./scripts/setup_jest.js"
+    ],
     "setupFilesAfterEnv": [
       "jest-extended"
     ],
