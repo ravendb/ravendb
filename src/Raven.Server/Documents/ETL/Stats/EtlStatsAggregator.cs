@@ -68,7 +68,8 @@ namespace Raven.Server.Documents.ETL.Stats
                 NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
-                BatchCompleteReason = Stats.BatchCompleteReason,
+                BatchTransformationCompleteReason = Stats.BatchTransformationCompleteReason,
+                BatchStopReason = Stats.BatchStopReason,
                 CurrentlyAllocated = new Size(Stats.CurrentlyAllocated.GetValue(SizeUnit.Bytes)),
                 BatchSize = new Size(Stats.BatchSize.GetValue(SizeUnit.Bytes)),
             };
@@ -108,7 +109,8 @@ namespace Raven.Server.Documents.ETL.Stats
                 NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
-                BatchCompleteReason = Stats.BatchCompleteReason
+                BatchTransformationCompleteReason = Stats.BatchTransformationCompleteReason,
+                BatchStopReason = Stats.BatchStopReason
             };
         }
 

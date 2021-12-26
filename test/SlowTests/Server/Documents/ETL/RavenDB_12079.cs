@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 var stats = etlProcess.GetPerformanceStats();
 
-                Assert.Contains("The batch was stopped after processing 64 items because of low memory", stats.Select(x => x.BatchCompleteReason));
+                Assert.Contains("The batch was stopped after processing 64 items because of low memory", stats.Select(x => x.BatchTransformationCompleteReason));
             }
         }
     }

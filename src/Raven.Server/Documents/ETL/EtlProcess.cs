@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.ETL
 
                             Database.NotificationCenter.Add(alert);
 
-                            stats.RecordBatchCompleteReason(message);
+                            stats.RecordBatchTransformationCompleteReason(message);
                             stats.RecordTransformationError();
 
                             Stop(reason: message);
@@ -393,9 +393,9 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
 
-                if (batchStopped == false && stats.HasBatchCompleteReason() == false)
+                if (batchStopped == false && stats.HasBatchTransformationCompleteReason() == false)
                 {
-                    stats.RecordBatchCompleteReason("No items to process");
+                    stats.RecordBatchTransformationCompleteReason("No more items to process");
                 }
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
@@ -424,10 +424,15 @@ namespace Raven.Server.Documents.ETL
                 {
                     if (CancellationToken.IsCancellationRequested == false)
                     {
+                        string msg = $"Failed to load transformed data for '{Name}'";
+
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+                        {
+                            Logger.Operations(msg, e);
+                        }
 
                         stats.RecordLoadFailure();
+                        stats.RecordBatchStopReason($"{msg} : {e}");
 
                         EnterFallbackMode();
 
@@ -463,7 +468,7 @@ namespace Raven.Server.Documents.ETL
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"[{Name}] {reason}");
 
-                stats.RecordBatchCompleteReason(reason);
+                stats.RecordBatchTransformationCompleteReason(reason);
 
                 return false;
             }
@@ -477,7 +482,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
 
-                    stats.RecordBatchCompleteReason(reason);
+                    stats.RecordBatchTransformationCompleteReason(reason);
 
                     return false;
                 }
@@ -493,7 +498,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
 
-                    stats.RecordBatchCompleteReason(reason);
+                    stats.RecordBatchTransformationCompleteReason(reason);
 
                     return false;
                 }
@@ -506,7 +511,7 @@ namespace Raven.Server.Documents.ETL
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"[{Name}] {reason}");
 
-                stats.RecordBatchCompleteReason(reason);
+                stats.RecordBatchTransformationCompleteReason(reason);
 
                 return false;
             }
@@ -518,7 +523,7 @@ namespace Raven.Server.Documents.ETL
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"[{Name}] {reason}");
 
-                stats.RecordBatchCompleteReason(reason);
+                stats.RecordBatchTransformationCompleteReason(reason);
                 return false;
             }
 
@@ -544,7 +549,7 @@ namespace Raven.Server.Documents.ETL
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"[{Name}] {reason}");
 
-                    stats.RecordBatchCompleteReason(reason);
+                    stats.RecordBatchTransformationCompleteReason(reason);
 
                     ctx.DoNotReuse = true;
 
@@ -561,7 +566,7 @@ namespace Raven.Server.Documents.ETL
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"[{Name}] {reason}");
 
-                stats.RecordBatchCompleteReason(reason);
+                stats.RecordBatchTransformationCompleteReason(reason);
 
                 return false;
             }
@@ -638,8 +643,17 @@ namespace Raven.Server.Documents.ETL
             if (_longRunningWork == null)
                 return;
 
+            string msg = $"Stopping {Tag} process: '{Name}'. Reason: {reason}";
+
             if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Stopping {Tag} process: '{Name}'. Reason: {reason}");
+            {
+                Logger.Operations(msg);
+            }
+
+            if (_lastStats?.Completed == false)
+            {
+                ReportStopReasonToStats(msg);
+            }
 
             _cts.Cancel();
 
@@ -648,6 +662,20 @@ namespace Raven.Server.Documents.ETL
 
             if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
+        }
+
+        private void ReportStopReasonToStats(string msg)
+        {
+            try
+            {
+                var agg = (EtlStatsAggregator<TStatsScope, TEtlPerformanceOperation>)_lastStats;
+                var stats = (TStatsScope)agg.StatsScope;
+                stats.RecordBatchStopReason(msg);
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         protected abstract TStatsScope CreateScope(EtlRunStats stats);
@@ -720,6 +748,7 @@ namespace Raven.Server.Documents.ETL
 
                                         Statistics.LastProcessedEtag = lastProcessed;
                                         Statistics.LastChangeVector = stats.ChangeVector;
+                                        RecordSuccessfulBatch(stats);
 
                                         UpdateMetrics(startTime, stats);
 
@@ -734,10 +763,12 @@ namespace Raven.Server.Documents.ETL
                             }
                             catch (Exception e)
                             {
-                                var message = $"Exception in ETL process '{Name}'";
+                                var message = $"{Tag} Exception in ETL process '{Name}'";
 
                                 if (Logger.IsOperationsEnabled)
-                                    Logger.Operations($"{Tag} {message}", e);
+                                    Logger.Operations(message, e);
+
+                                stats.RecordBatchStopReason($"{message} : {e}");
                             }
                         }
 
@@ -805,8 +836,14 @@ namespace Raven.Server.Documents.ETL
                 }
                 catch (Exception e)
                 {
+                    var msg = $"Unexpected error in {Tag} process: '{Name}'";
+
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Unexpected error in {Tag} process: '{Name}'", e);
+                    {
+                        Logger.Operations(msg, e);
+                    }
+
+                    ReportStopReasonToStats($"{msg} : {e}");
                 }
                 finally
                 {
@@ -814,6 +851,12 @@ namespace Raven.Server.Documents.ETL
                     _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
                 }
             }
+        }
+
+        private static void RecordSuccessfulBatch(TStatsScope stats)
+        {
+            const string message = "Successfully finished loading all batch items";
+            stats.RecordBatchStopReason(message);
         }
 
         protected void UpdateEtlProcessState(EtlProcessState state, DateTime? lastBatchTime = null)
@@ -917,8 +960,11 @@ namespace Raven.Server.Documents.ETL
 
             message.Append($" in {stats.Duration} (last loaded etag: {stats.LastLoadedEtag})");
 
-            if (stats.BatchCompleteReason != null)
-                message.Append($" Batch completion reason: {stats.BatchCompleteReason}");
+            if (stats.BatchTransformationCompleteReason != null)
+                message.Append($" Batch Transformation completion reason: {stats.BatchTransformationCompleteReason}");
+
+            if (stats.BatchStopReason != null)
+                message.Append($" Batch stop reason: {stats.BatchStopReason}");
 
             Logger.Info(message.ToString());
         }

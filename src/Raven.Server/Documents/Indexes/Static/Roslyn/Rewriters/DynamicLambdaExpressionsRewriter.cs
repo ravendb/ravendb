@@ -171,7 +171,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return node;
 
             var parentInvocation = GetInvocationParent(node);
-
             if (currentInvocation.ArgumentList.Arguments.Count > 0 && currentInvocation.ArgumentList.Arguments[0].Expression == node)
             {
                 if (node is SimpleLambdaExpressionSyntax)
@@ -181,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         case "ToDictionary":
                             return Visit(SyntaxFactory.ParseExpression($"(Func<KeyValuePair<dynamic, dynamic>, IEnumerable<KeyValuePair<dynamic, dynamic>>>)({node})"));
                         default:
-                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({node})"));
+                            return Visit(SyntaxFactory.ParseExpression($"(Func<dynamic, IEnumerable<dynamic>>)({ModifyLambdaForDynamicEnumerable(node)})"));
                     }
                 }
                 else
@@ -210,6 +209,24 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
+        private static SyntaxNode ModifyLambdaForDynamicEnumerable(LambdaExpressionSyntax node)
+        {
+            var lambda = node as SimpleLambdaExpressionSyntax;
+            if (lambda == null)
+                throw new InvalidOperationException($"Invalid lambda expression: {node}");
+
+            var alreadyCasted = GetAsCastExpression(lambda.Body);
+
+            if (alreadyCasted != null)
+            {
+                return SyntaxFactory.ParseExpression($"{lambda.WithBody(lambda.Body)}");
+            }
+
+            var cast = SyntaxFactory.ParseExpression($"Enumerable.Cast<dynamic>({lambda.Body})");
+
+            return SyntaxFactory.ParseExpression($"{lambda.WithBody(cast)}");
+        }
+        
         private static SyntaxNode ModifyLambdaForSelect(LambdaExpressionSyntax node, InvocationExpressionSyntax currentInvocation)
         {
             var parentMethod = GetParentMethod(currentInvocation);
