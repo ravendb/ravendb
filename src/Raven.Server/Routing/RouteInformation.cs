@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using StringSegment = Sparrow.StringSegment;
@@ -35,8 +34,7 @@ namespace Raven.Server.Routing
         public enum RouteType
         {
             None,
-            Databases,
-            ClusterWideDatabaseInfo // for database information that is not reliant on the database being up/enabled
+            Databases
         }
 
         public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, bool skipLastRequestTimeUpdate, CorsMode corsMode,
@@ -64,11 +62,6 @@ namespace Raven.Server.Routing
             if (typeof(DatabaseRequestHandler).IsAssignableFrom(action.DeclaringType))
             {
                 _typeOfRoute = RouteType.Databases;
-            }
-            
-            if (typeof(DatabaseRecordHandler).IsAssignableFrom(action.DeclaringType))
-            {
-                _typeOfRoute = RouteType.ClusterWideDatabaseInfo;
             }
 
             // CurrentRequestContext currentRequestContext
@@ -205,7 +198,7 @@ namespace Raven.Server.Routing
 
         public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
         {
-            if (_typeOfRoute == RouteType.None || _typeOfRoute == RouteType.ClusterWideDatabaseInfo)
+            if (_typeOfRoute == RouteType.None)
             {
                 return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
             }
