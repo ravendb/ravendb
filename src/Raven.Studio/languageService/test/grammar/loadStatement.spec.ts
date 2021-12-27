@@ -45,4 +45,15 @@ describe("LOAD statement parser", function() {
         expect(itemB._as._name.text)
             .toEqual("aliasB");
     });
+
+    it("load with reduce", function() {
+        const { parseTree, parser } = parseRql("from Orders as o\n" +
+            "group by Company\n" +
+            "order by Sum as long desc\n" +
+            "load Company as c\n" +
+            "select sum(o.Lines[].Quantity) as Sum, c.Name");
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(0);
+    });
 });
