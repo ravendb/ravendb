@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Voron;
 
@@ -121,8 +122,32 @@ namespace Corax.Queries
                 {
                     { nameof(IsBoosting), IsBoosting.ToString() },
                     { nameof(Count), $"{Count} [{Confidence}]" },
-                    { "FieldId", $"{_fieldId}" }
+                    { "FieldId", $"{_fieldId}" },
+                    { "Value", GetValue()},
+                    { "AuxValue", GetAuxValue()}
+
                 });
+        }
+
+        public string GetValue()
+        {
+            return ((object)_value) switch
+            {
+                long => ((long)(object)_value).ToString(),
+                double => ((double)(object)_value).ToString(CultureInfo.InvariantCulture),
+                Slice => ((Slice)(object)_value).ToString(),
+                _ => "Unknown type of value"
+            };
+        }
+        public string GetAuxValue()
+        {
+            return ((object)_value) switch
+            {
+                long => ((long)(object)_valueAux).ToString(),
+                double => ((double)(object)_valueAux).ToString(CultureInfo.InvariantCulture),
+                Slice => ((Slice)(object)_valueAux).ToString(),
+                _ => "Unknown type of value aux"
+            };
         }
 
         string DebugView => Inspect().ToString();

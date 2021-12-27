@@ -17,6 +17,7 @@ using static Corax.Queries.SortingMatch;
 using System.Runtime.Intrinsics.X86;
 using Sparrow.Server;
 using Corax.Pipeline;
+using NotContainsTermProvider = Corax.Queries.NotContainsTermProvider;
 
 namespace Corax
 {
@@ -183,19 +184,30 @@ namespace Corax
 
             return MultiTermMatch.Create(new MultiTermMatch<InTermProvider>(_transaction.Allocator, new InTermProvider(this, field, inTerms)));
         }
-        
-        public MultiTermMatch StartWithQuery(string field, string startWith, int fieldId = NonAnalyzer)
+
+        public MultiTermMatch StartWithQuery(string field, string startWith, bool isNegated = false, int fieldId = NonAnalyzer)
         {
-            return PrefixSuffixQuery<StartWithTermProvider>(field, startWith, fieldId);
+            return PrefixSuffixQuery<StartWithTermProvider>(field, startWith, isNegated, fieldId);
         }
 
-        public MultiTermMatch EndsWithQuery(string field, string endsWith, int fieldId = NonAnalyzer)
+        public MultiTermMatch ExistsQuery(string field)
         {
-            return PrefixSuffixQuery<EndsWithTermProvider>(field, endsWith, fieldId);
+            var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+            var terms = fields.CompactTreeFor(field);
+            if (terms == null)
+                return MultiTermMatch.CreateEmpty(_transaction.Allocator);
+
+            return MultiTermMatch.Create(new MultiTermMatch<ExistsTermProvider>(_transaction.Allocator,
+                new ExistsTermProvider(this, _transaction.Allocator, terms, field)));
+        }
+
+        public MultiTermMatch EndsWithQuery(string field, string endsWith, bool isNegated = false, int fieldId = NonAnalyzer)
+        {
+            return PrefixSuffixQuery<EndsWithTermProvider>(field, endsWith, isNegated, fieldId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private MultiTermMatch PrefixSuffixQuery<TTermProvider>(string field, string term, int fieldId = NonAnalyzer)
+        private MultiTermMatch PrefixSuffixQuery<TTermProvider>(string field, string term, bool isNegated = false, int fieldId = NonAnalyzer)
             where TTermProvider : ITermProvider
         {
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
@@ -204,15 +216,27 @@ namespace Corax
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
             if (typeof(TTermProvider) == typeof(StartWithTermProvider))
-                return MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator, new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
-            
+            {
+                return isNegated
+                    ? MultiTermMatch.Create(new MultiTermMatch<NotStartWithTermProvider>(_transaction.Allocator,
+                        new NotStartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)))
+                    : MultiTermMatch.Create(new MultiTermMatch<StartWithTermProvider>(_transaction.Allocator,
+                        new StartWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
+            }
+
             if (typeof(TTermProvider) == typeof(EndsWithTermProvider))
-                return MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(_transaction.Allocator, new EndsWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
+            {
+                return isNegated
+                    ? MultiTermMatch.Create(new MultiTermMatch<NotEndsWithTermProvider>(_transaction.Allocator,
+                        new NotEndsWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)))
+                    : MultiTermMatch.Create(new MultiTermMatch<EndsWithTermProvider>(_transaction.Allocator,
+                        new EndsWithTermProvider(this, _transaction.Allocator, terms, field, fieldId, term)));
+            }
 
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
-        public MultiTermMatch ContainsQuery(string field, string containsTerm)
+        public MultiTermMatch ContainsQuery(string field, string containsTerm, bool isNegated = false, int fieldId = NonAnalyzer)
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
             var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
@@ -220,8 +244,12 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
-            return MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator,
-                new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm)));
+
+            return isNegated
+                ? MultiTermMatch.Create(new MultiTermMatch<NotContainsTermProvider>(_transaction.Allocator,
+                    new NotContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm, fieldId)))
+                : MultiTermMatch.Create(new MultiTermMatch<ContainsTermProvider>(_transaction.Allocator,
+                    new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm, fieldId)));
         }
 
         public SortingMatch OrderByAscending<TInner>(in TInner set, int fieldId, MatchCompareFieldType entryFieldType = MatchCompareFieldType.Sequence,
@@ -587,19 +615,22 @@ namespace Corax
                     this, new InTermProvider(this, field, inTerms), scoreFunction));
         }
 
-        public MultiTermMatch StartWithQuery<TScoreFunction>(string field, string startWith, TScoreFunction scoreFunction)
+        public MultiTermMatch StartWithQuery<TScoreFunction>(string field, string startWith, TScoreFunction scoreFunction, bool isNegated = false,
+            int fieldId = NonAnalyzer)
             where TScoreFunction : IQueryScoreFunction
         {
-            return PrefixSuffixQuery<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction);
-        }
-        
-        public MultiTermMatch EndsWithQuery<TScoreFunction>(string field, string endsWith, TScoreFunction scoreFunction)
-            where TScoreFunction : IQueryScoreFunction
-        {
-            return PrefixSuffixQuery<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction);
+            return PrefixSuffixQuery<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction, isNegated, fieldId);
         }
 
-        private MultiTermMatch PrefixSuffixQuery<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction)
+        public MultiTermMatch EndsWithQuery<TScoreFunction>(string field, string endsWith, TScoreFunction scoreFunction, bool isNegated = false,
+            int fieldId = NonAnalyzer)
+            where TScoreFunction : IQueryScoreFunction
+        {
+            return PrefixSuffixQuery<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction, isNegated, fieldId);
+        }
+
+        private MultiTermMatch PrefixSuffixQuery<TScoreFunction, TTermProvider>(string field, string term, TScoreFunction scoreFunction, bool isNegated = false,
+            int fieldId = NonAnalyzer)
             where TScoreFunction : IQueryScoreFunction
             where TTermProvider : ITermProvider
         {
@@ -611,22 +642,31 @@ namespace Corax
 
             if (typeof(TTermProvider) == typeof(StartWithTermProvider))
             {
-                return MultiTermMatch.Create(
-                    MultiTermBoostingMatch<StartWithTermProvider>.Create(
-                        this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
+                return isNegated
+                    ? MultiTermMatch.Create(
+                        MultiTermBoostingMatch<NotStartWithTermProvider>.Create(
+                            this, new NotStartWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction))
+                    : MultiTermMatch.Create(
+                        MultiTermBoostingMatch<StartWithTermProvider>.Create(
+                            this, new StartWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
             }
 
             if (typeof(TTermProvider) == typeof(EndsWithTermProvider))
             {
-                return MultiTermMatch.Create(
-                    MultiTermBoostingMatch<EndsWithTermProvider>.Create(
-                        this, new EndsWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
+                return isNegated
+                    ? MultiTermMatch.Create(
+                        MultiTermBoostingMatch<NotEndsWithTermProvider>.Create(
+                            this, new NotEndsWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction))
+                    : MultiTermMatch.Create(
+                        MultiTermBoostingMatch<EndsWithTermProvider>.Create(
+                            this, new EndsWithTermProvider(this, _transaction.Allocator, terms, field, NonAnalyzer, term), scoreFunction));
             }
-            
+
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
         }
 
-        private MultiTermMatch ContainsQuery<TScoreFunction>(string field, string containsTerm, TScoreFunction scoreFunction)
+        private MultiTermMatch ContainsQuery<TScoreFunction>(string field, string containsTerm, TScoreFunction scoreFunction, bool isNegated = false,
+            int fieldId = NonAnalyzer)
             where TScoreFunction : IQueryScoreFunction
         {
             // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
@@ -635,176 +675,202 @@ namespace Corax
             if (terms == null)
                 return MultiTermMatch.CreateEmpty(_transaction.Allocator);
 
+            if (isNegated == false)
+                return MultiTermMatch.Create(
+                    MultiTermBoostingMatch<ContainsTermProvider>.Create(
+                        this, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm, fieldId), scoreFunction));
+
             return MultiTermMatch.Create(
-                MultiTermBoostingMatch<ContainsTermProvider>.Create(
-                    this, new ContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm), scoreFunction));
+                MultiTermBoostingMatch<NotContainsTermProvider>.Create(
+                    this, new NotContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm, fieldId), scoreFunction));
         }
 
-        public IQueryMatch SearchQuery(string field, string searchTerm, SearchOperator @operator, int analyzerId)
+        public IQueryMatch SearchQuery(string field, string searchTerm, SearchOperator @operator, bool isNegated, int analyzerId)
         {
-             ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
-            
-            var analyzer = _analyzers[analyzerId] ?? throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
-            analyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
-            
-            var buffer = QueryContext.MatchesPool.Rent(outputSize + Unsafe.SizeOf<Token>() * tokenSize);
-            Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
-            Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize));
-
-            var encoded = encodeBufferOriginal;
-            var tokens = tokensBufferOriginal;
-
-            analyzer.Execute(term, ref encoded, ref tokens);
-            IQueryMatch match = null;
-            foreach (var token in tokens)
-            {
-                var word = encoded.Slice(token.Offset, (int)token.Length);
-                SearchMatchOptions mode = SearchMatchOptions.Exact;
-                if (searchTerm[0] is '*') 
-                    mode |= SearchMatchOptions.EndsWith;
-                if (searchTerm[^1] is '*')
-                    mode |= SearchMatchOptions.StartsWith;
-                if (mode.HasFlag(SearchMatchOptions.StartsWith | SearchMatchOptions.EndsWith))
-                    mode = SearchMatchOptions.Contains;
-
-                var encodedString = Encodings.Utf8.GetString(word);
-                switch (mode)
-                {
-                    case SearchMatchOptions.Exact:
-                        if (match is null)
-                        {
-                            match = TermQuery(field, encodedString, NonAnalyzer);
-                            continue;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, TermQuery(field, encodedString))
-                            : And(match, TermQuery(field, encodedString));
-                        break;
-                    case SearchMatchOptions.StartsWith:
-                        if (match is null)
-                        {
-                            match = StartWithQuery(field, encodedString);
-                            continue;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, StartWithQuery(field, encodedString))
-                            : And(match, StartWithQuery(field, encodedString));
-                        break;
-                    case SearchMatchOptions.EndsWith:
-                        if (match is null)
-                        {
-                            match = EndsWithQuery(field, encodedString);
-                            continue;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, EndsWithQuery(field, encodedString))
-                            : And(match, EndsWithQuery(field, encodedString));
-                        break;
-                    case SearchMatchOptions.Contains:
-                        if (match is null)
-                        {
-                            match = ContainsQuery(field, encodedString);
-                            continue;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, ContainsQuery(field, encodedString))
-                            : And(match, ContainsQuery(field, encodedString));
-                        break;
-                    default:
-                        throw new InvalidExpressionException("Unknown flag inside Search match.");
-                }
-            }
-            
-            QueryContext.MatchesPool.Return(buffer);
-            return match;
+            return SearchQuery<NullScoreFunction>(field, searchTerm, default, @operator, analyzerId, isNegated);
         }
 
-        public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, SearchOperator @operator, int analyzerId)
+        public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, SearchOperator @operator, int analyzerId,
+            bool isNegated = false)
             where TScoreFunction : IQueryScoreFunction
         {
+            const byte wildcard = (byte)'*';
             ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
-            
-            var analyzer = _analyzers[analyzerId] ?? throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
-            analyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
-            
-            var buffer = QueryContext.MatchesPool.Rent(outputSize + Unsafe.SizeOf<Token>() * tokenSize);
-            Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
-            Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize));
-
-            var encoded = encodeBufferOriginal;
-            var tokens = tokensBufferOriginal;
-
-            analyzer.Execute(term, ref encoded, ref tokens);
-            IQueryMatch match = null;
-            foreach (var token in tokens)
+            if (isNegated)
             {
-                var word = encoded.Slice(token.Offset, (int)token.Length);
+                @operator = @operator switch
+                {
+                    SearchOperator.Or => SearchOperator.And,
+                    SearchOperator.And => SearchOperator.Or,
+                    _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
+                };
+            }
+
+            if (_analyzers.TryGetValue(analyzerId, out var searchAnalyzer) == false)
+            {
+                throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
+            }
+
+            var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();
+
+            searchAnalyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
+            wildcardAnalyzer.GetOutputBuffersSize(searchTerm.Length, out var wildcardSize, out var wildcardTokenSize);
+
+            var tokenStructSize = Unsafe.SizeOf<Token>();
+            var buffer = QueryContext.MatchesPool.Rent(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize));
+            Span<byte> encodeBufferOriginal = buffer.AsSpan().Slice(0, outputSize);
+            Span<Token> tokensBufferOriginal = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize, tokenSize * tokenStructSize));
+
+            var wildcardAnalyzerBuffer = buffer.AsSpan().Slice(outputSize + tokenSize * tokenStructSize, wildcardSize);
+            var wildcardTokenizerBuffer = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(outputSize + tokenSize * tokenStructSize + wildcardSize));
+
+            var encodedWildcard = wildcardAnalyzerBuffer;
+            var tokensWildcard = wildcardTokenizerBuffer;
+
+
+            wildcardAnalyzer.Execute(term, ref encodedWildcard, ref tokensWildcard);
+            IQueryMatch match = null;
+            foreach (var tokenWildcard in tokensWildcard)
+            {
+                var encoded = encodeBufferOriginal;
+                var tokens = tokensBufferOriginal;
+                var originalWord = term.Slice(tokenWildcard.Offset, (int)tokenWildcard.Length);
+                searchAnalyzer.Execute(term.Slice(tokenWildcard.Offset, (int)tokenWildcard.Length), ref encoded, ref tokens);
+                if (tokens.Length == 0)
+                    continue;
+
+
                 SearchMatchOptions mode = SearchMatchOptions.Exact;
-                if (searchTerm[0] is '*') 
+                if (originalWord[0] is wildcard)
                     mode |= SearchMatchOptions.EndsWith;
-                if (searchTerm[^1] is '*')
+                if (originalWord[^1] is wildcard)
                     mode |= SearchMatchOptions.StartsWith;
                 if (mode.HasFlag(SearchMatchOptions.StartsWith | SearchMatchOptions.EndsWith))
                     mode = SearchMatchOptions.Contains;
 
-                var encodedString = Encodings.Utf8.GetString(word);
-                switch (mode)
+                Slice.From(_transaction.Allocator, encoded.Slice(tokens[0].Offset, (int)tokens[0].Length), ByteStringType.Immutable, out var encodedString);
+                if (typeof(TScoreFunction) == typeof(NullScoreFunction))
+                    BuildExpressionWithoutScoring(mode, encodedString);
+                else
+                    BuildExpressionWithScoring(mode, encodedString);
+            }
+
+            QueryContext.MatchesPool.Return(buffer);
+          
+            return match;
+            
+            void BuildExpressionWithoutScoring(SearchMatchOptions mode, Slice encodedString)
+            {
+                   switch (mode)
                 {
                     case SearchMatchOptions.Exact:
+                        IQueryMatch exactMatch = isNegated
+                            ? NotEquals(AllEntries(), analyzerId, encodedString)
+                            : TermQuery(field, encodedString.ToString());
+
                         if (match is null)
                         {
-                            match = TermQuery(field, encodedString, NonAnalyzer);
-                            continue;
+                            match = exactMatch;
+                            return;
                         }
 
                         match = @operator is SearchOperator.Or
-                            ? Or(match, TermQuery(field, encodedString))
-                            : And(match, TermQuery(field, encodedString));
+                            ? Or(match, exactMatch)
+                            : And(match, exactMatch);
                         break;
                     case SearchMatchOptions.StartsWith:
                         if (match is null)
                         {
-                            match = StartWithQuery(field, encodedString, scoreFunction);
-                            continue;
+                            match = StartWithQuery(field, encodedString.ToString(), isNegated);
+                            return;
                         }
 
                         match = @operator is SearchOperator.Or
-                            ? Or(match, StartWithQuery(field, encodedString, scoreFunction))
-                            : And(match, StartWithQuery(field, encodedString, scoreFunction));
+                            ? Or(match, StartWithQuery(field, encodedString.ToString(), isNegated))
+                            : And(match, StartWithQuery(field, encodedString.ToString(), isNegated));
                         break;
                     case SearchMatchOptions.EndsWith:
                         if (match is null)
                         {
-                            match = EndsWithQuery(field, encodedString, scoreFunction);
-                            continue;
+                            match = EndsWithQuery(field, encodedString.ToString(), isNegated);
+                            return;
                         }
 
                         match = @operator is SearchOperator.Or
-                            ? Or(match, EndsWithQuery(field, encodedString, scoreFunction))
-                            : And(match, EndsWithQuery(field, encodedString, scoreFunction));
+                            ? Or(match, EndsWithQuery(field, encodedString.ToString(), isNegated))
+                            : And(match, EndsWithQuery(field, encodedString.ToString(), isNegated));
                         break;
                     case SearchMatchOptions.Contains:
                         if (match is null)
                         {
-                            match = ContainsQuery(field, encodedString, scoreFunction);
-                            continue;
+                            match = ContainsQuery(field, encodedString.ToString(), isNegated);
+                            return;
                         }
 
                         match = @operator is SearchOperator.Or
-                            ? Or(match, ContainsQuery(field, encodedString, scoreFunction))
-                            : And(match, ContainsQuery(field, encodedString, scoreFunction));
+                            ? Or(match, ContainsQuery(field, encodedString.ToString(), isNegated))
+                            : And(match, ContainsQuery(field, encodedString.ToString(), isNegated));
                         break;
                     default:
                         throw new InvalidExpressionException("Unknown flag inside Search match.");
                 }
             }
-            
-            QueryContext.MatchesPool.Return(buffer);
-            return match;
+            void BuildExpressionWithScoring(SearchMatchOptions mode, Slice encodedString)
+            {
+                switch (mode)
+                {
+                    case SearchMatchOptions.Exact:
+                        IQueryMatch exactMatch = isNegated
+                            ? NotEquals(AllEntries(), analyzerId, encodedString)
+                            : TermQuery(field, encodedString.ToString());
+
+                        if (match is null)
+                        {
+                            match = exactMatch;
+                            return;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, exactMatch)
+                            : And(match, exactMatch);
+                        break;
+                    case SearchMatchOptions.StartsWith:
+                        if (match is null)
+                        {
+                            match = StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated);
+                            return;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated))
+                            : And(match, StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated));
+                        break;
+                    case SearchMatchOptions.EndsWith:
+                        if (match is null)
+                        {
+                            match = EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated);
+                            return;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated))
+                            : And(match, EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated));
+                        break;
+                    case SearchMatchOptions.Contains:
+                        if (match is null)
+                        {
+                            match = ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated);
+                            return;
+                        }
+
+                        match = @operator is SearchOperator.Or
+                            ? Or(match, ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated))
+                            : And(match, ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated));
+                        break;
+                    default:
+                        throw new InvalidExpressionException("Unknown flag inside Search match.");
+                }
+            }
         }
 
         [Flags]

@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
         private long _entriesCount = 0;
-        private const int BufferSize = 2048;
+        private const int BufferSize = 4096;
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield break;
 
 
-            var ids = ArrayPool<long>.Shared.Rent(query.Metadata.OrderBy?.Length == 0 ? BufferSize : CoraxGetPageSize(_indexSearcher, BufferSize));
+            var ids = ArrayPool<long>.Shared.Rent(Math.Max(CoraxGetPageSize(_indexSearcher, BufferSize), BufferSize));
 
             int read = 0;
             int docsToLoad = pageSize;
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             {
                 var names = MapIndexIdentifiers();
-                var allDocsInIndex = _indexSearcher.AllEntries();
+                var allDocsInIndex = _coraxQueryEvaluator.Search(query, new FieldsToFetch(query, _index.Definition));
                 totalResults.Value = Convert.ToInt32(allDocsInIndex.Count);
                 ids = ArrayPool<long>.Shared.Rent(BufferSize);
 
@@ -257,27 +257,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             Span<byte> encoded = encodedBuffer;
                             Span<Token> tokens = tokensBuffer;
 
-                            if (reader.Read(fieldId, out var value))
-                            {
-                                analyzer.Execute(value, ref encoded, ref tokens);
-                                if (tokens.Length > 1)
-                                {
-                                    listItemInIndex ??= new(32);
-                                    listItemInIndex.Clear();
-                                    for (var index = 0; index < tokens.Length; index++)
-                                    {
-                                        token.ThrowIfCancellationRequested();
-                                        var t = tokens[index];
-                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
-                                    }
-
-                                    doc[name] = listItemInIndex.ToArray();
-                                    continue;
-                                }
-
-                                doc[name] = Encodings.Utf8.GetString(encoded);
-                            }
-                            else if (reader.TryReadMany(fieldId, out var iterator))
+                            if (reader.TryReadMany(fieldId, out var iterator))
                             {
                                 List<string[]> map = new(8);
                                 while (iterator.ReadNext())
@@ -297,6 +277,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 }
 
                                 doc[name] = map;
+                            }
+                            else if (reader.Read(fieldId, out var value))
+                            {
+                                analyzer.Execute(value, ref encoded, ref tokens);
+                                if (tokens.Length > 1)
+                                {
+                                    listItemInIndex ??= new(32);
+                                    listItemInIndex.Clear();
+                                    for (var index = 0; index < tokens.Length; index++)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        var t = tokens[index];
+                                        listItemInIndex.Add(Encodings.Utf8.GetString(encoded.Slice(t.Offset, (int)t.Length)));
+                                    }
+
+                                    doc[name] = listItemInIndex.ToArray();
+                                    continue;
+                                }
+
+                                doc[name] = Encodings.Utf8.GetString(encoded);
                             }
                         }
 
