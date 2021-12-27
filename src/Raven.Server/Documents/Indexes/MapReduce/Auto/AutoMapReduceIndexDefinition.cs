@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);
 
-            var lastUsedId = new Reference<int>() { Value = mapFields.Length };
+            var lastUsedId = new Reference<int>() { Value = MapFields.Count + GroupByFields.Count };
 
             foreach (var field in MapFields)
             {

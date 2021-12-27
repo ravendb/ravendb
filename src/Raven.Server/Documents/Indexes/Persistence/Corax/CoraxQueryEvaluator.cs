@@ -72,18 +72,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.StartWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.EndsWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, fieldId);
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, isNegated, fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take);
                         case MethodType.Search:
-                            return SearchMethod(methodExpression);
+                            return SearchMethod(methodExpression, isNegated);
+                        case MethodType.Exists:
+                            fieldName = GetField(methodExpression.Arguments[0]);
+                            return _searcher.ExistsQuery(fieldName);
                         default:
-                            throw new NotImplementedException($"Method {nameof(methodExpression)} is not implemented.");
+                            throw new NotImplementedException($"Method {expressionType.ToString()} is not implemented.");
                     }
 
                 case InExpression inExpression:
@@ -102,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IQueryMatch SearchMethod(MethodExpression expression)
+        private IQueryMatch SearchMethod(MethodExpression expression, bool isNegated)
         {
             var fieldName = $"search({GetField(expression.Arguments[0])})";
             var fieldId = GetFieldIdInIndex(fieldName);
@@ -128,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             if (expression.Arguments.Count is not 3)
-                return _searcher.SearchQuery(fieldName, searchTerm, @operator, fieldId);
+                return _searcher.SearchQuery(fieldName, searchTerm, @operator, isNegated, fieldId);
 
 
             if (expression.Arguments[2] is not FieldExpression operatorType)
@@ -142,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             };
 
 
-            return _searcher.SearchQuery(fieldName, searchTerm, @operator, fieldId);
+            return _searcher.SearchQuery(fieldName, searchTerm, @operator, isNegated, fieldId);
         }
 
         private IQueryMatch BinaryEvaluator(BinaryExpression expression, bool isNegated, int take)

@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
         public EnumerableWriterScope(int field, ref IndexEntryWriter entryWriter, List<int> stringsLength, ByteStringContext allocator)
         {
             _items = new();
+            _allocator = allocator;
         }
 
         public List<int> GetLengthList() => throw new Exception();
