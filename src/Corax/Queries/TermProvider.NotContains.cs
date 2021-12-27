@@ -6,7 +6,7 @@ using Voron.Data.CompactTrees;
 
 namespace Corax.Queries
 {
-    public unsafe struct ContainsTermProvider : ITermProvider
+    public unsafe struct NotContainsTermProvider : ITermProvider
     {
         private readonly CompactTree _tree;
         private readonly IndexSearcher _searcher;
@@ -15,7 +15,7 @@ namespace Corax.Queries
 
         private CompactTree.Iterator _iterator;
 
-        public ContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, string term, int fieldId)
+        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, string term, int fieldId)
         {
             _tree = tree;
             _searcher = searcher;
@@ -38,7 +38,7 @@ namespace Corax.Queries
             var contains = _term;
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                if (!termSlice.Contains(contains))
+                if (termSlice.Contains(contains))
                     continue;
 
                 term = _searcher.TermQuery(_field, termSlice.ToString());
@@ -51,7 +51,7 @@ namespace Corax.Queries
 
         public QueryInspectionNode Inspect()
         {
-            return new QueryInspectionNode($"{nameof(ContainsTermProvider)}",
+            return new QueryInspectionNode($"{nameof(NotContainsTermProvider)}",
                             parameters: new Dictionary<string, string>()
                             {
                                 { "Field", _field },

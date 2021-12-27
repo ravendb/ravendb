@@ -44,7 +44,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 do
                 {
                     var offset = stream.GetAttribute<IOffsetAttribute>();
-
                     int start = offset.StartOffset;
                     int length = offset.EndOffset - start;
                     if (length == 0)

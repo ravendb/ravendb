@@ -181,78 +181,86 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
                 }
-                foreach (var fieldToFetch in fields.Values)
+
+                if (fields is not null)
                 {
-                    switch (SearchEngineType)
+                    foreach (var fieldToFetch in fields?.Values)
                     {
-                        case SearchEngineType.Corax:
-                            if (TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
-                                continue;
-                            break;
-                        case SearchEngineType.Lucene:
-                            if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
-                                continue;
-                            break;
-                        default:
-                            throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
-                    }
+                        switch (SearchEngineType)
+                        {
+                            case SearchEngineType.Corax:
+                                if (TryExtractValueFromIndexCorax(fieldToFetch, ref retrieverInput, result))
+                                    continue;
+                                break;
+                            case SearchEngineType.Lucene:
+                                if (LuceneTryExtractValueFromIndex(fieldToFetch, retrieverInput.LuceneDocument, result, retrieverInput.State))
+                                    continue;
+                                break;
+                            default:
+                                throw new InvalidDataException($"Unknown {nameof(Client.Documents.Indexes.SearchEngineType)}.");
+                        }
 
-                    if (FieldsToFetch.Projection.MustExtractFromIndex)
-                    {
-                        if (FieldsToFetch.Projection.MustExtractOrThrow)
-                            FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name.Value);
+                        if (FieldsToFetch.Projection.MustExtractFromIndex)
+                        {
+                            if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name
+                                    .Value);
 
-                        continue;
-                    }
-
-                    if (doc == null)
-                    {
-                        using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                            doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
+                            continue;
+                        }
 
                         if (doc == null)
+                        {
+                            using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
+                                doc = DirectGet(ref retrieverInput, lowerId, DocumentFields.All);
+
+                            if (doc == null)
+                            {
+                                if (FieldsToFetch.Projection.MustExtractFromDocument)
+                                {
+                                    if (FieldsToFetch.Projection.MustExtractOrThrow)
+                                        FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId,
+                                            fieldToFetch.Name.Value);
+
+                                    break;
+                                }
+
+                                // we don't return partial results
+                                return default;
+                            }
+                        }
+
+                        if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key,
+                                out var fieldVal, token))
+                        {
+                            if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
+                            {
+                                if (fieldVal is BlittableJsonReaderObject nested)
+                                    doc.Data = nested;
+                                else if (fieldVal is Document d)
+                                    doc = d;
+                                else
+                                    ThrowInvalidQueryBodyResponse(fieldVal);
+                                FinishDocumentSetup(doc, retrieverInput.Score);
+                                return (doc, null);
+                            }
+
+                            if (fieldVal is List<object> list)
+                                fieldVal = new DynamicJsonArray(list);
+
+                            if (fieldVal is Document d2)
+                                fieldVal = d2.Data;
+
+                            result[key] = fieldVal;
+                        }
+                        else
                         {
                             if (FieldsToFetch.Projection.MustExtractFromDocument)
                             {
                                 if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                    FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value);
-
-                                break;
+                                    FieldsToFetch.Projection
+                                        .ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
                             }
-
-                            // we don't return partial results
-                            return default;
-                        }
-                    }
-
-                    if (TryGetValue(fieldToFetch, doc, ref retrieverInput, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal, token))
-                    {
-                        if (FieldsToFetch.SingleBodyOrMethodWithNoAlias)
-                        {
-                            if (fieldVal is BlittableJsonReaderObject nested)
-                                doc.Data = nested;
-                            else if (fieldVal is Document d)
-                                doc = d;
-                            else
-                                ThrowInvalidQueryBodyResponse(fieldVal);
-                            FinishDocumentSetup(doc, retrieverInput.Score);
-                            return (doc, null);
-                        }
-
-                        if (fieldVal is List<object> list)
-                            fieldVal = new DynamicJsonArray(list);
-
-                        if (fieldVal is Document d2)
-                            fieldVal = d2.Data;
-
-                        result[key] = fieldVal;
-                    }
-                    else
-                    {
-                        if (FieldsToFetch.Projection.MustExtractFromDocument)
-                        {
-                            if (FieldsToFetch.Projection.MustExtractOrThrow)
-                                FieldsToFetch.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value);
                         }
                     }
                 }
