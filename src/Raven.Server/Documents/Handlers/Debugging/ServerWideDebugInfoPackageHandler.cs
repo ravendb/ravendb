@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerWideDebugInfoPackageHandler : RequestHandler
     {
-        private const string _serverWidePrefix = "server-wide";
+        internal const string _serverWidePrefix = "server-wide";
         internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
         {
             nameof(DatabaseRecord.DatabaseName),
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return deletionInProgress != null && deletionInProgress.TryGetValue(tag, out var delInProgress) && delInProgress != DeletionInProgressStatus.No;
         }
         
-        private static async Task WriteDatabaseInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
+        private async Task WriteDatabaseInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
             string databaseName, CancellationToken token = default)
         {
             var endpointParameters = new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>()
@@ -286,19 +286,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
             await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.Databases, databaseName, endpointParameters, token);
         }
 
-        private static async Task WriteServerInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
+        private async Task WriteServerInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
         {
             await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.None, _serverWidePrefix, null, token);
         }
 
-        private static async Task WriteForServerOrDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
+        private async Task WriteForServerOrDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
             RouteInformation.RouteType routeType, string path,
             Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
 
-            foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType))
+            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType);
+            
+            if (Server.Certificate.Certificate != null)
+            {
+                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                Debug.Assert(feature != null);
+                routes = routes.Where(route => DebugInfoPackageUtils.CanAccessRoute(feature, route, routeType == RouteInformation.RouteType.Databases ? path : null));
+            }
+
+            foreach (var route in routes)
             {
                 token.ThrowIfCancellationRequested();
                 var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path);
@@ -331,14 +340,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private async void WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
         {
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            Debug.Assert(feature != null);
-            if (feature.CanAccess(databaseName, requireAdmin:true) == false)
-                return;
-
-            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(
-                new RouteInformation("", "/database-record", default, false, false, default, false), 
-                databaseName);
+            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation("/database-record", databaseName);
             try
             {
                 var entry = archive.CreateEntry(entryName);
