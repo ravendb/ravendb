@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Server;
+using Voron.Exceptions;
 
 namespace Voron.Data.Tables
 {
@@ -94,9 +95,10 @@ namespace Voron.Data.Tables
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
             if (dictionary != null)
             {
-                throw new InvalidOperationException(ptrToStringAnsi + " on " + dictionary);
+                throw new VoronErrorException(ptrToStringAnsi + " on " + dictionary);
             }
-            throw new InvalidOperationException(ptrToStringAnsi);
+
+            throw new VoronErrorException(ptrToStringAnsi);
         }
 
         private class CompressContext
@@ -229,7 +231,7 @@ namespace Voron.Data.Tables
 
             public override string ToString()
             {
-                return "Dic #" + Id 
+                return "Dictionary #" + Id 
 #if DEBUG
 					 + " - " + DictionaryHash
 #endif
