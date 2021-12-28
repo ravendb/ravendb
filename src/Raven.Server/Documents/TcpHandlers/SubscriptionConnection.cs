@@ -962,7 +962,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (includeDocumentsCommand != null && includeDocumentsCommand.HasIncludesIds())
                                 {
                                     var includes = new List<Document>();
-                                    includeDocumentsCommand.Fill(includes);
+                                    includeDocumentsCommand.Fill(includes, false);
                                     writer.WriteStartObject();
 
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));

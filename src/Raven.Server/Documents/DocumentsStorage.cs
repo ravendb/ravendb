@@ -969,7 +969,7 @@ namespace Raven.Server.Documents
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<string> ids, string collection, long start, long take, Reference<int> totalCount)
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
             foreach (var doc in GetDocuments(context, ids, start, int.MaxValue, totalCount))
