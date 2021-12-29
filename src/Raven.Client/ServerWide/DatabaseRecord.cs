@@ -268,7 +268,7 @@ namespace Raven.Client.ServerWide
                 {
                     InitializeRollingDeployment(definition.Name, createdAt);
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
-        }
+                }
             }
         }
 
@@ -296,12 +296,12 @@ namespace Raven.Client.ServerWide
             }
 
             AutoIndexes[definition.Name] = definition;
-            
+
             if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                     InitializeRollingDeployment(definition.Name, createdAt);
-        }
+            }
         }
 
         internal static bool IsRolling(IndexDeploymentMode? fromDefinition, IndexDeploymentMode fromSetting)
@@ -314,32 +314,43 @@ namespace Raven.Client.ServerWide
 
         private void InitializeRollingDeployment(string indexName, DateTime createdAt)
         {
-            RollingIndexes ??= new Dictionary<string, RollingIndex>();
-            
-            var rollingIndex = new RollingIndex();
-            RollingIndexes[indexName] = rollingIndex;
-
-            var chosenNode = ChooseFirstNode();
-
-            foreach (var node in Topology.AllNodes)
+            if (IsSharded)
             {
-                var deployment = new RollingIndexDeployment
+                foreach (var shard in Shards)
                 {
-                    CreatedAt = createdAt
-                };
-
-                if (node.Equals(chosenNode))
-                {
-                    deployment.State = RollingIndexState.Running;
-                    deployment.StartedAt = createdAt;
+                    //TODO: rolling index deployment for Sharding
                 }
-                else
-                {
-                    deployment.State = RollingIndexState.Pending;
-                }
-
-                rollingIndex.ActiveDeployments[node] = deployment;
             }
+            else
+            {
+                RollingIndexes ??= new Dictionary<string, RollingIndex>();
+
+                var rollingIndex = new RollingIndex();
+                RollingIndexes[indexName] = rollingIndex;
+
+                var chosenNode = ChooseFirstNode();
+
+                foreach (var node in Topology.AllNodes)
+                {
+                    var deployment = new RollingIndexDeployment
+                    {
+                        CreatedAt = createdAt
+                    };
+
+                    if (node.Equals(chosenNode))
+                    {
+                        deployment.State = RollingIndexState.Running;
+                        deployment.StartedAt = createdAt;
+                    }
+                    else
+                    {
+                        deployment.State = RollingIndexState.Pending;
+                    }
+
+                    rollingIndex.ActiveDeployments[node] = deployment;
+                }
+            }
+            
         }
 
         private string ChooseFirstNode()
