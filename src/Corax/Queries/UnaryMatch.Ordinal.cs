@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Voron;
@@ -16,15 +17,16 @@ namespace Corax.Queries
         [SkipLocalsInit]
         private static int AndWith(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
         {
-            var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
-            var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
-
-            var count = match._fillFunc(ref match, buffer);
-            var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-
-            var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
             int matchesSize = matches.Length;
 
+            var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matchesSize);
+            var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matchesSize);
+            Debug.Assert(buffer.Length == matchesSize);
+
+            var count = match._fillFunc(ref match, buffer);            
+            
+            var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+            var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
             var result = MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, baseMatchesPtr, count);
 
             QueryContext.MatchesPool.Return(bufferHolder);
