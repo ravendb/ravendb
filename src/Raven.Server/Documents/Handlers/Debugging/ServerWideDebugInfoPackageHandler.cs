@@ -15,6 +15,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -300,37 +301,60 @@ namespace Raven.Server.Documents.Handlers.Debugging
             foreach (var route in routes)
             {
                 token.ThrowIfCancellationRequested();
-                var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path);
-                try
-                {
-                    using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, jsonOperationContext, endpointParameters))
-                    {
-                        var entry = archive.CreateEntry(entryName);
-                        entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+                
+                await InvokeAndWriteToArchive(archive, jsonOperationContext, localEndpointClient, route, path, endpointParameters, token);
+            }
+        }
 
-                        using (var entryStream = entry.Open())
+        internal static async Task InvokeAndWriteToArchive(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
+            RouteInformation route, string path,
+            Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null,
+            CancellationToken token = default)
+        {
+            try
+            {
+                var response = await localEndpointClient.InvokeAsync(route, endpointParameters);
+
+                var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path, response.ContentType == "text/plain" ? "txt" : "json");
+                var entry = archive.CreateEntry(entryName);
+                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                using (var entryStream = entry.Open())
+                {
+                    if (response.ContentType == "text/plain")
+                    {
+                        await response.Body.CopyToAsync(entryStream, token);
+                    }
+                    else
+                    {
                         using (var writer = new BlittableJsonTextWriter(jsonOperationContext, entryStream))
                         {
+                            var endpointOutput = jsonOperationContext.ReadForMemory(response.Body, $"read/local endpoint/{route.Path}");
                             jsonOperationContext.Write(writer, endpointOutput);
                             writer.Flush();
-                            await entryStream.FlushAsync(token);
                         }
                     }
+                    await entryStream.FlushAsync(token);
                 }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception e)
-                {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (InvalidStartOfObjectException e)
+            {
+                //precaution, ideally this exception should never be thrown
+                throw new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.", e);
+            }
+            catch (Exception e)
+            {
+                DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, path, null));
             }
         }
 
         private async void WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
         {
-            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation("/database-record", databaseName);
+            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation("/database-record", databaseName, "json");
             try
             {
                 var entry = archive.CreateEntry(entryName);
