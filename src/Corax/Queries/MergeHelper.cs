@@ -243,13 +243,13 @@ namespace Corax.Queries
             {
                 // We have items still available in the left arm                
                 values = leftEndPtr - leftPtr;
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(leftPtr), (uint)values * sizeof(long));
+                Unsafe.CopyBlockUnaligned(dstPtr, leftPtr, (uint)values * sizeof(long));
             }
             else if (rightPtr != rightEndPtr)
             {
                 // We have items still available in the left arm
                 values = rightEndPtr - rightPtr;
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(rightPtr), (uint)values * sizeof(long));
+                Unsafe.CopyBlockUnaligned(dstPtr, rightPtr, (uint)values * sizeof(long));
             }
 
             return (int)(dstPtr + values - dst);
@@ -300,13 +300,13 @@ namespace Corax.Queries
             {
                 // We have items still available in the left arm                
                 values = leftEndPtr - leftPtr;
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(leftPtr), (uint)values * sizeof(long));
+                Unsafe.CopyBlockUnaligned(dstPtr, leftPtr, (uint)values * sizeof(long));                
             }
             else if (rightPtr != rightEndPtr)
             {
                 // We have items still available in the left arm
                 values = rightEndPtr - rightPtr;
-                Unsafe.CopyBlockUnaligned(ref Unsafe.AsRef<byte>(dstPtr), ref Unsafe.AsRef<byte>(rightPtr), (uint)values * sizeof(long));
+                Unsafe.CopyBlockUnaligned(dstPtr, rightPtr, (uint)values * sizeof(long));
             }
 
             return (int)(dstPtr + values - dst);
