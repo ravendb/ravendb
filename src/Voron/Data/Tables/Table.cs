@@ -751,6 +751,8 @@ namespace Voron.Data.Tables
 
             public void Remove(int id)
             {
+                // Intentionally orphaning the dictionary here, we'll let the 
+                // GC's finalizer to clear it up, this is a *very* rare operation.
                 _compressionDictionaries.TryRemove(id, out _);
             }
         }
