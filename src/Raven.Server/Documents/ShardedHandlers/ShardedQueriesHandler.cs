@@ -3,20 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Google.Protobuf.Reflection;
-using Jint.Runtime;
-using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
@@ -26,7 +20,6 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -115,7 +108,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
                             {
                                 result.Timings = indexQuery.Timings?.ToTimings();
-                                var numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
+                                await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
                                 await writer.OuterFlushAsync();
                             }
 
