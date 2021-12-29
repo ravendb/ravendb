@@ -279,6 +279,10 @@ namespace Corax
             {
                 return Create(new SortingMatch<TInner, DescendingMatchComparer>(this, set, new DescendingMatchComparer(this, fieldId, entryFieldType), take));
             }
+            else if (typeof(TComparer) == typeof(BoostingComparer))
+            {
+                return Create(new SortingMatch<TInner, BoostingComparer>(this, set, default(BoostingComparer), take));
+            }
             else if (typeof(TComparer) == typeof(CustomMatchComparer))
             {
                 throw new ArgumentException($"Custom comparers can only be created through the {nameof(OrderByCustomOrder)}");
