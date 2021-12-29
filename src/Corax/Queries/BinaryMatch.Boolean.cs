@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -121,20 +121,27 @@ namespace Corax.Queries
             [SkipLocalsInit]
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
+                ref var inner = ref match._inner;
+                ref var outer = ref match._outer;
+
                 int matchesSize = matches.Length;
+                var bufferHolder = QueryContext.MatchesPool.Rent(2 * sizeof(long) * matchesSize);
+                var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
 
-                var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matchesSize);
-                var orMatches = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matchesSize);
+                var innerMatches = buffer.Slice(0, matchesSize);
+                var outerMatches = buffer.Slice(matchesSize, matchesSize);
+                Debug.Assert(innerMatches.Length == matchesSize);
+                Debug.Assert(outerMatches.Length == matchesSize);
 
-                var count = FillFunc(ref match, orMatches);
+                // Execute the AndWith operation for each subpart of the query.               
+                matches.CopyTo(innerMatches);
+                inner.AndWith(innerMatches);
 
-                var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-
-
-                var orMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(orMatches));
-
-                var result = MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, orMatchesPtr, count);
+                matches.CopyTo(outerMatches);
+                outer.AndWith(outerMatches);
                 
+                // Merge the hits from every side into the output buffer. 
+                var result = MergeHelper.Or(matches, innerMatches, outerMatches);                
                 QueryContext.MatchesPool.Return(bufferHolder);
 
                 return result;
