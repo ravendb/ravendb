@@ -68,11 +68,11 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Theory]
-        [InlineData(false)]
+        //[InlineData(false)]
         [InlineData(true)]
         public async Task EnsureDocumentsReplication(bool useSsl)
         {
-            var clusterSize = 5;
+            var clusterSize = 3;
             var databaseName = GetDatabaseName();
 
             RavenServer leader;
@@ -110,7 +110,10 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = new DatabaseRecord(databaseName);
                 databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                WaitForUserToContinueTheTest(store);
+
             }
+            
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {

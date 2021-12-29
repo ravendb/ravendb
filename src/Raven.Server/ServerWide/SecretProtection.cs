@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Pkcs;
 using Org.BouncyCastle.Asn1.X509;
@@ -325,8 +326,26 @@ namespace Raven.Server.ServerWide
         }
 
 #if !RVN
+        public static  LetsEncryptUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
+        {
+            ValidateExpiration(source, loadedCertificate,licenseType);
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
+            ValidatePrivateKey(source, password, rawBytes, out var privateKey);
+
+            ValidateKeyUsages(source, loadedCertificate, certificateValidationKeyUsages);
+            //ValidateKeyUsages(source, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
+
+            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
+
+            return new LetsEncryptUtils.CertificateHolder
+            {
+                Certificate = loadedCertificate,
+                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                PrivateKey = privateKey
+            };
+        }
+
+        public LetsEncryptUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             Process process;
 
@@ -405,7 +424,7 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                ValidateExpiration(executable, loadedCertificate, serverStore);
+                ValidateExpiration(executable, loadedCertificate, serverStore.LicenseManager.LicenseStatus.Type);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
             }
@@ -414,7 +433,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
 
-            return new RavenServer.CertificateHolder
+            return new LetsEncryptUtils.CertificateHolder
             {
                 Certificate = loadedCertificate,
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -578,24 +597,7 @@ namespace Raven.Server.ServerWide
         }
 
 #if !RVN
-
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
-        {
-            ValidateExpiration(source, loadedCertificate, serverStore);
-
-            ValidatePrivateKey(source, password, rawBytes, out var privateKey);
-
-            ValidateKeyUsages(source, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
-
-            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
-
-            return new RavenServer.CertificateHolder
-            {
-                Certificate = loadedCertificate,
-                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                PrivateKey = privateKey
-            };
-        }
+        //in utils
 
         public static void AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
         {
@@ -667,7 +669,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
+        public LetsEncryptUtils.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
         {
             try
             {
@@ -677,13 +679,13 @@ namespace Raven.Server.ServerWide
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
-                ValidateExpiration(path, loadedCertificate, serverStore);
+                ValidateExpiration(path, loadedCertificate, serverStore.LicenseManager.LicenseStatus.Type);
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
                 ValidateKeyUsages(path, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
 
-                return new RavenServer.CertificateHolder
+                return new LetsEncryptUtils.CertificateHolder
                 {
                     Certificate = loadedCertificate,
                     CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -732,13 +734,14 @@ namespace Raven.Server.ServerWide
 
 #if !RVN
 
-        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
+        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, LicenseType licenseType)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
 
-            if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
+            //if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
+            if (licenseType == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
                 if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))

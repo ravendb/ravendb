@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "rvn": {
+      "commandName": "Project",
+      "commandLineArgs": "create-setup-package --setup-parameters=\"D:\\tf\\settings.json\""
+    }
+  }
+}

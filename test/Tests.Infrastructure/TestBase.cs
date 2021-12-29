@@ -277,7 +277,7 @@ namespace FastTests
                 {
                     CertificateUtils.CreateSelfSignedClientCertificate(
                         name,
-                        new RavenServer.CertificateHolder
+                        new LetsEncryptUtils.CertificateHolder
                         {
                             Certificate = serverCertificate,
                             PrivateKey = pk
