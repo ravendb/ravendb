@@ -22,6 +22,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Logging;

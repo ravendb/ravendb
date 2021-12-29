@@ -1,7 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Server.Commercial;
+using Raven.Server.ServerWide;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace rvn
 {
@@ -34,6 +42,7 @@ namespace rvn
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
+            ConfigureSetupPackage();
 
             _app.OnExecute(() =>
             {
@@ -49,6 +58,35 @@ namespace rvn
             {
                 return ExitWithError(parsingException.Message, _app);
             }
+        }
+
+        private static async Task ConfigureSetupPackage()
+        {
+            _app.Command("create-setup-package", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
+                cmd.HelpOption(HelpOptionString);
+                var setupParameters = ConfigureSetupParameters(cmd);
+                var configureInsecureSetup = ConfigureInsecureSetup(cmd);
+                var packageOutputFile = ConfigurePackageOutputFile(cmd);
+
+                cmd.OnExecute(() =>
+                {
+                    var value = configureInsecureSetup.Value();
+                    if (File.Exists(setupParameters.Value()) == false)
+                        return ExitWithError("Path to setup params has not found", cmd);
+
+                    using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
+                    {
+                        JsonSerializer serializer = new();
+                        var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                        var setupLetsEncryptTask =  LetsEncryptUtils.SetupLetsEncryptTask(setupInfo, CancellationToken.None);
+                    }
+
+
+                    return 0;
+                });
+            });
         }
 
         private static void ConfigureLogsCommand()
@@ -93,7 +131,8 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description =
+                    "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
                 cmd.OnExecute(() =>
@@ -265,7 +304,8 @@ namespace rvn
                         });
                     }, multipleValues: true);
 
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
+                    subcmd.ExtendedHelpText = Environment.NewLine +
+                                              "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
                                               "This is typically used as part of the restore process of an encrypted server store on a new machine";
                 });
 
@@ -314,7 +354,8 @@ namespace rvn
 
                 cmd.Command("decrypt", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
+                    subcmd.ExtendedHelpText = Environment.NewLine +
+                                              "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
                                               Environment.NewLine + EncryptionCommandsNote;
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Description = "Decrypts RavenDB files";
@@ -341,6 +382,21 @@ namespace rvn
             cmd.Error.WriteLine(errMsg);
             cmd.ShowHelp();
             return 1;
+        }
+
+        private static CommandOption ConfigureInsecureSetup(CommandLineApplication cmd)
+        {
+            return cmd.Option("-i|--insecure-ravendb-url", "RavenDB insecure setup", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
+        {
+            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
+        {
+            return cmd.Option("-o|--package-output-file", "default output file", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
@@ -375,7 +431,7 @@ namespace rvn
 
             if (directory.Exists == false)
             {
-                throw new InvalidOperationException($"Directory does not exist: { argument.Value }.");
+                throw new InvalidOperationException($"Directory does not exist: {argument.Value}.");
             }
 
             if (directory.Name.Equals("System"))

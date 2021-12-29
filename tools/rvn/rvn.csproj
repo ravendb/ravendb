@@ -15,9 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-    <Compile Include="..\..\src\Raven.Client\Exceptions\UnsuccessfulFileAccessException.cs" Link="Client\Exceptions\UnsuccessfulFileAccessException.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\ExpressionExtensions.cs" Link="Client\Extensions\ExpressionExtensions.cs" />
-    <Compile Include="..\..\src\Raven.Client\Extensions\MemberInfoExtensions.cs" Link="Client\Extensions\MemberInfoExtensions.cs" />
     <Compile Include="..\..\src\Raven.Client\Extensions\WhoIsLocking.cs" Link="Client\Extensions\WhoIsLocking.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupMode.cs" Link="Server\Commercial\SetupMode.cs" />
     <Compile Include="..\..\src\Raven.Server\Config\Attributes\ConfigurationEntryAttribute.cs" Link="Server\Config\Attributes\ConfigurationEntryAttribute.cs" />
@@ -124,6 +121,7 @@
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>
 </Project>
