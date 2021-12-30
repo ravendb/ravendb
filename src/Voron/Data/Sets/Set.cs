@@ -518,8 +518,11 @@ namespace Voron.Data.Sets
             }
 
             public bool? MaybeSeek(long from)
-            {
-                if (_it.IsInRange(from))
+            {                
+                // TODO: In case that we are in the right location but we have passed over,
+                //       we may be able to use a optimized Seek method instead which would
+                //       avoid getting the page and just start over in the current segment.
+                if (Current < from && _it.IsInRange(from)) 
                     return null;
                 return Seek(from);
             }

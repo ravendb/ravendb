@@ -409,7 +409,9 @@ namespace FastTests.Corax
         [Theory]
         [InlineData(new object[] { 100000, 128 })]
         [InlineData(new object[] { 100000, 18 })]
+        [InlineData(new object[] { 8000, 18 })]
         [InlineData(new object[] { 1000, 8 })]
+        [InlineData(new object[] { 1020, 7 })]
         public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
         {
             setSize = setSize - (setSize % 3);
@@ -499,7 +501,8 @@ namespace FastTests.Corax
         }
 
         [Theory]
-        [InlineData(new object[] { 100000, 128 })]
+        [InlineData(new object[] { 300, 128 })]
+        [InlineData(new object[] { 10000, 128 })]
         [InlineData(new object[] { 100000, 2046 })]
         [InlineData(new object[] { 1000, 8 })]
         [InlineData(new object[] { 11700, 18 })]
@@ -1335,7 +1338,56 @@ namespace FastTests.Corax
             finally
             {
                 ArrayPool<long>.Shared.Return(ids);
+            }        
+        }
+
+        [Fact]
+        public void NotEqualWithList()
+        {
+            var entries = new List<IndexEntry>();
+            var entriesToIndex = new IndexEntry[7];
+            for (int i = 0; i < 7; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 7) switch
+                    {
+                        0 => new string[] { "1" },
+                        1 => new string[] { "7" },
+                        2 => new string[] { "1", "2" },
+                        3 => new string[] { "1", "2", "3" },
+                        4 => new string[] { "1", "2", "3", "5" },
+                        5 => new string[] { "2", "5" },
+                        6 => new string[] { "2", "5", "7" },
+                        _ => throw new ArgumentOutOfRangeException()
+                    }
+                };
+                entries.Add(entry);
+                entriesToIndex[i] = entry;
             }
+            //":{"p0":"8 9 10"}}
+            IndexEntries(entriesToIndex);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+
+            Slice.From(bsc, "8", out var eight);
+            Slice.From(bsc, "9", out var nine);
+            Slice.From(bsc, "10", out var ten);
+
+
+            {
+                var match0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, eight);
+                var match1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, nine);
+                var match2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, ten);
+                var firstOr = searcher.Or(match0, match1);
+                var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(firstOr, match2));
+
+
+                Span<long> ids = stackalloc long[256];
+                Assert.Equal(7, finalOr.Fill(ids));
+            }
+
         }
     }
 }
