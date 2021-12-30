@@ -644,6 +644,25 @@ namespace Raven.Server.Json
             return numberOfResults;
         }
 
+
+        public static void WritePutIndexResponse(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<PutIndexResult> createdIndexes)
+        {
+            writer.WriteStartObject();
+
+            writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
+            {
+                w.WriteStartObject();
+                w.WritePropertyName(nameof(PutIndexResult.Index));
+                w.WriteString(index.Index);
+                w.WriteComma();
+                w.WritePropertyName(nameof(PutIndexResult.RaftCommandIndex));
+                w.WriteInteger(index.RaftCommandIndex);
+                w.WriteEndObject();
+            });
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteIncludedCounterNames(this AbstractBlittableJsonTextWriter writer, Dictionary<string, string[]> includedCounterNames)
         {
             writer.WriteStartObject();
