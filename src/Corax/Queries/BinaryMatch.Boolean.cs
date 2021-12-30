@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,13 +22,62 @@ namespace Corax.Queries
 
                 while (true)
                 {
-                    var results = inner.Fill(matches);
-                    if (results == 0)
+                    int totalResults = 0;
+                    int iterations = 0;
+
+                    // PERF: An alternative implementation would be to perform OR in place. The upside is that every improvement on
+                    //       OR would impact everywhere this happens, but the vectorized Sort may also tip the balance here. Another
+                    //       good behavior would be that in cases of many duplicates we will have a better use of the buffer because
+                    //       OR will also deduplicate on every call. 
+
+                    var resultsSpan = matches;
+                    while (resultsSpan.Length > 0)
+                    {
+                        // RavenDB-17750: We have to fill everything possible UNTIL there are no more matches availables.
+                        var results = inner.Fill(resultsSpan);
+                        if (results == 0)
+                            break;
+
+                        totalResults += results;
+                        iterations++;
+
+                        resultsSpan = resultsSpan.Slice(results);
+                    }
+
+                    // The problem is that multiple Fill calls do not ensure that we will get a sequence of ordered
+                    // values, therefore we must ensure that we get a 'sorted' sequence ensuring those happen.
+                    if (iterations > 1)
+                    {
+                        // We need to sort and remove duplicates.
+                        var bufferBasePtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+
+                        MemoryExtensions.Sort(matches.Slice(0, totalResults));
+
+                        // We need to fill in the gaps left by removing deduplication process.
+                        // If there are no duplicated the writes at the architecture level will execute
+                        // way faster than if there are.
+
+                        var outputBufferPtr = bufferBasePtr;
+
+                        var bufferPtr = bufferBasePtr;
+                        var bufferEndPtr = bufferBasePtr + totalResults - 1;
+                        while (bufferPtr < bufferEndPtr)
+                        {
+                            outputBufferPtr += bufferPtr[1] != bufferPtr[0] ? 1 : 0;
+                            *outputBufferPtr = bufferPtr[1];
+
+                            bufferPtr++;
+                        }
+
+                        totalResults = (int)(outputBufferPtr - bufferBasePtr + 1);
+                    }
+
+                    if (totalResults == 0)
                         return 0;
 
-                    results = outer.AndWith(matches.Slice(0, results));
-                    if (results != 0)
-                        return results;
+                    totalResults = outer.AndWith(matches.Slice(0, totalResults));
+                    if (totalResults != 0)
+                        return totalResults;
                 }
             }
 
@@ -36,10 +85,11 @@ namespace Corax.Queries
             static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
             {
                 ref var inner = ref match._inner;
-                ref var outer = ref match._outer;
-
                 var results = inner.AndWith(matches);
+                if (results == 0)
+                    return 0;
 
+                ref var outer = ref match._outer;
                 return outer.AndWith(matches.Slice(0, results));
             }
 
@@ -111,88 +161,110 @@ namespace Corax.Queries
                 }
 
                 var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matches.Length);
-                var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
+                var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matches.Length);                
 
-                // need to be ready to put both outputs to the matches
-                int length = matches.Length / 2;           
-                Span<long> innerMatches = longBuffer.Slice(0, length);
-                Debug.Assert(innerMatches.Length == length);
-                Span<long> outerMatches = longBuffer.Slice(length, length);
-                Debug.Assert(outerMatches.Length == length);
+                // RavenDB-17750: The basic concept for this fill function is that we do not really care from which side the matches come
+                //                but we need somewhat ensure that we are conceptually getting as small amount of overlapping matches on 
+                //                different calls as possible. 
 
-                var innerCount = inner.Fill(innerMatches);
-                var outerCount = outer.Fill(outerMatches);
+                int totalLength = buffer.Length;
+                int idx = totalLength / 2;
 
-                long* innerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerMatches));
-                long* outerMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(outerMatches));
-                long* matchesStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
+                var innerSlice = buffer.Slice(0, idx);
+                int innerCount = inner.Fill(innerSlice);
+                var outerSlice = buffer.Slice(idx, idx);
+                int outerCount = outer.Fill(outerSlice);
+                Debug.Assert(innerSlice.Length == outerSlice.Length);
 
+                // If we depleted everything we are done. 
+                if (innerCount == 0 && outerCount == 0)
+                {
+                    idx = 0;
+                    goto END; // Nothing more to do here, we are done. 
+                }
+
+                // We need to know if we have to run another who is gonna come next. The heuristic is to take the one with the smaller
+                // index, so we can ensure to get as many repeated documents as possible in the batch. The rationale of why we do this
+                // is to avoid having to do repeated work higher up in the query. 
+
+                long innerMax = innerCount == 0 ? long.MaxValue : innerSlice[innerCount - 1];
+                long outerMax = outerCount == 0 ? long.MaxValue : outerSlice[outerCount - 1];
+
+                bool isOuterNext;
                 if (innerCount == 0)
+                    isOuterNext = true;
+                else if (outerCount == 0)
+                    isOuterNext = false;
+                else
+                    isOuterNext = innerMax > outerMax;               
+
+                // This is the first run, merge on external buffer and copy back.
+                idx = MergeHelper.Or(matches, innerSlice.Slice(0, innerCount), outerSlice.Slice(0, outerCount));                
+                if (idx == matches.Length)
+                    return idx; // The buffer is full, we are done. 
+
+                // Most of the times we may not need to execute this part, specially when the matches are unique among sets.
+                // Also when faced with smaller buffers it will execute until they are filled.
+                var leftoverMatches = buffer.Slice(idx);
+                while (leftoverMatches.Length > (totalLength / 32))
                 {
-                    Unsafe.CopyBlockUnaligned(matchesStartPtr, outerMatchesPtr, (uint)outerCount * sizeof(long));
-                    return outerCount;
-                }
-                if (outerCount == 0)
-                {
-                    Unsafe.CopyBlockUnaligned(matchesStartPtr, innerMatchesPtr, (uint)innerCount * sizeof(long));
-                    return innerCount;
-                }
+                    // We use 1/32th of the buffer as an heuristic of how many calls we believe it would make sense to do to fill up the
+                    // buffer vs providing more documents to the aggregations upper in the query tree. This can change, but at 4Kb buffers
+                    // 128 empty places is a good enough tradeoff. 
 
-                var innerMatchesPtrEnd = innerMatchesPtr + innerCount;
-                var outerMatchesPtrEnd = outerMatchesPtr + outerCount;
+                    if (innerCount == 0 && outerCount == 0)
+                        break; // Nothing more to do here, we are done. 
 
-                long* matchesPtr = matchesStartPtr;
-                long* matchesPtrEnd = matchesStartPtr + matches.Length;
-
-                while (innerMatchesPtr < innerMatchesPtrEnd && outerMatchesPtr < outerMatchesPtrEnd)
-                {
-                    Debug.Assert(matchesPtr >= matchesStartPtr && matchesPtr < matchesPtrEnd);
-
-                    long innerMatch = *innerMatchesPtr;
-                    long outerMatch = *outerMatchesPtr;
-
-                    // PERF: The if-then-else version is actually faster than the branchless version because the
-                    //       JIT wont generate a CMOV operation and there is no intrinsic yet available;
-                    if (innerMatch == outerMatch)
+                    int newIdx;
+                    if (isOuterNext && outerCount != 0)
                     {
-                        *matchesPtr = *innerMatchesPtr;
-                        innerMatchesPtr++;
-                        outerMatchesPtr++;
-                    }
-                    else if (innerMatch < outerMatch)
-                    {
-                        *matchesPtr = *innerMatchesPtr;
-                        innerMatchesPtr++;
+                        outerCount = outer.Fill(leftoverMatches);
+                        newIdx = outerCount;
+                        if (outerCount != 0)
+                        {
+                            outerMax = leftoverMatches[outerCount - 1];
+
+                            // The idea here is to always use the one that hasnt yet seen the highest match. In this case
+                            // if the current values are higher than the highest we found on the outer fill, then we continue on the outer. 
+                            isOuterNext = innerMax > outerMax;
+                        }
+                        else
+                        {
+                            isOuterNext = false;
+                        }
                     }
                     else
                     {
-                        *matchesPtr = *outerMatchesPtr;
-                        outerMatchesPtr++;
+                        innerCount = inner.Fill(leftoverMatches);                        
+                        newIdx = innerCount;
+                        if (innerCount != 0)
+                        {
+                            innerMax = leftoverMatches[innerCount - 1];
+
+                            // The idea here is to always use the one that hasnt yet seen the highest match. In this case
+                            // if the current values are higher than the highest we found on the outer fill, then we continue on the outer. 
+                            isOuterNext = innerMax > outerMax;
+                        }                            
+                        else
+                        {
+                            isOuterNext = true;
+                        }
                     }
 
-                    matchesPtr++;
+                    if ( newIdx != 0)
+                    {
+                        // Copy the result of matches to the buffer.
+                        matches.Slice(0, idx).CopyTo(buffer);
+                        idx = MergeHelper.Or(matches, buffer.Slice(0, idx), leftoverMatches.Slice(0, newIdx));                        
+
+                        leftoverMatches = buffer.Slice(idx);
+                    }
                 }
 
-                if (innerMatchesPtr < innerMatchesPtrEnd)
-                {
-                    long values = innerMatchesPtrEnd - innerMatchesPtr;
-                    Unsafe.CopyBlockUnaligned(matchesPtr, innerMatchesPtr, (uint)values * sizeof(long));
-                    matchesPtr += values;
-                }
-                else if (outerMatchesPtr < outerMatchesPtrEnd)
-                {
-                    long values = outerMatchesPtrEnd - outerMatchesPtr;
-                    Unsafe.CopyBlockUnaligned(matchesPtr, outerMatchesPtr, (uint)values * sizeof(long));
-                    matchesPtr += values;
-                }
-
-                Debug.Assert(matchesPtr >= matchesStartPtr && matchesPtr <= matchesPtrEnd);
-                var result = (int)(matchesPtr - matchesStartPtr);
-
+                END:
                 QueryContext.MatchesPool.Return(bufferHolder);
-
-                return result;
-            }
+                return idx;
+            }      
 
             static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
             {

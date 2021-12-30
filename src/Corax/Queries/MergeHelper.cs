@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -181,6 +182,7 @@ namespace Corax.Queries
             var leftPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(left));
             var rightPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(right));
 
+            // TODO: Check there is no overlapping between dst and left and right.             
             return Or(dstPtr, dst.Length, leftPtr, left.Length, rightPtr, right.Length);
         }
 
