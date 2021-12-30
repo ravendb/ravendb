@@ -23,7 +23,11 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanGetDatabaseRecordInDebugPackageFromUnsecuredServerWithoutClientCert()
         {
-            using (var store = GetDocumentStore())
+            var databaseName = GetDatabaseName();
+            using (var store = GetDocumentStore(new Options()
+                   {
+                       ModifyDatabaseName = s => databaseName
+                   }))
             {
                 var requestExecutor = store.GetRequestExecutor(store.Database);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
@@ -83,15 +87,15 @@ namespace SlowTests.Authentication
 
             using (var store = GetDocumentStore(new Options()
                    {
-                       ClientCertificate = userCert,
-                       AdminCertificate = adminCert,
+                       ClientCertificate = userCert, 
+                       AdminCertificate = adminCert, 
                        ModifyDatabaseName = _ => databaseName
-            }))
+                   }))
             {
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
                 using var archive = new ZipArchive(response);
-                
+
                 var nonAdminDatabaseEntries = DebugInfoPackageUtils.Routes
                     .Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases && ReadWriteAccess(route))
                     .Select(route => DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, null)).ToHashSet();
