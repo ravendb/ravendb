@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var createdIndexes = new List<(string Name, long RaftIndex)>();
+                var createdIndexes = new List<PutIndexResult>();
 
                 var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
                 if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
@@ -88,8 +88,13 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
 
-                    createdIndexes.Add((indexDefinition.Name, index));
+                    createdIndexes.Add(new PutIndexResult
+                    {
+                        Index = indexDefinition.Name,
+                        RaftCommandIndex = index
+                    });
                 }
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
 
@@ -97,20 +102,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-
-                    writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
-                    {
-                        w.WriteStartObject();
-                        w.WritePropertyName(nameof(PutIndexResult.Index));
-                        w.WriteString(index.Name);
-                        w.WriteComma();
-                        w.WritePropertyName(nameof(PutIndexResult.RaftCommandIndex));
-                        w.WriteInteger(index.RaftIndex);
-                        w.WriteEndObject();
-                    });
-
-                    writer.WriteEndObject();
+                    writer.WritePutIndexResponse(context, createdIndexes);
                 }
             }
         }
