@@ -6,6 +6,7 @@ using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException.ConflictType;
 
 namespace SlowTests.Issues
 {
@@ -40,20 +41,20 @@ namespace SlowTests.Issues
                     session.Advanced.ClusterTransaction
                         .CreateCompareExchangeValue("emails/info@ravendb.net", new object());
 
-                    var ex = await Assert.ThrowsAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
+                    var ex = await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(async () => await session.SaveChangesAsync());
                     
-                    Assert.NotNull(ex.ClusterConcurrencyViolations);
-                    Assert.Equal(2, ex.ClusterConcurrencyViolations.Length);
+                    Assert.NotNull(ex.ConcurrencyViolations);
+                    Assert.Equal(2, ex.ConcurrencyViolations.Length);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterConcurrencyViolations[0].Type);
-                    Assert.Equal("usernames/ravendb", ex.ClusterConcurrencyViolations[0].Id);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Expected);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Actual);
+                    Assert.Equal(CompareExchange, ex.ConcurrencyViolations[0].Type);
+                    Assert.Equal("usernames/ravendb", ex.ConcurrencyViolations[0].Id);
+                    Assert.NotNull(ex.ConcurrencyViolations[0].Expected);
+                    Assert.NotNull(ex.ConcurrencyViolations[0].Actual);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.CompareExchange, ex.ClusterConcurrencyViolations[1].Type);
-                    Assert.Equal("emails/info@ravendb.net", ex.ClusterConcurrencyViolations[1].Id);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Expected);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Actual);
+                    Assert.Equal(CompareExchange, ex.ConcurrencyViolations[1].Type);
+                    Assert.Equal("emails/info@ravendb.net", ex.ConcurrencyViolations[1].Id);
+                    Assert.NotNull(ex.ConcurrencyViolations[1].Expected);
+                    Assert.NotNull(ex.ConcurrencyViolations[1].Actual);
                 }
             }
         }
@@ -88,19 +89,19 @@ namespace SlowTests.Issues
                     o1.Value = 13;
                     o2.Value = 23;
 
-                    var ex = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.NotNull(ex.ClusterConcurrencyViolations);
-                    Assert.Equal(2, ex.ClusterConcurrencyViolations.Length);
+                    var ex = Assert.Throws<ClusterTransactionConcurrencyException>(() => session.SaveChanges());
+                    Assert.NotNull(ex.ConcurrencyViolations);
+                    Assert.Equal(2, ex.ConcurrencyViolations.Length);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterConcurrencyViolations[0].Type);
-                    Assert.Equal("rvn-atomic/objects/1", ex.ClusterConcurrencyViolations[0].Id);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Expected);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[0].Actual);
+                    Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[0].Type);
+                    Assert.Equal("rvn-atomic/objects/1", ex.ConcurrencyViolations[0].Id);
+                    Assert.NotNull(ex.ConcurrencyViolations[0].Expected);
+                    Assert.NotNull(ex.ConcurrencyViolations[0].Actual);
 
-                    Assert.Equal(ConcurrencyException.ConflictType.Document, ex.ClusterConcurrencyViolations[1].Type);
-                    Assert.Equal("rvn-atomic/objects/2", ex.ClusterConcurrencyViolations[1].Id);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Expected);
-                    Assert.NotNull(ex.ClusterConcurrencyViolations[1].Actual);
+                    Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[1].Type);
+                    Assert.Equal("rvn-atomic/objects/2", ex.ConcurrencyViolations[1].Id);
+                    Assert.NotNull(ex.ConcurrencyViolations[1].Expected);
+                    Assert.NotNull(ex.ConcurrencyViolations[1].Actual);
                 }
             }
         }
