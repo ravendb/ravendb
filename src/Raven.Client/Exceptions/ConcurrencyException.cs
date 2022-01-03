@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Exceptions
 {
@@ -64,35 +63,5 @@ namespace Raven.Client.Exceptions
         /// The Document Id.
         /// </summary>
         public string Id;
-
-        /// <summary>
-        /// Cluster Concurrency violations info.
-        /// </summary>
-        public Conflict[] ClusterConcurrencyViolations;
-
-        public class Conflict
-        {
-            public ConflictType Type;
-            public string Id;
-            public string Expected;
-            public string Actual;
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue()
-                {
-                    [nameof(Type)] = Type,
-                    [nameof(Id)] = Id,
-                    [nameof(Expected)] = Expected,
-                    [nameof(Actual)] = Actual
-                };
-            }
-        }
-
-        public enum ConflictType
-        {
-            Document,
-            CompareExchange
-        }
     }
 }

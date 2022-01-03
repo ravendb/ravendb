@@ -326,10 +326,10 @@ namespace Raven.Server
                 djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
                 djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
                 djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
-
-                if (concurrencyException.ClusterConcurrencyViolations != null)
-                    djv[nameof(ConcurrencyException.ClusterConcurrencyViolations)] = new DynamicJsonArray(concurrencyException.ClusterConcurrencyViolations.Select(c => c.ToJson()));
             }
+
+            if (exception is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
+                djv[nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations)] = new DynamicJsonArray(ctxConcurrencyException.ConcurrencyViolations.Select(c => c.ToJson()));
         }
 
         private static void MaybeSetExceptionStatusCode(HttpContext httpContext, ServerStore serverStore, Exception exception)

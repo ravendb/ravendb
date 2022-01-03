@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
@@ -17,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -72,7 +72,7 @@ namespace Raven.Server.ServerWide.Commands
         public class ClusterTransactionErrorInfo : IDynamicJsonValueConvertible
         {
             public string Message;
-            public ConcurrencyException.Conflict Conflict;
+            public Conflict Conflict;
             
             public DynamicJsonValue ToJson()
             {
@@ -226,18 +226,18 @@ namespace Raven.Server.ServerWide.Commands
             var msg = $"Concurrency check failed for {(delete ? "deleting" : "putting")} the key '{clusterCommand.Id}'. " +
                       $"Requested index: {clusterCommand.Index}, actual index: {actualIndex}";
 
-            var type = ConcurrencyException.ConflictType.CompareExchange;
+            var type = ConflictType.CompareExchange;
 
             if (clusterCommand.Error != null)
             {
                 msg = $"{clusterCommand.Error}{Environment.NewLine}{msg}";
-                type = ConcurrencyException.ConflictType.Document;
+                type = ConflictType.Document;
             }
 
             return new ClusterTransactionErrorInfo
             {
                 Message = msg,
-                Conflict = new ConcurrencyException.Conflict
+                Conflict = new Conflict
                 {
                     Id = clusterCommand.Id, 
                     Actual = actualIndex.ToString(), 

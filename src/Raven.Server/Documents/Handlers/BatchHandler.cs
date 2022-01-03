@@ -229,9 +229,9 @@ namespace Raven.Server.Documents.Handlers
             if (result.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
+                throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
                 {
-                    ClusterConcurrencyViolations = errors.Select(e => e.Conflict).ToArray()
+                    ConcurrencyViolations = errors.Select(e => e.Conflict).ToArray()
                 };
             }
 
