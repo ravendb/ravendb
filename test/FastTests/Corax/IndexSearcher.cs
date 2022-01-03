@@ -1371,6 +1371,11 @@ namespace FastTests.Corax
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             using var searcher = new IndexSearcher(Env);
 
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "2", out var two);
+            Slice.From(bsc, "3", out var three);
+            Slice.From(bsc, "5", out var five);
+            Slice.From(bsc, "7", out var seven);
             Slice.From(bsc, "8", out var eight);
             Slice.From(bsc, "9", out var nine);
             Slice.From(bsc, "10", out var ten);
@@ -1388,6 +1393,45 @@ namespace FastTests.Corax
                 Assert.Equal(7, finalOr.Fill(ids));
             }
 
+            {
+                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
+                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
+                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
+                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
+
+                Span<long> ids = stackalloc long[256];
+                var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
+                Assert.Equal(7, orResult.Fill(ids));
+            }
+
+            {
+                Span<long> ids = stackalloc long[256];
+                var startsWith = searcher.StartWithQuery("Id", "e");
+                Assert.Equal(7, startsWith.Fill(ids.Slice(7)));
+
+                var orResArr = ids.Slice(0, 7).ToArray();
+                var stWthArr = ids.Slice(7, 7).ToArray();
+                Array.Sort(orResArr);
+                Array.Sort(stWthArr);
+                Assert.True(orResArr.SequenceEqual(stWthArr));
+            }
+
+            {
+                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
+                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
+                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
+                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
+                
+                var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
+                
+                Span<long> ids = stackalloc long[256];
+                var amount = result.Fill(ids.Slice(14));
+                var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.GetIdentityFor(x)).ToList();
+                Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
+                Assert.Equal(7, amount);
+            }
         }
     }
 }

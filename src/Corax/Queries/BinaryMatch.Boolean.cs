@@ -135,13 +135,13 @@ namespace Corax.Queries
 
                 // Execute the AndWith operation for each subpart of the query.               
                 matches.CopyTo(innerMatches);
-                inner.AndWith(innerMatches);
+                int innerSize = inner.AndWith(innerMatches);
 
                 matches.CopyTo(outerMatches);
-                outer.AndWith(outerMatches);
+                int outerSize = outer.AndWith(outerMatches);
                 
                 // Merge the hits from every side into the output buffer. 
-                var result = MergeHelper.Or(matches, innerMatches, outerMatches);                
+                var result = MergeHelper.Or(matches, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
                 QueryContext.MatchesPool.Return(bufferHolder);
 
                 return result;
