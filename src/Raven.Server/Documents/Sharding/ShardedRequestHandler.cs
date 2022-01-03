@@ -1,10 +1,16 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
+using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
@@ -88,6 +94,72 @@ namespace Raven.Server.Documents.Sharding
                     tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
                 }
                 await tasks.WhenAll();
+            }
+        }
+
+        protected async Task WaitForExecutionOfDatabaseCommands(JsonOperationContext context, List<long> raftIndexIds)
+        {
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
+            {
+                var timeToWait = ServerStore.Configuration.Cluster.OperationTimeout.GetValue(TimeUnit.Milliseconds) * raftIndexIds.Count;
+                cts.CancelAfter(TimeSpan.FromMilliseconds(timeToWait));
+
+                var waitingTasks = new List<Task<Exception>>();
+                List<Exception> exceptions = null;
+
+                foreach (var executor in ShardedContext.RequestExecutors)
+                {
+                    waitingTasks.Add(ExecuteTask(executor));
+                }
+
+                while (waitingTasks.Count > 0)
+                {
+                    var task = await Task.WhenAny(waitingTasks);
+                    waitingTasks.Remove(task);
+
+                    if (task.Result == null)
+                        continue;
+
+                    var exception = task.Result.ExtractSingleInnerException();
+
+                    exceptions ??= new List<Exception>();
+                    exceptions.Add(exception);
+                }
+
+                if (exceptions != null)
+                {
+                    var allTimeouts = true;
+                    foreach (var exception in exceptions)
+                    {
+                        if (exception is OperationCanceledException)
+                            continue;
+
+                        allTimeouts = false;
+                    }
+
+                    var aggregateException = new AggregateException(exceptions);
+
+                    if (allTimeouts)
+                        throw new TimeoutException($"Waited too long for the raft commands (numbered {string.Join(", ", raftIndexIds)}) to be executed on any of the relevant nodes to this command.",
+                            aggregateException);
+
+                    throw new InvalidDataException(
+                        $"The database '{ShardedContext.DatabaseName}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.",
+                        aggregateException);
+                }
+
+                async Task<Exception> ExecuteTask(RequestExecutor executor)
+                {
+                    try
+                    {
+                        await executor.ExecuteAsync(new WaitForCommands(raftIndexIds), context, token: cts.Token);
+                        return null;
+                    }
+                    catch (Exception e)
+                    {
+                        return e;
+                    }
+                }
             }
         }
     }
