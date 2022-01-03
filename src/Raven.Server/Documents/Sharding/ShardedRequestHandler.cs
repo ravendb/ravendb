@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Sharding
                 {
                     try
                     {
-                        await executor.ExecuteAsync(new WaitForCommands(raftIndexIds), context, token: cts.Token);
+                        await executor.ExecuteAsync(new WaitForDatabaseCommands(raftIndexIds), context, token: cts.Token);
                         return null;
                     }
                     catch (Exception e)

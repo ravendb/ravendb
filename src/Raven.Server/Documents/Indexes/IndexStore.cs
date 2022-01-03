@@ -904,7 +904,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down");
+                ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down", _serverStore);
             }
 
             try
@@ -913,7 +913,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.", _serverStore);
             }
 
             return index;
@@ -995,7 +995,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down");
+                ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down", _serverStore);
             }
 
             try
@@ -1004,7 +1004,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.", _serverStore);
             }
 
             ForTestingPurposes?.AfterIndexCreation?.Invoke(definition.Name);
@@ -2406,9 +2406,9 @@ namespace Raven.Server.Documents.Indexes
             return indexMerger.ProposeIndexMergeSuggestions();
         }
 
-        private void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason)
+        public static void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason, ServerStore serverStore)
         {
-            throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", exception);
+            throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {serverStore.NodeTag} state is {serverStore.LastStateChangeReason()}", exception);
         }
 
         public class IndexBatchScope

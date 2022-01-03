@@ -16,6 +16,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -28,44 +29,65 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            await PutInternal(validatedAsAdmin: true);
+            var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
+            if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
+            {
+                await HandleLegacyIndexesAsync();
+                return;
+            }
+
+            await PutInternal(new PutIndexParameters
+            {
+                RequestHandler = this,
+                ContextPool = Database.ServerStore.ContextPool,
+                DatabaseName = Database.Name,
+                ValidatedAsAdmin = true,
+                PutIndexTask = PutIndexTask
+            });
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
-            await PutInternal(validatedAsAdmin: false);
+            await PutInternal(new PutIndexParameters
+            {
+                RequestHandler = this,
+                ContextPool = Database.ServerStore.ContextPool,
+                DatabaseName = Database.Name,
+                ValidatedAsAdmin = false,
+                PutIndexTask = PutIndexTask
+            });
         }
 
-        private async Task PutInternal(bool validatedAsAdmin)
+        private async Task<long> PutIndexTask(IndexDefinition indexDefinition, string raftRequestId, string source = null)
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            return await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+        }
+
+        public static async Task PutInternal(PutIndexParameters parameters)
+        {
+            using (parameters.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var createdIndexes = new List<PutIndexResult>();
+                var raftIndexIds = new List<long>();
 
-                var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
-                if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
-                {
-                    await HandleLegacyIndexesAsync();
-                    return;
-                }
-
-                var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
+                var input = await context.ReadForMemoryAsync(parameters.RequestHandler.RequestBodyStream(), "Indexes");
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
-                var raftRequestId = GetRaftRequestIdFromQuery();
+
+                var raftRequestId = parameters.RequestHandler.GetRaftRequestIdFromQuery();
                 foreach (BlittableJsonReaderObject indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition(indexToAdd);
                     indexDefinition.Name = indexDefinition.Name?.Trim();
 
-                    var source = IsLocalRequest(HttpContext) ? Environment.MachineName : HttpContext.Connection.RemoteIpAddress.ToString();
+                    var source = IsLocalRequest(parameters.RequestHandler.HttpContext) ? Environment.MachineName : parameters.RequestHandler.HttpContext.Connection.RemoteIpAddress.ToString();
 
                     if (LoggingSource.AuditLog.IsInfoEnabled)
                     {
-                        var clientCert = GetCurrentCertificate();
+                        var clientCert = parameters.RequestHandler.GetCurrentCertificate();
 
-                        var auditLog = LoggingSource.AuditLog.GetLogger(Database.Name, "Audit");
+                        var auditLog = LoggingSource.AuditLog.GetLogger(parameters.DatabaseName, "Audit");
                         auditLog.Info($"Index {indexDefinition.Name} PUT by {clientCert?.Subject} {clientCert?.Thumbprint} with definition: {indexToAdd} from {source} at {DateTime.UtcNow}");
                     }
 
@@ -75,7 +97,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     indexDefinition.Type = indexDefinition.DetectStaticIndexType();
 
                     // C# index using a non-admin endpoint
-                    if (indexDefinition.Type.IsJavaScript() == false && validatedAsAdmin == false)
+                    if (indexDefinition.Type.IsJavaScript() == false && parameters.ValidatedAsAdmin == false)
                     {
                         throw new UnauthorizedAccessException($"Index {indexDefinition.Name} is a C# index but was sent through a non-admin endpoint using REST api, this is not allowed.");
                     }
@@ -86,7 +108,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                    var index = await parameters.PutIndexTask(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                    raftIndexIds.Add(index);
 
                     createdIndexes.Add(new PutIndexResult
                     {
@@ -96,15 +119,33 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
+                    parameters.RequestHandler.AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                if (parameters.WaitForIndexNotification != null)
+                    await parameters.WaitForIndexNotification(context, raftIndexIds);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                parameters.RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, parameters.RequestHandler.ResponseBodyStream()))
                 {
                     writer.WritePutIndexResponse(context, createdIndexes);
                 }
             }
+        }
+
+        public class PutIndexParameters
+        {
+            public TransactionContextPool ContextPool { get; set; }
+
+            public bool ValidatedAsAdmin { get; set; }
+
+            public RequestHandler RequestHandler { get; set; }
+
+            public string DatabaseName { get; set; }
+
+            public Func<IndexDefinition, string, string, Task<long>> PutIndexTask { get; set; }
+
+            public Func<JsonOperationContext, List<long>, Task> WaitForIndexNotification { get; set; }
         }
 
         private async Task HandleLegacyIndexesAsync()
