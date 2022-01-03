@@ -1861,6 +1861,7 @@ namespace Raven.Server.Documents.Patch
                     _loadScope = null;
                     _docsCtx = null;
                     _jsonCtx = null;
+                    _token = default;
                     Array.Clear(_args, 0, _args.Length);
                 }
             }
