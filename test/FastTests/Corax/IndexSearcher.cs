@@ -1403,18 +1403,15 @@ namespace FastTests.Corax
                 Span<long> ids = stackalloc long[256];
                 var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
                 Assert.Equal(7, orResult.Fill(ids));
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
             {
                 Span<long> ids = stackalloc long[256];
                 var startsWith = searcher.StartWithQuery("Id", "e");
-                Assert.Equal(7, startsWith.Fill(ids.Slice(7)));
+                Assert.Equal(7, startsWith.Fill(ids));
 
-                var orResArr = ids.Slice(0, 7).ToArray();
-                var stWthArr = ids.Slice(7, 7).ToArray();
-                Array.Sort(orResArr);
-                Array.Sort(stWthArr);
-                Assert.True(orResArr.SequenceEqual(stWthArr));
+                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
 
             {
@@ -1431,6 +1428,7 @@ namespace FastTests.Corax
                 var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.GetIdentityFor(x)).ToList();
                 Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
                 Assert.Equal(7, amount);
+                Assert.True(idsOfResult.SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
             }
         }
     }
