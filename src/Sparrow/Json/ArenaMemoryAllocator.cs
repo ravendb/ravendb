@@ -111,6 +111,11 @@ namespace Sparrow.Json
                 SizeInBytes = size
             };
 #else
+
+            if (size > MaxArenaSize)
+                throw new ArgumentOutOfRangeException(nameof(size), size,
+                    $"Requested size {size} while maximum size is {MaxArenaSize}");
+
             size = Bits.PowerOf2(Math.Max(sizeof(FreeSection), size));
 
             AllocatedMemoryData allocation;
@@ -167,7 +172,7 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (requestedSize >= MaxArenaSize)
+            if (requestedSize > MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize), requestedSize,
                     $"Requested arena resize to {requestedSize} while current size is {_allocated} and maximum size is {MaxArenaSize}");
 
@@ -212,12 +217,12 @@ namespace Sparrow.Json
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            return ApplyLimit(Math.Max(Bits.PowerOf2(requestedSize) * 3, _initialSize));
+            return ApplyLimit(Math.Max(Bits.PowerOf2(requestedSize) * 3L, _initialSize));
 
-            int ApplyLimit(int size)
+            int ApplyLimit(long size)
             {
                 if (SingleAllocationSizeLimit == null)
-                    return size;
+                    return (int)size;
 
                 if (size > SingleAllocationSizeLimit.Value)
                 {
@@ -225,7 +230,7 @@ namespace Sparrow.Json
                     return sizeInMb * Constants.Size.Megabyte;
                 }
 
-                return size;
+                return (int)size;
             }
         }
 

@@ -20,6 +20,37 @@ namespace FastTests.Client.BulkInsert
         {
         }
 
+        [Theory]
+        [InlineData(6)]
+        [InlineData(100)]
+        [InlineData(600)]
+        public async Task SendingDocumentWithLargeFieldInBulkInsert(int sizeInMb)
+        {
+            var mb = 1024 * 1024;
+            var objSize = sizeInMb * mb;
+            var bigObj = new BigFieldObject()
+            {
+                textField = new string('*', objSize)
+            };
+
+            using (var store = GetDocumentStore())
+            {
+                await using (var bulkInsert = store.BulkInsert())
+                {
+                    await bulkInsert.StoreAsync(new BigFieldObject());
+                    await bulkInsert.StoreAsync(new BigFieldObject());
+                    await bulkInsert.StoreAsync(new BigFieldObject());
+                    await bulkInsert.StoreAsync(bigObj);
+                }
+            }
+        }
+
+        public class BigFieldObject
+        {
+            public string textField;
+        }
+
+
         [Fact]
         public void SimpleBulkInsertShouldWork()
         {
