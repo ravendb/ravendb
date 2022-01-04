@@ -1107,7 +1107,7 @@ namespace Raven.Server.Documents.Replication
                     HashSet<LazyStringValue> docCountersToRecreate = null;
                     var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
-                    
+
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
                         if (lastTransactionMarker != item.TransactionMarker)

@@ -794,7 +794,7 @@ namespace Sparrow.Json
             if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return list;
 
-            foreach (BlittableJsonReaderObject item in array)
+            foreach (object item in array)
             {
                 if (item == null)
                 {
@@ -802,7 +802,20 @@ namespace Sparrow.Json
                     continue;
                 }
 
-                list.Add(converter(item));
+                if (item is BlittableJsonReaderObject bjro)
+                {
+                    list.Add(converter(bjro));
+                    continue;
+                }
+
+                object copy = item;
+
+                if (item is LazyStringValue lsv && IsNumeric<T>())
+                {
+                    copy = new LazyNumberValue(lsv);
+                }
+
+                list.Add((T)Convert.ChangeType(copy, typeof(T)));
             }
 
             return list;
@@ -830,7 +843,7 @@ namespace Sparrow.Json
 
                 object copy = item;
 
-                if (item is LazyStringValue lsv && IsNumeric())
+                if (item is LazyStringValue lsv && IsNumeric<T>())
                 {
                     copy = new LazyNumberValue(lsv);
                 }
@@ -839,21 +852,21 @@ namespace Sparrow.Json
             }
 
             return list.ToArray();
+        }
 
-            bool IsNumeric()
-            {
-                return typeof(T) == typeof(double) ||
-                    typeof(T) == typeof(decimal) ||
-                    typeof(T) == typeof(float) ||
-                    typeof(T) == typeof(int) ||
-                    typeof(T) == typeof(uint) ||
-                    typeof(T) == typeof(long) ||
-                    typeof(T) == typeof(ulong) ||
-                    typeof(T) == typeof(short) ||
-                    typeof(T) == typeof(ushort) ||
-                    typeof(T) == typeof(byte) ||
-                    typeof(T) == typeof(sbyte);
-            }
+        private static bool IsNumeric<T>()
+        {
+            return typeof(T) == typeof(double) ||
+                   typeof(T) == typeof(decimal) ||
+                   typeof(T) == typeof(float) ||
+                   typeof(T) == typeof(int) ||
+                   typeof(T) == typeof(uint) ||
+                   typeof(T) == typeof(long) ||
+                   typeof(T) == typeof(ulong) ||
+                   typeof(T) == typeof(short) ||
+                   typeof(T) == typeof(ushort) ||
+                   typeof(T) == typeof(byte) ||
+                   typeof(T) == typeof(sbyte);
         }
 
         private static bool TryGetTimeSpan(BlittableJsonReaderObject json, string propertyName, out TimeSpan timeSpan)

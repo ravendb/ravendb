@@ -531,7 +531,7 @@ namespace Raven.Server.Utils
             var buffer = value.Buffer;
             var size = value.Size;
 
-            var result = LazyStringParser.TryParseDateTime(buffer, size, out DateTime dt, out DateTimeOffset dto);
+            var result = LazyStringParser.TryParseDateTime(buffer, size, out DateTime dt, out DateTimeOffset dto, properlyParseThreeDigitsMilliseconds: true);
             if (result == LazyStringParser.Result.DateTime)
                 return dt;
             if (result == LazyStringParser.Result.DateTimeOffset)
@@ -568,7 +568,7 @@ namespace Raven.Server.Utils
 
             fixed (char* str = value)
             {
-                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto);
+                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto,properlyParseThreeDigitsMilliseconds: true);
                 if (result == LazyStringParser.Result.DateTime)
                     output = dt;
                 if (result == LazyStringParser.Result.DateTimeOffset)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Platform;
+using Voron.Exceptions;
 
 namespace Sparrow.Utils
 {
@@ -134,9 +135,10 @@ namespace Sparrow.Utils
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
             if (dictionary != null)
             {
-                throw new InvalidOperationException(ptrToStringAnsi + " on " + dictionary);
+                throw new VoronErrorException(ptrToStringAnsi + " on " + dictionary);
             }
-            throw new InvalidOperationException(ptrToStringAnsi);
+
+            throw new VoronErrorException(ptrToStringAnsi);
         }
 
         public class CompressContext : IDisposable
@@ -295,7 +297,7 @@ namespace Sparrow.Utils
 
             public override string ToString()
             {
-                return "Dic #" + Id
+                return "Dictionary #" + Id 
 #if DEBUG
                      + " - " + DictionaryHash
 #endif

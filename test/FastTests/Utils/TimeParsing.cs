@@ -29,7 +29,7 @@ namespace FastTests.Utils
                 DateTime time;
                 DateTimeOffset dto;
                 Assert.Equal(LazyStringParser.Result.DateTime,
-                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto));
+                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto, properlyParseThreeDigitsMilliseconds: true));
                 Assert.Equal(expected, time);
             }
         }
@@ -87,7 +87,7 @@ namespace FastTests.Utils
                 DateTime time;
                 DateTimeOffset dto;
                 Assert.Equal(LazyStringParser.Result.DateTimeOffset,
-                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto));
+                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto, properlyParseThreeDigitsMilliseconds: true));
                 Assert.Equal(expected, dto);
             }
         }
@@ -107,7 +107,7 @@ namespace FastTests.Utils
                 DateTime time;
                 DateTimeOffset dto;
                 Assert.Equal(LazyStringParser.Result.Failed,
-                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto));
+                    LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto, properlyParseThreeDigitsMilliseconds: true));
             }
         }
     }

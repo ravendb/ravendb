@@ -5,20 +5,21 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler
 {
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {
-        private readonly List<string> _messages;
+        private ConcurrentSet<string> _messages;
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
 
         public SmugglerResult()
         {
             _sw = Stopwatch.StartNew();
-            _messages = new List<string>();
+            _messages = new ConcurrentSet<string>();
 
             /*
             *  NOTE:
@@ -50,7 +51,20 @@ namespace Raven.Client.Documents.Smuggler
 
         public IOperationProgress Progress => _progress;
 
-        public IReadOnlyList<string> Messages => _messages;
+        public IReadOnlyList<string> Messages
+        {
+            get
+            {
+                return _messages.ToArray();
+            }
+            set
+            {
+                foreach (var x in value)
+                {
+                    _messages.Add(x);
+                }
+            }
+        }
 
         public void AddWarning(string message)
         {
@@ -70,21 +84,13 @@ namespace Raven.Client.Documents.Smuggler
         internal void AddMessage(string message)
         {
             Message = message;
-
-            lock (this)
-            {
-                _messages.Add(Message);
-            }
+            _messages.Add(Message);
         }
 
         private void AddMessage(string type, string message)
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-
-            lock (this)
-            {
-                _messages.Add(Message);
-            }
+            _messages.Add(Message);
         }
 
         public override DynamicJsonValue ToJson()
@@ -93,10 +99,7 @@ namespace Raven.Client.Documents.Smuggler
 
             var json = base.ToJson();
 
-            lock (this)
-            {
-                json[nameof(Messages)] = Messages.ToList();
-            }
+            json[nameof(Messages)] = Messages;
 
             json[nameof(Elapsed)] = Elapsed;
 
