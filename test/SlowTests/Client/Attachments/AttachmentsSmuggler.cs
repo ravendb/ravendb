@@ -470,7 +470,7 @@ namespace SlowTests.Client.Attachments
 
                         Assert.Equal(await WaitForValueAsync(async () =>
                         {
-                            var backupOperation = store2.Maintenance.Send(new GetOperationStateOperation(importOperation.Id));
+                            var backupOperation = await store2.Maintenance.SendAsync(new GetOperationStateOperation(importOperation.Id));
                             return backupOperation.Status;
                         },OperationStatus.Completed), OperationStatus.Completed);
 
