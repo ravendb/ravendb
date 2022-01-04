@@ -7,8 +7,11 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import moment = require("moment");
 
 class requestLatencyDetails extends abstractPerformanceHintDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails.html");
     
     tableItems: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] = [];
     private gridController = ko.observable<virtualGridController<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>>();
@@ -71,7 +74,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
 
     private mapItems(details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyDetail): Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo[] {
         return _.flatMap(details.RequestLatencies, (value, key) => {
-            return value.map((item: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo) =>
+            return (value as any).map((item: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo) =>
                 ({
                     Action: key,
                     Date: item.Date,

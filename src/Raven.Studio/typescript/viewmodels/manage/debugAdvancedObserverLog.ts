@@ -4,6 +4,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 import getClusterObserverDecisionsCommand = require("commands/database/cluster/getClusterObserverDecisionsCommand");
 import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
@@ -13,6 +14,8 @@ import fileDownloader = require("common/fileDownloader");
 
 class clusterObserverLog extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedObserverLog.html");
+    
     filter = ko.observable<string>();
     
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();

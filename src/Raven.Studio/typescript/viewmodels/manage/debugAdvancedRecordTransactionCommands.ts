@@ -4,6 +4,7 @@ import recordTransactionsCommand = require("commands/database/debug/recordTransa
 import notificationCenter = require("common/notifications/notificationCenter");
 import operation = require("common/notifications/models/operation");
 import stopRecordingTransactionsCommand = require("commands/database/debug/stopRecordingTransactionsCommand");
+import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 
 class runningRecording {
     databaseName: string;
@@ -26,26 +27,39 @@ class runningRecording {
 
 class debugAdvancedRecordTransactionCommands extends viewModelBase {
 
+    view = require("views/manage/debugAdvancedRecordTransactionCommands.html");
+    
     private highlightDatabase: string;
     
     databaseNames = ko.observableArray<string>([]);
     databaseName = ko.observable<string>();
+    
     outputFile = ko.observable<string>();
+    outputFilePathHasFocus = ko.observable<boolean>(false);
     
     runningTasks = ko.observableArray<runningRecording>([]);
     
     validationGroup: KnockoutValidationGroup;
-    
-    // marker for parent router
-    static preventParentGrow = true;
+
+    outputFilePathOptions = ko.observableArray<string>([]);
     
     constructor() {
         super();
+
+        _.bindAll(this, "outputFilePathChanged");
+        this.updateOutputFilePathOptions(this.outputFile());
         
+        this.initObservables();
         this.initValidation();
     }
     
-    private initValidation() {
+    private initObservables(): void {
+        this.outputFile.throttle(300).subscribe(newPathValue => {
+            this.updateOutputFilePathOptions(newPathValue);
+        });
+    }
+    
+    private initValidation(): void {
         this.outputFile.extend({
             required: true
         });
@@ -77,7 +91,7 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
         this.syncRunningRecordings();
     }
 
-    private syncRunningRecordings() {
+    private syncRunningRecordings(): void {
         const runningRecordCommands = notificationCenter.instance.globalNotifications()
             .filter(x => x instanceof operation && x.taskType() === "RecordTransactionCommands" && !x.isCompleted())
             .map(command => {
@@ -100,7 +114,7 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
         }
     }
 
-    startRecording() {
+    startRecording(): void {
         if (!this.isValid(this.validationGroup)) {
             return;
         }
@@ -110,11 +124,29 @@ class debugAdvancedRecordTransactionCommands extends viewModelBase {
             .execute();
     }
     
-    stopRecording(databaseName: string) {
+    stopRecording(databaseName: string): void {
         const db = databasesManager.default.getDatabaseByName(databaseName);
         
         new stopRecordingTransactionsCommand(db)
             .execute();
+    }
+
+    private updateOutputFilePathOptions(path: string): void {
+        getFolderPathOptionsCommand.forServerLocal(path, true)
+            .execute()
+            .done((result: Raven.Server.Web.Studio.FolderPathOptions) => {
+                if (this.outputFile() !== path) {
+                    // the path has changed
+                    return;
+                }
+
+                this.outputFilePathOptions(result.List);
+            });
+    }
+
+    outputFilePathChanged(value: string): void {
+        this.outputFile(value);
+        this.outputFilePathHasFocus(true);
     }
 }
 

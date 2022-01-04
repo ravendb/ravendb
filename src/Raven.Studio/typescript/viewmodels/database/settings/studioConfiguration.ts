@@ -9,6 +9,8 @@ import accessManager = require("common/shell/accessManager");
 
 class studioConfiguration extends viewModelBase {
 
+    view = require("views/database/settings/studioConfiguration.html");
+
     model: databaseStudioConfigurationModel;
     serverWideStudioConfigurationUrl = appUrl.forGlobalStudioConfiguration();
     canNavigateToServerSettings: KnockoutComputed<boolean>;

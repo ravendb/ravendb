@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -123,6 +124,50 @@ namespace SlowTests.Smuggler
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_17387()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_1"
+                }))
+                using (var store2 = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_2"
+                }))
+                {
+                    var user = new User { Name = "Name1", LastName = "LastName1" };
+                    using (var session = store1.OpenAsyncSession(new SessionOptions()
+                    {
+                        TransactionMode = TransactionMode.ClusterWide
+                    }))
+                    {
+                        await session.StoreAsync(user);
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var importedUser = await session.LoadAsync<User>(user.Id);
+                        Assert.Equal(user.Id, importedUser.Id);
+                    }
                 }
             }
             finally
@@ -1060,6 +1105,156 @@ namespace SlowTests.Smuggler
                 File.Delete(file);
             }
         }
+
+        [Fact]
+        public async Task CanExportAndImportIncrementalTimeSeries()
+        {
+            var file = GetTempFileName();
+            var baseline = RavenTestHelper.UtcToday;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate").Increment(baseline.AddSeconds(i * 10), new[] { i % 60d });
+                            session.IncrementalTimeSeriesFor("users/2", "INC:Heartrate").Increment(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5 });
+                            session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate2").Increment(baseline.AddSeconds(i * 10), new[] { i % 60d, i % 60d + 5, i % 60d + 10 });
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(4, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name1", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var values = await session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
+
+                        var count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(1, val.Values.Length);
+                            Assert.Equal(count++ % 60, val.Values[0]);
+                        }
+
+                        Assert.Equal(360, count);
+
+                        values = await session.IncrementalTimeSeriesFor("users/2", "INC:Heartrate").GetAsync(DateTime.MinValue, DateTime.MaxValue);
+
+                        count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(2, val.Values.Length);
+                            Assert.Equal(count % 60, val.Values[0]);
+                            Assert.Equal(count++ % 60 + 5, val.Values[1]);
+                        }
+
+                        Assert.Equal(360, count);
+
+                        values = await session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate2").GetAsync(DateTime.MinValue, DateTime.MaxValue);
+
+                        count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(3, val.Values.Length);
+                            Assert.Equal(count % 60, val.Values[0]);
+                            Assert.Equal(count % 60 + 5, val.Values[1]);
+                            Assert.Equal(count++ % 60 + 10, val.Values[2]);
+                        }
+
+                        Assert.Equal(360, count);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+
+        [Fact]
+        public async Task ImportIncrementalTimeSeriesTwice()
+        {
+            var file = GetTempFileName();
+            var baseline = RavenTestHelper.UtcToday;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate").Increment(baseline, 1);
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // import twice
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        Assert.Equal("Name1", user1.Name);
+
+                        var values = await session.IncrementalTimeSeriesFor("users/1", "INC:Heartrate").GetAsync();
+                        var entry = values.Single();
+                        Assert.Equal(baseline, entry.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(1, entry.Values.Length);
+                        Assert.Equal(1, entry.Values[0]);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
 
         [Fact]
         public async Task CanExportAndImportTimeSeriesWithMultipleSegments()

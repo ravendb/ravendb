@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis.Remote;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -80,6 +81,7 @@ namespace Raven.Server.Rachis
         {
             Term = term;
             _engine = engine;
+            PeersVersion[engine.Tag] = ClusterCommandsVersionManager.MyCommandsVersion;
         }
 
         private MultipleUseFlag _running = new MultipleUseFlag();
@@ -465,9 +467,15 @@ namespace Raven.Server.Rachis
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
-                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
+                var sp = Stopwatch.StartNew();
+                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, sp);
 
                 context.Transaction.Commit();
+
+                var elapsed = sp.Elapsed;
+                if (RachisStateMachine.EnableDebugLongCommit && elapsed > TimeSpan.FromSeconds(5))
+                    Console.WriteLine($"Commiting from {_lastCommit} to {maxIndexOnQuorum} took {elapsed}");
+
                 _lastCommit = maxIndexOnQuorum;
             }
 
@@ -786,12 +794,28 @@ namespace Raven.Server.Rachis
 
         internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {
+            ConvertResultAction action;
             switch (cmd)
             {
                 case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
-                    return new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    action = batchCmpExchangeCommand.ConvertResultAction;
+                    if (action != null)
+                        return action;
+
+                    action = new ConvertResultAction(batchCmpExchangeCommand.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    Interlocked.CompareExchange(ref batchCmpExchangeCommand.ConvertResultAction, action, null);
+                    return batchCmpExchangeCommand.ConvertResultAction;
+
                 case CompareExchangeCommandBase cmpExchange:
-                    return new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+
+                    action = cmpExchange.ConvertResultAction;
+                    if (action != null)
+                        return action;
+
+                    action = new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                    Interlocked.CompareExchange(ref cmpExchange.ConvertResultAction, action, null);
+                    return cmpExchange.ConvertResultAction;
+
                 default:
                     return null;
             }

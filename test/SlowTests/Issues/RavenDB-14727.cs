@@ -22,7 +22,9 @@ namespace SlowTests.Issues
             {
                 Database = "HibernatingRhinos",
                 Urls = new[] { url1 },
+#pragma warning disable SYSLIB0026 // Type or member is obsolete
                 Certificate = new X509Certificate2()
+#pragma warning restore SYSLIB0026 // Type or member is obsolete
             };
 
             Exception exception = Assert.Throws<InvalidOperationException>(() => store.Initialize());

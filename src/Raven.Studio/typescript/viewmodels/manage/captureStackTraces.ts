@@ -6,6 +6,7 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import copyToClipboard = require("common/copyToClipboard");
 import fileDownloader = require("common/fileDownloader");
 import fileImporter = require("common/fileImporter");
+import genUtils = require("common/generalUtils");
 
 type stackFrame = {
     short: string;
@@ -28,7 +29,7 @@ class stackInfo {
     }
 
     static isUserCode(line: string): boolean {
-        return line.startsWith("Raven") || line.startsWith("Voron") || line.startsWith("Sparrow");
+        return genUtils.isRavenDBCode(line);
     }
 
     constructor(public threadIds: number[], public stackTrace: string[]) {
@@ -70,6 +71,8 @@ class stackInfo {
 }
 
 class captureStackTraces extends viewModelBase {
+    
+    view = require("views/manage/captureStackTraces.html");
     
     spinners = {
         loading: ko.observable<boolean>(false)

@@ -1,12 +1,15 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import genUtils = require("common/generalUtils");
 import queryUtil = require("common/queryUtil");
+import moment = require("moment");
 
 class queryCriteria {
 
     name = ko.observable<string>("");
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
+    ignoreIndexQueryLimit = ko.observable<boolean>(false);
+    
     queryText = ko.observable<string>("");
     metadataOnly = ko.observable<boolean>(false);
     recentQuery = ko.observable<boolean>(false);
@@ -15,7 +18,7 @@ class queryCriteria {
     
     validationGroup: KnockoutValidationGroup;
 
-    static empty() {
+    static empty(): queryCriteria{
         return new queryCriteria();
     }
 
@@ -24,7 +27,7 @@ class queryCriteria {
         this.initValidation();
     }
     
-    private initValidation() {
+    private initValidation(): void {
         this.queryText.extend({
             // We want to be able to send invalid queries in order to get the server side error as well.
             // aceValidation: true
@@ -35,7 +38,7 @@ class queryCriteria {
         })
     }
 
-    private initObservables() {
+    private initObservables(): void {
         this.showFields.subscribe(showFields => {
             if (showFields && this.indexEntries()) {
                 this.indexEntries(false);
@@ -46,10 +49,14 @@ class queryCriteria {
             if (indexEntries && this.showFields()) {
                 this.showFields(false);
             }
+            
+            if (!indexEntries) {
+                this.ignoreIndexQueryLimit(false);
+            }
         });
     }
 
-    updateUsing(storedQuery: storedQueryDto) {
+    updateUsing(storedQuery: storedQueryDto): void {
         this.queryText(storedQuery.queryText);
         this.recentQuery(storedQuery.recentQuery);
     }
@@ -67,19 +74,23 @@ class queryCriteria {
         };
     }
 
-    setSelectedIndex(indexName: string) {
+    setSelectedIndex(indexName: string): void {
         let rql = "from ";
+
         if (indexName.startsWith(queryUtil.DynamicPrefix)) {
             rql += indexName.substring(queryUtil.DynamicPrefix.length);
+
         } else if (indexName === queryUtil.AllDocs) {
             rql += "@all_docs";
+
         } else {
-            rql += "index '" + indexName + "'";
+            rql += `index ${queryUtil.escapeIndexName(indexName)}`;
         }
+
         this.queryText(rql);
     }
 
-    copyFrom(incoming: queryDto) {
+    copyFrom(incoming: queryDto): void {
         this.name("");
         this.queryText(incoming.queryText);
         this.recentQuery(incoming.recentQuery);
@@ -92,6 +103,7 @@ class queryCriteria {
         clonedItem.queryText(this.queryText());
         clonedItem.showFields(this.showFields());
         clonedItem.indexEntries(this.indexEntries());
+        clonedItem.ignoreIndexQueryLimit(this.ignoreIndexQueryLimit());
         clonedItem.metadataOnly(this.metadataOnly());
         clonedItem.graphOutput(this.graphOutput());
         clonedItem.recentQuery(this.recentQuery());

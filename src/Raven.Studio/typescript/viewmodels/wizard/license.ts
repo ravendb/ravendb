@@ -4,6 +4,8 @@ import registrationInfoCommand = require("commands/wizard/registrationInfoComman
 
 class license extends setupStep {
 
+    view = require("views/wizard/license.html");
+
     spinners = {
         next: ko.observable<boolean>(false)
     };

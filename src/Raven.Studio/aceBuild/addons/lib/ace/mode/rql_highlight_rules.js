@@ -9,6 +9,14 @@ define(function(require, exports, module) {
 
         var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
 
+        var escapedRe = "\\\\(?:x[0-9a-fA-F]{2}|" + // hex
+            "u[0-9a-fA-F]{4}|" + // unicode
+            "u{[0-9a-fA-F]{1,6}}|" + // es6 unicode
+            "[0-2][0-7]{0,2}|" + // oct
+            "3[0-7][0-7]?|" + // oct
+            "[4-7][0-7]?|" + //oct
+            ".)";
+
         var clausesKeywords = (
             "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
         );
@@ -99,10 +107,12 @@ define(function(require, exports, module) {
             end : "\\*/"
         }, {
             token : "string",           // " string
-            regex : '"[^"]*"?'
+            regex : '"(?=.)',
+            next  : "qqstring"
         }, {
             token : "string",           // ' string
-            regex : "'[^']*'?"
+            regex : "'(?=.)",
+            next  : "qstring"
         }, {
             token : "string",           // ` string (apache drill)
             regex : "`[^`]*`?"
@@ -163,6 +173,38 @@ define(function(require, exports, module) {
 
         this.$rules = {
             "start" : commonRules.concat(startRule),
+            "qqstring" : [
+                {
+                    token : "constant.language.escape",
+                    regex : escapedRe
+                }, {
+                    token : "string",
+                    regex : "\\\\$",
+                    consumeLineEnd  : true
+                }, {
+                    token : "string",
+                    regex : '"|$',
+                    next  : "start"
+                }, {
+                    defaultToken: "string"
+                }
+            ],
+            "qstring" : [
+                {
+                    token: "constant.language.escape",
+                    regex: escapedRe
+                }, {
+                    token: "string",
+                    regex: "\\\\$",
+                    consumeLineEnd: true
+                }, {
+                    token: "string",
+                    regex: "'|$",
+                    next: "start"
+                }, {
+                    defaultToken: "string"
+                }
+            ],
             "whereFunction" : commonRules.concat(whereFunctionsRules).map(function (rule) {
                 return {
                     token: rule.token + ".whereFunction",

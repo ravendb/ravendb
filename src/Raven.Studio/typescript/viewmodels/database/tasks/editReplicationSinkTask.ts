@@ -13,7 +13,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import messagePublisher = require("common/messagePublisher");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import replicationCertificateModel = require("models/database/tasks/replicationCertificateModel");
-import forge = require("forge/forge");
+import forge = require("node-forge");
 import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
@@ -22,6 +22,9 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editReplicationSinkTask extends viewModelBase {
+
+    view = require("views/database/tasks/editReplicationSinkTask.html");
+    connectionStringView = require("views/database/settings/connectionStringRaven.html")
 
     editedSinkTask = ko.observable<ongoingTaskReplicationSinkEditModel>();
     isAddingNewTask = ko.observable<boolean>(true);

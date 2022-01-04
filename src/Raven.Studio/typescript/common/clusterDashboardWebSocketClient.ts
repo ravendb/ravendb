@@ -1,6 +1,7 @@
 /// <reference path="../../typings/tsd.d.ts" />
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
+import moment = require("moment");
 
 class clusterDashboardWebSocketClient extends abstractWebSocketClient<Raven.Server.Dashboard.Cluster.WidgetMessage> {
 

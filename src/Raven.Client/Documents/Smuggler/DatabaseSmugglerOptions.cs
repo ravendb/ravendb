@@ -36,7 +36,8 @@
                                                                                   DatabaseRecordItemType.OlapConnectionStrings |
                                                                                   DatabaseRecordItemType.OlapEtls |
                                                                                   DatabaseRecordItemType.ElasticSearchConnectionStrings |
-                                                                                  DatabaseRecordItemType.ElasticSearchEtls;
+                                                                                  DatabaseRecordItemType.ElasticSearchEtls |
+                                                                                  DatabaseRecordItemType.PostgreSQLIntegration;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

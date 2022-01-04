@@ -83,7 +83,7 @@
                             </div>
                             <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
                                 <div class="form-group">
-                                    <div class="flex-grow" data-bind="compose: 'database/settings/connectionStringSql.html'"></div>
+                                    <div class="flex-grow" data-bind="compose: $root.connectionStringView"></div>
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
@@ -230,7 +230,9 @@
             <div class="flex-horizontal flex-header">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
-                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
+                        <i class="icon-plus"></i><span>Add Transformation Script</span>
+                    </button>
                 </div> 
             </div>
             <!-- The transformation scripts -->
@@ -250,8 +252,15 @@
                                         <span data-bind="text: name"></span>
                                         <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                     </div>
-                                    <div class="collections">Collection: <span
-                                        data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>
+                                    <div class="collections">
+                                        Collections:
+                                        <span class="etl-collections" title="The Collections transformed"
+                                              data-bind="foreach: transformScriptCollections, visible: !applyScriptForAllCollections() && transformScriptCollections().length">
+                                            <span data-bind="text: $data, attr: { class: 'collection-color-' + $parent.getCollectionEntry($data) }"></span>
+                                        </span>
+                                        <span class="etl-collections" data-bind="visible: applyScriptForAllCollections" title="The Collections transformed">
+                                            <span>All collections</span>
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="actions">
@@ -287,21 +296,41 @@
                             <div class="help-block" data-bind="validationMessage: script"></div>
                         </div>
                     </div>
-                    <div class="form-group margin-top margin-top-lg">
-                        <label><strong>Collection:</strong></label>
-                        <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
-                            <div class="dropdown btn-block">
-                                <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" title="Select/enter the collection name"
-                                       data-bind="textInput: collection" placeholder="Select (or enter) a collection">
-                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                <ul class="dropdown-menu"
-                                    data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
-                                    <li data-bind="click: _.partial($root.useCollection, $data)">
-                                        <a href="#" data-bind="text: $data"></a>
-                                    </li>
-                                </ul>
+                    <div class="margin-bottom margin-top margin-top-lg">
+                        <div class="flex-horizontal margin-bottom">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a collection" data-toggle="dropdown" autocomplete="off"
+                                           data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutoCompleter(transformScriptCollections, inputCollection)">
+                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                            <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                        </li>
+                                    </ul>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
+                                        <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <span class="help-block" data-bind="validationMessage: collection"></span>
+                            <div>
+                                <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()">
+                                    <i class="icon-plus"></i><span>Add Collection</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div data-bind="visible: transformScriptCollections().length" class="margin-top">
+                            <label><strong>Collections Selected:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: transformScriptCollections">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                     <div class="toggle margin-top margin-top-lg margin-bottom" data-bind="visible: !isNew() && !$root.enableTestArea()">

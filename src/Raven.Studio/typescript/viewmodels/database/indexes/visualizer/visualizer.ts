@@ -14,6 +14,8 @@ type autoCompleteItem = {
 
 class visualizer extends viewModelBase {
 
+    view = require("views/database/indexes/visualizer/visualizer.html");
+
     static readonly noIndexSelected = "Select an index";
 
     indexes = ko.observableArray<string>();

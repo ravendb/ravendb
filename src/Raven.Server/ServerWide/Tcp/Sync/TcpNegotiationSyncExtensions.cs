@@ -5,7 +5,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Logging;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide.Tcp.Sync
 {
@@ -23,13 +22,17 @@ namespace Raven.Server.ServerWide.Tcp.Sync
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 var current = parameters.Version;
+                bool dataCompression;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
                         throw new OperationCanceledException($"Stopped TCP negotiation for {parameters.Operation} because of cancellation request");
 
                     SendTcpVersionInfo(context, writer, parameters, current);
-                    var version = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
+                    var response = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
+                    var version = response.Version;
+                    dataCompression = response.LicensedFeatures?.DataCompression ?? false;
+
                     if (Log.IsInfoEnabled)
                     {
                         Log.Info($"Read response from {parameters.SourceNodeTag ?? parameters.DestinationUrl} for '{parameters.Operation}', received version is '{version}'");
@@ -58,7 +61,13 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 {
                     Log.Info($"{parameters.DestinationNodeTag ?? parameters.DestinationUrl} agreed on version '{current}' for {parameters.Operation}.");
                 }
-                return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                var supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
+
+                return new TcpConnectionHeaderMessage.SupportedFeatures(supportedFeatures)
+                {
+                    DataCompression = dataCompression
+                };
             }
         }
 
@@ -76,7 +85,9 @@ namespace Raven.Server.ServerWide.Tcp.Sync
                 [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
                 [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion,
                 [nameof(TcpConnectionHeaderMessage.AuthorizeInfo)] = parameters.AuthorizeInfo?.ToJson(),
-                [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId
+                [nameof(TcpConnectionHeaderMessage.ServerId)] = parameters.DestinationServerId,
+                [nameof(TcpConnectionHeaderMessage.LicensedFeatures)] = parameters.LicensedFeatures?.ToJson()
+
             });
             writer.Flush();
         }

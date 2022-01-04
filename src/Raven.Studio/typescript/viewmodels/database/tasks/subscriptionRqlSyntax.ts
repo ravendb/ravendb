@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 
 class subscriptionRqlSyntax extends dialogViewModelBase {
 
+    view = require("views/database/tasks/subscriptionRqlSyntax.html");
+    
     dialogContainer: Element;
 
     compositionComplete() {

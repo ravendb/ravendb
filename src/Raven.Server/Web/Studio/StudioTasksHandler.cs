@@ -308,7 +308,7 @@ namespace Raven.Server.Web.Studio
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                             using (var awsClient = new RavenAwsS3Client(s3Settings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                awsClient.TestConnection();
+                                await awsClient.TestConnectionAsync();
                             }
                             break;
 
@@ -316,7 +316,7 @@ namespace Raven.Server.Web.Studio
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
                             using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                glacierClient.TestConnection();
+                                await glacierClient.TestConnectionAsync();
                             }
                             break;
 
@@ -324,7 +324,7 @@ namespace Raven.Server.Web.Studio
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
                             using (var azureClient = RavenAzureClient.Create(azureSettings, ServerStore.Configuration.Backup, cancellationToken: ServerStore.ServerShutdown))
                             {
-                                azureClient.TestConnection();
+                                await azureClient.TestConnectionAsync();
                             }
                             break;
 

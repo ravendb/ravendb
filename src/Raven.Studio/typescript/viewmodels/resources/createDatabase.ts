@@ -27,6 +27,8 @@ import generalUtils = require("common/generalUtils");
 
 class createDatabase extends dialogViewModelBase {
     
+    view = require("views/resources/createDatabase.html");
+    
     static readonly legacyKeySizes = [128, 192, 256];
     static readonly legacyEncryptionAlgorithms: legacyEncryptionAlgorithms[] = ['DES', 'RC2', 'Rijndael', 'Triple DES'];
 
@@ -153,6 +155,8 @@ class createDatabase extends dialogViewModelBase {
         super.compositionComplete();
         this.encryptionSection.syncQrCode();
         this.setupDisableReasons("#savingKeyData");
+        
+        $('.restore [data-toggle="tooltip"]').tooltip();
         
         popoverUtils.longWithHover($(".resource-type-label small"),
             {

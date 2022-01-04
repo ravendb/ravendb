@@ -3,13 +3,17 @@ import dbLiveIOStatsWebSocketClient = require("common/dbLiveIOStatsWebSocketClie
 import ioStatsGraph = require("models/database/status/ioStatsGraph");
 
 class ioStats extends viewModelBase {
+    
+    view = require("views/database/status/ioStats.html");
+    graphView = require("views/partial/ioStatsGraph.html");
+    
     private graph: ioStatsGraph;
     
     constructor() {
         super();
         
         this.graph = new ioStatsGraph(
-            () => this.activeDatabase().name,
+            () => `database-${this.activeDatabase().name}`,
             ["Documents", "Index", "Configuration"],
             true,
             (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.activeDatabase(), onUpdate, cutOff));

@@ -121,25 +121,13 @@ class menu {
             return false;
         }
 
-        if (this.shouldOpenAsDialog($data)) {
-            const leafItem = $data as leafMenuItem;
-            require([leafItem.moduleId],
-                (viewModel: any) => {
-                    app.showBootstrapDialog(new viewModel);
-                });
+        let a = $event.currentTarget as HTMLAnchorElement;
+
+        if ($event.ctrlKey) {
+            window.open(a.href);
         } else {
-            let a = $event.currentTarget as HTMLAnchorElement;
-
-            if ($event.ctrlKey) {
-                window.open(a.href);
-            } else {
-                router.navigate(a.href);
-            }
+            router.navigate(a.href);
         }
-    }
-
-    private shouldOpenAsDialog($data: menuItem) {
-        return $data instanceof leafMenuItem && ($data as leafMenuItem).openAsDialog;
     }
 
     back($data: any, $event: JQueryEventObject) {

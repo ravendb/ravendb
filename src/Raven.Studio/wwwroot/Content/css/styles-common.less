@@ -1,4 +1,4 @@
-@import "bootstrap/bootstrap.less";
+@import "./bootstrap/bootstrap.less";
 @import "fonts.less";
 @import "checkbox-toggle.less";
 @import "icons.less";
@@ -128,6 +128,10 @@ h6 {
             margin-left: 6px;
         }
     }
+}
+
+.no-wrap {
+    white-space: nowrap;
 }
 
 .nobr {
@@ -2038,6 +2042,14 @@ ul.properties {
 }
 
 .copy-button {
+    color: @copy-button-color;
+
+    &:hover {
+        color: @copy-button-hover-color;
+    }
+}
+
+.copy-button-hidden {
     visibility: hidden;
     color: @copy-button-color;
 
@@ -2048,7 +2060,7 @@ ul.properties {
 
  .copy-area {
      &:hover {
-         .copy-button {
+         .copy-button-hidden {
              visibility: visible;
          }
      }

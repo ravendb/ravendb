@@ -9,6 +9,8 @@ import virtualBulkInsert = require("common/notifications/models/virtualBulkInser
 
 class bulkInsertDetails extends abstractOperationDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/operations/bulkInsertDetails.html");
+    
     progress: KnockoutObservable<Raven.Client.Documents.Operations.BulkInsertProgress>;
     result: KnockoutObservable<Raven.Client.Documents.Operations.BulkOperationResult>;
     processingSpeed: KnockoutComputed<string>;

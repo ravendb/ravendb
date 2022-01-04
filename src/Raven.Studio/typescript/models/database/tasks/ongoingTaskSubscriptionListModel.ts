@@ -6,6 +6,13 @@ import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskI
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 import dropSubscriptionConnectionCommand = require("commands/database/tasks/dropSubscriptionConnectionCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import moment = require("moment");
+
+type PerConnectionStats = {
+    clientUri: string;
+    workerId: string;
+    strategy?: Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy;
+}
 
 class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     
@@ -17,9 +24,9 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
     changeVectorForNextBatchStartingPoint = ko.observable<string>(null);
 
     // Live connection stats
-    clientIP = ko.observable<string>();
-    connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();
+    clients = ko.observableArray<PerConnectionStats>([]);
     clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details..
+    subscriptionMode = ko.observable<string>();
     textClass = ko.observable<string>("text-details");
 
     validationGroup: KnockoutValidationGroup;
@@ -29,24 +36,31 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
         this.update(dto);
         this.initializeObservables(); 
+        
+        _.bindAll(this, "disconnectClientFromSubscription");
     }
 
-    initializeObservables() {
+    initializeObservables(): void {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
+
+        this.taskState.subscribe(() => this.refreshIfNeeded());
     }
 
-    toggleDetails() {
+    toggleDetails(): void {
         this.showDetails.toggle();
-
+        this.refreshIfNeeded()
+    }
+    
+    private refreshIfNeeded(): void {
         if (this.showDetails()) {
             this.refreshSubscriptionInfo();
         }
     }
 
-    refreshSubscriptionInfo() {
+    private refreshSubscriptionInfo() {
         // 1. Get general info
         ongoingTaskInfoCommand.forSubscription(this.activeDatabase(), this.taskId, this.taskName())
             .execute()
@@ -68,12 +82,17 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                 this.clientDetailsIssue(null);
                 new subscriptionConnectionDetailsCommand(this.activeDatabase(), this.taskId, this.taskName(), this.responsibleNode().NodeUrl)
                     .execute()
-                    .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails) => {
+                    .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
 
-                        this.clientIP(result.ClientUri);
-                        this.connectionStrategy(result.Strategy);
+                        this.subscriptionMode(result.SubscriptionMode);
+                        
+                        this.clients(result.Results.map(x => ({
+                            clientUri: x.ClientUri,
+                            strategy: x.Strategy,
+                            workerId: x.WorkerId
+                        })));
 
-                        if (!this.clientIP()) { 
+                        if (!result.Results.length) { 
                             this.clientDetailsIssue("No client is connected");
                             this.textClass("text-warning");
                         }
@@ -91,10 +110,10 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
             });
     }
 
-    disconnectClientFromSubscription() {
-        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName())
+    disconnectClientFromSubscription(workerId: string) {
+        new dropSubscriptionConnectionCommand(this.activeDatabase(), this.taskId, this.taskName(), workerId)
             .execute()
-            .done(() => { this.refreshSubscriptionInfo(); });
+            .done(() => this.refreshSubscriptionInfo());
     }
 }
 

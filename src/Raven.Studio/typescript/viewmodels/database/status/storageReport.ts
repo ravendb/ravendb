@@ -17,6 +17,8 @@ type positionAndSizes = {
 }
 
 class storageReport extends viewModelBase {
+
+    view = require("views/database/status/storageReport.html");
     
     accessManager = accessManager.default.databasesView;
 
@@ -71,7 +73,7 @@ class storageReport extends viewModelBase {
         super.compositionComplete();
         this.processData();
         this.initGraph();
-        this.draw(undefined, undefined);
+        this.draw(undefined);
     }
 
     private initObservables() {
@@ -257,6 +259,7 @@ class storageReport extends viewModelBase {
         
         item.pageCount = tree.PageCount;
         item.numberOfEntries = tree.NumberOfEntries;
+        item.lazyLoadChildren = children.length === 1 && children[0].name === "Stream details summary info";
         return item;
     }
 
@@ -339,7 +342,7 @@ class storageReport extends viewModelBase {
         return depth === 0 ? node.internalChildren : [];
     }
 
-    private draw(goingIn: boolean, previousNode: storageReportItem) {
+    private draw(goingIn: boolean, forceOldLocation?: positionAndSizes) {
         const levelDown = goingIn === true;
         const levelUp = goingIn === false;
 
@@ -350,7 +353,7 @@ class storageReport extends viewModelBase {
 
         this.tooltip = d3.select(".chart-tooltip");
 
-        const oldLocation: positionAndSizes = {
+        const oldLocation: positionAndSizes = forceOldLocation || {
             dx: this.node().dx,
             dy: this.node().dy,
             x: this.node().x,
@@ -493,21 +496,31 @@ class storageReport extends viewModelBase {
         }
     } 
 
+    private findDatafile(d: storageReportItem): storageReportItem {
+        while (d.parent.parent && d.parent.parent.name !== "/") {
+            d = d.parent;
+        }
+        
+        return d;
+    }
+    
     private loadDetailedReport(d: storageReportItem): JQueryPromise<detailedStorageReportItemDto> {
         if (!d.lazyLoadChildren) {
             return;
         }
 
-        const env = d.parent;
+        const datafile = this.findDatafile(d);
+        const full = datafile !== d; // load full details only when loadDetailedReport was requested from child of data file 
+        const env = datafile.parent;
 
         const showLoaderTimer = setTimeout(() => {
             this.showLoader(true);
         }, 100);
 
-        return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type))
+        return new getEnvironmentStorageReportCommand(this.activeDatabase(), env.name, _.capitalize(env.type), full)
             .execute()
             .done((envReport) => {
-                this.mapDetailedReport(envReport.Report, d);
+                this.mapDetailedReport(envReport.Report, datafile);
             })
             .always(() => {
                 if (this.showLoader()) {
@@ -516,6 +529,31 @@ class storageReport extends viewModelBase {
                     clearTimeout(showLoaderTimer);
                 }
             });
+    }
+    
+    private getNodePath(d: storageReportItem): string[] {
+        const result: string[] = [];
+        
+        do {
+            result.push(d.name);
+            d = d.parent;
+        } while (d.name !== "/");
+        
+        return result.reverse();
+    }
+    
+    private findNodeByPath(path: string[]): storageReportItem {
+        let target = this.root;
+
+        for (const item of path) {
+            target = target.internalChildren.find(x => x.name === item);
+
+            if (!target) {
+                return null;
+            }
+        }
+        
+        return target;
     }
 
     onClick(d: storageReportItem, goingIn: boolean) {
@@ -526,12 +564,33 @@ class storageReport extends viewModelBase {
         if (d.lazyLoadChildren) {
             const requestExecution = protractedCommandsDetector.instance.requestStarted(500);
 
+            const nodePath = this.getNodePath(d);
+            
+            // copy old positions as node references might change during load (data overwrite)
+            const oldLocation: positionAndSizes = {
+                dx: d.dx,
+                dy: d.dy,
+                x: d.x,
+                y: d.y
+            };
+            
             this.loadDetailedReport(d)
                 .done(() => {
-                    const prev = this.node();
-                    this.sortBySize(d);
-                    this.node(d);
-                    this.draw(true, prev);
+                    const nodeAfterLoad = this.findNodeByPath(nodePath);
+                    
+                    if (d !== nodeAfterLoad) {
+                        // little magic here - we want to restore parent/child relations
+                        d3.layout.treemap<any>()
+                            .children((n) => n.internalChildren)
+                            .value(d => d.size)
+                            .size([this.w, this.h])
+                            .nodes(this.root);
+                    }
+                    
+                    this.sortBySize(nodeAfterLoad);
+                    this.node(nodeAfterLoad);
+                    
+                    this.draw(true, oldLocation);
                 })
                 .always(() => requestExecution.markCompleted());
 
@@ -545,9 +604,8 @@ class storageReport extends viewModelBase {
             return;
         }
 
-        const prev = this.node();
         this.node(d);
-        this.draw(goingIn, prev);
+        this.draw(goingIn);
 
         this.updateTooltips();
         

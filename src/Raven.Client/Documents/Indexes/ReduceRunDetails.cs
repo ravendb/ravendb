@@ -55,5 +55,13 @@
 
         public long AllocationBudget { get; set; }
 
+        public string BatchCompleteReason { get; set; }
+    }
+
+    public class CleanupRunDetails
+    {
+        public int DeleteSuccesses { get; set; }
+
+        public string BatchCompleteReason { get; set; }
     }
 }

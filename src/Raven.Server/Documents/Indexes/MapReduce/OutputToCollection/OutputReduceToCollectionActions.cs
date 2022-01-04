@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Exceptions;
@@ -10,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Exceptions;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -197,6 +199,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                             {
                                 enqueue.GetAwaiter().GetResult();
                             }
+                            catch (OperationCanceledException)
+                            {
+                                throw;
+                            }
+                            catch (ObjectDisposedException e) when (database.DatabaseShutdown.IsCancellationRequested)
+                            {
+                                throw new OperationCanceledException("The operation of writing output reduce documents was cancelled because of database shutdown", e);
+                            }
+                            catch (Exception e) when (e.IsOutOfMemory() || e is DiskFullException)
+                            {
+                                throw;
+                            }
                             catch (Exception e)
                             {
                                 throw new IndexWriteException("Failed to delete output reduce documents", e);
@@ -227,7 +241,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
             reduceOutputsTree.Delete(prefix);
 
-            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += __ =>
+            indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewTransactionsPrevented += __ =>
             {
                 // ensure that we delete it from in-memory state only after successful commit
                 _prefixesOfReduceOutputDocumentsToDelete.TryRemove(prefix, out _);

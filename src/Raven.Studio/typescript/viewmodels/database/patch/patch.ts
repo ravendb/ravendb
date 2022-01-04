@@ -14,7 +14,6 @@ import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/provi
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
-import queryCompleter = require("common/queryCompleter");
 import patchSyntax = require("viewmodels/database/patch/patchSyntax");
 import patchTester = require("viewmodels/database/patch/patchTester");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
@@ -22,6 +21,7 @@ import queryUtil = require("common/queryUtil");
 import generalUtils = require("common/generalUtils");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
+import rqlLanguageService = require("common/rqlLanguageService");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -122,6 +122,8 @@ class patchList {
 }
 
 class patch extends viewModelBase {
+    
+    view = require("views/database/patch/patch.html");
 
     staleIndexBehavior = ko.observable("patchStale"); 
     staleTimeout = ko.observable<number>(60);
@@ -149,7 +151,7 @@ class patch extends viewModelBase {
 
     jsCompleter = defaultAceCompleter.completer();
     private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
-    queryCompleter: queryCompleter;
+    languageService: rqlLanguageService;
     
     private fullDocumentsProvider: documentPropertyProvider;
 
@@ -169,17 +171,13 @@ class patch extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Update");
+        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Update");
 
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
     }
 
     private initValidation() {
-        this.patchSaveName.extend({
-            required: true
-        });
-        
         this.saveValidationGroup = ko.validatedObservable({
             patchSaveName: this.patchSaveName
         });
@@ -271,6 +269,16 @@ class patch extends viewModelBase {
             documentBasedColumnsProvider.showPreview(doc);
         }
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+
+        this.patchDocument().query.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
+    }
 
     usePatch(item: storedPatchDto) {
         this.patchDocument().copyFrom(item);
@@ -330,6 +338,7 @@ class patch extends viewModelBase {
     detached() {
         super.detached();
         
+        this.languageService.dispose();
         // clean up virtual view - unbind subscriptions
         this.test.detached();
     }

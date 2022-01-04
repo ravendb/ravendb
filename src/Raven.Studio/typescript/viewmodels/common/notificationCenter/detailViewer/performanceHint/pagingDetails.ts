@@ -7,6 +7,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 type pagingDetailsItemDto = {
     Action: string;
@@ -19,6 +20,8 @@ type pagingDetailsItemDto = {
 }
 
 class pagingDetails extends abstractPerformanceHintDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/pagingDetails.html");
 
     tableItems: pagingDetailsItemDto[] = [];
     private gridController = ko.observable<virtualGridController<pagingDetailsItemDto>>();

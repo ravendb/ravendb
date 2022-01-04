@@ -12,8 +12,13 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import continueTest = require("common/shell/continueTest");
+import { highlight, languages } from "prismjs";
 
 class cmpXchg extends viewModelBase {
+
+    view = require("views/database/cmpXchg/cmpXchg.html");
 
     filter = ko.observable<string>();
     deleteEnabled: KnockoutComputed<boolean>;
@@ -36,12 +41,12 @@ class cmpXchg extends viewModelBase {
         this.filter.throttle(500).subscribe(() => this.filterLogEntries());
     }
     
-    private filterLogEntries() {
+    private filterLogEntries(): void {
         this.nextItemToFetchIndex = 0;
         this.gridController().reset(true);
     }
 
-    private initObservables() {
+    private initObservables(): void {
         this.selectedItemsCount = ko.pureComputed(() => {
             let selectedDocsCount = 0;
             const controll = this.gridController();
@@ -89,11 +94,28 @@ class cmpXchg extends viewModelBase {
         grid.headerVisible(true);
 
         const checkColumn = new checkedColumn(true); 
-        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%");
-        const valueColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%");
-        const metadataColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%");
+        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%", {
+            sortable: "string"
+        });
+        const valueColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%", {
+            sortable: "string"
+        });
+        const metadataColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%", {
+            sortable: "string"
+        });
+        const raftIndexColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Index, "Raft Index", "20%", {
+            sortable: "number"
+        });
 
-        const gridColumns = this.isReadOnlyAccess() ? [keyColumn, valueColumn, metadataColumn] : [checkColumn, keyColumn, valueColumn, metadataColumn];
+        const editColumn = new actionColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid,
+            x => this.editItem(x.Key),
+            "Edit",
+            `<i class="icon-edit"></i>`,
+            "50px",
+            { title: () => "Edit this compare exchange item" })
+        
+        const gridColumns = this.isReadOnlyAccess() ? [keyColumn, valueColumn, metadataColumn, raftIndexColumn] :
+                                                      [checkColumn, editColumn, keyColumn, valueColumn, metadataColumn, raftIndexColumn];
         grid.init((s, _) => this.fetchItems(s), () => gridColumns);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
@@ -102,14 +124,14 @@ class cmpXchg extends viewModelBase {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
                     const json = JSON.stringify(value, null, 4);
-                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    const html = highlight(json, languages.javascript, "js");
                     onValue(html, json);
                 }
             }
         });
     }
 
-    newItem($event: JQueryEventObject) {
+    newItem($event: JQueryEventObject): void {
         eventsCollector.default.reportEvent("cmpXchg", "new");
         const url = appUrl.forNewCmpXchg(this.activeDatabase());
         if ($event.ctrlKey) {
@@ -119,7 +141,7 @@ class cmpXchg extends viewModelBase {
         }
     }
 
-    deleteSelected() {
+    deleteSelected(): void {
         const selection = this.gridController().getSelectedItems();
         if (selection.length === 0) {
             throw new Error("No elements to delete");
@@ -127,8 +149,8 @@ class cmpXchg extends viewModelBase {
         
         const rawSelection = this.gridController().selection();
         if (rawSelection.mode === "exclusive" && !rawSelection.excluded.length && !rawSelection.included.length) {
-            // this is special case - user select all values, with out any exclusions, suggest deleting all cmpXchg values
-            // (including items which wasn't downloaded yet)
+            // this is special case - user selects all values, without exclusions, suggest deleting all cmpXchg values
+            // (including items which were not downloaded yet)
             this.confirmationMessage("Are you sure?", "Deleting <strong>ALL</strong> compare exchange items.", { html: true, buttons: ["Cancel", "Delete All"] })
                 .done(result => {
                     if (result.can) {
@@ -163,11 +185,15 @@ class cmpXchg extends viewModelBase {
         }
     }
 
-    private onDeleteCompleted() {
+    private onDeleteCompleted(): void {
         this.spinners.delete(false);
         this.nextItemToFetchIndex = 0;
         this.gridController().reset(true);
     }
+    
+    private editItem(itemKey: string): void {
+        router.navigate(appUrl.forEditCmpXchg(itemKey, this.activeDatabase()));
+}
 }
 
 export = cmpXchg;

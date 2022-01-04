@@ -52,6 +52,12 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("SNMP")]
         Snmp,
 
+        [Description("PostgreSql Integration")]
+        PostgreSqlIntegration,
+
+        [Description("Power BI")]
+        PowerBI,
+
         [Description("Delayed External Replication")]
         DelayedExternalReplication,
 
@@ -77,6 +83,12 @@ namespace Raven.Client.Exceptions.Commercial
         MonitoringEndpoints,
 
         [Description("Read-only Certificates")]
-        ReadOnlyCertificates
+        ReadOnlyCertificates,
+
+        [Description("Concurrent Subscriptions")]
+        ConcurrentSubscriptions,
+
+        [Description("TCP Data Compression")]
+        TcpDataCompression
     }
 }

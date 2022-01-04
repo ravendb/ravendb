@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using Elasticsearch.Net;
 using Nest;
 using Raven.Client.Documents.Operations.Counters;
@@ -12,16 +14,21 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions.ETL.ElasticSearch;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 {
     public class ElasticSearchEtl : EtlProcess<ElasticSearchItem, ElasticSearchIndexWithRecords, ElasticSearchEtlConfiguration, ElasticSearchConnectionString, EtlStatsScope, EtlPerformanceOperation>
     {
         internal const string IndexBulkAction = @"{""index"":{""_id"":null}}";
+
+        internal static byte[] IndexBulkActionBytes = Encoding.UTF8.GetBytes(IndexBulkAction);
 
         private readonly HashSet<string> _existingIndexes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -102,32 +109,36 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 string indexName = index.IndexName.ToLower();
 
-                EnsureIndexExists(indexName, index);
-                
-                var actionDataPairs = new List<string>();
-
-                foreach (ElasticSearchItem insert in index.Inserts)
-                {
-                    if (insert.Property == null) 
-                        continue;
-
-                    using (var json = EnsureLowerCasedIndexIdProperty(context, insert.Property.RawValue, index))
-                    {
-                        actionDataPairs.Add(IndexBulkAction); // action
-                        actionDataPairs.Add(json.ToString()); // json data
-                    }
-
-                    count++;
-                }
+                EnsureIndexExistsAndValidateIfNeeded(indexName, index);
 
                 if (index.InsertOnlyMode == false)
                     count += DeleteByQueryOnIndexIdProperty(index);
 
-                if (actionDataPairs.Count > 0)
+                if (index.Inserts.Count > 0)
                 {
-                    var bulkBody = PostData.MultiJson(actionDataPairs);
+                    var streamHandler = PostData.StreamHandler(index.Inserts, (inserts, stream) =>
+                    {
+                        foreach (ElasticSearchItem insert in inserts)
+                        {
+                            if (insert.TransformationResult == null)
+                                continue;
 
-                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, bulkBody);
+                            stream.Write(IndexBulkActionBytes);
+
+                            using (var json = EnsureLowerCasedIndexIdProperty(context, insert.TransformationResult, index))
+                            using (var writer = new BlittableJsonTextWriter(context, stream))
+                            {
+                                writer.WriteNewLine();
+                                writer.WriteObject(json);
+                                writer.WriteNewLine();
+                            }
+
+                            count++;
+                        }
+                    }, (i, s, token) => throw new NotSupportedException("We don't use async bulk method"));
+
+                    
+                    var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, streamHandler, new BulkRequestParameters { Refresh = Refresh.WaitFor });
 
                     if (bulkIndexResponse.IsValid == false)
                         ThrowElasticSearchLoadException($"Failed to index data to '{index}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
@@ -141,14 +152,25 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
         internal static BlittableJsonReaderObject EnsureLowerCasedIndexIdProperty(DocumentsOperationContext context, BlittableJsonReaderObject json,
             ElasticSearchIndexWithRecords index)
         {
-            if (json.TryGet(index.IndexIdProperty, out LazyStringValue idProperty))
+            if (json.TryGet(index.DocumentIdProperty, out LazyStringValue idProperty))
             {
                 using (var old = json)
                 {
-                    json.Modifications = new DynamicJsonValue(json) { [index.IndexIdProperty] = LowerCaseIndexIdProperty(idProperty) };
+                    json.Modifications = new DynamicJsonValue(json) { [index.DocumentIdProperty] = LowerCaseDocumentIdProperty(idProperty) };
 
                     json = context.ReadObject(json, "es-etl-load");
                 }
+            }
+            else if (json.Modifications != null)
+            {
+                // document id property was not added by user, so we inserted the lowercased id in ElasticSearchDocumentTransformer.LoadToFunction
+#if DEBUG
+                var docIdProperty = json.Modifications.Properties.First(x => x.Name == index.DocumentIdProperty);
+
+                Debug.Assert(docIdProperty.Value.ToString() == docIdProperty.Value.ToString().ToLowerInvariant());
+#endif
+
+                json = context.ReadObject(json, "es-etl-load");
             }
 
             return json;
@@ -162,23 +184,15 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             foreach (ElasticSearchItem delete in index.Deletes)
             {
-                idsToDelete.Add(LowerCaseIndexIdProperty(delete.DocumentId));
+                idsToDelete.Add(LowerCaseDocumentIdProperty(delete.DocumentId));
             }
-
-            // we are about to delete by query so we need to ensure that all documents are available for search
-            // this way we won't skip just inserted documents that could not be indexed yet
-
-            var refreshResponse = _client.Indices.Refresh(new RefreshRequest(Indices.Index(indexName)));
-
-            if (refreshResponse.IsValid == false)
-                ThrowElasticSearchLoadException($"Failed to refresh index '{index}' before doing delete by query",
-                    refreshResponse.ServerError, refreshResponse.OriginalException, refreshResponse.DebugInformation);
 
             var deleteResponse = _client.DeleteByQuery<string>(d => d
                 .Index(indexName)
+                .Refresh()
                 .Query(q => q
                     .Terms(p => p
-                        .Field(index.IndexIdProperty)
+                        .Field(index.DocumentIdProperty)
                         .Terms((IEnumerable<string>)idsToDelete))
                 )
             );
@@ -190,7 +204,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return (int)deleteResponse.Deleted;
         }
 
-        private void EnsureIndexExists(string indexName, ElasticSearchIndexWithRecords index)
+        private void EnsureIndexExistsAndValidateIfNeeded(string indexName, ElasticSearchIndexWithRecords index)
         {
             if (_existingIndexes.Contains(indexName) == false && _client.Indices.Exists(new IndexExistsRequest(Indices.Index(indexName))).Exists == false)
             {
@@ -200,6 +214,20 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             }
             else
             {
+                var indexResponse = _client.Indices.Get(new GetIndexDescriptor(Indices.Index(indexName)));
+
+                var mappingsProperties = indexResponse.Indices[indexName].Mappings.Properties;
+
+                if (mappingsProperties.TryGetValue(new PropertyName(index.DocumentIdProperty), out var propertyDefinition) == false)
+                    throw new ElasticSearchLoadException(
+                        $"The index '{indexName}' doesn't contain the mapping for '{index.DocumentIdProperty}' property. " +
+                        "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
+
+                if (propertyDefinition.Type == null || propertyDefinition.Type.Equals("keyword", StringComparison.OrdinalIgnoreCase) == false)
+                    throw new ElasticSearchLoadException(
+                        $"The index '{indexName}' has invalid mapping for '{index.DocumentIdProperty}' property. " +
+                        "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
+
                 _existingIndexes.Add(indexName);
             }
         }
@@ -210,7 +238,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 .Map(m => m
                     .Properties(p => p
                         .Keyword(t => t
-                            .Name(index.IndexIdProperty)))));
+                            .Name(index.DocumentIdProperty)))));
 
             // The request made it to the server but something went wrong in ElasticSearch (query parsing exception, non-existent index, etc)
             if (response.ServerError != null)
@@ -222,7 +250,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                 throw new ElasticSearchLoadException($"Failed to create '{indexName}' index. Debug Information: {response.DebugInformation}", response.OriginalException);
         }
 
-        internal static string LowerCaseIndexIdProperty(LazyStringValue id)
+        internal static string LowerCaseDocumentIdProperty(LazyStringValue id)
         {
             return id.ToLowerInvariant();
         }

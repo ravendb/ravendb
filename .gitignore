@@ -85,10 +85,15 @@ src/Raven.Studio/test.log
 src/Raven.Studio/wwwroot/App/**/*.js
 src/Raven.Studio/wwwroot/App/**/*.js.map
 
-src/Raven.Studio/typescript/endpoints.ts
-src/Raven.Studio/typescript/configuration.ts
+src/Raven.Studio/wwwroot/dist/
+
+src/Raven.Studio/typings/server/endpoints.ts
+src/Raven.Studio/typings/server/configuration.ts
 src/Raven.Studio/typings/server/include.ts
 src/Raven.Studio/typings/**/*.d.ts
+!src/Raven.Studio/typings/npmTypes.d.ts
+!src/Raven.Studio/typings/custom_jszip.d.ts
+!src/Raven.Studio/typings/custom_node-forge.d.ts
 src/Raven.Studio/typings/globals
 src/Raven.Studio/typings/modules
 !src/Raven.Studio/typings/_studio/**/*.d.ts
@@ -97,6 +102,8 @@ src/Raven.Studio/typings/modules
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
+# web woker is bundled using webpack
+/src/Raven.Studio/wwwroot/rql_worker.js 
 
 test/FastTests/Databases/
 /test/Tryouts/Logs
@@ -122,3 +129,9 @@ bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
 /src/Raven.Pal/osxcross
 /src/Raven.Pal/*.nativecodeanalysis.xml
 /src/Raven.Pal/src/posix/*.o
+
+
+# ANTLR generated files (via Rider plugin)
+gen/*.java
+gen/*.tokens
+gen/*.interp

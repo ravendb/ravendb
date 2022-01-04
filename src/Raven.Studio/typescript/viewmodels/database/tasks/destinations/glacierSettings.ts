@@ -5,6 +5,9 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class glacierSettings extends amazonSettings {
+
+    view = require("views/database/tasks/destinations/glacierSettings.html");
+    
     vaultName = ko.observable<string>();
 
     targetOperation: string;
@@ -38,6 +41,8 @@ class glacierSettings extends amazonSettings {
     }
     
     initValidation() {
+        super.initAmazonValidation();
+        
         // - vault name can be between 1 and 255 characters long.
         // - allowed characters are a-z, A-Z, 0-9, '_' (underscore), '-' (hyphen), and '.' (period).
         const regExp = /^[A-Za-z0-9_\.-]+$/;

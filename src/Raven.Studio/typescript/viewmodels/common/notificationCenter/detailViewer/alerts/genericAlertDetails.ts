@@ -7,6 +7,8 @@ import generalUtils = require("common/generalUtils");
 
 class genericAlertDetails extends abstractAlertDetails {
 
+    view = require("views/common/notificationCenter/detailViewer/alerts/genericAlertDetails.html");
+
     constructor(alert: alert, notificationCenter: notificationCenter) {
         super(alert, notificationCenter);
     }

@@ -93,6 +93,7 @@ class appUrl {
         customAnalyzers: ko.pureComputed(() => appUrl.forCustomAnalyzers(appUrl.currentDatabase())),
         editCustomSorter: ko.pureComputed(() => appUrl.forEditCustomSorter(appUrl.currentDatabase())),
         editCustomAnalyzer: ko.pureComputed(() => appUrl.forEditCustomAnalyzer(appUrl.currentDatabase())),
+        integrations: ko.pureComputed(() => appUrl.forIntegrations(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
 
@@ -391,6 +392,10 @@ class appUrl {
         const namePart = analyzerName ? "&name=" + encodeURIComponent(analyzerName) : "";
 
         return "#databases/settings/editCustomAnalyzer?" + databasePart + namePart;
+    }
+
+    static forIntegrations(db: database | databaseInfo): string {
+        return "#databases/settings/integrations?" + appUrl.getEncodedDbPart(db);
     }
 
     static forConnectionStrings(db: database | databaseInfo, type?: string, name?: string): string {
@@ -704,6 +709,8 @@ class appUrl {
     private static getEncodedIndexNamePart(indexName?: string) {
         return indexName ? "indexName=" + encodeURIComponent(indexName) : "";
     }
+    
+    static defaultModule: Function; // will be bind dynamically to avoid cycles in imports
 
     static mapUnknownRoutes(router: DurandalRouter) {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
@@ -711,7 +718,7 @@ class appUrl {
 
             messagePublisher.reportWarning("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-            instruction.config.moduleId = "viewmodels/resources/databases";
+            instruction.config.moduleId = appUrl.defaultModule;
         });
     }
 

@@ -6,6 +6,8 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class recentErrorDetails extends dialogViewModelBase {
 
+    view = require("views/common/notificationCenter/detailViewer/recentErrorDetails.html");
+
     protected readonly recentError: recentError;
     protected readonly dismissFunction: () => void;
 

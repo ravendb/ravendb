@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests;
 using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -13,15 +12,20 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
-    public class CompareExchangeExpirationTest : RavenTestBase
+    public class CompareExchangeExpirationTest : ClusterTestBase
     {
         private const string _chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -301,6 +305,74 @@ namespace SlowTests.Cluster
                 Assert.Equal(0, val);
             }
 
+        }
+
+        [Fact]
+        public async Task CanSnapshotCompareExchangeWithExpiration()
+        {
+            var count = 45;
+            var (_, leader) = await CreateRaftCluster(1, watcherCluster: true);
+
+            using (var store = GetDocumentStore(options: new Options
+            {
+                Server = leader
+            }))
+            {
+                var expiry = DateTime.Now.AddMinutes(2);
+                var compareExchanges = new Dictionary<string, User>();
+                await CompareExchangeExpirationTest.AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
+                await CompareExchangeExpirationTest.AssertCompareExchanges(compareExchanges, store, expiry);
+
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    Assert.Equal(count, CompareExchangeExpirationStorage.GetExpiredValues(context, long.MaxValue).Count());
+                }
+
+                var server2 = GetNewServer();
+                var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+                Servers.Add(server2);
+
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url, watcher: true), ctx);
+
+                    var addDatabaseNode = new AddDatabaseNodeOperation(store.Database);
+                    await store.Maintenance.Server.SendAsync(addDatabaseNode);
+                }
+
+                using (server2.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    Assert.Equal(count, CompareExchangeExpirationStorage.GetExpiredValues(context, long.MaxValue).Count());
+                }
+
+                var now = DateTime.UtcNow;
+                leader.ServerStore.Observer.Time.UtcDateTime = () => now.AddMinutes(3);
+
+                var leaderCount = WaitForValue(() =>
+                {
+                    using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        return CompareExchangeExpirationStorage.GetExpiredValues(context, long.MaxValue).Count();
+                    }
+                }, 0, interval: 333);
+
+                Assert.Equal(0, leaderCount);
+
+                var server2count = WaitForValue(() =>
+                {
+                    using (server2.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        return CompareExchangeExpirationStorage.GetExpiredValues(context, long.MaxValue).Count();
+                    }
+                }, 0, interval: 333);
+
+                Assert.Equal(0, server2count);
+            }
         }
 
         private static async Task AssertCompareExchanges(Dictionary<string, User> compareExchangesWithExpiration, DocumentStore store, DateTime? expiry = null)

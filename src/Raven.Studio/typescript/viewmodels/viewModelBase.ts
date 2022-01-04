@@ -11,11 +11,12 @@ import eventsCollector = require("common/eventsCollector");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
 import messagePublisher = require("common/messagePublisher");
+import { jwerty } from "jwerty";
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
-class viewModelBase {
+abstract class viewModelBase {
 
     protected activeDatabase = activeDatabaseTracker.default.database;
     
@@ -25,6 +26,18 @@ class viewModelBase {
     
     protected isOperatorOrAbove = accessManager.default.isOperatorOrAbove;
     protected isClusterAdminOrClusterNode = accessManager.default.isClusterAdminOrClusterNode;
+    
+    abstract view: { default: string };
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this.constructor.name);
+        }
+        if (!this.view.default.trim().startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view.default || this.view;
+    }
     
     downloader = new downloader();
 

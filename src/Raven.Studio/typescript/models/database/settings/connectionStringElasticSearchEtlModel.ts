@@ -6,7 +6,7 @@ import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 import fileImporter = require("common/fileImporter");
 import replicationCertificateModel = require("models/database/tasks/replicationCertificateModel");
-import forge = require("forge/forge");
+import forge = require("node-forge");
 import certificateUtils = require("common/certificateUtils");
 import messagePublisher = require("common/messagePublisher");
 import testElasticSearchNodeConnectionCommand = require("commands/database/cluster/testElasticSearchNodeConnectionCommand");
@@ -18,7 +18,7 @@ class authenticationInfo {
     static authProviders: Array<valueAndLabelItem<authenticationMethod, string>> = [
         { value: "none", label: "No authentication" },
         { value: "basic", label: "Basic" },
-        { value: "apiKey",label: "Api Key" },
+        { value: "apiKey",label: "API Key" },
         { value: "certificate", label: "Certificate" }
     ];
     
@@ -305,8 +305,8 @@ class connectionStringElasticSearchEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: discoveryUrl): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        return new testElasticSearchNodeConnectionCommand(urlToTest.discoveryUrlName(), this.authentication().toDto())
+    testConnection(db: database, urlToTest: discoveryUrl): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
+        return new testElasticSearchNodeConnectionCommand(db, urlToTest.discoveryUrlName(), this.authentication().toDto())
             .execute()
             .done((result) => {
                 if (result.Error) {

@@ -7,12 +7,15 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 interface indexingDetailsItemDto extends Raven.Server.NotificationCenter.Notifications.Details.WarnIndexOutputsPerDocument.WarningDetails {
     IndexName: string;
 }
 
 class indexingDetails extends abstractPerformanceHintDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/indexingDetails.html");
 
     tableItems: indexingDetailsItemDto[] = [];
     suggestions = ko.observableArray<string>([]);

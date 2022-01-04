@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
+using Sparrow;
 using Voron.Data.BTrees;
+using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -387,6 +389,57 @@ namespace SlowTests.Voron.Storage
                 }
 
                 Assert.Equal(total, treeReport.Streams.AllocatedSpaceInBytes);
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed(1)]
+        [InlineDataWithRandomSeed(5)]
+        [InlineDataWithRandomSeed(15)]
+        [InlineData(1, 265522278)]
+        [InlineData(1, 1859588471)]
+        [InlineData(5, 550046396)]
+        public void TreeReportContainsPartialInfoAboutStreams(int numberOfStreams, int seed)
+        {
+            var r = new Random(seed);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("streams-tree");
+
+                for (int streamNumber = 0; streamNumber < numberOfStreams; streamNumber++)
+                {
+                    var bytes = new byte[r.Next(0, 2 * 1024 * 1024)];
+
+                    r.NextBytes(bytes);
+
+                    var name = $"streams/{streamNumber}";
+                    tree.AddStream(name, new MemoryStream(bytes));
+                }
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                // here we are checking that the original streams' size is ~equal to the calculated [fake] one
+
+                var report = Env.GenerateDetailedReport(tx, includeDetails: false);
+                var fullReport = Env.GenerateDetailedReport(tx, includeDetails: true);
+
+                var treeReport = report.Trees.Find(x => x.Name == "streams-tree");
+                var fullTreeReport = fullReport.Trees.Find(x => x.Name == "streams-tree");
+                
+                Assert.NotNull(treeReport);
+                Assert.NotNull(fullTreeReport);
+
+                Assert.Equal(1, treeReport.Streams.Streams.Count);
+                Assert.Equal(StorageReportGenerator.SkippedStreamsDetailsName, treeReport?.Streams.Streams[0].Name);
+
+                var streamsSizeInMb = new Size(treeReport.Streams.Streams[0].AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                var fullStreamsSizeInMb = new Size(fullTreeReport.Streams.AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
+                
+                Assert.Equal(streamsSizeInMb,fullStreamsSizeInMb);
             }
         }
 

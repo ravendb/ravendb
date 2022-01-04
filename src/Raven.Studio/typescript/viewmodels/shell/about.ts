@@ -1,19 +1,26 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
 import buildInfo = require("models/resources/buildInfo");
-import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import getLicenseConfigurationSettingsCommand = require("commands/licensing/getLicenseConfigurationSettingsCommand");
+import getConnectivityToLicenseServerCommand = require("commands/licensing/getConnectivityToLicenseServerCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
+import popoverUtils = require("common/popoverUtils");
+import app = require("durandal/app");
+import feedback from "viewmodels/shell/feedback";
 
 class about extends viewModelBase {
 
+    view = require("views/shell/about.html");
+
     accessManager = accessManager.default.aboutView;
+    
+    connectedToLicenseServer = ko.observable<boolean>();
+    connectionException = ko.observable<string>();
     
     clusterViewUrl = appUrl.forCluster();
     passiveNode = ko.pureComputed(() => clusterTopologyManager.default.topology().isPassive());
@@ -24,7 +31,7 @@ class about extends viewModelBase {
     supportLabel = license.supportLabel;
     supportTableCssClass = license.supportTableCssClass;
     
-    clientVersion = shell.clientVersion;
+    clientVersion = viewModelBase.clientVersion;
     serverVersion = buildInfo.serverBuildVersion;
 
     developerLicense = license.developerLicense;
@@ -87,7 +94,8 @@ class about extends viewModelBase {
     spinners = {
         forceLicenseUpdate: ko.observable<boolean>(false),
         renewLicense: ko.observable<boolean>(false),
-        latestVersionUpdates: ko.observable<boolean>(false)
+        latestVersionUpdates: ko.observable<boolean>(false),
+        checkConnectionToLicenseServer: ko.observable<boolean>(false)
     };
 
     expiresText = ko.pureComputed(() => {
@@ -162,10 +170,6 @@ class about extends viewModelBase {
     
     canRenewLicense = ko.pureComputed(() => {
         return this.licenseType() === 'Developer' || this.licenseType() === 'Community';
-    });
-
-    canForceUpdate = ko.pureComputed(() => {
-        return this.licenseType() !== 'Developer' && this.licenseType() !== 'Community';
     });
     
     licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
@@ -296,13 +300,41 @@ class about extends viewModelBase {
     }
 
     openFeedbackForm() {
-        shell.openFeedbackForm();
+        const dialog = new feedback(viewModelBase.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
+    }
+
+    checkConnectionToLicenseServer() {
+        this.spinners.checkConnectionToLicenseServer(true);
+        return new getConnectivityToLicenseServerCommand()
+            .execute()
+            .done((connectionResult: Raven.Server.Web.Studio.LicenseHandler.ConnectivityToLicenseServer) => {
+                this.connectedToLicenseServer(connectionResult.StatusCode === "OK");
+                this.connectionException(connectionResult.Exception || "");
+            })
+            .always(() => this.spinners.checkConnectionToLicenseServer(false));
     }
 
     activate(args: any) {
         super.activate(args, { shell: true });
-        return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo(), license.fetchLicenseStatus());
+        return $.when<any>(this.getLicenseConfigurationSettings(),
+                           this.pullLatestVersionInfo(),
+                           license.fetchLicenseStatus(),
+                           this.checkConnectionToLicenseServer());
     }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        popoverUtils.longWithHover($(".not-connected"),
+            {
+                content:
+                    `<small><small>Unable to reach the RavenDB License Server at <code>api.ravendb.net</code><br>
+                     ${this.connectionException()}</small></small>`,
+                placement: "bottom"
+            });
 }
+}
+
 
 export = about;

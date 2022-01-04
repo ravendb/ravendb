@@ -18,6 +18,15 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 
 class connectionStrings extends viewModelBase {
 
+    view = require("views/database/settings/connectionStrings.html");
+    backupDestinationTestCredentialsView = require("views/partial/backupDestinationTestCredentialsResults.html");
+    connectionStringOlapView = require("views/database/settings/connectionStringOlap.html");
+    connectionStringRavenView = require("views/database/settings/connectionStringRaven.html");
+    connectionStringElasticView = require("views/database/settings/connectionStringElasticSearch.html");
+    connectionStringSqlView = require("views/database/settings/connectionStringSql.html");
+    backupConfigurationView = require("views/partial/backupConfigurationScript.html");
+    
+
     ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
     olapEtlConnectionStringsNames = ko.observableArray<string>([]);
@@ -481,7 +490,7 @@ class connectionStrings extends viewModelBase {
         this.spinners.test(true);
         elasticConnectionString.selectedUrlToTest(urlToTest.discoveryUrlName());
 
-        elasticConnectionString.testConnection(urlToTest)
+        elasticConnectionString.testConnection(this.activeDatabase(), urlToTest)
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);

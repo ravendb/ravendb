@@ -14,9 +14,12 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
@@ -77,11 +80,14 @@ namespace Raven.Server.Documents.Replication
 
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
+        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
+            ReplicationLatestEtagRequest.ReplicationType replicationType,
             ReplicationLoader.PullReplicationParams pullReplicationParams = null)
         {
             if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
@@ -101,6 +107,8 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
+
+            ReplicationType = replicationType;
 
             _incomingPullReplicationParams = new ReplicationLoader.PullReplicationParams
             {
@@ -886,6 +894,13 @@ namespace Raven.Server.Documents.Replication
                 _lastReplicationStats.TryDequeue(out stats);
         }
 
+        public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
+        {
+            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
+                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingInternal
+                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.IncomingExternal;
+        }
+
         public bool IsDisposed => _disposeOnce.Disposed;
 
         public void Dispose()
@@ -1210,6 +1225,21 @@ namespace Raven.Server.Documents.Replication
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
+                                if (_replicationInfo.SupportedFeatures.Replication.IncrementalTimeSeries == false &&
+                                    TimeSeriesHandler.CheckIfIncrementalTs(segment.Name))
+                                {
+                                    var msg = $"Detected an item of type Incremental-TimeSeries : '{segment.Name}' on document '{docId}', " +
+                                              $"while replication protocol version '{_replicationInfo.SupportedFeatures.ProtocolVersion}' does not support Incremental-TimeSeries feature.";
+                                    
+                                    database.NotificationCenter.Add(AlertRaised.Create(
+                                        database.Name,
+                                        "Incoming Replication",
+                                        msg,
+                                        AlertType.Replication,
+                                        NotificationSeverity.Error));
+
+                                    throw new LegacyReplicationViolationException(msg);
+                                }
                                 UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
 
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
@@ -1218,9 +1248,15 @@ namespace Raven.Server.Documents.Replication
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
                                     continue;
                                 }
+                                
+                                var options = new TimeSeriesStorage.AppendOptions
+                                {
+                                    VerifyName = false,
+                                    ChangeVectorFromReplication = segment.ChangeVector
+                                };
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, segment.ChangeVector, verifyName: false);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
@@ -1306,8 +1342,15 @@ namespace Raven.Server.Documents.Replication
                                                 }
                                             }
 
-                                            database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                rcvdChangeVector, null, flags, nonPersistentFlags);
+                                            try
+                                            {
+                                                database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
+                                                    rcvdChangeVector, null, flags, nonPersistentFlags);
+                                            }
+                                            catch (DocumentCollectionMismatchException)
+                                            {
+                                                goto case ConflictStatus.Conflict;
+                                            }
                                         }
                                         else
                                         {

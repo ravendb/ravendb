@@ -477,7 +477,33 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         /// <summary>
-        /// Force server to close current client subscription connection to the server
+        /// Force server to close current subscription worker
+        /// </summary>
+        /// <param name="worker"></param>
+        /// <param name="database"></param>
+        public void DropSubscriptionWorker<T>(SubscriptionWorker<T> worker, string database = null) where T : class
+        {
+            AsyncHelpers.RunSync(() => DropSubscriptionWorkerAsync(worker, database));
+        }
+
+        /// <summary>
+        /// Force server to close current subscription worker
+        /// </summary>
+        /// <param name="worker"></param>
+        /// <param name="database"></param>
+        public async Task DropSubscriptionWorkerAsync<T>(SubscriptionWorker<T> worker, string database = null, CancellationToken token = default)  where T : class
+        {
+            database = _store.GetDatabase(database);
+
+            var requestExecutor = _store.GetRequestExecutor(database);
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
+            {
+                var command = new DropSubscriptionConnectionCommand(worker.SubscriptionName, worker.WorkerId);
+                await requestExecutor.ExecuteAsync(command, jsonOperationContext, sessionInfo: null, token: token).ConfigureAwait(false);
+            }
+        }
+        /// <summary>
+        /// Force server to close all current client subscription connections to the server
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>
@@ -487,7 +513,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         /// <summary>
-        /// Force server to close current client subscription connection to the server
+        /// Force server to close all current client subscription connections to the server
         /// </summary>
         /// <param name="id"></param>
         /// <param name="database"></param>

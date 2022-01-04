@@ -3,6 +3,8 @@ import copyToClipboard = require("common/copyToClipboard");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 class patchSyntax extends dialogViewModelBase {
+    
+    view = require("views/database/patch/patchSyntax.html");
 
     dialogContainer: Element;
     clientVersion = viewModelBase.clientVersion;
@@ -82,14 +84,16 @@ update {
         {
             title: "Add a time series entry",
             text:
-`from Persons
+`from Employees
 update {
-    timeseries("Persons/1", "HeartRate").append("2020-06-25T10:48:14.794", [120, 80], "TagName");
+    timeseries("employees/1-A", "HeartRates")
+        .append("2020-06-25T10:48:14.794", [120, 80], "TagName");
 }`,
             html:
-`<span class="token keyword">from </span><span class="token string">Persons</span>
+`<span class="token keyword">from </span><span class="token string">Employees</span>
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
-    timeseries(<span class="token string">"Persons/1"</span>, <span class="token string">"HeartRate"</span>).append(<span class="token string">"2020-06-25T10:48:14.794"</span>, [120, 80], <span class="token string">"TagName"</span>);
+    timeseries(<span class="token string">"employees/1-A"</span>, <span class="token string">"HeartRates"</span>)
+        .append(<span class="token string">"2020-06-25T10:48:14.794"</span>, [120, 80], <span class="token string">"TagName"</span>);
 <span class="token punctuation">}</span>`
         },
     ];

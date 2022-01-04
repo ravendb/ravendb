@@ -736,7 +736,7 @@ namespace Raven.Server.Documents.Handlers
                     Debug.Assert(false, "Shouldn't happen - cluster tx run via normal means");
                     return 0;// should never happened
                 }
-
+                Reply.Clear();
                 _disposables.Clear();
 
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
@@ -968,6 +968,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
 
                         case CommandType.TimeSeries:
+                        case CommandType.TimeSeriesWithIncrements:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Id, cmd, lastPutResult);
                             var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, cmd.FromEtl);
 
@@ -979,7 +980,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = tsCmd.LastChangeVector,
-                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeries),
+                                [nameof(BatchRequestParser.CommandData.Type)] = cmd.Type,
                                 //TODO: handle this
                                 //[nameof(Constants.Fields.CommandData.DocumentChangeVector)] = tsCmd.LastDocumentChangeVector
                             });

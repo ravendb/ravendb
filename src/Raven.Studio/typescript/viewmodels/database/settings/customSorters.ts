@@ -7,7 +7,6 @@ import columnsSelector = require("viewmodels/partial/columnsSelector");
 import documentObject = require("models/database/documents/document");
 import router = require("plugins/router");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import queryCompleter = require("common/queryCompleter");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import getServerWideCustomSortersCommand = require("commands/serverWide/sorters/getServerWideCustomSortersCommand");
 import queryCommand = require("commands/database/query/queryCommand");
@@ -20,14 +19,18 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import sorterListItemModel = require("models/database/settings/sorterListItemModel");
 import accessManager = require("common/shell/accessManager");
+import rqlLanguageService = require("common/rqlLanguageService");
+import { highlight, languages } from "prismjs";
 
 type testTabName = "results" | "diagnostics";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class customSorters extends viewModelBase {
 
+    view = require("views/database/settings/customSorters.html");
+
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
-    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
+    languageService: rqlLanguageService;
     
     sorters = ko.observableArray<sorterListItemModel>([]);
     serverWideSorters = ko.observableArray<sorterListItemModel>([]);
@@ -39,6 +42,8 @@ class customSorters extends viewModelBase {
 
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
+
+    syntaxCheckSubscription: KnockoutSubscription;
     
     currentTab = ko.observable<testTabName>("results");
     effectiveFetcher = ko.observable<fetcherType>();
@@ -62,6 +67,8 @@ class customSorters extends viewModelBase {
         this.bindToCurrentInstance("confirmRemoveSorter", "enterTestSorterMode", "editSorter", "runTest");
 
         this.canNavigateToServerWideCustomSorters = accessManager.default.isClusterAdminOrClusterNode;
+        
+        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Select");
     }
     
     activate(args: any) {
@@ -85,6 +92,12 @@ class customSorters extends viewModelBase {
         $('.custom-sorters [data-toggle="tooltip"]').tooltip();
     }
     
+    detached() {
+        super.detached();
+        
+        this.languageService.dispose();
+    }
+
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
@@ -142,6 +155,17 @@ class customSorters extends viewModelBase {
                 .filter(x => x !== sorter)
                 .forEach(x => x.testModeEnabled(false));
         }
+
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+        
+        if (this.syntaxCheckSubscription) {
+            this.syntaxCheckSubscription.dispose();
+            this.syntaxCheckSubscription = null;
+        }
+        
+        this.syntaxCheckSubscription = sorter.testRql.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
     }
     
     editSorter(sorter: sorterListItemModel) {
@@ -235,7 +259,7 @@ class customSorters extends viewModelBase {
                             onValue(formattedValue, value);
                         } else {
                             const json = JSON.stringify(value, null, 4);
-                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
                         }
                     }

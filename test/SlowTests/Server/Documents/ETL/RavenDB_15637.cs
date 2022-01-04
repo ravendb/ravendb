@@ -11,8 +11,26 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Fact]
-        public void ShouldNotDeleteDestinationDocumentWhenFilteredOutOfLoad()
+        [Theory]
+        [InlineData(@"if(this.Age % 2 === 0)
+    return;
+if(this.Name == 'Sus')
+    return;
+loadToUsers(this);
+
+function deleteDocumentsBehavior(docId, collection, deleted){
+return deleted;
+}")]
+        [InlineData(@"if(this.Age % 2 === 0)
+    return;
+if(this.Name == 'Sus')
+    return;
+loadToUsers(this);
+
+function deleteDocumentsOfUsersBehavior(docId, deleted){
+return deleted;
+}")]
+        public void ShouldNotDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -29,18 +47,9 @@ namespace SlowTests.Server.Documents.ETL
                     session.Store(new User() {Name = "Sus", Age = 31});
                     session.SaveChanges();
 
-                    AddEtl(src, dest, "Users", script:
-@"if(this.Age % 2 === 0)
-    return;
-if(this.Name == 'Sus')
-    return;
-loadToUsers(this);
-
-function deleteDocumentsBehavior(docId, collection, deleted){
-return deleted;
-}");
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
-                etlDone.Wait(timeout:TimeSpan.FromSeconds(30));
+                    AddEtl(src, dest, "Users", script);
+                    var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                    etlDone.Wait(timeout:TimeSpan.FromSeconds(10));
                 }
 
                 using (var session = dest.OpenSession())
@@ -50,8 +59,26 @@ return deleted;
             }
         }
 
-        [Fact]
-        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad()
+        [Theory]
+        [InlineData(@"if(this.Age % 2 === 0)
+    return;
+if(this.Name == 'Sus')
+    return;
+loadToUsers(this);
+
+function deleteDocumentsBehavior(docId, collection, deleted) {
+return !deleted;
+}")]
+        [InlineData(@"if(this.Age % 2 === 0)
+    return;
+if(this.Name == 'Sus')
+    return;
+loadToUsers(this);
+
+function deleteDocumentsOfUsersBehavior(docId, deleted) {
+return !deleted;
+}")]
+        public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
@@ -70,16 +97,7 @@ return deleted;
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script:
-@"if(this.Age % 2 === 0)
-    return;
-if(this.Name == 'Sus')
-    return;
-loadToUsers(this);
-
-function deleteDocumentsBehavior(docId, collection, deleted) {
-return !deleted;
-}");
+                AddEtl(src, dest, "Users", script);
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
                 etlDone.Wait(timeout:TimeSpan.FromSeconds(30));
 

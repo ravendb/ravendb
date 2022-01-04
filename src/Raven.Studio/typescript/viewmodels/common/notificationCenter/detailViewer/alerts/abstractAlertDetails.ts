@@ -5,6 +5,8 @@ import notificationCenterSettings = require("common/notifications/notificationCe
 
 abstract class abstractAlertDetails extends dialogViewModelBase {
 
+    footerPartialView = require("views/common/notificationCenter/detailViewer/alerts/footerPartial.html");
+    
     readonly postponeOptions = notificationCenterSettings.postponeOptions;
 
     protected readonly alert: alert;

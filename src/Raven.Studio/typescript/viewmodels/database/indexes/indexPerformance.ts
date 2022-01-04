@@ -12,6 +12,7 @@ import messagePublisher = require("common/messagePublisher");
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
+import moment = require("moment");
 
 type rTreeLeaf = {
     minX: number;
@@ -151,6 +152,8 @@ class hitTest {
 class indexPerformance extends viewModelBase {
 
     /* static */
+    
+    view = require("views/database/indexes/indexPerformance.html");
 
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionIndexesWorkHeight = 22;
@@ -1038,8 +1041,8 @@ class indexPerformance extends viewModelBase {
         }
     }
     
-    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats, 
-                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, 
+    private drawStripes(level: number, rootPerf:Raven.Client.Documents.Indexes.IndexingPerformanceStats,
+                        context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>,
                         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
@@ -1053,27 +1056,18 @@ class indexPerformance extends viewModelBase {
             context.fillRect(currentX, yStart, dx, indexPerformance.trackHeight);
 
             if (yOffset !== 0) { // track is opened
-                if (dx >= 0.8) { // don't show tooltip for very small items
+                if (dx >= 0.8) { // don't show tooltip & text for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
-                }
-       
-                if (dx >= 5 && op.Name.startsWith("Collection_")) {
-                    context.fillStyle = this.colors.stripeTextColor;
-                    const text = op.Name.substr("Collection_".length);
-                    const textWidth = context.measureText(text).width;
-                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
-                    if (truncatedText) {
-                        context.font = "12px Lato";
-                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
-                    }
-                } else if ((op.Name === "Map" || op.Name === "Reduce") && dx >= 6) {
-                    context.fillStyle = this.colors.stripeTextColor;
-                    const text = op.Name;
-                    const textWidth = context.measureText(text).width;
-                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
-                    if (truncatedText) {
-                        context.font = "12px Lato";
-                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+
+                    if (dx > 30) {
+                        context.fillStyle = this.colors.stripeTextColor;
+                        const text = op.Name.startsWith("Collection_") ? `${op.Name.substr("Collection_".length)} (Collection)` : op.Name;
+                        const textWidth = context.measureText(text).width;
+                        const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
+                        if (truncatedText) {
+                            context.font = "12px Lato";
+                            context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+                        }
                     }
                 }
             } else { // track is closed

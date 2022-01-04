@@ -6,6 +6,7 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import moment = require("moment");
 import performanceHint = require("common/notifications/models/performanceHint");
 import abstractPerformanceHintDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/abstractPerformanceHintDetails");
 
@@ -21,6 +22,8 @@ interface indexingReferencesItem {
 }
 
 class indexingReferencesDetails extends abstractPerformanceHintDetails {
+
+    view = require("views/common/notificationCenter/detailViewer/performanceHint/indexingReferencesDetails.html");
 
     currentDetails = ko.observable<indexingReferencesItem>();
     

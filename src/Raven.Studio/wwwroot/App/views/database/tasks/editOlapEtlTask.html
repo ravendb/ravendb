@@ -81,7 +81,7 @@
                             <div class="form-group" data-bind="validationElement: runFrequency">
                                 <label class="control-label">Run Frequency</label>
                                 <div class="flex-grow">
-                                    <div data-bind="compose: runFrequencyCronEditor"></div>
+                                    <div data-bind="compose: { model: runFrequencyCronEditor }"></div>
                                 </div>
                             </div>
                         </div>
@@ -130,7 +130,7 @@
                     </div>
                     <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
                         <div data-bind="validationElement: connectionStringName">
-                            <div data-bind="compose: 'database/settings/connectionStringOlap.html'"></div>
+                            <div data-bind="compose: $root.connectionStringOlapView"></div>
                         </div>
                     </div>
                 </div>
@@ -138,7 +138,9 @@
             <div class="flex-horizontal flex-header margin-top">
                 <div class="flex-grow"><h3>Transform Scripts</h3></div>
                 <div>
-                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation"><i class="icon-plus"></i><span>Add Transformation Script</span></button>
+                    <button type="button" class="btn btn-info" data-bind="click: addNewTransformation, disable: $root.showEditTransformationArea">
+                        <i class="icon-plus"></i><span>Add Transformation Script</span>
+                    </button>
                 </div>
             </div>
             <!-- The transformation scripts -->

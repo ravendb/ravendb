@@ -9,7 +9,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
     const settingsItems: menuItem[] = [
         new leafMenuItem({
             route: ['databases/settings/databaseSettings'],
-            moduleId: 'viewmodels/database/settings/databaseSettings',
+            moduleId: require('viewmodels/database/settings/databaseSettings'),
             title: 'Database Settings',
             nav: true,
             css: 'icon-database-settings',
@@ -18,7 +18,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
-            moduleId: "viewmodels/database/settings/connectionStrings",
+            moduleId: require("viewmodels/database/settings/connectionStrings"),
             title: "Connection Strings",
             nav: true,
             css: 'icon-manage-connection-strings',
@@ -27,7 +27,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/conflictResolution',
-            moduleId: "viewmodels/database/settings/conflictResolution",
+            moduleId: require("viewmodels/database/settings/conflictResolution"),
             title: "Conflict Resolution",
             nav: true,
             css: 'icon-conflicts-resolution',
@@ -35,7 +35,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
-            moduleId: 'viewmodels/database/settings/clientConfiguration',
+            moduleId: require('viewmodels/database/settings/clientConfiguration'),
             title: 'Client Configuration',
             nav: true,
             css: 'icon-database-client-configuration',
@@ -43,7 +43,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
-            moduleId: 'viewmodels/database/settings/studioConfiguration',
+            moduleId: require('viewmodels/database/settings/studioConfiguration'),
             title: 'Studio Configuration',
             nav: true,
             css: 'icon-database-studio-configuration',
@@ -51,7 +51,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/revisions',
-            moduleId: 'viewmodels/database/settings/revisions',
+            moduleId: require('viewmodels/database/settings/revisions'),
             title: 'Document Revisions',
             nav: true,
             css: 'icon-revisions',
@@ -59,7 +59,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/revertRevisions',
-            moduleId: 'viewmodels/database/settings/revertRevisions',
+            moduleId: require('viewmodels/database/settings/revertRevisions'),
             title: 'Revert Revisions',
             nav: false,
             css: 'icon-revert-revisions',
@@ -68,7 +68,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/refresh',
-            moduleId: 'viewmodels/database/settings/refresh',
+            moduleId: require('viewmodels/database/settings/refresh'),
             title: 'Document Refresh',
             nav: true,
             css: 'icon-expos-refresh',
@@ -76,7 +76,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/expiration',
-            moduleId: 'viewmodels/database/settings/expiration',
+            moduleId: require('viewmodels/database/settings/expiration'),
             title: 'Document Expiration',
             nav: true,
             css: 'icon-document-expiration',
@@ -84,7 +84,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/documentsCompression',
-            moduleId: 'viewmodels/database/settings/documentsCompression',
+            moduleId: require('viewmodels/database/settings/documentsCompression'),
             title: 'Document Compression',
             nav: true,
             css: 'icon-documents-compression',
@@ -92,7 +92,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/timeSeries',
-            moduleId: 'viewmodels/database/settings/timeSeries',
+            moduleId: require('viewmodels/database/settings/timeSeries'),
             title: 'Time Series',
             nav: true, 
             css: 'icon-timeseries-settings',
@@ -100,7 +100,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/customSorters',
-            moduleId: 'viewmodels/database/settings/customSorters',
+            moduleId: require('viewmodels/database/settings/customSorters'),
             title: 'Custom Sorters',
             nav: true,
             css: 'icon-custom-sorters',
@@ -108,7 +108,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/customAnalyzers',
-            moduleId: 'viewmodels/database/settings/customAnalyzers',
+            moduleId: require('viewmodels/database/settings/customAnalyzers'),
             title: 'Custom Analyzers',
             nav: true,
             css: 'icon-custom-analyzers',
@@ -116,7 +116,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/editCustomSorter',
-            moduleId: 'viewmodels/database/settings/editCustomSorter',
+            moduleId: require('viewmodels/database/settings/editCustomSorter'),
             title: 'Custom Sorter',
             nav: false,
             dynamicHash: appUrls.editCustomSorter, 
@@ -124,7 +124,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/editCustomAnalyzer',
-            moduleId: 'viewmodels/database/settings/editCustomAnalyzer',
+            moduleId: require('viewmodels/database/settings/editCustomAnalyzer'),
             title: 'Custom Analyzer',
             nav: false,
             dynamicHash: appUrls.editCustomAnalyzer,
@@ -132,17 +132,26 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/manageDatabaseGroup',
-            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            moduleId: require('viewmodels/resources/manageDatabaseGroup'),
             title: 'Manage Database Group',
             nav: true,
             css: 'icon-manage-dbgroup',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
+        new leafMenuItem({
+            route: 'databases/settings/integrations',
+            moduleId: require('viewmodels/database/settings/integrations'),
+            title: 'Integrations',
+            nav: true,
+            css: 'icon-integrations',
+            dynamicHash: appUrls.integrations,
+            requiredAccess: "DatabaseAdmin"
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Advanced'),
         new leafMenuItem({
             route: 'databases/advanced/databaseRecord',
-            moduleId: 'viewmodels/database/advanced/databaseRecord',
+            moduleId: require('viewmodels/database/advanced/databaseRecord'),
             title: 'Database Record',
             nav: true,
             css: 'icon-database-record',
@@ -151,7 +160,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/advanced/databaseIDs',
-            moduleId: 'viewmodels/database/advanced/databaseIDs',
+            moduleId: require('viewmodels/database/advanced/databaseIDs'),
             title: 'Unused Database IDs',
             nav: true,
             css: 'icon-database-id',

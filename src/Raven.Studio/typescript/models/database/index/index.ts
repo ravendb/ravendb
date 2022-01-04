@@ -379,6 +379,10 @@ class index {
                 || _.includes(status, "Disabled") && this.isDisabledState()
                 || _.includes(status, "Idle") && this.isIdleState();
     }
+
+    static getUniqueId(indexName: string): string {
+        return `index_${indexName}`;
+    }
 }
 
 export = index; 

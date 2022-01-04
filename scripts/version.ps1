@@ -230,7 +230,7 @@ function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCont
     $releaseDate = $(Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
     $result = $pattern.Replace(
         $result,
-        "[assembly: RavenVersion(Build = ""53"", CommitHash = ""$commit"", Version = ""5.3"", FullVersion = ""$newVersion-custom-52"", ReleaseDateString = ""$releaseDate"")]")
+        "[assembly: RavenVersion(Build = ""53"", CommitHash = ""$commit"", Version = ""5.3"", FullVersion = ""$newVersion-custom-53"", ReleaseDateString = ""$releaseDate"")]")
 
     if (!$result) {
         throw "Could not get VersionInfo.cs file contents with bumped version."

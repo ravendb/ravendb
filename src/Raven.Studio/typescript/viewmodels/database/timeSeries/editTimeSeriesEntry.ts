@@ -3,13 +3,25 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
 import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
+import popoverUtils = require("common/popoverUtils");
+import moment = require("moment");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
+    
+    view = require("views/database/timeSeries/editTimeSeriesEntry.html");
 
     static aggregationColumns = timeSeriesEntryModel.aggregationColumns;
     
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
+
+    static readonly incrementalTimeSeriesInfo =
+        `<ul class="margin-top margin-top-xs no-padding-left margin-left">
+            <li><small><strong>Incremental Time Series</strong> allows to increment/decrement values by some delta.<br>
+                               The value's total content is the merged content from all nodes.
+            </small></li>
+            <li><small><strong>Regular Time Series</strong> values that are modified override current value.</small></li>
+         </ul>`;
     
     spinners = {
         save: ko.observable<boolean>(false)
@@ -29,6 +41,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     lockTimeStamp: boolean;
 
     valuesNames = ko.observableArray<string>([]);
+
+    showValuesPerNode = ko.observable<boolean>(false);
     
     constructor(private documentId: string,
                 private db: database,
@@ -60,7 +74,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         
         this.dateFormattedAsLocal = ko.pureComputed(() => {
             const date = moment(model.timestamp());
-            return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
+            return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (Local)"
         });
 
         if (!!this.timeSeriesName) {
@@ -70,7 +84,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.model().name.subscribe(() => this.getValuesNames());
     }
     
-    private getValuesNames() {
+    private getValuesNames(): void {
         const valuesNames = this.valuesNamesProvider(this.model().name());
         this.valuesNames(valuesNames);
     }
@@ -78,6 +92,11 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     compositionComplete() {
         super.compositionComplete();
         this.setupDisableReasons(".edit-time-series-entry");
+
+        popoverUtils.longWithHover($(".create-incremental"),
+            {
+                content: editTimeSeriesEntry.incrementalTimeSeriesInfo
+            });
     }
     
     getValueName(idx: number) {
@@ -93,24 +112,28 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             }
         });
     }
+
+    getValueOnNode(nodeIndex: number, valueIndex: number) {
+        return ko.pureComputed(() => this.model().nodesDetails()[nodeIndex].nodeValues[valueIndex]);
+    }
     
     save() {
-        const valid = this.model().isRollupEntry() ?
-            !this.model().rollupValues().filter(x => !this.isValid(x.validationGroup)).length :
-            !this.model().values().filter(x => !this.isValid(x.validationGroup)).length;
+        const model = this.model();
         
-        if (!this.isValid(this.model().validationGroup) || !valid) {
+        const valid = model.isRollupEntry() ?
+            !model.rollupValues().filter(x => !this.isValid(x.validationGroup)).length :
+            !model.values().filter(x => !this.isValid(x.validationGroup)).length;
+        
+        if (!this.isValid(model.validationGroup) || !valid) {
             return false;
         }
         
         this.spinners.save(true);
-        
-        const dto = this.model().toDto();
-        
-        new saveTimeSeriesCommand(this.documentId, this.model().name(), dto, this.db)
+
+        new saveTimeSeriesCommand(this.documentId, model.name(), model.toDto(), this.db)
             .execute()
             .done(() => {
-                dialog.close(this, this.model().name());
+                dialog.close(this, model.name());
             })
             .always(() => this.spinners.save(false));
     }

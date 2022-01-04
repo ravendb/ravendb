@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Rachis;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -10,6 +11,9 @@ namespace Raven.Server.ServerWide.Commands
         public List<RemoveCompareExchangeCommand> RemoveCommands;
         [JsonDeserializationIgnore]
         public JsonOperationContext ContextToWriteResult;
+
+        [JsonDeserializationIgnore]
+        public Leader.ConvertResultAction ConvertResultAction;
 
         public AddOrUpdateCompareExchangeBatchCommand()
         {

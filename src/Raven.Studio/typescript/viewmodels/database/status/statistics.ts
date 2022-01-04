@@ -13,6 +13,8 @@ type identityItem = { Prefix: string, Value: number };
 
 class statistics extends viewModelBase {
 
+    view = require("views/database/status/statistics.html");
+
     stats = ko.observable<statsModel>();
     identities = ko.observableArray<identityItem>([]);
     rawJsonUrl: KnockoutComputed<string>;
@@ -149,6 +151,10 @@ class statistics extends viewModelBase {
     showStaleReasons(indexName: string) {
         const view = new indexStalenessReasons(this.activeDatabase(), indexName);
         app.showBootstrapDialog(view);
+    }
+
+    refreshStats() {
+        this.fetchStats();
     }
 }
 

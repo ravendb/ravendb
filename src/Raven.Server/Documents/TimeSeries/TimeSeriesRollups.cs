@@ -493,6 +493,11 @@ namespace Raven.Server.Documents.TimeSeries
                 return RolledUp;
             }
 
+            private readonly TimeSeriesStorage.AppendOptions _appendOptionsForRollups = new TimeSeriesStorage.AppendOptions
+            {
+                VerifyName = false
+            };
+
             private void RollupOne(DocumentsOperationContext context, Table table, RollupState item, TimeSeriesPolicy policy, TimeSeriesCollectionConfiguration config)
             {
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
@@ -589,7 +594,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 var before = context.LastDatabaseChangeVector;
-                var after = tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);
+                var after = tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, _appendOptionsForRollups);
                 if (before != after)
                     RolledUp++;
                 MarkForNextPolicyAfterRollup(context, table, item, policy, tss, rollupEnd);
@@ -881,7 +886,7 @@ namespace Raven.Server.Documents.TimeSeries
                     // if the range it cover needs to be broken up to multiple ranges.
                     // For example, if the segment covers 3 days, but we have group by 1 hour,
                     // we still have to deal with the individual values
-                    if (it.Segment.End > rangeSpec.End)
+                    if (it.Segment.End > rangeSpec.End || it.Segment.Summary.Version.ContainsLastValueDuplicate)
                     {
                         AggregateIndividualItems(it.Segment.Values);
                     }

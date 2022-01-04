@@ -5,8 +5,11 @@ import deleteTimeSeriesCommand = require("commands/database/documents/timeSeries
 import messagePublisher = require("common/messagePublisher");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class deleteTimeSeries extends dialogViewModelBase {
+
+    view = require("views/database/timeSeries/deleteTimeSeries.html");
 
     spinners = {
         delete: ko.observable<boolean>(false)
@@ -17,14 +20,15 @@ class deleteTimeSeries extends dialogViewModelBase {
         sideBySide: true
     };
     
+    startDateLocal = ko.observable<moment.Moment>();
+    endDateLocal = ko.observable<moment.Moment>();
+
+    startDateUTC: KnockoutComputed<string>;
+    endDateUTC: KnockoutComputed<string>;
+    
     useMinStartDate = ko.observable<boolean>(false);
-    startDate = ko.observable<moment.Moment>();
-    
     useMaxEndDate = ko.observable<boolean>(false);
-    endDate = ko.observable<moment.Moment>();
-    
-    startDateToUse: KnockoutComputed<string>;
-    endDateToUse: KnockoutComputed<string>;
+        
     showWarning: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup;
@@ -33,17 +37,27 @@ class deleteTimeSeries extends dialogViewModelBase {
         super();
         criteria.selection = criteria.selection || [];
         
-        this.startDateToUse = ko.pureComputed(() => {
-            return this.useMinStartDate() ? null : this.startDate().utc().format(generalUtils.utcFullDateFormat);
+        this.startDateUTC = ko.pureComputed(() => {
+            if (this.useMinStartDate()) {
+                return null;
+            }
+            
+            const newMoment = moment(this.startDateLocal());
+            return newMoment.utc().format(generalUtils.utcFullDateFormat);
         });
         
-        this.endDateToUse = ko.pureComputed(() => {
-            return this.useMaxEndDate() ? null : this.endDate().utc().format(generalUtils.utcFullDateFormat);
+        this.endDateUTC = ko.pureComputed(() => {
+            if (this.useMaxEndDate()) {
+                return null;
+            }
+
+            const newMoment = moment(this.endDateLocal());
+            return newMoment.utc().format(generalUtils.utcFullDateFormat);
         });
         
         this.showWarning = ko.pureComputed(() => {
-            const startDefined = this.useMinStartDate() || (this.startDate() && this.startDate.isValid());
-            const endDefined = this.useMaxEndDate() || (this.endDate() && this.endDate.isValid());
+            const startDefined = this.useMinStartDate() || (this.startDateLocal() && this.startDateLocal.isValid());
+            const endDefined = this.useMaxEndDate() || (this.endDateLocal() && this.endDateLocal.isValid());
             
             return !!startDefined && !!endDefined;
         });
@@ -53,7 +67,7 @@ class deleteTimeSeries extends dialogViewModelBase {
     }
     
     private initValidation() {
-        this.startDate.extend({
+        this.startDateLocal.extend({
             required: {
                 onlyIf: () => !this.useMinStartDate()
             },
@@ -63,14 +77,14 @@ class deleteTimeSeries extends dialogViewModelBase {
                         if (this.useMinStartDate()) {
                             return true;
                         }
-                        return this.startDate().isValid();
+                        return this.startDateLocal().isValid();
                     },
                     message: "Please enter a valid date"
                 }
             ]
         });
         
-        this.endDate.extend({
+        this.endDateLocal.extend({
             required: {
                 onlyIf: () => !this.useMaxEndDate()
             },
@@ -80,7 +94,7 @@ class deleteTimeSeries extends dialogViewModelBase {
                         if (this.useMaxEndDate()) {
                             return true;
                         }
-                        return this.endDate().isValid();
+                        return this.endDateLocal().isValid();
                     },
                     message: "Please enter a valid date"
                 },
@@ -90,21 +104,21 @@ class deleteTimeSeries extends dialogViewModelBase {
                             return true;
                         }
                         
-                        if (!this.startDate() || !this.startDate().isValid()) {
+                        if (!this.startDateLocal() || !this.startDateLocal().isValid()) {
                             return true;
                         }
                         
                         // at this point both start/end are defined and valid, we can compare
-                        return this.endDate().diff(this.startDate()) >= 0;
+                        return this.endDateLocal().diff(this.startDateLocal()) >= 0;
                     },
-                    message: "End Date must be greater than Start Date"
+                    message: "End Date must be greater than (or equal to) Start Date"
                 }
             ]
         });
         
         this.validationGroup = ko.validatedObservable({
-            startDate: this.startDate,
-            endDate: this.endDate
+            startDate: this.startDateLocal,
+            endDate: this.endDateLocal
         });
     }
     
@@ -124,8 +138,8 @@ class deleteTimeSeries extends dialogViewModelBase {
                 }));
             case "range":
                 return [{
-                    From: this.startDateToUse(),
-                    To: this.endDateToUse(),
+                    From: this.startDateUTC(),
+                    To: this.endDateUTC(),
                 }];
         }
     }

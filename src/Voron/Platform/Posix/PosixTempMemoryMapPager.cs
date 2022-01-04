@@ -5,6 +5,7 @@ using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Util.Settings;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Platform.Posix
 {

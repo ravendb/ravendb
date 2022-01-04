@@ -15,7 +15,8 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             if (records.InsertOnlyMode == false)
             {
                 // first, delete all the rows that might already exist there
-                result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.IndexIdProperty,
+
+                result.Add(GenerateDeleteItemsCommandText(records.IndexName.ToLower(), records.DocumentIdProperty,
                     records.Deletes));
             }
 
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
             foreach (var item in elasticSearchItems)
             {
-                idsToDelete.Add(ElasticSearchEtl.LowerCaseIndexIdProperty(item.DocumentId));
+                idsToDelete.Add(ElasticSearchEtl.LowerCaseDocumentIdProperty(item.DocumentId));
             }
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
-                    .AppendLine("/_delete_by_query")
+                    .AppendLine("/_delete_by_query?refresh=true")
                     .AppendLine(resultJson);
 
                 return sb.ToString();
@@ -65,11 +66,11 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             {
                 var sb = new StringBuilder("POST ")
                     .Append(indexName)
-                    .AppendLine("/_bulk");
+                    .AppendLine("/_bulk?refresh=wait_for");
 
                 foreach (var item in index.Inserts)
                 {
-                    using (var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.Property.RawValue, index))
+                    using (var json = ElasticSearchEtl.EnsureLowerCasedIndexIdProperty(context, item.TransformationResult, index))
                     {
                         sb.AppendLine(ElasticSearchEtl.IndexBulkAction);
                         sb.AppendLine(json.ToString());

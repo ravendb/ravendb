@@ -8,6 +8,9 @@ import generalUtils = require("common/generalUtils");
 import deleteServerWideCustomAnalyzerCommand = require("commands/serverWide/analyzers/deleteServerWideCustomAnalyzerCommand");
 
 class serverWideCustomAnalyzers extends viewModelBase {
+
+    view = require("views/manage/serverWideCustomAnalyzers.html");
+    
     serverWideAnalyzers = ko.observableArray<analyzerListItemModel>([]);
 
     addUrl = ko.pureComputed(() => appUrl.forEditServerWideCustomAnalyzer());

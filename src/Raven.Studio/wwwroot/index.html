@@ -10,23 +10,14 @@
         <meta name="format-detection" content="telephone=no"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <link rel="apple-touch-icon" sizes="180x180" href="favicon-apple-touch-icon.png">
-        <link rel="icon" href="favicon.ico">
-        <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-        <link rel="manifest" href="manifest.json">
-        <link rel="mask-icon" href="safari-pinned-tab.svg" color="#ca1c59">
+        <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+        <link rel="icon" href="icons/favicon.ico">
+        <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+        <link rel="manifest" href="icons/manifest.json">
+        <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#ca1c59">
         <meta name="theme-color" content="#2c343c">
 
-        <!-- build:css Content/css/styles-common.css -->
-            <link rel="stylesheet" href="lib/Durandal/css/durandal.css" />
-            <link rel="stylesheet" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
-            <link rel="stylesheet" href="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css" />
-            <link rel="stylesheet" href="lib/leaflet/dist/leaflet.css" />
-            <link rel="stylesheet" href="lib/leaflet.markercluster/dist/MarkerCluster.css" />
-            <link rel="stylesheet" href="lib/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-        <!-- /build -->
-        
         <script type="text/javascript">
             var themeToCss = {
                 "dark": "styles.css",
@@ -43,7 +34,7 @@
             var link = document.createElement("link");
             link.rel = "stylesheet";
             link.id  = "raven-theme";
-            link.href = "Content/css/" + themeToCss[themeToUse];
+            link.href = "styles/" + themeToCss[themeToUse];
 
             var head = document.getElementsByTagName("head")[0];
             head.appendChild(link);
@@ -66,54 +57,17 @@
             </p>
         </div>
     </div>
-    <div id="applicationHost">        
+    <div id="applicationHost">
     </div>
     <div class="processing-spinner"></div>
     <iframe id="downloadFrame" style="display: none" name="hidden-form"></iframe>
 
-    <!-- build:js App/external-libs.js -->
-        <script type="text/javascript" src="lib/es6-shim/es6-shim.js"></script>
-        <script type="text/javascript" src="Content/modernizr.js"></script>
-        <script type="text/javascript" src="lib/jquery/dist/jquery.js"></script>
-        <script type="text/javascript" src="lib/lodash/dist/lodash.js"></script>
-        <script type="text/javascript" src="lib/prism/prism.js"></script>
-        <script type="text/javascript" src="lib/Sortable/Sortable.js"></script>
-        <script type="text/javascript" src="lib/prism/components/prism-javascript.js"></script>
-        <script type="text/javascript" src="lib/prism/components/prism-csharp.js"></script>
-        <script type="text/javascript" src="lib/blockUI/jquery.blockUI.js"></script>
-        <script type="text/javascript" src="lib/knockout/dist/knockout.debug.js"></script>
-        <script type="text/javascript" src="lib/knockout-validation/dist/knockout.validation.js"></script>
-        <script type="text/javascript" src="lib/knockout.dirtyFlag/index.js"></script>
-        <script type="text/javascript" src="lib/knockout-delegatedEvents/build/knockout-delegatedEvents.js"></script>
-        <script type="text/javascript" src="lib/knockout-postbox/build/knockout-postbox.js"></script>
-        <script type="text/javascript" src="lib/moment/moment.js"></script>
-        <script type="text/javascript" src="lib/cronstrue/dist/cronstrue.js"></script>
-        <script type="text/javascript" src="lib/bootstrap/dist/js/bootstrap.js"></script>
-        <script type="text/javascript" src="lib/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
-        <script type="text/javascript" src="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker-debug.js"></script>
-        <script type="text/javascript" src="lib/bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
-        <script type="text/javascript" src="lib/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
-        <script type="text/javascript" src="lib/bootstrap-select/dist/js/bootstrap-select.js"></script>
-        <script type="text/javascript" src="lib/jwerty/jwerty.js"></script>
-        <script type="text/javascript" src="lib/jquery-fullscreen/jquery.fullscreen.js"></script>
-        <script type="text/javascript" src="lib/spin.js/spin.js"></script>
-        <script type="text/javascript" src="lib/google-analytics/index.js"></script>
-        <script type="text/javascript" src="lib/qrcode.js/qrcode.js"></script>
-        <script type="text/javascript" src="lib/css-escape/css.escape.js"></script>
-        <script type="text/javascript" src="lib/favico.js/favico.js"></script>
-        <script type="text/javascript" src="lib/leaflet/dist/leaflet-src.js"></script>
-        <script type="text/javascript" src="lib/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-        <script type="text/javascript" src="lib/packery/dist/packery.pkgd.js"></script>
-        <script type="text/javascript" src="lib/draggabilly/dist/draggabilly.pkgd.js"></script>
-    <!-- /build -->
-
-    <script data-main="App/main"></script>
-    <!-- build:js App/main.js -->
-        <script type="text/javascript" src="lib/requirejs/require.js"></script>
-        <script type="text/javascript" src="Content/ace/ace.js"></script>
-        <script type="text/javascript" src="Content/ace/ext-language_tools.js"></script>
-        <script type="text/javascript" src="Content/ace/worker-json.js"></script>
-    <!-- /build -->
+    <!-- webpackIgnore: true -->
+    <script type="text/javascript" src="/studio/ace/ace.js"></script>
+    <!-- webpackIgnore: true -->
+    <script type="text/javascript" src="/studio/ace/ext-language_tools.js"></script>
+    <!-- webpackIgnore: true -->
+    <script type="text/javascript" src="/studio/ace/worker-json.js"></script>
 
 </body>
 </html>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Lucene.Net.Index;
@@ -8,6 +9,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
@@ -68,9 +70,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         public override int CompareBottom(int doc, IState state)
         {
             var str2 = _lookup[_order[doc]];
-            if (_bottom.IsNull)
-                return str2.IsNull ? 0 : -1;
-            if (str2.IsNull)
+            if (IsNull(_bottom))
+                return IsNull(str2) ? 0 : -1;
+            if (IsNull(str2))
                 return 1;
 
             return AlphanumComparer.Instance.Compare(_bottom, str2);
@@ -281,16 +283,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             public int Compare(UnmanagedStringArray.UnmanagedString string1, UnmanagedStringArray.UnmanagedString string2)
             {
-                if (string1.IsNull)
-                {
-                    return 0;
-                }
-
-                if (string2.IsNull)
-                {
-                    return 0;
-                }
-
+                Debug.Assert(string1.IsNull == false);
+                Debug.Assert(string2.IsNull == false);
+                
                 var string1State = new AlphanumericStringComparisonState(string1);
                 var string2State = new AlphanumericStringComparisonState(string2);
 

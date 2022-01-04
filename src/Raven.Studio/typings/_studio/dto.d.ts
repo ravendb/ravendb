@@ -150,6 +150,11 @@ interface timeSeriesDeleteCriteria {
 
 type postTimeSeriesDeleteAction = "reloadCurrent" | "changeTimeSeries" | "doNothing";
 
+interface filterTimeSeriesDates<T> {
+    startDate: T;
+    endDate: T;
+}
+
 interface documentAttachmentDto {
     ContentType: string;
     Hash: string;
@@ -427,6 +432,7 @@ interface testSubscriptionPagedResult<T> extends pagedResult<T> {
 
 interface pagedResultExtended<T> extends pagedResult<T> {
     includes: dictionary<any>;
+    includesRevisions?: Array<any>;
     highlightings?: dictionary<dictionary<Array<string>>>;
     explanations?: dictionary<Array<string>>;
     timings?: Raven.Client.Documents.Queries.Timings.QueryTimings;
@@ -471,7 +477,10 @@ interface autoCompleteWordList {
     value: string; 
     snippet?: string; 
     score: number; 
-    meta: string 
+    meta: string;
+    completer?: {
+        insertMatch(editor: AceAjax.Editor, data: autoCompleteWordList);
+    }
 }
 
 interface autoCompleteLastKeyword {
@@ -496,7 +505,6 @@ interface rqlQueryInfo {
 }
 
 interface queryCompleterProviders {
-    terms: (indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
     indexFields: (indexName: string, callback: (fields: string[]) => void) => void;
     collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
     collections: (callback: (collectionNames: string[]) => void) => void;
@@ -759,6 +767,20 @@ interface rawStackTraceResponseItem {
     StackTrace: string[];
 }
 
+interface threadStackTraceResponseDto {
+    Results: Array<threadStackTraceResponseItem>;
+    Threads: Array<Raven.Server.Dashboard.ThreadInfo>;
+}
+type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
+
+interface threadStackTraceResponseItem {
+    OSThreadId: number;
+    ManagedThreadId: number;
+    IsNative: boolean;
+    ThreadType: string;
+    StackTrace: string[];
+}
+
 type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
 interface MigratorPathConfiguration {
@@ -794,6 +816,7 @@ type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | "String
 interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation {
     Appends: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation[];
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
+    Increments: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.IncrementOperation[];
 }
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "OLAP ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink" | "Elasticsearch ETL";
@@ -846,4 +869,9 @@ interface iconPlusText {
     text: string;
     textClass: string;
     title: string;
+}
+
+interface columnPreviewFeature {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void;
+    syntax(column: virtualColumn, escapedValue: any): void;
 }

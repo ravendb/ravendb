@@ -3,6 +3,9 @@ import eventsCollector = require("common/eventsCollector");
 import setLicenseLimitsCommand = require("commands/database/cluster/setLicenseLimitsCommand");
 
 class assignCores extends dialogViewModelBase {
+
+    view = require("views/manage/assignCores.html");
+    
     utilizedCores = ko.observable<number>();
     maxUtilizedCores = ko.observable<number | null>();
     availableCores = ko.observable<number>();
@@ -33,7 +36,8 @@ class assignCores extends dialogViewModelBase {
 
         this.maxUtilizedCores.extend({
             required: false,
-            min: 1
+            min: 1,
+            max: this.numberOfCores()
         });
     }
 

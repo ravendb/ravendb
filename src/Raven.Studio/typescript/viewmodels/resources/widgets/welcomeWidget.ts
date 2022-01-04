@@ -8,6 +8,8 @@ class welcomeWidget extends widget {
 
     static clientVersion = viewModelBase.clientVersion;
     
+    view = require("views/resources/widgets/welcomeWidget.html");
+    
     clusterViewUrl = appUrl.forCluster();
     connectingToDatabaseUrl = welcomeWidget.createLink("GXMEFO");
     indexesUrl = welcomeWidget.createLink("7D62W8");

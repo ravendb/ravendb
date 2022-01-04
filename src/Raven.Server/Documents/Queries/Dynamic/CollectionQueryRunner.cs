@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
         }
 
-        private async ValueTask ExecuteCollectionQueryAsync(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, QueryOperationContext context, bool pulseReadingTransaction, CancellationToken cancellationToken)
+        private async ValueTask ExecuteCollectionQueryAsync(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, QueryOperationContext context, bool pulseReadingTransaction, CancellationToken token)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (pulseReadingTransaction == false)
                 {
-                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
+                    var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand: includeRevisionsCommand, includeCompareExchangeValuesCommand: includeCompareExchangeValuesCommand, totalResults: totalResults, token);
                     
                     documents.SkippedResults = skippedResults;
                     enumerator = documents.GetEnumerator();
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             query.Start = state.Start;
                             query.PageSize = state.Take;
-                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults);
+                            var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context.Documents, includeDocumentsCommand, includeRevisionsCommand, includeCompareExchangeValuesCommand, totalResults, token);
 
                             return documents;
                         },
@@ -202,9 +202,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             var document = enumerator.Current;
 
-                            cancellationToken.ThrowIfCancellationRequested();
+                            token.ThrowIfCancellationRequested();
 
-                            await resultToFill.AddResultAsync(document, cancellationToken);
+                            await resultToFill.AddResultAsync(document, token);
 
                             using (gatherScope?.Start())
                             {
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (resultToFill.SupportsExceptionHandling == false)
                         throw;
 
-                    await resultToFill.HandleExceptionAsync(e, cancellationToken);
+                    await resultToFill.HandleExceptionAsync(e, token);
                 }
 
                 using (fillScope?.Start())

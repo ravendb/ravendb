@@ -29,6 +29,7 @@ using Voron;
 using Voron.Data;
 using Xunit;
 using Xunit.Abstractions;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Tests.Infrastructure
 {
@@ -42,6 +43,8 @@ namespace Tests.Infrastructure
             XunitLogging.EnableExceptionCapture();
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+            RachisStateMachine.EnableDebugLongCommit = true;
+
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
             JsonDeserializationCluster.Commands.Add(nameof(TestCommand), JsonDeserializationBase.GenerateJsonDeserializationRoutine<TestCommand>());
@@ -77,7 +80,7 @@ namespace Tests.Infrastructure
                 }
                 var follower = RachisConsensuses[i + initialCount];
                 await leader.AddToClusterAsync(follower.Url);
-                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(timeout);
+                var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitWithoutExceptionAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
             var currentState = RachisConsensuses[leaderIndex + initialCount].CurrentState;

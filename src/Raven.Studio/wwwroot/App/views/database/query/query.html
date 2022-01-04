@@ -40,14 +40,14 @@
                             </div>
                         </div>
                         <pre class="form-control editor query-source"
-                             data-bind="aceEditor: { code: criteria().queryText, allowResize: true, minHeight: 180, maxHeight: 600, lang:'ace/mode/rql', completer: queryCompleter.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: true, minHeight: 180, maxHeight: 600, lang:'ace/mode/rql', completer: languageService.complete, hasFocus: queryHasFocus }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
 
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
                             <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
                         </div>
                     </div>
                     <div class="query-controls">
-                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': isLoading }, enable: criteria().queryText().trim()">
+                        <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: _.partial(runQuery, null), css: { 'btn-spinner': spinners.isLoading }, enable: criteria().queryText().trim()">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
@@ -58,10 +58,24 @@
     </div>
     <div class="flex-window-scroll flex-window stretch query-results-container">
         <div class="flex-window-head">
-            <h2 class="on-base-background">
-                Results
-                <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: queryStats"><i class="icon-link"></i></a>
-            </h2>
+            <div class="flex-horizontal">
+                <h2 class="on-base-background">
+                    Results
+                    <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }, visible: queryStats"><i class="icon-link"></i></a>
+                </h2>
+                <div class="margin-left text-warning bg-warning padding padding-xs" data-bind="visible: showMapView() && hasMoreSpatialResultsForMap() && !failedToGetResultsForSpatial()">
+                    <small>
+                        <span class="margin-right margin-right-xs" data-bind="text: spatialResultsOnMapText"></span>
+                        <a href="#" data-bind="click: $root.loadMoreSpatialResultsToMap">Load more.</a>
+                    </small>
+                </div>
+                <div class="margin-left text-danger bg-danger padding padding-xs" data-bind="visible: showMapView() && failedToGetResultsForSpatial()">
+                    <small>
+                        <span class="margin-right margin-right-xs">Failed to get spatial results.</span>
+                        <a href="#" data-bind="click: $root.loadMoreSpatialResultsToMap">Reload.</a>
+                    </small>
+                </div>
+            </div>
             <div class="clearfix">
                 <div class="pull-left btn-group">
                     <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
@@ -159,7 +173,7 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu colselect-dropdown colselect-sm slidein-style" role="menu" data-bind="dropdownPanel: true">
-                            <div data-bind="compose: $root.columnsSelector"></div>
+                            <div data-bind="compose: { model: $root.columnsSelector }"></div>
                         </ul>
                     </div>
                     <button class="btn btn-default btn-sm" data-bind="click: toggleResults">
@@ -215,7 +229,7 @@
                 <div class="panel-body js-graph-container graph-container absolute-fill" data-bind="visible: currentTab() === 'graph'">
                 </div>
                 <div class="panel-body absolute-fill js-time-series-graph-container" data-bind="if: showTimeSeriesGraph(), visible: showTimeSeriesGraph()">
-                    <div class="absolute-fill flex-vertical" data-bind="compose: $root.currentTab"></div>
+                    <div class="absolute-fill flex-vertical" data-bind="compose: { model: $root.currentTab }"></div>
                 </div>
                 <div class="panel-body absolute-fill" data-bind="if: showMapView(), visible: showMapView()">
                     <div class="absolute-fill flex-vertical" data-bind="compose: $root.currentTab"></div>
@@ -227,8 +241,15 @@
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
-            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView }, visible: isSpatialQuery">
-                <i class="icon-spatial-map-view"></i><span>Spatial Map</span> &nbsp; <span class="label" data-bind="text: totalNumberOfMarkers, css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
+            <button type="button" class="btn btn-sm results-btn"
+                    data-bind="click: $root.goToSpatialMapTab, css: { active: showMapView, 'btn-spinner': spinners.isLoadingSpatialResults }, visible: isSpatialQuery">
+                <i class="icon-spatial-map-view"></i><span>Spatial Map</span>
+                <span class="label margin-left margin-left-xs" data-bind="text: numberOfMarkersText, visible: !spinners.isLoadingSpatialResults() && allSpatialResultsItems().length,
+                                               css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }">
+                </span>
+            </button>
+            <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesRevisionsTab, css: { active: currentTab() ===  'revisions' }, visible: includesRevisionsCache().total()">
+                <span>Includes (Revisions)</span> &nbsp; <span class="label label-primary" data-bind="text: includesRevisionsCache().total().toLocaleString()"></span>
             </button>
             <!-- ko foreach: includesCache -->
             <button type="button" class="btn btn-sm results-btn" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">
@@ -300,37 +321,23 @@
 </div>
 
 <script type="text/html" id="settings-template">
-    <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-6">
-            <div class="control-label">Cache enabled</div>
+    <div class="padding padding-sm margin-top margin-top-sm margin-bottom margin-bottom-sm">
+        <div class="toggle margin-left">
+            <input id="cache" type="checkbox" data-bind="checked: cacheEnabled">
+            <label for="cache">Cache enabled</label>
         </div>
-        <div class="col-xs-5">
-            <div class="toggle flex-row">
-                <input type="checkbox" class="styled" data-bind="checked: cacheEnabled">
-                <label class="flex-end"></label>
-            </div>
+        <div class="toggle margin-left">
+            <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
+            <label for="storedFields">Show stored index fields only</label>
         </div>
-    </div>
-    <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-6">
-            <div class="control-label">Show stored index fields only</div>
+        <div class="toggle margin-left">
+            <input id="rawEntries" type="checkbox" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
+            <label for="rawEntries" data-bind="text: 'Show raw index entries instead of ' + (queryResultsContainMatchingDocuments() ? 'matching documents' : 'index results')"></label>
         </div>
-        <div class="col-xs-5">
-            <div class="toggle flex-row">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
-                <label class="flex-end"></label>
-            </div>
-        </div>
-    </div>
-    <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-6">
-            <div class="control-label" data-bind="visible: queryResultsContainMatchingDocuments">Show the raw index entries instead of matching documents</div>
-            <div class="control-label" data-bind="visible: !queryResultsContainMatchingDocuments()">Show the raw index entries instead of index results</div>
-        </div>
-        <div class="col-xs-5">
-            <div class="toggle flex-row">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
-                <label class="flex-end"></label>
+        <div class="margin-left margin-left-lg" data-bind="collapse: criteria().indexEntries">
+            <div class="toggle margin-left margin-left-lg">
+                <input id="ignoreLimit" type="checkbox" data-bind="checked: criteria().ignoreIndexQueryLimit">
+                <label for="ignoreLimit">Ignore the index query size limit</label>
             </div>
         </div>
     </div>

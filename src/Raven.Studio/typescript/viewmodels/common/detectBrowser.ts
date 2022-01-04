@@ -1,6 +1,12 @@
 import studioSettings = require("common/settings/studioSettings");
 
 class detectBrowser {
+    
+    view = require("views/common/detectBrowser.html");
+    
+    getView() {
+        return this.view;
+    }
 
     showBrowserAlert = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);

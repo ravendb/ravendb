@@ -5,9 +5,13 @@ import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class s3Settings extends amazonSettings {
+    
+    view = require("views/database/tasks/destinations/s3Settings.html");
+    
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();
+    forcePathStyle = ko.observable<boolean>();
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
 
@@ -18,6 +22,7 @@ class s3Settings extends amazonSettings {
 
         this.bucketName(dto.BucketName);
         this.customServerUrl(dto.CustomServerUrl);
+        this.forcePathStyle(dto.ForcePathStyle);
         this.useCustomS3Host(!!dto.CustomServerUrl);
         this.targetOperation = targetOperation;
         
@@ -32,6 +37,7 @@ class s3Settings extends amazonSettings {
             this.remoteFolderName,
             this.selectedAwsRegion,
             this.customServerUrl,
+            this.forcePathStyle,
             this.useCustomS3Host,
             
             this.configurationScriptDirtyFlag().isDirty
@@ -67,6 +73,8 @@ class s3Settings extends amazonSettings {
     }
     
     initValidation() {
+        super.initAmazonValidation();
+        
         /* Bucket name must :
             - be at least 3 and no more than 63 characters long.
             - be a series of one or more labels. 
@@ -141,6 +149,7 @@ class s3Settings extends amazonSettings {
         
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
+        dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
         
         return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
     }
@@ -155,6 +164,7 @@ class s3Settings extends amazonSettings {
             BucketName: null,
             RemoteFolderName: null,
             GetBackupConfigurationScript: null,
+            ForcePathStyle: false,
             CustomServerUrl: null,
         }, allowedRegions, targetOperation);
     }

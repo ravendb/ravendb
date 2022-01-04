@@ -1,5 +1,4 @@
 ﻿import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 type VersionInfoDto = Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo;

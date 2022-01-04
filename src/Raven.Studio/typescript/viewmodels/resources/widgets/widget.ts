@@ -5,6 +5,19 @@ import clusterDashboard = require("viewmodels/resources/clusterDashboard");
 import generalUtils = require("common/generalUtils");
 
 abstract class widget<TConfig = unknown, TState = unknown> {
+    
+    abstract view: { default: string };
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this.constructor.name);
+        }
+        if (!this.view.default.trim().startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view.default || this.view;
+    }
+    
     static nextWidgetId = 1;
     
     static resizeAnimationDuration = 300;

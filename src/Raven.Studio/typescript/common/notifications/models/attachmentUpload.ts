@@ -3,6 +3,7 @@
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 
 class attachmentUpload extends abstractNotification {
 

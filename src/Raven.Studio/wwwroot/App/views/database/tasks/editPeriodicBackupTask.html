@@ -105,7 +105,7 @@
                             <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
                             <label for="fullBackupToggle">Enable full backup</label>
                         </div>
-                        <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
+                        <div data-bind="compose: { model: $root.fullBackupCronEditor }, visible: fullBackupEnabled"></div>
                     </div>
                 </div>
                 <div class="row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
@@ -118,7 +118,7 @@
                         <div data-bind="validationElement: incrementalBackupEnabled">
                             <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
                         </div>
-                        <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
+                        <div data-bind="compose: { model: $root.incrementalBackupCronEditor }, visible: incrementalBackupEnabled"></div>
                     </div>
                 </div>
             </div>
@@ -224,18 +224,18 @@
                         </div>
                         <hr />
                         <div data-bind="with: encryptionSection">
-                            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+                            <div data-bind="compose: $root.setupEncryptionKeyView"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <div data-bind="compose: 'partial/backupDestinations.html'"></div>
+    <div data-bind="compose: $root.backupDestinationsView"></div>
 </form>
 
 <script type="text/html" id="test-connection-results-template">
     <div data-bind="with: testConnectionResult">
-        <div data-bind="compose: 'partial/backupDestinationTestCredentialsResults.html'"></div>
+        <div data-bind="compose: $root.backupDestinationTestCredentialsView"></div>
     </div>
 </script>

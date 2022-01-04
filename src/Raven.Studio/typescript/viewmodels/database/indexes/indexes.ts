@@ -18,10 +18,10 @@ import getIndexesProgressCommand = require("commands/database/index/getIndexesPr
 import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
-import shell = require("viewmodels/shell");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import bulkIndexOperationConfirm = require("viewmodels/database/indexes/bulkIndexOperationConfirm");
 import forceParallelDeploymentConfirm = require("viewmodels/database/indexes/forceParallelDeploymentConfirm");
+import connectionStatus from "models/resources/connectionStatus";
 
 type indexGroup = {
     entityName: string;
@@ -30,6 +30,8 @@ type indexGroup = {
 };
 
 class indexes extends viewModelBase {
+
+    view = require("views/database/indexes/indexes.html");
 
     indexGroups = ko.observableArray<indexGroup>();
     sortedGroups: KnockoutComputed<indexGroup[]>;
@@ -288,7 +290,7 @@ class indexes extends viewModelBase {
         const indexToHighlight = this.indexNameToHighlight();
 
         if (indexToHighlight) {
-            const indexId = `index_${indexToHighlight}`;
+            const indexId = index.getUniqueId(indexToHighlight);
             
             const indexElement = document.getElementById(indexId);
 
@@ -300,7 +302,7 @@ class indexes extends viewModelBase {
     }
     
     private highlightIndex(indexName: string, highlight: boolean = true): void {
-        const indexId = "index_" + indexName;
+        const indexId = index.getUniqueId(indexName);
         const indexElement = document.getElementById(indexId);
         this.highlightIndexElement(indexElement, highlight);
     }
@@ -445,10 +447,14 @@ class indexes extends viewModelBase {
         }
     }
 
-    createIndexesUrlObservableForNode(nodeTag: string) {
+    createIndexesUrlObservableForNode(nodeTag: string, indexProgress: indexProgress) {
         return ko.pureComputed(() => {
+            const name = indexProgress.name;
+            const indexName = name.startsWith(index.SideBySideIndexPrefix) ? name.replace(index.SideBySideIndexPrefix, "") : name;
+            
+            const link = appUrl.forIndexes(this.activeDatabase(), indexName);
             const nodeInfo = this.clusterManager.getClusterNodeByTag(nodeTag);
-            const link = appUrl.forIndexes(this.activeDatabase());
+            
             return appUrl.toExternalUrl(nodeInfo.serverUrl(), link);
         });
     }
@@ -458,7 +464,7 @@ class indexes extends viewModelBase {
             return;
         }
         
-        if (shell.showConnectionLost()) {
+        if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred().fail();
         }

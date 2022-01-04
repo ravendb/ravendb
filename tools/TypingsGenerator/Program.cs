@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -44,6 +45,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -77,6 +79,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Integrations.PostgreSQL.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -108,11 +111,17 @@ namespace TypingsGenerator
 {
     public class Program
     {
-        public const string TargetDirectory = "../../src/Raven.Studio/typings/server/";
+        public static readonly string[] TargetDirectory = { "../../src/Raven.Studio/", "../../../src/Raven.Studio/", "../../../../src/Raven.Studio/" };
+        public const string TypingsDirectory = "typings/server";
 
         public static void Main(string[] args)
         {
-            Directory.CreateDirectory(TargetDirectory);
+            string studioDir = FindStudioDirectory();
+
+            string targetDir = Path.Combine(studioDir, TypingsDirectory);
+            
+            Console.WriteLine("Using directory: " + Path.GetFullPath(targetDir));
+            Directory.CreateDirectory(targetDir);
 
             var scripter = new CustomScripter()
                 .UsingFormatter(new TsFormatter
@@ -150,10 +159,16 @@ namespace TypingsGenerator
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
             scripter = ConfigureTypes(scripter);
-            Directory.Delete(TargetDirectory, true);
-            Directory.CreateDirectory(TargetDirectory);
+            Directory.Delete(targetDir, true);
+            Directory.CreateDirectory(targetDir);
             scripter
-                .SaveToDirectory(TargetDirectory);
+                .SaveToDirectory(targetDir);
+            
+            var endpoints = new EndpointsExporter();
+            endpoints.Create(targetDir);
+            
+            var configuration = new ConfigurationExporter();
+            configuration.Create(targetDir);
         }
 
         private static Scripter ConfigureTypes(Scripter scripter)
@@ -424,7 +439,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionTryout));
             scripter.AddType(typeof(DocumentWithException));
             scripter.AddType(typeof(SubscriptionStateWithNodeDetails));
-            scripter.AddType(typeof(SubscriptionConnectionDetails));
+            scripter.AddType(typeof(SubscriptionConnectionsDetails));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
             scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates));
@@ -563,6 +578,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TimeSeriesOperation));
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
             scripter.AddType(typeof(TimeSeriesOperation.DeleteOperation));
+            scripter.AddType(typeof(TimeSeriesOperation.IncrementOperation));
             scripter.AddType(typeof(TimeSeriesConfiguration));
 
             // studio configuration
@@ -572,6 +588,11 @@ namespace TypingsGenerator
             // custom sorters & analyzers
             scripter.AddType(typeof(SorterDefinition));
             scripter.AddType(typeof(AnalyzerDefinition));
+            
+            // integrations
+            scripter.AddType(typeof(PostgreSqlUser));
+            scripter.AddType(typeof(PostgreSqlUsernames));
+            scripter.AddType(typeof(PostgreSqlServerStatus));
             
             scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
 
@@ -584,6 +605,18 @@ namespace TypingsGenerator
             scripter.AddType(typeof(LiveRunningQueriesCollector.ExecutingQueryCollection));
 
             return scripter;
+        }
+
+        private static string FindStudioDirectory()
+        {
+            foreach (string dir in TargetDirectory)
+            {
+                var fullPath = Path.GetFullPath(dir);
+                if (Directory.Exists(fullPath))
+                    return fullPath;
+            }
+
+            throw new FileNotFoundException("Unable to find Studio directory");
         }
     }
 }

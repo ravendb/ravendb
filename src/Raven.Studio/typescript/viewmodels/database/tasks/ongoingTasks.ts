@@ -27,6 +27,9 @@ import accessManager = require("common/shell/accessManager");
 import generalUtils = require("common/generalUtils");
 
 class ongoingTasks extends viewModelBase {
+
+    view = require("views/database/tasks/ongoingTasks.html");
+    databaseGroupLegendView = require("views/partial/databaseGroupLegend.html");
     
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
@@ -84,7 +87,7 @@ class ongoingTasks extends viewModelBase {
         this.myNodeTag(this.clusterManager.localNodeTag());
         this.serverWideTasksUrl = appUrl.forServerWideTasks();
         this.canNavigateToServerWideTasks = accessManager.default.isClusterAdminOrClusterNode;
-        this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
+        this.taskNameToCount = ko.pureComputed<Record<TasksNamesInUI, number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,
                 "RavenDB ETL": this.ravenEtlTasks().length,
@@ -93,8 +96,8 @@ class ongoingTasks extends viewModelBase {
                 "Elasticsearch ETL": this.elasticSearchEtlTasks().length,
                 "Backup": this.backupTasks().length,
                 "Subscription": this.subscriptionTasks().length,
-                "Pull Replication Hub": this.replicationHubTasks().length,
-                "Pull Replication Sink": this.replicationSinkTasks().length
+                "Replication Hub": this.replicationHubTasks().length,
+                "Replication Sink": this.replicationSinkTasks().length
             }
         });
     }
@@ -400,7 +403,7 @@ class ongoingTasks extends viewModelBase {
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskReplicationSinkListModel(dto));
         
-        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
+        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as unknown as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
         this.mergeReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks);
@@ -470,7 +473,7 @@ class ongoingTasks extends viewModelBase {
         return appUrl.forManageDatabaseGroup(dbInfo);
     }
 
-    confirmEnableOngoingTask(model: ongoingTaskModel) {
+    confirmEnableOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
 
         this.confirmationMessage("Enable Task",
@@ -488,7 +491,7 @@ class ongoingTasks extends viewModelBase {
         });
     }
 
-    confirmDisableOngoingTask(model: ongoingTaskModel | ongoingTaskReplicationHubDefinitionListModel) {
+    confirmDisableOngoingTask(model: ongoingTaskListModel | ongoingTaskReplicationHubDefinitionListModel) {
         const db = this.activeDatabase();
 
         this.confirmationMessage("Disable Task",
@@ -506,7 +509,7 @@ class ongoingTasks extends viewModelBase {
        });
     }
 
-    confirmRemoveOngoingTask(model: ongoingTaskModel) {
+    confirmRemoveOngoingTask(model: ongoingTaskListModel) {
         const db = this.activeDatabase();
         
         const taskType = ongoingTaskModel.mapTaskType(model.taskType());
@@ -523,7 +526,7 @@ class ongoingTasks extends viewModelBase {
             });
     }
 
-    private deleteOngoingTask(db: database, model: ongoingTaskModel) {
+    private deleteOngoingTask(db: database, model: ongoingTaskListModel) {
         new deleteOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName())
             .execute()
             .done(() => this.fetchOngoingTasks());

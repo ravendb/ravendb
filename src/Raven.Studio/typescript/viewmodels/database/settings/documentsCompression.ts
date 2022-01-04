@@ -8,6 +8,8 @@ import saveDocumentsCompressionCommand = require("commands/database/documents/sa
 
 class documentsCompression extends viewModelBase {
 
+    view = require("views/database/settings/documentsCompression.html");
+
     allExistingCollections: KnockoutComputed<Array<string>>;
     collectionsToCompress = ko.observableArray<string>();
     

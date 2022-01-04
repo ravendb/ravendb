@@ -8,6 +8,8 @@ import messagePublisher = require("common/messagePublisher");
 import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
 import fileImporter = require("common/fileImporter");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import moment = require("moment");
+import d3 = require("d3");
 
 type rTreeLeaf = {
     minX: number;
@@ -1439,7 +1441,7 @@ class ioStatsGraph {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `IOStats-of-${this.statsNameProvider()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
+            exportFileName = `IOStats-for-${this.statsNameProvider()}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 
         const keysToIgnore: Array<keyof IOMetricsRecentStatsWithCache> = ["StartedAsDate", "CompletedAsDate"];

@@ -30,6 +30,19 @@
             font-size: 34px;
             margin-right: @grid-gutter-width/2;
             margin-top: 2px;
+            
+            &.check-connection {
+                font-size: 16px;
+                cursor: pointer;
+            }
+            
+            &.check-connection:hover {
+                color: @brand-success;
+            }
+            
+            &.connection-status {
+                font-size: 18px;
+            }
         }
 
         .content {
@@ -55,7 +68,7 @@
         width: 100%;
         padding: @gutter;
         margin-bottom: @gutter !important;
-        background-image: url(../img/pages/about/passive-state-bg.svg);
+        background-image: url(../../img/pages/about/passive-state-bg.svg);
         background-position: right center;
         background-repeat: no-repeat;
         background-size: auto 100%;
@@ -327,5 +340,13 @@
         .commercial i {
             color: @brand-success-light;
         }
+    }
+
+    .connected {
+        color:  @brand-success;
+    }
+
+    .not-connected {
+        color: @brand-danger;
     }
 }

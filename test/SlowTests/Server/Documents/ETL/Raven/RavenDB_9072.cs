@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
+using Raven.Server.Documents.ETL.Test;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
@@ -42,7 +43,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
+                        using (RavenEtl.TestScript(new TestRavenEtlScript
                         {
                             DocumentId = "orders/1-A",
                             Configuration = new RavenEtlConfiguration()
@@ -52,10 +53,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                                 {
                                     new Transformation()
                                     {
-                                        Collections =
-                                        {
-                                            "Orders"
-                                        },
+                                        Collections = {"Orders"},
                                         Name = "OrdersAndLines",
                                         Script =
                                             @"
@@ -82,16 +80,19 @@ loadToOrders(orderData);"
                                     }
                                 }
                             }
-                        }, database, database.ServerStore, context);
+                        }, database, database.ServerStore, context, out var testResult))
+                        {
+                            var result = (RavenEtlTestScriptResult)testResult;
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                            Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(4, result.Commands.Count);
+                            Assert.Equal(4, result.Commands.Count);
 
-                        Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
-                        Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
+                            Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
+                            Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
 
-                        Assert.Equal("test output", result.DebugOutput[0]);
+                            Assert.Equal("test output", result.DebugOutput[0]);
+                        }
                     }
                 }
             }
@@ -136,7 +137,7 @@ loadToOrders(this);"
                                     }
                                 }
                         }
-                    }, database, database.ServerStore, context);
+                    }, database, database.ServerStore, context, out _);
                 }
             }
         }
@@ -179,7 +180,7 @@ loadToDifferentCollection(this);"
                                 }
                             }
                         }
-                    }, database, database.ServerStore, context));
+                    }, database, database.ServerStore, context, out _));
 
                     Assert.Contains(
                         "Document 'orders/1-A' belongs to Orders collection while tested ETL script works on the following collections: DifferentCollection",
@@ -203,34 +204,27 @@ loadToDifferentCollection(this);"
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
-                        {
-                            DocumentId = "orders/1-A",
-                            Configuration = new RavenEtlConfiguration()
+                        using (RavenEtl.TestScript(
+                            new TestRavenEtlScript
                             {
-                                Name = "simulate",
-                                Transforms =
+                                DocumentId = "orders/1-A",
+                                Configuration = new RavenEtlConfiguration()
                                 {
-                                    new Transformation()
-                                    {
-                                        Collections =
-                                        {
-                                            "Orders"
-                                        },
-                                        Name = "OrdersAndLines",
-                                        Script = null
-                                    }
+                                    Name = "simulate", Transforms = {new Transformation() {Collections = {"Orders"}, Name = "OrdersAndLines", Script = null}}
                                 }
-                            }
-                        }, database, database.ServerStore, context);
+                            }, database, database.ServerStore, context, out var testResult))
+                        {
 
-                        Assert.Equal(0, result.TransformationErrors.Count);
+                            var result = (RavenEtlTestScriptResult)testResult;
 
-                        Assert.Equal(1, result.Commands.Count);
+                            Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.IsType(typeof(PutCommandDataWithBlittableJson), result.Commands[0]);
+                            Assert.Equal(1, result.Commands.Count);
 
-                        Assert.Empty(result.DebugOutput);
+                            Assert.IsType(typeof(PutCommandDataWithBlittableJson), result.Commands[0]);
+
+                            Assert.Empty(result.DebugOutput);
+                        }
                     }
                 }
             }

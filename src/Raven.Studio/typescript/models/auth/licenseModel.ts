@@ -3,6 +3,7 @@
 import getLicenseStatusCommand = require("commands/licensing/getLicenseStatusCommand");
 import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
+import moment = require("moment");
 import licenseSupportInfoCommand = require("commands/licensing/licenseSupportInfoCommand");
 
 class licenseModel {

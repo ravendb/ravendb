@@ -16,6 +16,9 @@ import discoveryUrl = require("models/database/settings/discoveryUrl");
 
 class editExternalReplicationTask extends viewModelBase {
 
+    view = require("views/database/tasks/editExternalReplicationTask.html");
+    connectionStringView = require("views/database/settings/connectionStringRaven.html");
+
     editedExternalReplication = ko.observable<ongoingTaskReplicationEditModel>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
     private taskId: number = null;

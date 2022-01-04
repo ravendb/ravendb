@@ -43,6 +43,8 @@ namespace Raven.Client.Documents
 
         private string _identifier;
 
+        public override IHiLoIdGenerator HiLoIdGenerator => _asyncMultiDbHiLo;
+
         /// <summary>
         /// Gets or sets the identifier for this store.
         /// </summary>
@@ -222,7 +224,7 @@ namespace Raven.Client.Documents
 
             RequestExecutor.ValidateUrls(Urls, Certificate);
 
-            if(Certificate != null && Certificate.PrivateKey == null)
+            if(Certificate != null && Certificate.HasPrivateKey == false)
                 throw new InvalidOperationException(
                     $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
                     "Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem.");

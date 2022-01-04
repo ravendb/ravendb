@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -13,11 +12,13 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static SlowTests.Issues.RavenDB_17096;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {
@@ -30,8 +31,8 @@ namespace SlowTests.Server.Documents.ETL.Olap
         [Fact]
         public async Task OlapTaskShouldBeHighlyAvailable()
         {
-            var nodes = await CreateRaftCluster(3, watcherCluster: true);
-            var leader = nodes.Leader;
+            var cluster = await CreateRaftCluster(3);
+            var leader = cluster.Leader;
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
@@ -45,9 +46,9 @@ namespace SlowTests.Server.Documents.ETL.Olap
                     }
                 }.Initialize())
                 .ToList();
-
-            var server = db.Servers.First(s => s != leader);
-            var store = stores.Single(s => s.Urls[0] == server.WebUrl);
+            var mentorNode = db.Servers.First(s => s != leader);
+            var mentorTag = mentorNode.ServerStore.NodeTag;
+            var store = stores.Single(s => s.Urls[0] == mentorNode.WebUrl);
 
             Assert.Equal(store.Database, dbName);
 
@@ -69,7 +70,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                 await session.SaveChangesAsync();
             }
 
-            var etlDone = WaitForEtl(server, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+            var etlDone = WaitForEtl(mentorNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
             var script = @"
 var orderDate = new Date(this.OrderedAt);
@@ -95,13 +96,16 @@ loadToOrders(partitionBy(key),
                 Name = configName,
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                Transforms = {new Transformation
+                Transforms =
+                {
+                    new Transformation
                     {
                         Name = transformationName,
                         Collections = new List<string> {"Orders"},
                         Script = script
-                    }},
-                MentorNode = server.ServerStore.NodeTag
+                    }
+                },
+                MentorNode = mentorTag
             };
             var task = AddEtl(store,
                 configuration,
@@ -119,9 +123,16 @@ loadToOrders(partitionBy(key),
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             Assert.Equal(1, files.Length);
 
-            DisposeServerAndWaitForFinishOfDisposal(server);
+            await ActionWithLeader(l => l.ServerStore.RemoveFromClusterAsync(mentorTag));
+            Assert.True(await mentorNode.ServerStore.WaitForState(RachisState.Passive, CancellationToken.None).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)),
+                $"Removed node {mentorTag} wasn't move to passive state ({mentorNode.ServerStore.Engine.CurrentState})");
 
             var store2 = stores.First(s => s != store);
+
+            var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag);
+            var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == newResponsible);
+            etlDone = WaitForEtl(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
+
             using (var session = store2.OpenAsyncSession())
             {
                 for (int i = 0; i < 28; i++)
@@ -138,21 +149,16 @@ loadToOrders(partitionBy(key),
                 await session.SaveChangesAsync();
             }
 
-            etlDone.Reset();
-            etlDone.Wait(TimeSpan.FromMinutes(1));
-
-            var ongoingTask = store2.Maintenance.Send(new GetOngoingTaskInfoOperation(task.TaskId, OngoingTaskType.OlapEtl));
-            Assert.Equal(OngoingTaskState.Enabled, ongoingTask.TaskState);
-            Assert.NotNull(ongoingTask.ResponsibleNode);
-            Assert.NotEqual(server.ServerStore.NodeTag, ongoingTask.ResponsibleNode.NodeTag);
+            Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
             files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
-            Assert.True(files.Length == 2, $"Expected 2 output files but got {files.Length}. files : '{string.Join(", ", files)}'. " +
-                                           $"Responsible node : '{ongoingTask.ResponsibleNode.NodeTag}'.");
+            Assert.True(files.Length == 2, $"Expected 2 output files but got {files.Length}. " +
+                                           $"files : '{string.Join(", ", files)}'. " +
+                                           $"Mentor node : '{mentorTag}', new Responsible node : '{newResponsibleNode.ServerStore.NodeTag}'.");
         }
 
 
-        private ManualResetEventSlim WaitForEtl(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
+        private static ManualResetEventSlim WaitForEtl(RavenServer server, string databaseName, Func<string, EtlProcessStatistics, bool> predicate)
         {
             var database = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
 

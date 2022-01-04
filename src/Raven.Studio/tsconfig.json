@@ -1,19 +1,67 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "noImplicitAny": true,
     "noEmitOnError": true,
     "removeComments": false,
     "declaration": false,
     "sourceMap": true,
-    "target": "es5", 
+    "target": "ES2020", 
+    "esModuleInterop": true,
+    "moduleResolution": "node",
     "skipLibCheck": true,
-    "module": "amd",
+    "module": "AMD",
+    "lib": [
+      "DOM",
+      "es6",
+      "es2017"  
+    ],
     "typeRoots": [
+        "./node_modules/@types",
         "./typings/**/*"
-    ]
+    ],
+      "types": [
+          "durandal",
+          "jquery",
+          "knockout",
+          "google.analytics",
+          "moment",
+          "knockout-postbox",
+          "knockout.validation",
+          "lodash",
+          "d3",
+          "rbush",
+          "requirejs",
+          "webcola",
+          "jquery.blockui",
+          "prismjs",
+          "toastr",
+          "diff",
+          "ace",
+          "bootstrap",
+          "eonasdan-bootstrap-datetimepicker",
+          "leaflet",
+          "leaflet.markercluster"
+      ],
+      "paths": {
+          "webcola": ["node_modules/webcola/dist/index.d.ts"],
+          "Favico":  ["node_modules/favico.js/favico.js"],
+          "moment": ["node_modules/moment/moment.d.ts"],
+          "jszip":  ["typings/jszip.d.ts"],
+          "viewmodels/*":  ["typescript/viewmodels/*"],
+          "models/*":  ["typescript/models/*"],
+          "common/*": ["typescript/common/*"],
+          "widgets/*": ["typescript/widgets/*"],
+          "commands/*": ["typescript/commands/*"],
+          "knockout": ["node_modules/@types/knockout"],
+          "endpoints": ["typings/server/endpoints"],
+          "configuration": ["typings/server/configuration"],
+          "node-forge": ["typings/custom_node-forge.d.ts"]
+      }
   },
   "exclude": [
     "node_modules",
-    "wwwroot"
+    "wwwroot",
+    "aceBuild"
   ]
 }

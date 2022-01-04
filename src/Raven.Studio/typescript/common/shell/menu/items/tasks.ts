@@ -7,7 +7,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
     var tasksItems: menuItem[] = [
         new leafMenuItem({
             route: 'databases/tasks/backups',
-            moduleId: 'viewmodels/database/tasks/backups',
+            moduleId: require('viewmodels/database/tasks/backups'),
             title: 'Backups',
             nav: true,
             css: 'icon-backups',
@@ -15,7 +15,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/ongoingTasks',
-            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            moduleId: require('viewmodels/database/tasks/ongoingTasks'),
             title: 'Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
@@ -23,7 +23,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/import*details',
-            moduleId: 'viewmodels/database/tasks/importParent',
+            moduleId: require('viewmodels/database/tasks/importParent'),
             title: 'Import Data',
             nav: true,
             css: 'icon-import-database',
@@ -32,7 +32,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
-            moduleId: 'viewmodels/database/tasks/exportDatabase',
+            moduleId: require('viewmodels/database/tasks/exportDatabase'),
             title: 'Export Database',
             nav: true,
             css: 'icon-export-database',
@@ -40,7 +40,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
-            moduleId: 'viewmodels/database/tasks/createSampleData',
+            moduleId: require('viewmodels/database/tasks/createSampleData'),
             title: 'Create Sample Data',
             nav: true,
             css: 'icon-create-sample-data',
@@ -49,7 +49,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
-            moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
+            moduleId: require('viewmodels/database/tasks/editExternalReplicationTask'),
             title: 'External Replication Task',
             nav: false,
             dynamicHash: appUrls.editExternalReplicationTaskUrl,
@@ -57,7 +57,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editReplicationHubTask',
-            moduleId: 'viewmodels/database/tasks/editReplicationHubTask',
+            moduleId: require('viewmodels/database/tasks/editReplicationHubTask'),
             title: 'Replication Hub Task',
             nav: false,
             dynamicHash: appUrls.editReplicationHubTaskUrl,
@@ -65,7 +65,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editReplicationSinkTask',
-            moduleId: 'viewmodels/database/tasks/editReplicationSinkTask',
+            moduleId: require('viewmodels/database/tasks/editReplicationSinkTask'),
             title: 'Replication Sink Task',
             nav: false,
             dynamicHash: appUrls.editReplicationSinkTaskUrl,
@@ -73,7 +73,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editPeriodicBackupTask',
-            moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
+            moduleId: require('viewmodels/database/tasks/editPeriodicBackupTask'),
             title: 'Backup Task',
             nav: false,
             dynamicHash: appUrls.backupsUrl,
@@ -81,7 +81,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editSubscriptionTask',
-            moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
+            moduleId: require('viewmodels/database/tasks/editSubscriptionTask'),
             title: 'Subscription Task',
             nav: false,
             dynamicHash: appUrls.editSubscriptionTaskUrl,
@@ -89,7 +89,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editRavenEtlTask',
-            moduleId: 'viewmodels/database/tasks/editRavenEtlTask',
+            moduleId: require('viewmodels/database/tasks/editRavenEtlTask'),
             title: 'RavenDB ETL Task',
             nav: false,
             dynamicHash: appUrls.editRavenEtlTaskUrl,
@@ -97,7 +97,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editSqlEtlTask',
-            moduleId: 'viewmodels/database/tasks/editSqlEtlTask',
+            moduleId: require('viewmodels/database/tasks/editSqlEtlTask'),
             title: 'SQL ETL Task',
             nav: false,
             dynamicHash: appUrls.editSqlEtlTaskUrl,
@@ -105,7 +105,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editOlapEtlTask',
-            moduleId: 'viewmodels/database/tasks/editOlapEtlTask',
+            moduleId: require('viewmodels/database/tasks/editOlapEtlTask'),
             title: 'OLAP ETL Task',
             nav: false,
             dynamicHash: appUrls.editOlapEtlTaskUrl,
@@ -113,7 +113,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editElasticSearchEtlTask',
-            moduleId: 'viewmodels/database/tasks/editElasticSearchEtlTask',
+            moduleId: require('viewmodels/database/tasks/editElasticSearchEtlTask'),
             title: 'Elastic Search ETL Task',
             nav: false,
             dynamicHash: appUrls.editElasticSearchEtlTaskUrl,

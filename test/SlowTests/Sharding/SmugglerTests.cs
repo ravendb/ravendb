@@ -653,7 +653,17 @@ namespace SlowTests.Sharding
                          MentorNode = "A",
                          Name = "Etl",
                          TaskId = 4,
-                         TestMode = true
+                         TestMode = true,
+                         Transforms = {
+                             new Transformation
+                             {
+                                 Name = $"ETL : 1",
+                                 Collections = new List<string>(new[] {"Users"}),
+                                 Script = null,
+                                 ApplyToAllDocuments = false,
+                                 Disabled = false
+                             }
+                         }
                      }));
                     
                      store1.Maintenance.Send(new AddEtlOperation<SqlConnectionString>(new SqlEtlConfiguration()
@@ -668,7 +678,17 @@ namespace SlowTests.Sharding
                              },
                          Name = "sql",
                          ParameterizeDeletes = false,
-                         MentorNode = "A"
+                         MentorNode = "A",
+                         Transforms = {
+                             new Transformation
+                             {
+                                 Name = $"ETL : 2",
+                                 Collections = new List<string>(new[] {"Users"}),
+                                 Script = null,
+                                 ApplyToAllDocuments = false,
+                                 Disabled = false
+                             }
+                         }
                      }));
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 

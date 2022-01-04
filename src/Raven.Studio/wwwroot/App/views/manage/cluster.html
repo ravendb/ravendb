@@ -75,19 +75,21 @@
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-right">
-                                        <li data-bind="visible: $root.isClusterAdminOrClusterNode">
-                                            <a href="#" data-bind="click: _.partial($parent.assignCores, $data)">
+                                        <li data-bind="click: _.partial($parent.assignCores, $data), visible: $root.isClusterAdminOrClusterNode">
+                                            <a href="#">
                                                 <i class="icon-reassign-cores"></i>
                                                 <span>Reassign cores</span>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a href="#" data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
-                                                <i class="icon-stepdown"></i> <span>Step down</span>
+                                        <li data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag() && $root.canStepDown(),
+                                                       css: { 'disabled-area' : $root.spinners.stepdown() }">
+                                            <a href="#" data-bind="css: { 'btn-spinner': $root.spinners.stepdown }">
+                                                <i class="icon-stepdown"></i>
+                                                <span>Step down</span>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a href="#" data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'btn-spinner': $root.spinners.forceTimeout() }, disable: $root.spinners.forceTimeout()">
+                                        <li data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'disabled-area' : $root.spinners.forceTimeout }">
+                                            <a href="#" data-bind="css: { 'btn-spinner': $root.spinners.forceTimeout }">
                                                 <i class="icon-waiting"></i>
                                                 <span>Force timeout</span>
                                             </a>

@@ -3,7 +3,7 @@
         <div class="grid-sizer"></div>
         <div class="gutter-sizer"></div>
         <div data-bind="foreach: widgets">
-            <div class="cluster-dashboard-item" data-bind="compose: $data, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>
+            <div class="cluster-dashboard-item" data-bind="compose: { model: $data }, attr: { 'data-widget-id': id }, css: { 'fullscreen': fullscreen }"></div>
         </div>
         <div class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !widgets().length">
             <i class="icon-xl icon-empty-set"></i>

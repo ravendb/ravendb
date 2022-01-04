@@ -44,6 +44,8 @@ class feedbackModel {
 
 class feedback extends dialogViewModelBase {
 
+    view = require("views/shell/feedback.html");
+
     private readonly studioVersion: string;
     private readonly serverVersion: string;
     private moduleTitle = ko.observable<string>();
@@ -64,7 +66,7 @@ class feedback extends dialogViewModelBase {
         const instruction = router.activeInstruction();
         if (instruction) {
             this.moduleTitle(instruction.config.title);
-            this.moduleId(instruction.config.moduleId);
+            this.moduleId((instruction.config.moduleId as Function)?.name);
         }
 
         studioSettings.default.globalSettings()

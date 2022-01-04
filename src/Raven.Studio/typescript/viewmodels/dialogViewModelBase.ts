@@ -2,6 +2,7 @@
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import dialog = require("plugins/dialog");
+import { jwerty } from "jwerty";
 
 type dialogViewModelBaseOptions = {
     elementToFocusOnDismissal?: string;
@@ -10,6 +11,18 @@ type dialogViewModelBaseOptions = {
 
 abstract class dialogViewModelBase {
 
+    abstract view: { default: string };
+    
+    getView() {
+        if (!this.view) {
+            throw new Error("Looks like you forgot to define view in: " + this);
+        }
+        if (!this.view.default.trim().startsWith("<")) {
+            console.warn("View doesn't start with '<'");
+        }
+        return this.view.default;
+    }
+    
     protected activeDatabase = activeDatabaseTracker.default.database;
     static readonly dialogSelector = ".modal-dialog";
 

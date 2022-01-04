@@ -15,13 +15,14 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
-import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
+import rqlLanguageService = require("common/rqlLanguageService");
+import { highlight, languages } from "prismjs";
 
 type testTabName = "results" | perCollectionIncludes;
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -39,7 +40,9 @@ class perCollectionIncludes {
 
 class editSubscriptionTask extends viewModelBase {
 
-    queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
+    languageService: rqlLanguageService;
+    view = require("views/database/tasks/editSubscriptionTask.html");
+
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
@@ -71,6 +74,8 @@ class editSubscriptionTask extends viewModelBase {
         super();
         this.bindToCurrentInstance("setStartingPointType", "goToTab", "setState");
         aceEditorBindingHandler.install();
+        
+        this.languageService = new rqlLanguageService(this.activeDatabase, ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
     }
 
     activate(args: any) { 
@@ -94,8 +99,8 @@ class editSubscriptionTask extends viewModelBase {
                     this.editedSubscription().liveConnection(false);
                     new subscriptionConnectionDetailsCommand(this.activeDatabase(), args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
                         .execute()
-                        .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails) => {
-                            this.editedSubscription().liveConnection(!!result.ClientUri);
+                        .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails) => {
+                            this.editedSubscription().liveConnection(!!result.Results.length);
                         });
                 })
                 .fail(() => { 
@@ -114,6 +119,12 @@ class editSubscriptionTask extends viewModelBase {
 
         return $.when<any>(deferred, this.loadPossibleMentors());
     }
+    
+    detached() {
+        super.detached();
+        
+        this.languageService.dispose();
+    }
 
     private loadPossibleMentors() {
         return new getPossibleMentorsCommand(this.activeDatabase().name)
@@ -131,7 +142,13 @@ class editSubscriptionTask extends viewModelBase {
                 content: tasksCommonContent.responsibleNodeInfo
             });
         
-        document.getElementById('taskName').focus(); 
+        document.getElementById('taskName').focus();
+
+        const queryEditor = aceEditorBindingHandler.getEditorBySelection($(".query-source"));
+        
+        this.editedSubscription().query.throttle(500).subscribe(() => {
+            this.languageService.syntaxCheck(queryEditor);
+        });
     }
 
     saveSubscription() {
@@ -245,7 +262,7 @@ class editSubscriptionTask extends viewModelBase {
                             onValue(formattedValue, value);
                         } else {
                             const json = JSON.stringify(value, null, 4);
-                            const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                            const html = highlight(json, languages.javascript, "js");
                             onValue(html, json);
                         }
                     }

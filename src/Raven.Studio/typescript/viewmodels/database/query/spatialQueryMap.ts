@@ -2,14 +2,22 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import spatialMarkersLayerModel = require("models/database/query/spatialMarkersLayerModel");
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
-import { Control, IconOptions, MarkerClusterGroup } from "leaflet";
+import { Control, IconOptions, MarkerClusterGroup, Map, TileLayer } from "leaflet";
 import genUtils = require("common/generalUtils");
 import spatialCircleModel = require("models/database/query/spatialCircleModel");
 import spatialPolygonModel = require("models/database/query/spatialPolygonModel");
+import { highlight, languages } from "prismjs";
+
+import L = require("leaflet");
+import "leaflet.markercluster";
+
+const markerIcon = require("Content/img/leaflet/marker-icon.svg");
 
 class spatialQueryMap extends viewModelBase {
+
+    view = require("views/database/query/spatialQueryMap.html");
     
-    private map: L.Map;
+    private map: Map;
     
     markersLayers = ko.observableArray<spatialMarkersLayerModel>([]);
     circlesLayer = ko.observableArray<spatialCircleModel>([]);
@@ -22,12 +30,12 @@ class spatialQueryMap extends viewModelBase {
         this.polygonsLayer(polygons);
     }
 
-    compositionComplete() {
+    compositionComplete(): void {
         super.compositionComplete();
         this.createMap();
     }
     
-    private createMap() {
+    private createMap(): void {
         const osmMap = this.getStreetMapTileLayer();
         const otmMap = this.getTopographyMapTileLayer();
         const baseLayers = {
@@ -41,7 +49,7 @@ class spatialQueryMap extends viewModelBase {
             documentMetadata.filterMetadata(metaDto);
 
             let text = JSON.stringify(docDto, null, 4);
-            text = Prism.highlight(text, (Prism.languages as any)["javascript"]);
+            text = highlight(text, languages.javascript, "js");
 
             return `<div>
                           <h4>Document: ${genUtils.escapeHtml(doc.getId())}</h4>
@@ -53,7 +61,7 @@ class spatialQueryMap extends viewModelBase {
         const markersGroups: MarkerClusterGroup[] = [];
 
         const ravenMarker = L.icon({
-            iconUrl: 'Content/img/leaflet/marker-icon.svg',
+            iconUrl: markerIcon,
             iconSize: [35, 26],
             iconAnchor: [17, 22],
             popupAnchor: [5, -22],
@@ -64,7 +72,7 @@ class spatialQueryMap extends viewModelBase {
             const markers = markersLayer.geoPoints().map(point => {
                 return L.marker([point.Latitude, point.Longitude], { icon: ravenMarker })
                     .bindTooltip(point.PopupContent.getId(), { direction: 'top' })
-                    .bindPopup(generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
+                    .bindPopup(() => generatePopupHtml(point.PopupContent), { "className" : "custom-popup", "maxWidth": 600, "maxHeight": 400 } );
             });
 
             const markersGroup = L.markerClusterGroup();
@@ -119,21 +127,21 @@ class spatialQueryMap extends viewModelBase {
         this.map.fitBounds(mapBounds, {padding: [50, 50]});
     }
     
-    private getStreetMapTileLayer() {
+    private getStreetMapTileLayer(): TileLayer {
         const osmLink = `<a href="http://openstreetmap.org">OpenStreetMap</a>`;
         const osmUrl = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         const osmAttrib = `&copy; ${osmLink} Contributors`;
         return L.tileLayer(osmUrl, {attribution: osmAttrib});
     }
     
-    private getTopographyMapTileLayer() {
+    private getTopographyMapTileLayer(): TileLayer {
         const otmLink = `<a href="http://opentopomap.org/">OpenTopoMap</a>`;
         const otmUrl = `http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`;
         const otmAttrib = `&copy; ${otmLink} Contributors`;
         return L.tileLayer(otmUrl, {attribution: otmAttrib});
     } 
     
-    onResize() {
+    onResize(): void {
         this.map.invalidateSize();
     }
 }

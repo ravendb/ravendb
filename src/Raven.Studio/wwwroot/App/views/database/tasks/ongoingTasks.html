@@ -368,8 +368,8 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
-                                    <div class="flex-grow">
+                                <div class="padding flex-horizontal flex-wrap">
+                                    <div>
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
@@ -405,7 +405,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex-noshrink">
+                                    <div class="flex-noshrink flex-grow flex-start text-right">
                                         <!--  // TODO - currently added requiredAccess, but maybe think what if 'show backup progress' ?? -->
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
@@ -446,12 +446,16 @@
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
-                                <div class="padding flex-horizontal">
-                                    <div class="flex-grow">
+                                <div class="padding flex-horizontal flex-wrap">
+                                    <div>
                                         <div class="list-properties">
                                             <div class="property-item">
                                                 <div class="property-name">Task Status:</div>
                                                 <span class="property-value text-details" data-bind="text: badgeText"></span>
+                                            </div>
+                                            <div class="property-item">
+                                                <div class="property-name">Mode:</div>
+                                                <span class="property-value text-details" data-bind="text: subscriptionMode"></span>
                                             </div>
                                             <!-- ko if: clientDetailsIssue -->
                                             <div class="property-item">
@@ -460,13 +464,30 @@
                                             </div>
                                             <!-- /ko -->
                                             <!-- ko if: !clientDetailsIssue() -->
-                                            <div class="property-item">
-                                                <div class="property-name">Client IP:</div>
-                                                <div class="property-value text-details" data-bind="text: clientIP"></div>
-                                            </div>
-                                            <div class="property-item">
-                                                <div class="property-name">Connection Strategy:</div>
-                                                <div class="property-value text-details" data-bind="text: connectionStrategy"></div>
+                                            <hr />
+                                            <div data-bind="foreach: clients">
+                                                <div class="property-item">
+                                                    <div class="property-name">Client URI:</div>
+                                                    <div class="property-value text-details">
+                                                        <div class="flex-horizontal">
+                                                            <div data-bind="text: clientUri"></div>
+                                                            <button class="btn btn-xs margin-left margin-left-sm" 
+                                                                    data-bind="click: _.partial($parent.disconnectClientFromSubscription, workerId)" 
+                                                                    title="Disconnect client from this subscription (unsubscribe client)">
+                                                                <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="property-item">
+                                                    <div class="property-name">Connection Strategy:</div>
+                                                    <div class="property-value text-details">
+                                                        <div class="flex-horizontal">
+                                                            <div data-bind="text: strategy"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <hr />
                                             </div>
                                             <!-- /ko -->
                                             <div class="property-item">
@@ -481,15 +502,10 @@
                                             <div class="property-item">
                                                 <div class="property-name">Last Client Connection Time:</div>
                                                 <div class="property-value"><span class="text-details" data-bind="text: lastClientConnectionTime"></span></div>
-                                                    <!-- ko if: clientIP() -->
-                                                        <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
-                                                            <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                        </button>
-                                                    <!-- /ko -->
-                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
+                                    <div class="flex-noshrink flex-grow flex-start text-right">
                                         <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
                                 </div>
@@ -663,7 +679,7 @@
                     <span>Exit full screen</span>
                 </button>
             </div>
-            <div data-bind="compose: 'partial/databaseGroupLegend.html'"></div>
+            <div data-bind="compose: $root.databaseGroupLegendView"></div>
         </div>
     </div>
 </div>
@@ -671,7 +687,7 @@
 <script type="text/html" id="name-template-admin">
     <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
         <div data-bind="visible: $root.isAdminAccessOrAbove() && !isServerWide()">
-            <a href="#" data-bind="click: editTask"><span data-bind="text: taskName"></span></a>
+            <a href="#" data-bind="click: editTask, attr: { href: editUrl() }"><span data-bind="text: taskName"></span></a>
         </div>
         <div data-bind="visible: !$root.isAdminAccessOrAbove() || isServerWide()">
             <span><span data-bind="text: taskName"></span></span>
@@ -707,7 +723,8 @@
 </script>
 
 <script type="text/html" id="responsible-node-template">
-    <div data-bind="with: responsibleNode().NodeTag, visible: !usingNotPreferredNode()" title="Cluster node that is responsible for this task">
+    <div data-bind="with: responsibleNode().NodeTag, visible: !usingNotPreferredNode(),
+                    attr: { title: taskType() === 'PullReplicationAsHub' ? 'Hub node that is serving this Sink task' : 'Cluster node that is responsible for this task' }">
         <i class="icon-cluster-node"></i>
         <span data-bind="text: $data"></span>
     </div>

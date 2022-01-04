@@ -34,16 +34,16 @@ class graphHelper {
         return `M ${x1} ${y1} Q ${pX + sign * delta * Math.cos(alpha)} ${pY + sign * delta * Math.sin(alpha)} ${x2} ${y2}`;
     }
 
-    static truncText(input: string, measuredWidth: number, availableWidth: number, minWidth = 5): string {
-        if (availableWidth >= measuredWidth) {
-            return input;
+    static truncText(text: string, textWidth: number, availableWidth: number, minWidth = 5): string {
+        if (availableWidth >= textWidth) {
+            return text;
         }
         if (availableWidth < minWidth) {
             return null;
         }
 
-        const approxCharactersToTake = Math.floor(availableWidth * input.length / measuredWidth);
-        return input.substr(0, approxCharactersToTake);
+        const approxCharactersToTake = Math.floor(availableWidth * text.length / textWidth);
+        return text.substr(0, approxCharactersToTake);
     }
 
     static trimText(input: string, lengthProvider: (numberOfCharacters: number) => number, minWidth: number, maxWidth: number, extraPadding: number = 0): { text: string, containerWidth: number } {

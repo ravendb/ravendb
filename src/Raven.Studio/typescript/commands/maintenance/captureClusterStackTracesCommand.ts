@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-import zipUtils = require("jszip-utils");
+import { getBinaryContent } from "jszip-utils";
 import jszip = require("jszip");
 
 class captureClusterStackTracesCommand extends commandBase {
@@ -14,7 +14,7 @@ class captureClusterStackTracesCommand extends commandBase {
         
         const task = $.Deferred<Array<clusterWideStackTraceResponseItem>>();
         
-        zipUtils.getBinaryContent(url, (error, data) => {
+        getBinaryContent(url, (error, data) => {
             if (error) {
                 task.reject(error);
             } else {
@@ -38,7 +38,7 @@ class captureClusterStackTracesCommand extends commandBase {
         return task;
     }
     
-    private extractStackTrace(fileName: string, zipFile: JSZipObject): Promise<clusterWideStackTraceResponseItem> {
+    private extractStackTrace(fileName: string, zipFile: jszip.JSZipObject): Promise<clusterWideStackTraceResponseItem> {
         return new Promise((resolve, reject) => {
             const nodeTagRegexp = /\[([A-Z?]{1,4})\]/;
             const nodeTag = fileName.match(nodeTagRegexp)[1];
