@@ -576,7 +576,6 @@ namespace RachisTests
                         if (deletionInProgress > 0 || topology.Members.Count < 2)
                         {
                             var status = deletionInProgress > 0 ? record.DeletionInProgress.First().Value.ToString() : "";
-                            DatabaseInfo databaseInfo = null;
                             info += $"deletionInProgress = {deletionInProgress}, status = {status}. " +
                                     $"members = {topology.Members.Count}, rehabs = {topology.Rehabs.Count}, ReplicationFactor = {topology.ReplicationFactor}";
                             var sb = new StringBuilder();
