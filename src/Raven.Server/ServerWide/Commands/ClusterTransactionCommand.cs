@@ -270,30 +270,44 @@ namespace Raven.Server.ServerWide.Commands
                 if (FromBackup)
                     changeVectorIndex = GetCurrentIndex(context, items, atomicGuardKey) ?? 0;
 
-                var type = cmdType switch
+                var clusterTransactionDataCommand = new ClusterTransactionDataCommand
                 {
-                    nameof(CommandType.PUT) => CommandType.CompareExchangePUT,
-                    nameof(CommandType.DELETE) => CommandType.CompareExchangeDELETE,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-
-                if (type == CommandType.CompareExchangeDELETE && changeVector == null)
-                {
-                    var current = GetCurrentIndex(context, items, atomicGuardKey);
-                    if (current == null)
-                        continue; // trying to delete non-existing key
-
-                    changeVectorIndex = current.Value;
-                }
-
-                ClusterCommands.Add(new ClusterTransactionDataCommand
-                {
-                    Type = type,
                     Id = atomicGuardKey,
                     Index = changeVectorIndex,
-                    Document = context.ReadObject(new DynamicJsonValue { ["Id"] = docId }, "cmp-xchg-content"),
                     Error = $"Guard compare exchange value '{atomicGuardKey}' index does not match the transaction index's {changeVectorIndex} change vector on {docId}"
-                });
+                };
+                
+                switch (cmdType)
+                {
+                    case nameof(CommandType.PUT):
+                        clusterTransactionDataCommand.Type = CommandType.CompareExchangePUT;
+                        
+                        var dynamicJsonValue = new DynamicJsonValue { ["Id"] = docId };
+                        if (dbCmd.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
+                            && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                            && metadata.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expires))
+                        {
+                            dynamicJsonValue[Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Expires] = expires};
+                        }
+
+                        clusterTransactionDataCommand.Document = context.ReadObject(dynamicJsonValue, "cmp-xchg-content");
+                        break;
+                    case nameof(CommandType.DELETE):
+                        if (changeVector == null)
+                        {
+                            var current = GetCurrentIndex(context, items, atomicGuardKey);
+                            if (current == null)
+                                continue; // trying to delete non-existing key
+
+                            clusterTransactionDataCommand.Index = current.Value;
+                        }
+                        clusterTransactionDataCommand.Type = CommandType.CompareExchangeDELETE;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                ClusterCommands.Add(clusterTransactionDataCommand);
             }
         }
 
