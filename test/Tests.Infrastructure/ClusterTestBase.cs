@@ -855,7 +855,7 @@ namespace Tests.Infrastructure
                 {
                     //catch debug logs
                     var sb = new StringBuilder();
-                    await GetClusterDebugLogs(sb);
+                    await GetClusterDebugLogsAsync(sb);
                     throw new ConcurrencyException($"Couldn't create database on time, cluster debug logs: {sb}", inner);
                 }
                 urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
@@ -990,7 +990,7 @@ namespace Tests.Infrastructure
 
         }
 
-        internal async Task GetClusterDebugLogs(StringBuilder sb)
+        internal async Task GetClusterDebugLogsAsync(StringBuilder sb)
         {
             (ClusterObserverLogEntry[] List, long Iteration) logs;
             List<DynamicJsonValue> historyLogs = null;

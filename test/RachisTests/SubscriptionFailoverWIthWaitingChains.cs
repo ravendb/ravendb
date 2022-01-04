@@ -565,7 +565,7 @@ namespace RachisTests
                 if ((attempts >= 0 && rehabNodes.Count == 0) == false)
                 {
                     var sb = new StringBuilder();
-                    await GetClusterDebugLogs(sb);
+                    await GetClusterDebugLogsAsync(sb);
 
                     List<string> currentRehabNodes;
                     string currentException = null;
