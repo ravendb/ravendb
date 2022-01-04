@@ -414,7 +414,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutOlapConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
-                    case nameof(RemoveOlapConnectionStringCommand): 
+                    case nameof(RemoveOlapConnectionStringCommand):
                     case nameof(UpdatePullReplicationAsHubCommand):
                     case nameof(UpdatePullReplicationAsSinkCommand):
                     case nameof(EditDatabaseClientConfigurationCommand):
@@ -1422,6 +1422,9 @@ namespace Raven.Server.ServerWide
             CleanupDatabaseRelatedValues(context, items, databaseName, serverStore);
             CleanupDatabaseReplicationCertificate(context, databaseName);
 
+            //remove the database from all certificate's permissions
+            DeleteDatabaseFromCertificatePermissions(context, databaseName);
+
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
 
@@ -1831,6 +1834,38 @@ namespace Raven.Server.ServerWide
             finally
             {
                 NotifyValueChanged(context, type, index);
+            }
+        }
+
+        private static void DeleteDatabaseFromCertificatePermissions(ClusterOperationContext context, string database)
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var blittable = GetCertificate(context, result.Value).Cert;
+
+                if (blittable.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint) == false)
+                    throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.Thumbprint)}' from {nameof(CertificateDefinition)}");
+
+                if (blittable.TryGet(nameof(CertificateDefinition.PublicKeyPinningHash), out string hash) == false)
+                    throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.PublicKeyPinningHash)}' from {nameof(CertificateDefinition)}");
+
+                if (blittable.TryGet(nameof(CertificateDefinition.Permissions), out BlittableJsonReaderObject permissions) == false)
+                    throw new MissingFieldException($"Couldn't get '{nameof(CertificateDefinition.Permissions)}' from {nameof(CertificateDefinition)}");
+
+                using (Slice.From(context.Allocator, thumbprint.ToLower(), out var thumbprintSlice))
+                using (Slice.From(context.Allocator, hash, out var hashSlice))
+                {
+                    int index = permissions.GetPropertyIndex(database);
+                    if (index > -1)
+                    {
+                        permissions.Modifications ??= new DynamicJsonValue(permissions);
+                        permissions.Modifications.Remove(database);
+                        var updated = context.ReadObject(blittable, "cert/updated");
+                        UpdateCertificate(certTable, thumbprintSlice, hashSlice, updated);
+                    }
+                }
             }
         }
 
@@ -3454,7 +3489,7 @@ namespace Raven.Server.ServerWide
 
                 info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
             }
-            
+
             TcpClient tcpClient = null;
             Stream stream = null;
             try
@@ -3463,8 +3498,8 @@ namespace Raven.Server.ServerWide
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var result = await TcpUtils.ConnectSecuredTcpSocket(info, _parent.ClusterCertificate, _parent.CipherSuitesPolicy,
-                        TcpConnectionHeaderMessage.OperationTypes.Cluster, 
-                        (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag), 
+                        TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        (string destUrl, TcpConnectionInfo tcpInfo, Stream conn, JsonOperationContext ctx, List<string> _) => NegotiateProtocolVersionAsyncForCluster(destUrl, tcpInfo, conn, ctx, tag),
                         context, _parent.TcpConnectionTimeout, null, token);
 
                     tcpClient = result.TcpClient;
