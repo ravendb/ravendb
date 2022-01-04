@@ -5,6 +5,8 @@ namespace Sparrow.Binary
 {
     public static class Bits
     {
+        private const int GB = 1024 * 1024 * 1024;
+
         //https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
         public static long NumberOfSetBits(long i)
         {
@@ -260,6 +262,9 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int PowerOf2Internal(int v)
         {
+            if (v > GB)
+                ThrowPowerOf2OverflowException(v);
+
             v--;
             v |= v >> 1;
             v |= v >> 2;
@@ -268,10 +273,12 @@ namespace Sparrow.Binary
             v |= v >> 16;
             v++;
 
-            if (v < 0)
-                throw new ArgumentException($"Could not return next power of 2 because the resulting number exceeds return type int");
-
             return v;
+        }
+
+        private static void ThrowPowerOf2OverflowException(int v)
+        {
+            throw new ArgumentException($"Could not return next power of 2 of {v} because the resulting number exceeds return type int");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
