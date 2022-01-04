@@ -52,6 +52,8 @@ namespace SlowTests.Issues
                 DeleteSecretKeyForDatabaseFromServerStore(databaseName, notInDbGroupServer);
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
 
+                await WaitForValueAsync(async () => (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).Topology.Members.Count, 2);
+
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Empty(record.DeletionInProgress);
                 Assert.Equal(2 ,record.Topology.Members.Count);
