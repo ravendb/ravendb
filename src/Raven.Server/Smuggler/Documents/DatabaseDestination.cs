@@ -129,8 +129,9 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICounterActions LegacyCounters(SmugglerResult result)
         {
-            //Only for StreamDestination
-            throw new NotImplementedException();
+            // Used only in Stream Destination, needed when we writing from Stream Source to Stream Destination
+            throw new NotSupportedException("LegacyCounters is not supported in Database destination, " +
+                                            "it is only supported when writing to Stream destination. Shouldn't happen.");
         }
 
         public ISubscriptionActions Subscriptions()
@@ -150,14 +151,16 @@ namespace Raven.Server.Smuggler.Documents
 
         public ILegacyActions LegacyDocumentDeletions()
         {
-            //Only for StreamDestination
-            throw new NotImplementedException();
+            // Used only in Stream Destination, needed when we writing from Stream Source to Stream Destination
+            throw new NotSupportedException("LegacyDocumentDeletions is not supported in Database destination, " +
+                                            "it is only supported when writing to Stream destination. Shouldn't happen.");
         }
 
         public ILegacyActions LegacyAttachmentDeletions()
         {
-            //Only for StreamDestination
-            throw new NotImplementedException();
+            // Used only in Stream Destination, needed when we writing from Stream Source to Stream Destination
+            throw new NotSupportedException("LegacyAttachmentDeletions is not supported in Database destination, " +
+                                            "it is only supported when writing to Stream destination. Shouldn't happen.");
         }
 
         public IIndexActions Indexes()

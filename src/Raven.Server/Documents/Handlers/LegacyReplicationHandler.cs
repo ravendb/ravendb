@@ -15,6 +15,8 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Threading;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Handlers
@@ -148,26 +150,27 @@ namespace Raven.Server.Documents.Handlers
                         {
                             Stream = documentActions.GetTempStream()
                         };
-
-                        var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(contextToUse, dataStream, attachmentKey, metadataBlittable, ref attachment);
-
-                        var documentItem = new DocumentItem
+                        using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
                         {
-                            Document = new Document
+                            var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(contextToUse, dataStream, attachmentKey, metadataBlittable, byteStringContext, ref attachment);
+                            var documentItem = new DocumentItem
                             {
-                                Data = StreamSource.WriteDummyDocumentForAttachment(contextToUse, attachmentDetails),
-                                Id = attachmentDetails.Id,
-                                ChangeVector = string.Empty,
-                                Flags = DocumentFlags.HasAttachments,
-                                LastModified = Database.Time.GetUtcNow()
-                            },
-                            Attachments = new List<DocumentItem.AttachmentStream>
-                            {
-                                attachment
-                            }
-                        };
+                                Document = new Document
+                                {
+                                    Data = StreamSource.WriteDummyDocumentForAttachment(contextToUse, attachmentDetails),
+                                    Id = attachmentDetails.Id,
+                                    ChangeVector = string.Empty,
+                                    Flags = DocumentFlags.HasAttachments,
+                                    LastModified = Database.Time.GetUtcNow()
+                                },
+                                Attachments = new List<DocumentItem.AttachmentStream>
+                                {
+                                    attachment
+                                }
+                            };
 
-                        await documentActions.WriteDocumentAsync(documentItem, progress);
+                            await documentActions.WriteDocumentAsync(documentItem, progress);
+                        }
                     }
                 }
 

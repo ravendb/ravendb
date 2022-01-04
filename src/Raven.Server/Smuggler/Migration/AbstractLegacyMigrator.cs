@@ -19,6 +19,8 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration.ApiKey;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Threading;
 
 namespace Raven.Server.Smuggler.Migration
 {
@@ -110,27 +112,26 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     Stream = documentActions.GetTempStream()
                 };
-
-                var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(context, dataStream, key, metadata, ref attachment);
-
-                var dummyDoc = new DocumentItem
+                using (var byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None))
                 {
-                    Document = new Document
-                    {
-                        Data = StreamSource.WriteDummyDocumentForAttachment(context, attachmentDetails),
-                        Id = attachmentDetails.Id,
-                        ChangeVector = string.Empty,
-                        Flags = DocumentFlags.HasAttachments,
-                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
-                        LastModified = Parameters.Database.Time.GetUtcNow(),
-                    },
-                    Attachments = new List<DocumentItem.AttachmentStream>
-                    {
-                        attachment
-                    }
-                };
+                    var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(context, dataStream, key, metadata, byteStringContext, ref attachment);
 
-                await documentActions.WriteDocumentAsync(dummyDoc, Parameters.Result.Documents);
+                    var dummyDoc = new DocumentItem
+                    {
+                        Document = new Document
+                        {
+                            Data = StreamSource.WriteDummyDocumentForAttachment(context, attachmentDetails),
+                            Id = attachmentDetails.Id,
+                            ChangeVector = string.Empty,
+                            Flags = DocumentFlags.HasAttachments,
+                            NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
+                            LastModified = Parameters.Database.Time.GetUtcNow(),
+                        },
+                        Attachments = new List<DocumentItem.AttachmentStream> { attachment }
+                    };
+
+                    await documentActions.WriteDocumentAsync(dummyDoc, Parameters.Result.Documents);
+                }
             }
         }
 

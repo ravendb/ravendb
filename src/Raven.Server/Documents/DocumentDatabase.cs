@@ -1092,7 +1092,6 @@ namespace Raven.Server.Documents
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
-                        //using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
                         {
                             var smugglerDestination = new StreamDestination(outputStream, jsonOperationContext, smugglerSource);

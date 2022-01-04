@@ -40,7 +40,6 @@ namespace Raven.Server.Documents
         public void SetException(string id, long index, Exception e)
         {
             Database.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
-          
             if (_results.TryGetValue(id, out var task))
             {
                 task.SetException(e);

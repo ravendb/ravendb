@@ -29,7 +29,6 @@ namespace Raven.Server.Smuggler.Documents
         private readonly SmugglerPatcher _patcher;
         private readonly TransactionContextPool _transactionContextPool;
         public Action<IndexDefinitionAndType> OnIndexAction;
-        public Action<DatabaseRecord> OnDatabaseRecordAction;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
 
@@ -95,34 +94,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result)
         {
-            result.DatabaseRecord.Start();
-
-            await using (var actions = _destination.DatabaseRecord())
-            {
-                var databaseRecord = await _source.GetDatabaseRecordAsync();
-
-                _token.ThrowIfCancellationRequested();
-
-                if (OnDatabaseRecordAction != null)
-                {
-                    OnDatabaseRecordAction(databaseRecord);
-                    return new SmugglerProgressBase.DatabaseRecordProgress();
-                }
-
-                result.DatabaseRecord.ReadCount++;
-
-                try
-                {
-                    await actions.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
-                }
-                catch (Exception e)
-                {
-                    result.AddError($"Could not write database record: {e.Message}");
-                    result.DatabaseRecord.ErroredCount++;
-                }
-            }
-
-            return result.DatabaseRecord;
+            return await ProcessDatabaseRecordInternalAsync(result, _destination.DatabaseRecord());
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessDocumentsAsync(SmugglerResult result, BuildVersionType buildType)
@@ -443,42 +415,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)
         {
-            result.Identities.Start();
-
-            await using (var actions = _destination.Identities())
-            {
-                await foreach (var identity in _source.GetIdentitiesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Identities.ReadCount++;
-
-                    if (identity.Equals(default))
-                    {
-                        result.Identities.ErroredCount++;
-                        continue;
-                    }
-
-                    try
-                    {
-                        string identityPrefix = identity.Prefix;
-                        if (buildType == BuildVersionType.V3)
-                        {
-                            // ends with a "/"
-                            identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
-                        }
-
-                        await actions.WriteKeyValueAsync(identityPrefix, identity.Value);
-                        result.Identities.LastEtag = identity.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{identity.Prefix}->{identity.Value}': {e.Message}");
-                    }
-                }
-            }
-
-            return result.Identities;
+            return await ProcessIdentitiesInternalAsync(result, buildType, _destination.Identities());
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentsAsync(SmugglerResult result)
@@ -569,6 +506,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseRecord shardedRecord = null;
             result.CompareExchange.Start();
 
+            //Handle compare exchange for shard database export
             if (_source is DatabaseSource)
             {
                 var record = await _source.GetDatabaseRecordAsync();
@@ -744,44 +682,12 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
-            result.Subscriptions.Start();
-
-            await using (var actions = _destination.Subscriptions())
-            {
-                await foreach (var subscription in _source.GetSubscriptionsAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Subscriptions.ReadCount++;
-
-                    if (result.Subscriptions.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
-
-                    await actions.WriteSubscriptionAsync(subscription);
-                }
-            }
-
-            return result.Subscriptions;
+            return await ProcessSubscriptionsInternalAsync(result, _destination.Subscriptions());
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result)
         {
-            result.ReplicationHubCertificates.Start();
-
-            await using (var actions = _destination.ReplicationHubCertificates())
-            {
-                await foreach (var (hub, access) in _source.GetReplicationHubCertificatesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.ReplicationHubCertificates.ReadCount++;
-
-                    if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
-
-                    await actions.WriteReplicationHubCertificateAsync(hub, access);
-                }
-            }
-
-            return result.ReplicationHubCertificates;
+            return await ProcessReplicationHubCertificatesInternalAsync(result, _destination.ReplicationHubCertificates());
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result)

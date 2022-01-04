@@ -41,7 +41,7 @@ namespace Raven.Server.Smuggler.Documents
                 Base64HashDispose.Dispose();
                 TagDispose.Dispose();
                 Stream.Dispose();
-                Data?.Dispose();
+                Data.Dispose();
             }
         }
     }

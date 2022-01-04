@@ -16,7 +16,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -214,7 +213,9 @@ namespace Raven.Server.Smuggler.Documents
 
         public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
         {
-            throw new NotImplementedException();
+            // Used only in Database Source
+            throw new NotSupportedException("GetShardedDatabaseRecordAsync is not supported in Stream Source, " +
+                                            "it is only supported from Sharded Database Source.");
         }
 
         public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
@@ -451,7 +452,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public void Dispose()

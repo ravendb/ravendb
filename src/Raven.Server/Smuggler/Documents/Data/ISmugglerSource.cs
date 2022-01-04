@@ -22,6 +22,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         Task<DatabaseItemType> GetNextTypeAsync();
 
         Task<DatabaseRecord> GetDatabaseRecordAsync();
+
         Task<DatabaseRecord> GetShardedDatabaseRecordAsync();
 
         IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);

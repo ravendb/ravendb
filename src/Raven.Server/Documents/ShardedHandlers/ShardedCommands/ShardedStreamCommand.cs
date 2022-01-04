@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 
         public override void OnResponseFailure(HttpResponseMessage response)
         {
-           
+            _tcs.TrySetCanceled();
         }
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)

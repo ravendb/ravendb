@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -26,6 +27,7 @@ namespace Raven.Server.Smuggler.Documents
         internal readonly Action<IOperationProgress> _onProgress;
         internal readonly CancellationToken _token;
         public readonly JsonOperationContext _context;
+        public Action<DatabaseRecord> OnDatabaseRecordAction;
 
         public BaseSmuggler(ISmugglerSource source, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, 
             SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
@@ -332,6 +334,38 @@ namespace Raven.Server.Smuggler.Documents
 
         protected abstract Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result);
 
+        protected async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordInternalAsync(SmugglerResult result, IDatabaseRecordActions action)
+        {
+            result.DatabaseRecord.Start();
+
+            await using (var actions = action)
+            {
+                var databaseRecord = await _source.GetDatabaseRecordAsync();
+
+                _token.ThrowIfCancellationRequested();
+
+                if (OnDatabaseRecordAction != null)
+                {
+                    OnDatabaseRecordAction(databaseRecord);
+                    return new SmugglerProgressBase.DatabaseRecordProgress();
+                }
+
+                result.DatabaseRecord.ReadCount++;
+
+                try
+                {
+                    await actions.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
+                }
+                catch (Exception e)
+                {
+                    result.AddError($"Could not write database record: {e.Message}");
+                    result.DatabaseRecord.ErroredCount++;
+                }
+            }
+
+            return result.DatabaseRecord;
+        }
+
         protected abstract Task<SmugglerProgressBase.Counts> ProcessDocumentsAsync(SmugglerResult result, BuildVersionType buildType);
 
         protected abstract Task<SmugglerProgressBase.Counts> ProcessRevisionDocumentsAsync(SmugglerResult result);
@@ -345,6 +379,46 @@ namespace Raven.Server.Smuggler.Documents
         protected abstract Task<SmugglerProgressBase.Counts> ProcessIndexesAsync(SmugglerResult result);
 
         protected abstract Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType);
+
+        protected async Task<SmugglerProgressBase.Counts> ProcessIdentitiesInternalAsync(SmugglerResult result, BuildVersionType buildType, IKeyValueActions<long> action)
+        {
+            result.Identities.Start();
+
+            await using (var actions = action)
+            {
+                await foreach (var identity in _source.GetIdentitiesAsync())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Identities.ReadCount++;
+
+                    if (identity.Equals(default))
+                    {
+                        result.Identities.ErroredCount++;
+                        continue;
+                    }
+
+                    try
+                    {
+                        string identityPrefix = identity.Prefix;
+                        if (buildType == BuildVersionType.V3)
+                        {
+                            // ends with a "/"
+                            identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
+                        }
+
+                        await actions.WriteKeyValueAsync(identityPrefix, identity.Value);
+                        result.Identities.LastEtag = identity.Index;
+                    }
+                    catch (Exception e)
+                    {
+                        result.Identities.ErroredCount++;
+                        result.AddError($"Could not write identity '{identity.Prefix}->{identity.Value}': {e.Message}");
+                    }
+                }
+            }
+
+            return result.Identities;
+        }
 
         protected abstract Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentsAsync(SmugglerResult result);
 
@@ -362,10 +436,51 @@ namespace Raven.Server.Smuggler.Documents
 
         protected abstract Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result);
 
-        protected abstract Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result);
-        
-        protected abstract Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result);
+        protected async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsInternalAsync(SmugglerResult result, ISubscriptionActions action)
+        {
+            result.Subscriptions.Start();
 
+            await using (var actions = action)
+            {
+                await foreach (var subscription in _source.GetSubscriptionsAsync())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.Subscriptions.ReadCount++;
+
+                    if (result.Subscriptions.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
+
+                    await actions.WriteSubscriptionAsync(subscription);
+                }
+            }
+
+            return result.Subscriptions;
+        }
+
+        protected abstract Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result);
+
+        protected async Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesInternalAsync(SmugglerResult result, IReplicationHubCertificateActions action)
+        {
+            result.ReplicationHubCertificates.Start();
+
+            await using (var actions = action)
+            {
+                await foreach (var (hub, access) in _source.GetReplicationHubCertificatesAsync())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.ReplicationHubCertificates.ReadCount++;
+
+                    if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
+
+                    await actions.WriteReplicationHubCertificateAsync(hub, access);
+                }
+            }
+
+            return result.ReplicationHubCertificates;
+        }
+
+        protected abstract Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result);
         
         protected async Task TryHandleLegacyDocumentTombstonesAsync(List<LazyStringValue> legacyIdsToDelete, IDocumentActions actions, SmugglerResult result)
         {

@@ -28,6 +28,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow;
@@ -713,8 +714,7 @@ namespace Raven.Server.Smuggler.Documents
                         Baseline = baseline,
                         Collection = collection,
                         ChangeVector = cv,
-                        Segment = segment,
-                        SegmentSize = size
+                        Segment = segment
                     };
                 }
             }
@@ -1297,7 +1297,7 @@ namespace Raven.Server.Smuggler.Documents
                             ChangeVector = string.Empty,
                             Flags = DocumentFlags.HasAttachments,
                             NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
-                            LastModified = DateTime.Today.ToUniversalTime(),
+                            LastModified = SystemTime.UtcNow
                         },
                         Attachments = new List<DocumentItem.AttachmentStream>
                         {
@@ -1454,7 +1454,7 @@ namespace Raven.Server.Smuggler.Documents
                             ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
                             NonPersistentFlags = modifier.NonPersistentFlags,
-                            LastModified = modifier.LastModified ?? DateTime.Today.ToUniversalTime(),
+                            LastModified = modifier.LastModified ?? SystemTime.UtcNow
                         },
                         Attachments = attachments
                     };
@@ -1676,7 +1676,7 @@ namespace Raven.Server.Smuggler.Documents
 
             memoryStream.Position = 0;
 
-            return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, ref attachment);
+            return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, _byteStringContext, ref attachment);
         }
 
         public static string GetLegacyAttachmentId(string key)
@@ -1689,17 +1689,17 @@ namespace Raven.Server.Smuggler.Documents
             Stream decodedStream,
             string key,
             BlittableJsonReaderObject metadata,
+            ByteStringContext byteStringContext,
             ref DocumentItem.AttachmentStream attachment)
         {
             var stream = attachment.Stream;
             var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, decodedStream, stream, CancellationToken.None));
             attachment.Stream.Flush();
             var lazyHash = context.GetLazyString(hash);
-            var allocator = new ByteStringContext(new SharedMultipleUseFlag()); // TODO 
-            attachment.Base64HashDispose = Slice.External(allocator, lazyHash, out attachment.Base64Hash);
+            attachment.Base64HashDispose = Slice.External(byteStringContext, lazyHash, out attachment.Base64Hash);
             var tag = $"{DummyDocumentPrefix}{key}{RecordSeparator}d{RecordSeparator}{key}{RecordSeparator}{hash}{RecordSeparator}";
             var lazyTag = context.GetLazyString(tag);
-            attachment.TagDispose = Slice.External(allocator, lazyTag, out attachment.Tag);
+            attachment.TagDispose = Slice.External(byteStringContext, lazyTag, out attachment.Tag);
             var id = GetLegacyAttachmentId(key);
             var lazyId = context.GetLazyString(id);
 
@@ -1739,10 +1739,8 @@ namespace Raven.Server.Smuggler.Documents
                 _returnWriteBuffer = _context.GetMemoryBuffer(out _writeBuffer);
 
             attachment.Data = data;
-            var allocator = new ByteStringContext(new SharedMultipleUseFlag());
-            _toDispose.Add(allocator);
-            attachment.Base64HashDispose = Slice.External(allocator, hash, out attachment.Base64Hash);
-            attachment.TagDispose = Slice.External(allocator, tag, out attachment.Tag);
+            attachment.Base64HashDispose = Slice.External(_byteStringContext, hash, out attachment.Base64Hash);
+            attachment.TagDispose = Slice.External(_byteStringContext, tag, out attachment.Tag);
 
             while (size > 0)
             {
@@ -1856,12 +1854,15 @@ namespace Raven.Server.Smuggler.Documents
 
         public Task<DatabaseRecord> GetShardedDatabaseRecordAsync()
         {
-            throw new NotImplementedException();
+            // Used only in Database Source
+            throw new NotSupportedException("GetShardedDatabaseRecordAsync is not supported in Stream Source, " +
+                                            "it is only supported from Sharded Database Source.");
         }
 
         public void Dispose()
         {
             _peepingTomStream.Dispose();
+            _byteStringContext.Dispose();
         }
     }
 }

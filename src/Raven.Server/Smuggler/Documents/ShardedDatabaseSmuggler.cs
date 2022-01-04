@@ -126,120 +126,16 @@ namespace Raven.Server.Smuggler.Documents
         
         protected override async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result)
         {
-            var action = new DatabaseRecordActions(_server, _databaseRecord, _databaseRecord.DatabaseName, LoggingSource.Instance.GetLogger<DatabaseDestination>(_databaseRecord.DatabaseName));
-
-            var databaseRecord = await _source.GetDatabaseRecordAsync();
-            _token.ThrowIfCancellationRequested();
-            //TODO - OnDatabaseRecordAction
-            result.DatabaseRecord.ReadCount++;
-            try
+            await using (var action = new DatabaseRecordActions(_server, _databaseRecord, _databaseRecord.DatabaseName,
+                             LoggingSource.Instance.GetLogger<DatabaseDestination>(_databaseRecord.DatabaseName)))
             {
-                await action.WriteDatabaseRecordAsync(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus, _options.OperateOnDatabaseRecordTypes);
-            }
-            catch (Exception e)
-            {
-                result.AddError($"Could not write database record: {e.Message}");
-                result.DatabaseRecord.ErroredCount++;
-                throw;
-            }
-            return result.DatabaseRecord;
-        }
-
-        private async void HandleImportBatch(string type)
-        {
-            if (_itemsInBatch == 1000)
-            {
-                await SendBatch();
-
-                foreach (var des in _destinations)
-                {
-                    _desList.Add(des.InitializeAsync(_options, _result, _buildVersion));
-
-                    switch (type)
-                    {
-                        case "Docs":
-                            _actionsList.Add(des.Documents(_options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false));
-                            break;
-                        case "Revisions":
-                            _actionsList.Add(des.RevisionDocuments());
-                            break;
-                        case "Tombstones":
-                            _actionsList.Add(des.Tombstones());
-                            break;
-                        case "Conflicts":
-                            _actionsList.Add(des.Conflicts());
-                            break;
-                        case "LegacyAttachments":
-                            _actionsList.Add(des.Documents());
-                            break;
-                        case "LegacyDocumentDeletions":
-                            _actionsList.Add(des.LegacyDocumentDeletions());
-                            break;
-                        case "LegacyAttachmentDeletions":
-                            _actionsList.Add(des.LegacyAttachmentDeletions());
-                            break;
-                        case "LegacyCounters":
-                            _actionsList.Add(des.LegacyCounters(_result));
-                            break;
-                        case "Counters":
-                            _actionsList.Add(des.Counters(_result));
-                            break;
-                        case "TimeSeries":
-                            _actionsList.Add(des.TimeSeries());
-                            break;
-                        case nameof(DatabaseItemType.CompareExchange):
-                            _actionsList.Add(des.CompareExchange(_context));
-                            break;
-                    }
-                }
-            }
-        }
-
-        private async Task SendBatch()
-        {
-            await CleanActionList();
-            foreach (var des in _desList)
-            {
-                await des.DisposeAsync();
-            }
-
-            var task = SendImportBatch();
-            task.Wait();
-            _itemsInBatch = 0;
-            _desList.Clear();
-        }
-
-        public async Task SendImportBatch()
-        {
-            var tasks = new List<Task>();
-            for (int i = 0; i < _shardedContext.ShardCount; i++)
-            {
-                _streamList[i].Position = 0;
-
-                var multi = new MultipartFormDataContent
-                {
-                    {
-                        new BlittableJsonContent(async stream2 => await _context.WriteAsync(stream2, _optionsAsBlittable).ConfigureAwait(false)),
-                        Constants.Smuggler.ImportOptions
-                    },
-                    {new Client.Documents.Smuggler.DatabaseSmuggler.StreamContentWithConfirmation(_streamList[i], _tcs), "file", "name"}
-                };
-                var cmd = new ShardedImportCommand(_handler, Headers.None, multi);
-
-                var task = _shardedContext.RequestExecutors[i].ExecuteAsync(cmd, _contextList[i]);
-
-                tasks.Add(task);
-            }
-
-            await tasks.WhenAll();
-            for (int i = 0; i < _shardedContext.ShardCount; i++)
-            {
-                _streamList[i].Position = 0;
+                return await ProcessDatabaseRecordInternalAsync(result, action);
             }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessDocumentsAsync(SmugglerResult result, BuildVersionType buildType)
         {
+            result.Documents.Start();
             var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
             try
             {
@@ -256,7 +152,6 @@ namespace Raven.Server.Smuggler.Documents
                     DisposeSourceInfo();
                     _itemsInBatch++;
                 }
-
             }
             finally
             {
@@ -356,8 +251,7 @@ namespace Raven.Server.Smuggler.Documents
             result.Indexes.Start();
 
             var configuration = _server.DatabasesLandlord.CreateConfiguration(_databaseRecord);
-            
-            
+
             await foreach (var index in _source.GetIndexesAsync())
             {
                 _token.ThrowIfCancellationRequested();
@@ -496,41 +390,10 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)
         {
-            result.Identities.Start();
-
-            await using (var actions = new DatabaseKeyValueActions(_server, _databaseRecord.DatabaseName))
+            await using (var action = new DatabaseKeyValueActions(_server, _databaseRecord.DatabaseName))
             {
-                await foreach (var identity in _source.GetIdentitiesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Identities.ReadCount++;
-
-                    if (identity.Equals(default))
-                    {
-                        result.Identities.ErroredCount++;
-                        continue;
-                    }
-
-                    try
-                    {
-                        string identityPrefix = identity.Prefix;
-                        if (buildType == BuildVersionType.V3)
-                        {
-                            // ends with a "/"
-                            identityPrefix = identityPrefix.Substring(0, identityPrefix.Length - 1) + "|";
-                        }
-
-                        await actions.WriteKeyValueAsync(identityPrefix, identity.Value);
-                        result.Identities.LastEtag = identity.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.Identities.ErroredCount++;
-                        result.AddError($"Could not write identity '{identity.Prefix}->{identity.Value}': {e.Message}");
-                    }
-                }
+                return await ProcessIdentitiesInternalAsync(result, buildType, action);
             }
-            return result.Identities;
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentsAsync(SmugglerResult result)
@@ -672,31 +535,6 @@ namespace Raven.Server.Smuggler.Documents
             return result.CompareExchange;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyCountersAsync(SmugglerResult result)
-        {
-            result.Counters.Start();
-            try
-            {
-                foreach (var des in _destinations)
-                {
-                    _actionsList.Add(des.LegacyCounters(result));
-                }
-                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
-                await foreach (var counter in _source.GetLegacyCounterValuesAsync())
-                {
-                    HandleImportBatch("LegacyCounters");
-                    var index = ShardHelper.GetShardIndexforDocument(_transactionOperationContext, _shardAllocation, counter.DocumentId);
-                    await ((ICounterActions)_actionsList[index]).WriteLegacyCounterAsync(counter);
-                    _itemsInBatch++;
-                }
-                return result.Counters;
-            }
-            finally
-            {
-                await CleanActionList();
-            }
-        }
-
         protected override async Task<SmugglerProgressBase.Counts> ProcessCountersAsync(SmugglerResult result)
         {
             result.Counters.Start();
@@ -713,6 +551,31 @@ namespace Raven.Server.Smuggler.Documents
                     var index = ShardHelper.GetShardIndexforDocument(_transactionOperationContext, _shardAllocation, counterGroup.DocumentId);
                     await ((ICounterActions)_actionsList[index]).WriteCounterAsync(counterGroup);
                     DisposeSourceInfo();
+                    _itemsInBatch++;
+                }
+                return result.Counters;
+            }
+            finally
+            {
+                await CleanActionList();
+            }
+        }
+
+        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyCountersAsync(SmugglerResult result)
+        {
+            result.Counters.Start();
+            try
+            {
+                foreach (var des in _destinations)
+                {
+                    _actionsList.Add(des.LegacyCounters(result));
+                }
+                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
+                await foreach (var counter in _source.GetLegacyCounterValuesAsync())
+                {
+                    HandleImportBatch("LegacyCounters");
+                    var index = ShardHelper.GetShardIndexforDocument(_transactionOperationContext, _shardAllocation, counter.DocumentId);
+                    await ((ICounterActions)_actionsList[index]).WriteLegacyCounterAsync(counter);
                     _itemsInBatch++;
                 }
                 return result.Counters;
@@ -754,44 +617,18 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
-            result.Subscriptions.Start();
-
             await using(var actions = new SubscriptionActions(_server, _databaseRecord.DatabaseName))
             {
-                await foreach (var subscription in _source.GetSubscriptionsAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Subscriptions.ReadCount++;
-
-                    if (result.Subscriptions.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Subscriptions.ReadCount:#,#;;0} subscription.");
-
-                    await actions.WriteSubscriptionAsync(subscription);
-                }
-
-                return result.Subscriptions;
+                return await ProcessSubscriptionsInternalAsync(result, actions);
             }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result)
         {
-            result.ReplicationHubCertificates.Start();
-
             await using (var actions = new ReplicationHubCertificateActions(_server, _databaseRecord.DatabaseName))
             {
-                await foreach (var (hub, access) in _source.GetReplicationHubCertificatesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.ReplicationHubCertificates.ReadCount++;
-
-                    if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
-
-                    await actions.WriteReplicationHubCertificateAsync(hub, access);
-                }
+                return await ProcessReplicationHubCertificatesInternalAsync(result, actions);
             }
-
-            return result.ReplicationHubCertificates;
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result)
@@ -816,6 +653,99 @@ namespace Raven.Server.Smuggler.Documents
             finally
             {
                 await CleanActionList();
+            }
+        }
+
+        private async void HandleImportBatch(string type)
+        {
+            if (_itemsInBatch == 1000)
+            {
+                await SendBatch();
+
+                foreach (var des in _destinations)
+                {
+                    _desList.Add(des.InitializeAsync(_options, _result, _buildVersion));
+
+                    switch (type)
+                    {
+                        case "Docs":
+                            _actionsList.Add(des.Documents(_options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false));
+                            break;
+                        case "Revisions":
+                            _actionsList.Add(des.RevisionDocuments());
+                            break;
+                        case "Tombstones":
+                            _actionsList.Add(des.Tombstones());
+                            break;
+                        case "Conflicts":
+                            _actionsList.Add(des.Conflicts());
+                            break;
+                        case "LegacyAttachments":
+                            _actionsList.Add(des.Documents());
+                            break;
+                        case "LegacyDocumentDeletions":
+                            _actionsList.Add(des.LegacyDocumentDeletions());
+                            break;
+                        case "LegacyAttachmentDeletions":
+                            _actionsList.Add(des.LegacyAttachmentDeletions());
+                            break;
+                        case "LegacyCounters":
+                            _actionsList.Add(des.LegacyCounters(_result));
+                            break;
+                        case "Counters":
+                            _actionsList.Add(des.Counters(_result));
+                            break;
+                        case "TimeSeries":
+                            _actionsList.Add(des.TimeSeries());
+                            break;
+                        case nameof(DatabaseItemType.CompareExchange):
+                            _actionsList.Add(des.CompareExchange(_context));
+                            break;
+                    }
+                }
+            }
+        }
+
+        private async Task SendBatch()
+        {
+            await CleanActionList();
+            foreach (var des in _desList)
+            {
+                await des.DisposeAsync();
+            }
+
+            var task = SendImportBatch();
+            task.Wait();
+            _itemsInBatch = 0;
+            _desList.Clear();
+        }
+
+        public async Task SendImportBatch()
+        {
+            var tasks = new List<Task>();
+            for (int i = 0; i < _shardedContext.ShardCount; i++)
+            {
+                _streamList[i].Position = 0;
+
+                var multi = new MultipartFormDataContent
+                {
+                    {
+                        new BlittableJsonContent(async stream2 => await _context.WriteAsync(stream2, _optionsAsBlittable).ConfigureAwait(false)),
+                        Constants.Smuggler.ImportOptions
+                    },
+                    {new Client.Documents.Smuggler.DatabaseSmuggler.StreamContentWithConfirmation(_streamList[i], _tcs), "file", "name"}
+                };
+                var cmd = new ShardedImportCommand(_handler, Headers.None, multi);
+
+                var task = _shardedContext.RequestExecutors[i].ExecuteAsync(cmd, _contextList[i]);
+
+                tasks.Add(task);
+            }
+
+            await tasks.WhenAll();
+            for (int i = 0; i < _shardedContext.ShardCount; i++)
+            {
+                _streamList[i].Position = 0;
             }
         }
 

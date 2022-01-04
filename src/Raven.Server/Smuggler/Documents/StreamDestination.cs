@@ -35,6 +35,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -979,7 +980,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WriteComma();
                     Writer.WritePropertyName(Constants.Documents.Blob.Size);
-                    Writer.WriteInteger(item.SegmentSize);
+                    Writer.WriteInteger(item.Segment.NumberOfBytes);
                 }
                 Writer.WriteEndObject();
 
