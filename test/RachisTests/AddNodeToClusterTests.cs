@@ -518,7 +518,7 @@ namespace RachisTests
                     Name = db
                 });
 
-                await WaitForAssertion(() =>
+                await WaitForAssertionAsync(() =>
                 {
                     using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
@@ -532,6 +532,8 @@ namespace RachisTests
                         Assert.Equal(0, topology.Promotables.Count);
                         Assert.Equal(0, topology.Rehabs.Count);
                     }
+
+                    return Task.CompletedTask;
                 });
             }
         }
@@ -563,7 +565,7 @@ namespace RachisTests
                     Name = db
                 });
 
-                await WaitForAssertion(() =>
+                await WaitForAssertionAsync(async () =>
                 {
                     using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
@@ -576,11 +578,10 @@ namespace RachisTests
                         if (deletionInProgress > 0 || topology.Members.Count < 2)
                         {
                             var status = deletionInProgress > 0 ? record.DeletionInProgress.First().Value.ToString() : "";
-                            DatabaseInfo databaseInfo = null;
                             info += $"deletionInProgress = {deletionInProgress}, status = {status}. " +
                                     $"members = {topology.Members.Count}, rehabs = {topology.Rehabs.Count}, ReplicationFactor = {topology.ReplicationFactor}";
                             var sb = new StringBuilder();
-                            GetClusterDebugLogs(sb);
+                            await GetClusterDebugLogsAsync(sb);
                             info += sb.ToString();
                         }
 
@@ -623,7 +624,7 @@ namespace RachisTests
                     Name = db
                 });
 
-                await WaitForAssertion(() =>
+                await WaitForAssertionAsync(() =>
                 {
                     using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
@@ -637,6 +638,8 @@ namespace RachisTests
                         Assert.Equal(0, topology.Promotables.Count);
                         Assert.Equal(0, topology.Rehabs.Count);
                     }
+
+                    return Task.CompletedTask;
                 });
             }
         }
@@ -798,14 +801,14 @@ namespace RachisTests
             Assert.Equal(3, topology.AllNodes.Count);
         }
 
-        private async Task WaitForAssertion(Action action)
+        private async Task WaitForAssertionAsync(Func<Task> action)
         {
             var sp = Stopwatch.StartNew();
             while (true)
             {
                 try
                 {
-                    action();
+                    await action();
                     return;
                 }
                 catch

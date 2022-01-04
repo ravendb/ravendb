@@ -110,7 +110,7 @@ namespace SlowTests.Issues
                 await WaitForRaftIndexToBeAppliedInCluster(addResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 var membersCount = await WaitForValueAsync(() => GetMembersCount(src), 3);
                 
-                Assert.True(membersCount == 3, await AddDebugInfo(src, membersCount));
+                Assert.True(membersCount == 3, await AddDebugInfoAsync(src, membersCount));
 
                 using (var session = src.OpenSession())
                 {
@@ -156,13 +156,13 @@ namespace SlowTests.Issues
             return mre;
         }
 
-        private async Task<string> AddDebugInfo(DocumentStore store, int membersCount)
+        private async Task<string> AddDebugInfoAsync(DocumentStore store, int membersCount)
         {
             var topology = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database)).Topology;
             var sb = new StringBuilder();
             sb.AppendLine(
                 $"Expected 3 members in database topology but got {membersCount}. Topology : {topology}");
-            await GetClusterDebugLogs(sb);
+            await GetClusterDebugLogsAsync(sb);
             return sb.ToString();
         }
     }
