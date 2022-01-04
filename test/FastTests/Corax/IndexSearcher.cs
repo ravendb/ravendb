@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Pipeline;
+using Corax.Queries;
 using FastTests.Voron;
 using Raven.Client.Documents.Linq;
 using Sparrow;
@@ -1429,6 +1430,77 @@ namespace FastTests.Corax
                 Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
                 Assert.Equal(7, amount);
                 Assert.True(idsOfResult.SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
+            }
+        }
+
+        [Theory]
+        [InlineData(100, 16)]
+        [InlineData(1000, 128)]
+        [InlineData(10_000, 128)]
+        [InlineData(10_000, 256)]
+        [InlineData(10_000, 512)]
+        [InlineData(10_000, 1028)]
+        [InlineData(100_000, 1028)]
+        [InlineData(100_000, 2048)]
+        [InlineData(100_000, 4096)]
+        public void MultiTermMatchWithBinaryOperations(int setSize, int stackSize)
+        {
+            var words = new[]
+            {
+                "torun", "pomorze", "maciej", "aszyk", "corax", "matt", "gracjan", "tomasz", "marcin", "tomtom",
+                "ravendb", "poland", "israel", "pattern", "seen", "macios", "tests", "are", "cool", "arent", "they",
+                "this", "should", "work", "every", "time"
+            };
+            var random = new Random(1000);
+            var entries = Enumerable.Range(0, setSize).Select(i => new IndexEntry()
+            {
+                Id = $"entry/{i}",
+                Content = GetContent()
+
+            }).ToList();
+            IndexEntries(entries.ToArray());
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            using var searcher = new IndexSearcher(Env);
+            {
+                //MultiTermMatch And TermMatch
+                var match0 = searcher.InQuery("Content", new List<string>() { "maciej", "poland" });
+                var match1 = searcher.TermQuery("Content", "this");
+                var and = searcher.And(match0, match1);
+                var result = Act(and);
+                var resultByLinq = entries.Where(x => (x.Content.Contains("maciej") || x.Content.Contains("poland")) && x.Content.Contains("this")).ToList();
+                Assert.Equal(result.Count, result.Distinct().Count());
+                Assert.Equal(resultByLinq.Count, result.Count);
+            }
+
+            {
+                var match0 = searcher.StartWithQuery("Content", "ma");
+                var match1 = searcher.TermQuery("Content", "torun");
+
+                var matchOr = searcher.Or(match0, match1);
+                var result = Act(matchOr);
+                var linqResult = entries.Where(x => x.Content.Any(z => z.StartsWith("ma") || z.Contains("torun"))).ToList();
+                Assert.Equal(linqResult.Count, result.Count);
+            }
+
+            List<string> Act(IQueryMatch query)
+            {
+                List<string> stringIds = new();
+                int read;
+                Span<long> ids = stackalloc long[stackSize];
+                while ((read = query.Fill(ids)) != 0)
+                {
+                    for (int i = 0; i < read; ++i)
+                        stringIds.Add(searcher.GetIdentityFor(ids[i]));
+                }
+
+                return stringIds.Distinct().ToList();
+            }
+
+            string[] GetContent()
+            {
+                var amount = random.Next(0, 10);
+                return Enumerable.Range(0, amount).Select(i => words[random.Next(0, words.Count())]).ToArray();
             }
         }
     }
