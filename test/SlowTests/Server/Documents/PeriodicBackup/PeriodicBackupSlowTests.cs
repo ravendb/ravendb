@@ -568,7 +568,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
             await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
-            
+
             // restore the database with a different name
             string restoredDatabaseName = GetDatabaseName();
             var backupLocation = Directory.GetDirectories(backupPath).First();
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var restoreStats = await destination.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
                 Assert.Equal(sourceStats.CountOfCompareExchange, restoreStats.CountOfCompareExchange);
 
-                using (var session = destination.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var user = await session.LoadAsync<User>(ids[0]);
 
@@ -599,7 +599,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     await session.SaveChangesAsync();
                 }
-                
+
                 using (var session = destination.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     await session.StoreAsync(new User(), ids[0]);
@@ -1455,7 +1455,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
-                using (var restored = RestoreAndGetStore(store, backupPath))
+                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase))
+                using (releaseDatabase)
                 {
                     var stats = await restored.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
@@ -2950,6 +2951,25 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     File.SetAttributes(file, attributes);
                 }
+            });
+        }
+
+
+        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null)
+        {
+            var restoredDatabaseName = GetDatabaseName();
+
+            releaseDatabase = Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = Directory.GetDirectories(backupPath).First(),
+                DatabaseName = restoredDatabaseName
+            }, timeout);
+
+            return GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => restoredDatabaseName,
+                CreateDatabase = false,
+                DeleteDatabaseOnDispose = true
             });
         }
     }

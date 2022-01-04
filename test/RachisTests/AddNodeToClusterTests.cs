@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -18,7 +18,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -571,11 +570,25 @@ namespace RachisTests
                     using (ctx.OpenReadTransaction())
                     {
                         var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
-                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
-
+                        var deletionInProgress = record.DeletionInProgress?.Count ?? 0;
+                        var info = "";
                         var topology = record.Topology;
+
+                        if (deletionInProgress > 0 || topology.Members.Count < 2)
+                        {
+                            var status = deletionInProgress > 0 ? record.DeletionInProgress.First().Value.ToString() : "";
+                            DatabaseInfo databaseInfo = null;
+                            info += $"deletionInProgress = {deletionInProgress}, status = {status}. " +
+                                    $"members = {topology.Members.Count}, rehabs = {topology.Rehabs.Count}, ReplicationFactor = {topology.ReplicationFactor}";
+                            var sb = new StringBuilder();
+                            GetClusterDebugLogs(sb);
+                            info += sb.ToString();
+                        }
+
+                        Assert.True(0 == deletionInProgress, info);
+                        Assert.True(2 == topology.Members.Count, info);
+
                         Assert.Equal(2, topology.ReplicationFactor);
-                        Assert.Equal(2, topology.Members.Count);
                         Assert.Equal(0, topology.Promotables.Count);
                         Assert.Equal(0, topology.Rehabs.Count);
                     }
