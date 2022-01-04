@@ -86,19 +86,22 @@ namespace SlowTests.Server.Replication
             var cluster = await CreateRaftCluster(3);
             await CreateDatabaseInCluster(database, 3, cluster.Leader.WebUrl);
 
-            using (var store1 = new DocumentStore()
+            using (var store1 = new DocumentStore
             {
                 Urls = new[] { cluster.Nodes[0].WebUrl },
+                Conventions = { DisableTopologyUpdates = true },
                 Database = database
             }.Initialize())
-            using (var store2 = new DocumentStore()
+            using (var store2 = new DocumentStore
             {
                 Urls = new[] { cluster.Nodes[1].WebUrl },
+                Conventions = { DisableTopologyUpdates = true },
                 Database = database,
             }.Initialize())
-            using (var store3 = new DocumentStore()
+            using (var store3 = new DocumentStore
             {
                 Urls = new[] { cluster.Nodes[2].WebUrl },
+                Conventions = { DisableTopologyUpdates = true },
                 Database = database
             }.Initialize())
             {
@@ -107,16 +110,22 @@ namespace SlowTests.Server.Replication
                     s1.Store(new User(), "foo/bar/store1");
                     s1.SaveChanges();
                 }
+
                 using (var s2 = store2.OpenSession(database))
                 {
                     s2.Store(new User(), "foo/bar/store2");
                     s2.SaveChanges();
                 }
+
                 using (var s3 = store3.OpenSession(database))
                 {
                     s3.Store(new User(), "foo/bar/store3");
                     s3.SaveChanges();
                 }
+
+                WaitForDocumentInAllStores("foo/bar/store1");
+                WaitForDocumentInAllStores("foo/bar/store2");
+                WaitForDocumentInAllStores("foo/bar/store3");
 
                 var collector = new LiveReplicationPerformanceCollector(await cluster.Nodes[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database));
                 var stats = await collector.Stats.DequeueAsync();
@@ -127,6 +136,13 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2,
                     stats.Count(performanceStats => performanceStats is LiveReplicationPerformanceCollector.OutgoingPerformanceStats perf &&
                                                     perf.Type == LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal));
+
+                void WaitForDocumentInAllStores(string documentId)
+                {
+                    WaitForDocument(store1, documentId);
+                    WaitForDocument(store2, documentId);
+                    WaitForDocument(store3, documentId);
+                }
             }
         }
 
@@ -134,16 +150,16 @@ namespace SlowTests.Server.Replication
         public async Task RavenDB_17187_CheckExternalShowsInStats()
         {
             var database = GetDatabaseName();
-            
-            using (var sender = GetNewServer(new ServerCreationOptions() { }))
-            using (var receiver = GetNewServer(new ServerCreationOptions() { }))
-            using (var senderStore = GetDocumentStore(new Options()
+
+            using (var sender = GetNewServer(new ServerCreationOptions { }))
+            using (var receiver = GetNewServer(new ServerCreationOptions { }))
+            using (var senderStore = GetDocumentStore(new Options
             {
                 Server = sender,
                 CreateDatabase = true,
                 ModifyDatabaseName = (s) => database
             }))
-            using (var receiverStore = GetDocumentStore(new Options()
+            using (var receiverStore = GetDocumentStore(new Options
             {
                 Server = receiver,
                 CreateDatabase = true,
@@ -152,7 +168,7 @@ namespace SlowTests.Server.Replication
             {
                 await SetupReplicationAsync(senderStore, receiverStore);
                 await EnsureReplicatingAsync(senderStore, receiverStore);
-                
+
                 var collector = new LiveReplicationPerformanceCollector(await sender.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database));
                 var stats = await collector.Stats.DequeueAsync();
                 Assert.Equal(1, stats.Count);
@@ -277,7 +293,7 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             {
                 var externalTask = new ExternalReplication(store1.Database + "test", $"Connection to {store1.Database} test");
-                await AddWatcherToReplicationTopology(store1, externalTask, new []{"http://1.2.3.4:8080"});
+                await AddWatcherToReplicationTopology(store1, externalTask, new[] { "http://1.2.3.4:8080" });
             }
         }
     }
