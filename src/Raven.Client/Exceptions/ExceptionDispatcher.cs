@@ -125,51 +125,58 @@ namespace Raven.Client.Exceptions
             if (schema.Type.Contains(nameof(DocumentConflictException))) // temporary!
                 throw DocumentConflictException.From(json);
 
-            string expectedCv, actualCv;
+            string expectedCv, actualCv, docId;
             if (schema.Type.Contains(nameof(ClusterTransactionConcurrencyException)))
             {
-                var clusterTransactionConcurrencyException = new ClusterTransactionConcurrencyException(schema.Message);
+                var ctxConcurrencyException = new ClusterTransactionConcurrencyException(schema.Message);
 
-                json.TryGet(nameof(ClusterTransactionConcurrencyException.Id), out clusterTransactionConcurrencyException.Id);
+                if (json.TryGet(nameof(ClusterTransactionConcurrencyException.Id), out docId))
+                    ctxConcurrencyException.Id = docId;
 
                 if (json.TryGet(nameof(ClusterTransactionConcurrencyException.ExpectedChangeVector), out expectedCv))
-                    clusterTransactionConcurrencyException.ExpectedChangeVector = expectedCv;
+                    ctxConcurrencyException.ExpectedChangeVector = expectedCv;
 
                 if (json.TryGet(nameof(ClusterTransactionConcurrencyException.ActualChangeVector), out actualCv))
-                    clusterTransactionConcurrencyException.ActualChangeVector = actualCv;
+                    ctxConcurrencyException.ActualChangeVector = actualCv;
 
                 if (json.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations), out BlittableJsonReaderArray violations) == false)
-                    throw clusterTransactionConcurrencyException;
+                    throw ctxConcurrencyException;
 
-                clusterTransactionConcurrencyException.ConcurrencyViolations = new ClusterTransactionConcurrencyException.Conflict[violations.Length];
+                ctxConcurrencyException.ConcurrencyViolations = new ClusterTransactionConcurrencyException.Conflict[violations.Length];
 
                 for (var i = 0; i < violations.Length; i++)
                 {
                     if (!(violations[i] is BlittableJsonReaderObject conflict))
                         continue;
 
-                    var current = clusterTransactionConcurrencyException.ConcurrencyViolations[i] = new ClusterTransactionConcurrencyException.Conflict();
+                    var current = ctxConcurrencyException.ConcurrencyViolations[i] = new ClusterTransactionConcurrencyException.Conflict();
 
-                    conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Id), out current.Id);
-                    conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Type), out current.Type);
-                    conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Expected), out current.Expected);
-                    conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Actual), out current.Actual);
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Id), out string id))
+                        current.Id = id;
+
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Type), out ClusterTransactionConcurrencyException.ConflictType type))
+                        current.Type = type;
+
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Expected), out string expected))
+                        current.Expected = expected;
+
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Actual), out string actual))
+                        current.Actual = actual;
                 }
 
-                throw clusterTransactionConcurrencyException;
+                throw ctxConcurrencyException;
             }
 
             var concurrencyException = new ConcurrencyException(schema.Message);
-            json.TryGet(nameof(ConcurrencyException.Id), out concurrencyException.Id);
 
+            if (json.TryGet(nameof(ConcurrencyException.Id), out docId))
+                concurrencyException.Id = docId;
             if (json.TryGet(nameof(ConcurrencyException.ExpectedChangeVector), out expectedCv))
                 concurrencyException.ExpectedChangeVector = expectedCv;
-
             if (json.TryGet(nameof(ConcurrencyException.ActualChangeVector), out actualCv))
                 concurrencyException.ActualChangeVector = actualCv;
 
             throw concurrencyException;
-
         }
 
         public static Type GetType(string typeAsString)

@@ -39,16 +39,16 @@ namespace Raven.Client.Exceptions
         }
 
         /// <summary>
-        /// Cluster Concurrency violations info.
+        /// Concurrency violations info.
         /// </summary>
-        public Conflict[] ConcurrencyViolations;
+        public Conflict[] ConcurrencyViolations { get; set; }
 
         public class Conflict
         {
-            public ConflictType Type;
-            public string Id;
-            public string Expected;
-            public string Actual;
+            public ConflictType Type { get; set; }
+            public string Id { get; set; }
+            public string Expected { get; set; }
+            public string Actual { get; set; }
 
             public DynamicJsonValue ToJson()
             {
