@@ -138,6 +138,9 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Exception e)
             {
+                if (Server._forTestingPurposes is { PrintExceptionDuringBulkInsertProcessingToConsole: true })
+                    Console.WriteLine($"Failed to process bulk insert. Exception: {e}");
+
                 HttpContext.Response.Headers["Connection"] = "close";
                 throw new InvalidOperationException("Failed to process bulk insert. " + progress, e);
             }
