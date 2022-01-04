@@ -62,6 +62,6 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// The Document Id.
         /// </summary>
-        public string Id;
+        public string Id { get; set; }
     }
 }
