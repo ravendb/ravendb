@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Server.Commercial;
-using Raven.Server.ServerWide;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace rvn
@@ -60,14 +54,13 @@ namespace rvn
             }
         }
 
-        private static Task ConfigureSetupPackage()
+        private static void ConfigureSetupPackage()
         {
             _app.Command("create-setup-package", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
                 cmd.HelpOption(HelpOptionString);
                 var setupParameters = ConfigureSetupParameters(cmd);
-                var configureInsecureSetup = ConfigureInsecureSetup(cmd);
                 var packageOutputFile = ConfigurePackageOutputFile(cmd);
 
                 cmd.OnExecuteAsync(async token =>
@@ -75,18 +68,18 @@ namespace rvn
                     if (File.Exists(setupParameters?.Value()) == false)
                         return ExitWithError("Path to setup params has not found", cmd);
 
-                    using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
+                    using (StreamReader file = File.OpenText(setupParameters?.Value() ?? string.Empty))
                     {
                         JsonSerializer serializer = new();
                         var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo, token);
+                        var settingsPath = setupParameters?.Values[0];
+                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
+                        var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
+                        await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
                     }
-
-
                     return 0;
                 });
             });
-            return Task.CompletedTask;
         }
 
         private static void ConfigureLogsCommand()
@@ -384,14 +377,9 @@ namespace rvn
             return 1;
         }
 
-        private static CommandOption ConfigureInsecureSetup(CommandLineApplication cmd)
-        {
-            return cmd.Option("-i|--insecure-ravendb-url", "RavenDB insecure setup", CommandOptionType.SingleValue);
-        }
-
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
