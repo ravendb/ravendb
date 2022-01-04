@@ -75,22 +75,22 @@ namespace Corax.Queries
                     if (totalResults == 0)
                         return 0;
 
-                    totalResults = outer.AndWith(matches.Slice(0, totalResults));
+                    totalResults = outer.AndWith(matches, totalResults);
                     if (totalResults != 0)
                         return totalResults;
                 }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
+            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
             {
                 ref var inner = ref match._inner;
-                var results = inner.AndWith(matches);
+                var results = inner.AndWith(buffer, matches);
                 if (results == 0)
                     return 0;
 
                 ref var outer = ref match._outer;
-                return outer.AndWith(matches.Slice(0, results));
+                return outer.AndWith(buffer, results);
             }
 
             static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
@@ -119,29 +119,30 @@ namespace Corax.Queries
         public static BinaryMatch<TInner, TOuter> YieldOr(in TInner inner, in TOuter outer)
         {
             [SkipLocalsInit]
-            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
+            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
             {
                 ref var inner = ref match._inner;
                 ref var outer = ref match._outer;
 
-                int matchesSize = matches.Length;
-                var bufferHolder = QueryContext.MatchesPool.Rent(2 * sizeof(long) * matchesSize);
-                var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
+                var bufferHolder = QueryContext.MatchesPool.Rent(2 * sizeof(long) * matches);
+                var innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder);
 
-                var innerMatches = buffer.Slice(0, matchesSize);
-                var outerMatches = buffer.Slice(matchesSize, matchesSize);
-                Debug.Assert(innerMatches.Length == matchesSize);
-                Debug.Assert(outerMatches.Length == matchesSize);
+                var innerMatches = innerBuffer.Slice(0, matches);
+                var outerMatches = innerBuffer.Slice(matches, matches);
+                Debug.Assert(innerMatches.Length == matches);
+                Debug.Assert(outerMatches.Length == matches);
+
+                var actualMatches = buffer.Slice(0, matches);
 
                 // Execute the AndWith operation for each subpart of the query.               
-                matches.CopyTo(innerMatches);
-                int innerSize = inner.AndWith(innerMatches);
+                actualMatches.CopyTo(innerMatches);
+                int innerSize = inner.AndWith(innerMatches, matches);
 
-                matches.CopyTo(outerMatches);
-                int outerSize = outer.AndWith(outerMatches);
+                actualMatches.CopyTo(outerMatches);
+                int outerSize = outer.AndWith(outerMatches, matches);
                 
                 // Merge the hits from every side into the output buffer. 
-                var result = MergeHelper.Or(matches, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
+                var result = MergeHelper.Or(buffer, innerMatches.Slice(0, innerSize), outerMatches.Slice(0, outerSize));                
                 QueryContext.MatchesPool.Return(bufferHolder);
 
                 return result;

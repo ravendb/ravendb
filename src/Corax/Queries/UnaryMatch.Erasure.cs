@@ -30,20 +30,20 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _functionTable.AndWithFunc(ref this, buffer);
+            return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
 
         internal class FunctionTable
         {
             public readonly delegate*<ref UnaryMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref UnaryMatch, Span<long>, int> AndWithFunc;
+            public readonly delegate*<ref UnaryMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref UnaryMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref UnaryMatch, Span<long>, int> fillFunc,
-                delegate*<ref UnaryMatch, Span<long>, int> andWithFunc,
+                delegate*<ref UnaryMatch, Span<long>, int, int> andWithFunc,
                 delegate*<ref UnaryMatch, long> countFunc)
             {
                 FillFunc = fillFunc;
@@ -77,11 +77,11 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int AndWithFunc(ref UnaryMatch match, Span<long> matches)
+                static int AndWithFunc(ref UnaryMatch match, Span<long> buffer, int matches)
                 {
                     if (match._inner is UnaryMatch<TInner, TValueType> inner)
                     {
-                        var result = inner.AndWith(matches);
+                        var result = inner.AndWith(buffer, matches);
                         match._inner = inner;
                         return result;
                     }

@@ -178,7 +178,7 @@ namespace Corax.Queries
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
             throw new NotSupportedException($"{nameof(AndWith)} is not supported for {nameof(MultiTermBoostingMatch<TTermProvider>)}");
         }

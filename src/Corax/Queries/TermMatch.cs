@@ -15,7 +15,7 @@ namespace Corax.Queries
     public unsafe struct TermMatch : IQueryMatch
     {
         private readonly delegate*<ref TermMatch, Span<long>, int> _fillFunc;
-        private readonly delegate*<ref TermMatch, Span<long>, int> _andWithFunc;
+        private readonly delegate*<ref TermMatch, Span<long>, int, int> _andWithFunc;
         private readonly delegate*<ref TermMatch, Span<long>, Span<float>, void> _scoreFunc;
         private readonly delegate*<ref TermMatch, QueryInspectionNode> _inspectFunc;
 
@@ -35,7 +35,7 @@ namespace Corax.Queries
         private TermMatch(
             long totalResults,
             delegate*<ref TermMatch, Span<long>, int> fillFunc,
-            delegate*<ref TermMatch, Span<long>, int> andWithFunc,
+            delegate*<ref TermMatch, Span<long>, int, int> andWithFunc,
             delegate*<ref TermMatch, Span<long>, Span<float>, void> scoreFunc = null,
             delegate*<ref TermMatch, QueryInspectionNode> inspectFunc = null)
         {
@@ -61,6 +61,13 @@ namespace Corax.Queries
                 return 0;
             }
 
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
+            {
+                term._currentIdx = QueryMatch.Invalid;
+                term._current = QueryMatch.Invalid;
+                return 0;
+            }
+
             static QueryInspectionNode InspectFunc(ref TermMatch term)
             {
                 return new QueryInspectionNode($"{nameof(TermMatch)} [Empty]",
@@ -71,7 +78,7 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(0, &FillFunc, &FillFunc, inspectFunc: &InspectFunc);
+            return new TermMatch(0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc);
         }
 
         public static TermMatch YieldOnce(long value)
@@ -91,15 +98,15 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithFunc(ref TermMatch term, Span<long> matches)
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
                 // TODO: If matches is too big, we should use quicksort
                 long current = term._current;
-                for (int i = 0; i < matches.Length; i++)
+                for (int i = 0; i < matches; i++)
                 {
-                    if (matches[i] == current)
+                    if (buffer[i] == current)
                     {
-                        matches[0] = current;
+                        buffer[0] = current;
                         return 1;
                     }
                 }
@@ -155,7 +162,7 @@ namespace Corax.Queries
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithFunc(ref TermMatch term, Span<long> matches)
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
                 // AndWith has to start from the start.
                 // TODO: Support Seek for the small set in order to have better behavior.
@@ -168,22 +175,22 @@ namespace Corax.Queries
 
                 int i = 0;
                 int matchedIdx = 0;
-                while (currentIdx < stream.Length && i < matches.Length)
+                while (currentIdx < stream.Length && i < matches)
                 {
                     current += ZigZagEncoding.Decode<long>(stream, out var len, currentIdx);
                     currentIdx += len;
 
-                    while (matches[i] < current)
+                    while (buffer[i] < current)
                     {                        
                         i++;
-                        if (i >= matches.Length)
+                        if (i >= matches)
                             goto End;
                     }                    
 
                     // If there is a match we advance. 
-                    if (matches[i] == current)
+                    if (buffer[i] == current)
                     {
-                        matches[matchedIdx++] = current;
+                        buffer[matchedIdx++] = current;
                         i++;
                     }
                 }
@@ -215,36 +222,36 @@ namespace Corax.Queries
         {
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithFunc(ref TermMatch term, Span<long> matches)
+            static int AndWithFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
                 int matchedIdx = 0;
 
                 var it = term._set;
 
-                it.MaybeSeek(matches[0] - 1);
+                it.MaybeSeek(buffer[0] - 1);
 
                 // We update the current value we want to work with.
                 var current = it.Current;
 
                 // Check if there are matches left to process or is any posibility of a match to be available in this block.
                 int i = 0;
-                while (i < matches.Length && current <= matches[^1])
+                while (i < matches && current <= buffer[matches-1])
                 {
                     // While the current match is smaller we advance.
-                    while (matches[i] < current)
+                    while (buffer[i] < current)
                     {
                         i++;
-                        if (i >= matches.Length)
+                        if (i >= matches)
                             goto End;
                     }
 
                     // We are guaranteed that matches[i] is at least equal if not higher than current.
-                    Debug.Assert(matches[i] >= current);
+                    Debug.Assert(buffer[i] >= current);
 
                     // We have a match, we include it into the matches and go on. 
-                    if (current == matches[i])
+                    if (current == buffer[i])
                     {
-                        matches[matchedIdx++] = current;
+                        buffer[matchedIdx++] = current;
                         i++;
                     }
 
@@ -263,18 +270,18 @@ namespace Corax.Queries
 
             [SkipLocalsInit]
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWithVectorizedFunc(ref TermMatch term, Span<long> matches)
+            static int AndWithVectorizedFunc(ref TermMatch term, Span<long> buffer, int matches)
             {
                 const int BlockSize = 4096;
                 uint N = (uint) Vector256<long>.Count;
 
                 Debug.Assert(Vector256<long>.Count == 4);
 
-                term._set.MaybeSeek(matches[0] - 1);
+                term._set.MaybeSeek(buffer[0] - 1);
 
                 // PERF: The AND operation can be performed in place, because we end up writing the same value that we already read. 
-                long* inputStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-                long* inputEndPtr = inputStartPtr + matches.Length;
+                long* inputStartPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
+                long* inputEndPtr = inputStartPtr + matches;
                 
                 // The size of this array is fixed to improve cache locality.
                 var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * BlockSize);
@@ -287,7 +294,7 @@ namespace Corax.Queries
                 long* dstPtr = inputStartPtr;
                 while (inputPtr < inputEndPtr)
                 {
-                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThan: matches[^1]);
+                    var result = term._set.Fill(blockMatches, out int read, pruneGreaterThan: buffer[matches-1]);
                     if (result == false)
                         break;
 
@@ -297,7 +304,7 @@ namespace Corax.Queries
                     long* smallerPtr, largerPtr;
                     long* smallerEndPtr, largerEndPtr;
                     
-                    if (read < matches.Length)
+                    if (read < matches)
                     {
                         smallerPtr = blockStartPtr;
                         smallerEndPtr = blockStartPtr + read;
@@ -389,10 +396,10 @@ namespace Corax.Queries
                         }
                     }
 
-                    inputPtr = read < matches.Length ? largerPtr : smallerPtr;
+                    inputPtr = read < matches ? largerPtr : smallerPtr;
 
                     Debug.Assert(inputPtr >= dstPtr);
-                    Debug.Assert((read >= matches.Length ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
+                    Debug.Assert((read >= matches ? largerPtr : smallerPtr) - blockStartPtr <= BlockSize);
                 }
 
                 return (int)((ulong)dstPtr - (ulong)inputStartPtr) / sizeof(ulong);
@@ -438,9 +445,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> matches)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _andWithFunc(ref this, matches);
+            return _andWithFunc(ref this, buffer, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

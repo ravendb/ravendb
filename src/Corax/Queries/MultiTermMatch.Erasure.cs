@@ -33,9 +33,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _functionTable.AndWithFunc(ref this, buffer);
+            return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -55,13 +55,13 @@ namespace Corax.Queries
         internal class FunctionTable
         {
             public readonly delegate*<ref MultiTermMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref MultiTermMatch, Span<long>, int> AndWithFunc;
+            public readonly delegate*<ref MultiTermMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> ScoreFunc;
             public readonly delegate*<ref MultiTermMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref MultiTermMatch, Span<long>, int> fillFunc,
-                delegate*<ref MultiTermMatch, Span<long>, int> andWithFunc,
+                delegate*<ref MultiTermMatch, Span<long>, int, int> andWithFunc,
                 delegate*<ref MultiTermMatch, Span<long>, Span<float>, void> scoreFunc,
                 delegate*<ref MultiTermMatch, long> countFunc)
             {
@@ -94,11 +94,11 @@ namespace Corax.Queries
                     return 0;
                 }
 
-                static int AndWithFunc(ref MultiTermMatch match, Span<long> matches)
+                static int AndWithFunc(ref MultiTermMatch match, Span<long> buffer, int matches)
                 {
                     if (match._inner is TTermMatch inner)
                     {
-                        var result = inner.AndWith(matches);
+                        var result = inner.AndWith(buffer, matches);
                         match._inner = inner;
                         return result;
                     }

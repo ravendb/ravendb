@@ -23,7 +23,7 @@ namespace Corax.Queries
         where TInner : IQueryMatch
     {
         private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _fillFunc;
-        private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> _andWithFunc;
+        private readonly delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> _andWithFunc;
 
         private TInner _inner;
         private UnaryMatchOperation _operation;
@@ -49,7 +49,7 @@ namespace Corax.Queries
             int fieldId,
             TValueType value,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
-            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> andWithFunc,
+            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWithFunc,
             long totalResults,
             QueryCountConfidence confidence, int take = -1)
         {
@@ -76,7 +76,7 @@ namespace Corax.Queries
             TValueType value1,
             TValueType value2,
             delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> fillFunc,
-            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int> andWith,
+            delegate*<ref UnaryMatch<TInner, TValueType>, Span<long>, int, int> andWith,
             long totalResults,
             QueryCountConfidence confidence, int take = -1)
         {
@@ -103,9 +103,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _andWithFunc(ref this, buffer);
+            return _andWithFunc(ref this, buffer, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

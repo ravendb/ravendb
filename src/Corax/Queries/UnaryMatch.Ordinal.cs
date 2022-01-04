@@ -15,19 +15,17 @@ namespace Corax.Queries
         }
 
         [SkipLocalsInit]
-        private static int AndWith(ref UnaryMatch<TInner, TValueType> match, Span<long> matches)
+        private static int AndWith(ref UnaryMatch<TInner, TValueType> match, Span<long> buffer, int matches)
         {
-            int matchesSize = matches.Length;
+            var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * buffer.Length);
+            var innerBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, buffer.Length);
+            Debug.Assert(innerBuffer.Length == buffer.Length);
 
-            var bufferHolder = QueryContext.MatchesPool.Rent(sizeof(long) * matchesSize);
-            var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matchesSize);
-            Debug.Assert(buffer.Length == matchesSize);
-
-            var count = match._fillFunc(ref match, buffer);            
+            var count = match._fillFunc(ref match, innerBuffer);            
             
-            var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
-            var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
-            var result = MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, baseMatchesPtr, count);
+            var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
+            var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(innerBuffer));
+            var result = MergeHelper.And(matchesPtr, buffer.Length, matchesPtr, matches, baseMatchesPtr, count);
 
             QueryContext.MatchesPool.Return(bufferHolder);
             return result;

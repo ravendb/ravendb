@@ -38,7 +38,7 @@ namespace Corax.Queries
 
         public bool IsBoosting => _inner.IsBoosting || _isScoreComparer;
 
-        public int AndWith(Span<long> prevMatches)
+        public int AndWith(Span<long> buffer, int matches)
         {
             throw new NotSupportedException($"{nameof(SortingMatch<TInner, TComparer>)} does not support the operation of {nameof(AndWith)}.");
         }
