@@ -111,7 +111,10 @@ namespace Sparrow.Json
                 SizeInBytes = size
             };
 #else
-
+            if (size < 0)
+                throw new ArgumentOutOfRangeException(nameof(size), size,
+                    $"Size cannot be negative");
+            
             if (size > MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(size), size,
                     $"Requested size {size} while maximum size is {MaxArenaSize}");
@@ -209,7 +212,7 @@ namespace Sparrow.Json
             _used = 0;
         }
 
-        private int GetPreferredSize(int requestedSize)
+        private long GetPreferredSize(int requestedSize)
         {
             if (AvoidOverAllocation || PlatformDetails.Is32Bits)
                 return ApplyLimit(Bits.PowerOf2(requestedSize));
@@ -219,10 +222,10 @@ namespace Sparrow.Json
             // the idea is that a single allocation can server for multiple (increasing in size) calls
             return ApplyLimit(Math.Max(Bits.PowerOf2(requestedSize) * 3L, _initialSize));
 
-            int ApplyLimit(long size)
+            long ApplyLimit(long size)
             {
                 if (SingleAllocationSizeLimit == null)
-                    return (int)size;
+                    return size;
 
                 if (size > SingleAllocationSizeLimit.Value)
                 {
@@ -230,7 +233,7 @@ namespace Sparrow.Json
                     return sizeInMb * Constants.Size.Megabyte;
                 }
 
-                return (int)size;
+                return size;
             }
         }
 
