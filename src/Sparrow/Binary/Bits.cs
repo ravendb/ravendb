@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Binary
@@ -266,6 +267,9 @@ namespace Sparrow.Binary
             v |= v >> 8;
             v |= v >> 16;
             v++;
+
+            if (v < 0)
+                throw new ArgumentException($"Could not return next power of 2 because the resulting number exceeds return type int");
 
             return v;
         }
