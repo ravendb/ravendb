@@ -85,10 +85,10 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> prevMatches)
+        public int AndWith(Span<long> buffer, int matches)
         {
             // this match *everything*, so ands with everything 
-            return prevMatches.Length;
+            return matches;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

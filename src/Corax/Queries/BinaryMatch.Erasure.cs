@@ -30,9 +30,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _functionTable.AndWithFunc(ref this, buffer);
+            return _functionTable.AndWithFunc(ref this, buffer, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -49,13 +49,13 @@ namespace Corax.Queries
         internal class FunctionTable
         {
             public readonly delegate*<ref BinaryMatch, Span<long>, int> FillFunc;
-            public readonly delegate*<ref BinaryMatch, Span<long>, int> AndWithFunc;
+            public readonly delegate*<ref BinaryMatch, Span<long>, int, int> AndWithFunc;
             public readonly delegate*<ref BinaryMatch, Span<long>, Span<float>, void> ScoreFunc;
             public readonly delegate*<ref BinaryMatch, long> CountFunc;
 
             public FunctionTable(
                 delegate*<ref BinaryMatch, Span<long>, int> fillFunc,
-                delegate*<ref BinaryMatch, Span<long>, int> andWithFunc,
+                delegate*<ref BinaryMatch, Span<long>, int, int> andWithFunc,
                 delegate*<ref BinaryMatch, Span<long>, Span<float>, void> scoreFunc,
                 delegate*<ref BinaryMatch, long> countFunc)
             {
@@ -92,11 +92,11 @@ namespace Corax.Queries
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                static int AndWithFunc(ref BinaryMatch match, Span<long> matches)
+                static int AndWithFunc(ref BinaryMatch match, Span<long> buffer, int matches)
                 {
                     if (match._inner is BinaryMatch<TInner, TOuter> inner)
                     {
-                        var result = inner.AndWith(matches);
+                        var result = inner.AndWith(buffer, matches);
                         match._inner = inner;
                         return result;
                     }

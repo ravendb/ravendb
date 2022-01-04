@@ -148,7 +148,7 @@ namespace Corax.Queries
             };
         }
 
-        public int AndWith(Span<long> prevMatches)
+        public int AndWith(Span<long> buffer, int matches)
         {
             throw new NotSupportedException($"SortingMultiMatch does not support the operation {nameof(AndWith)}.");
         }

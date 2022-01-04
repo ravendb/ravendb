@@ -104,7 +104,7 @@ namespace Corax.Queries
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
             // We should consider the policy where it makes sense to actually implement something different to avoid
             // the N^2 check here. While could be interesting to do now we still dont know what are the conditions
@@ -123,15 +123,17 @@ namespace Corax.Queries
             Span<long> tmp2 = longBuffer.Slice(2 * buffer.Length, buffer.Length);
 
             _inner.Reset();
-            
+
+            var actualMatches = buffer.Slice(0, matches);
+
             int totalSize = 0;
 
             bool hasData = _inner.Next(out var current);
             long totalRead = current.Count;
             while (totalSize < buffer.Length && hasData)
-            {                
-                buffer.CopyTo(tmp);
-                var read = current.AndWith(tmp);
+            {
+                actualMatches.CopyTo(tmp);
+                var read = current.AndWith(tmp, matches);
                 if (read != 0)
                 {
                     results[0..totalSize].CopyTo(tmp2);

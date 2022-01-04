@@ -88,9 +88,9 @@ namespace Corax.Queries
         public bool IsBoosting => true;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> prevMatches)
+        public int AndWith(Span<long> buffer, int matches)
         {            
-            var results = _inner.AndWith(prevMatches);
+            var results = _inner.AndWith(buffer, matches);
             if (results == 0)
                 return results;
 
@@ -102,7 +102,7 @@ namespace Corax.Queries
                 bufferSlice = new Span<long>(_buffer + _bufferIdx, _bufferSize - _bufferIdx);                
             }
 
-            prevMatches.Slice(0, results).CopyTo(bufferSlice);
+            buffer.Slice(0, results).CopyTo(bufferSlice);
             _bufferIdx += results;
 
             // We track the amount of times this is called in order to know if we need to sort the buffer when scoring.             

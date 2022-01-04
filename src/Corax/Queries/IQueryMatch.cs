@@ -53,7 +53,7 @@ namespace Corax.Queries
         // Guarantees: AndWith accepts sorted and returns sorted.
         //             May optimize for continued sorted.
         //             0 return means no more matches from the provided span, and may need to go to the next batch
-        int AndWith(Span<long> prevMatches);
+        int AndWith(Span<long> buffer, int matches);
 
         // Guarantees: The output of this for unscored sequences should be a no-op.
         // Requirements: The upmost call 

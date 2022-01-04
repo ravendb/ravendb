@@ -12,7 +12,7 @@ namespace Corax.Queries
         where TOuter : IQueryMatch
     {
         private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int>  _fillFunc;
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> _andWithFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> _andWithFunc;
         private readonly delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> _inspectFunc;
 
         private TInner _inner;
@@ -30,7 +30,7 @@ namespace Corax.Queries
 
         private BinaryMatch(in TInner inner, in TOuter outer,
             delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
-            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> andWithFunc,
+            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
             delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
             long totalResults,
             QueryCountConfidence confidence)
@@ -54,9 +54,9 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int AndWith(Span<long> buffer)
+        public int AndWith(Span<long> buffer, int matches)
         {
-            return _andWithFunc(ref this, buffer);
+            return _andWithFunc(ref this, buffer, matches);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
