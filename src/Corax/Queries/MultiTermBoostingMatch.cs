@@ -17,6 +17,7 @@ namespace Corax.Queries
         internal long _current;
         internal long _currentIdx;        
         private QueryCountConfidence _confidence;
+        private readonly IQueryScoreFunction _scoring;
 
         internal TTermProvider _inner;
         private TermMatch _currentTerm;
@@ -42,6 +43,7 @@ namespace Corax.Queries
             ByteStringContext context, TTermProvider inner,
             delegate*<ref MultiTermBoostingMatch<TTermProvider>, QueryInspectionNode> inspectFunc,
             long totalResults = 0, QueryCountConfidence confidence = QueryCountConfidence.Low,
+            IQueryScoreFunction scoring = null,
             delegate*<ref MultiTermBoostingMatch<TTermProvider>, Span<long>, Span<float>, void> scoreFunc = null)
         {
             _inner = inner;
@@ -52,6 +54,7 @@ namespace Corax.Queries
             _confidence = confidence;
             _scoreFunc = scoreFunc;
             _inspectFunc = inspectFunc;
+            _scoring = scoring;
 
             _inner.Next(out _currentTerm);
 
@@ -248,11 +251,11 @@ namespace Corax.Queries
 
             if (typeof(TScoreFunction) == typeof(ConstantScoreFunction))
             {
-                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoreFunc: &TermFrequencyScoreFunc);
+                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoring: scoreFunction, scoreFunc: &ConstantScoreFunc);
             }
             else if (typeof(TScoreFunction) == typeof(TermFrequencyScoreFunction))
             {
-                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoreFunc: &ConstantScoreFunc);
+                return new MultiTermBoostingMatch<TTermProvider>(searcher.Allocator, inTermProvider, &InspectFunc, scoring: scoreFunction, scoreFunc: &TermFrequencyScoreFunc);
             }
             else throw new NotSupportedException($"The scoring function '{typeof(TScoreFunction).Name}' is not supported.");
         }
@@ -308,6 +311,8 @@ namespace Corax.Queries
             while (eIdx < documentsSpan.Length && matchValue > documentsSpan[eIdx])
                 eIdx++;
 
+            var score = ((ConstantScoreFunction)match._scoring).Value;
+
             int mIdx = 0;
             // We know it is not boosting, so we assign the constant instead.
             while (eIdx < documentsSpan.Length)
@@ -322,8 +327,7 @@ namespace Corax.Queries
                 else if (elementValue == matchValue)
                 {
                     // When we find a match we apply the score.
-                    float termCount = 1.0f / countSpan[eIdx];
-                    scores[mIdx] = termCount;
+                    scores[mIdx] = score;
                     eIdx++;
                 }
 

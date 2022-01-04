@@ -11,6 +11,7 @@ using Sparrow.Threading;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using static Corax.Queries.SortingMatch;
 
 namespace FastTests.Corax
 {
@@ -257,6 +258,42 @@ namespace FastTests.Corax
 
                 for (int i = 0; i < longList.Count; ++i)
                     Assert.Equal(longList[i].Content1, sortedByCorax[i]);
+            }
+        }
+
+        [Theory]
+        [InlineData(290, 29)]
+        public void StartsWithBoosting(int amount, int mod)
+        {
+            longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                IQueryMatch match = searcher.StartWithQuery("Content1", "0", new ConstantScoreFunction(0f));
+                for (int i = 1; i < mod; ++i)
+                {
+                    match = searcher.Or(match, searcher.StartWithQuery("Content1", $"{i}", new ConstantScoreFunction(i)));
+                }
+
+                match = searcher.OrderByScore(match);
+                
+                Span<long> ids = stackalloc long[amount];
+                var read = match.Fill(ids);
+                Assert.Equal(longList.Count, read);
+                List<string> result = new();
+                for (int i = 0; i < read; ++i)
+                {
+                    result.Add(searcher.GetIdentityFor(ids[i]));
+                }
+
+                Assert.Equal(result.Count, result.Distinct().Count());
+
+                var localResults = longList.Where(x => x.Content1.ToString().StartsWith((mod - 1).ToString())).Select(y => y.Id).ToArray();
+                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
+                Array.Sort(localResults);
+                Array.Sort(highestScore);
+
+                Assert.True(localResults.SequenceEqual(highestScore));
             }
         }
 
