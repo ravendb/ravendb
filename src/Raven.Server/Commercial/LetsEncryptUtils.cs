@@ -52,24 +52,22 @@ namespace Raven.Server.Commercial
 
             var acmeClient = new LetsEncryptClient(AcmeClientUrl);
 
-            Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
             await acmeClient.Init(setupInfo.Email, token);
+            Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
             var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
             Console.WriteLine(challengeResult.Challenge != null
                 ? "Successfully received challenge(s) information from Let's Encrypt."
                 : "Using cached Let's Encrypt certificate.");
-
-            Console.WriteLine($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
-
+            
             try
             {
                 await UpdateDnsRecordsTask(new UpdateDnsRecordParameters {Challenge = challengeResult.Challenge, SetupInfo = setupInfo, Token = CancellationToken.None});
+                Console.WriteLine($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}",
-                    e);
+                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
             }
 
             Console.WriteLine($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
