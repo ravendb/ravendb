@@ -6,7 +6,9 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Corax;
 using Corax.Queries;
+using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
+using Nest;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -148,22 +150,35 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return _searcher.SearchQuery(fieldName, searchTerm, @operator, isNegated, fieldId);
         }
 
+        [SkipLocalsInit]
         private IQueryMatch BinaryEvaluator(BinaryExpression expression, bool isNegated, int take)
         {
             if (isNegated == true)
                 expression.Operator = GetNegated(expression.Operator);
 
+            ValueExpression value;
+            FieldExpression field;
+            string fieldName;
             switch (expression.Operator)
             {
                 case OperatorType.Or:
                     return _searcher.Or(Evaluate(expression.Left, isNegated, take), Evaluate(expression.Right, isNegated, take));
                 case OperatorType.Equal:
                 {
-                    var value = (ValueExpression)expression.Right;
-                    var field = (FieldExpression)expression.Left;
-                    var fieldName = GetField(field);
-                    return _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName));
+                    value = (ValueExpression)expression.Right;
+                    field = (FieldExpression)expression.Left;
+                    fieldName = GetField(field);
+                    return isNegated 
+                        ? _searcher.NotEquals(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), value.GetValue(_query.QueryParameters).ToString())
+                        : _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName));
                 }
+                case OperatorType.NotEqual:
+                    value = (ValueExpression)expression.Right;
+                    field = (FieldExpression)expression.Left;
+                    fieldName = GetField(field);
+                    return isNegated
+                        ? _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName))
+                        : _searcher.NotEquals(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), value.GetValue(_query.QueryParameters).ToString());
             }
 
             if (expression.IsRangeOperation)
@@ -336,7 +351,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return indexField.Id;
             }
 
-            throw new InvalidDataException($"Field {fieldName} does not found in current index.");
+            return fieldName switch
+            {
+                "id()" => 0,
+                _ => throw new InvalidDataException($"Field {fieldName} does not found in current index.")
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -350,6 +369,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             FieldExpression fieldExpression => _query.Metadata.GetIndexFieldName(fieldExpression, _query.QueryParameters).Value,
             ValueExpression valueExpression => valueExpression.Token.Value,
+            MethodExpression methodExpression => methodExpression.Name.Value switch
+            {
+                "id" => "id()",
+                _ => methodExpression.Name.Value
+            },
             _ => throw new InvalidDataException("Unknown type for now.")
         };
 
