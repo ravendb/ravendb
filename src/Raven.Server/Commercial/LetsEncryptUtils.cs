@@ -55,7 +55,7 @@ namespace Raven.Server.Commercial
             await acmeClient.Init(setupInfo.Email, token);
             Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
             Console.WriteLine(challengeResult.Challenge != null
                 ? "Successfully received challenge(s) information from Let's Encrypt."
                 : "Using cached Let's Encrypt certificate.");
@@ -162,14 +162,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
             }
 
-            if (parameters.OnValidationSuccessful == null)
-            {
-                Console.WriteLine("Let's encrypt validation successful, acquiring certificate now...");
-            }
-            else
-            {
-                parameters.OnValidationSuccessful();
-            }
+            parameters.OnValidationSuccessful();
 
             (X509Certificate2 Cert, RSA PrivateKey) result;
             try
@@ -525,12 +518,10 @@ namespace Raven.Server.Commercial
                         {
                             var base64 = parameters.SetupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password,
-                                X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                            serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                             var localNodeTag = parameters.SetupInfo.LocalNodeTag;
-                            publicServerUrl = GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, localNodeTag,
-                                parameters.SetupInfo.NodeSetupInfos[localNodeTag].Port,
+                            publicServerUrl = GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, localNodeTag, parameters.SetupInfo.NodeSetupInfos[localNodeTag].Port,
                                 parameters.SetupInfo.NodeSetupInfos[localNodeTag].TcpPort, out _, out domainFromCert);
 
                             if (parameters.OnBeforeAddingNodesToCluster != null)

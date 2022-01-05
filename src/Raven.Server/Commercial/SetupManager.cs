@@ -57,9 +57,9 @@ namespace Raven.Server.Commercial
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public const string GoogleDnsApi = "https://dns.google.com";
+        private const string GoogleDnsApi = "https://dns.google.com";
 
-        public static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
+        private static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
             return $"{nodeTag}.{userDomain}.{rootDomain}".ToLower();
         }
@@ -140,7 +140,7 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -159,16 +159,20 @@ namespace Raven.Server.Commercial
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
 
-            var cert = await CompleteAuthorizationAndGetCertificate(() =>
+            var cert = await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(
+                new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
-                },
-                setupInfo,
-                acmeClient,
-                challengeResult,
-                serverStore,
-                token);
+                    OnValidationSuccessful = () =>
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
+                    },
+                    SetupInfo = setupInfo,
+                    Client = acmeClient,
+                    ChallengeResult = challengeResult,
+                    ServerStore = serverStore,
+                    Token = token
+                });
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations("Successfully acquired certificate from Let's Encrypt.");
@@ -425,7 +429,7 @@ namespace Raven.Server.Commercial
                 var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
                 await acmeClient.Init(setupInfo.Email, token);
 
-                var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+                var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
                 progress.Processed++;
                 progress.AddInfo(challengeResult.Challenge != null
@@ -438,7 +442,14 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenge, setupInfo, token);
+                    await LetsEncryptUtils.UpdateDnsRecordsTask(new LetsEncryptUtils.UpdateDnsRecordParameters
+                    {
+                        OnProgress = onProgress,
+                        Progress = progress,
+                        Challenge = challengeResult.Challenge,
+                        SetupInfo = setupInfo,
+                        Token = token
+                    });
                 }
                 catch (Exception e)
                 {
@@ -450,23 +461,27 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Completing Let's Encrypt challenge(s)...");
                 onProgress(progress);
 
-                await CompleteAuthorizationAndGetCertificate(() =>
+                var cert = await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(
+                    new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
                     {
-                        progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
-                        progress.AddInfo("Acquiring certificate.");
-                        onProgress(progress);
-                    },
-                    setupInfo,
-                    acmeClient,
-                    challengeResult,
-                    serverStore,
-                    token);
-
+                        OnValidationSuccessful = () =>
+                        {
+                            progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
+                            progress.AddInfo("Acquiring certificate.");
+                            onProgress(progress);
+                        },
+                        SetupInfo = setupInfo,
+                        Client = acmeClient,
+                        ChallengeResult = challengeResult,
+                        ServerStore = serverStore,
+                        Token = token
+                    });
+                
                 progress.Processed++;
                 progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
                 progress.AddInfo("Starting validation.");
                 onProgress(progress);
-
+                
                 try
                 {
                     await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
@@ -540,46 +555,6 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
-        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo, LetsEncryptClient client,
-            (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult, ServerStore serverStore, CancellationToken token)
-        {
-            if (challengeResult.Challange == null && challengeResult.Cache != null)
-            {
-                return BuildNewPfx(setupInfo, challengeResult.Cache.Certificate, challengeResult.Cache.PrivateKey);
-            }
-
-            try
-            {
-                await client.CompleteChallenges(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
-            }
-
-            onValidationSuccessful();
-
-            (X509Certificate2 Cert, RSA PrivateKey) result;
-            try
-            {
-                var existingPrivateKey = serverStore.Server.Certificate?.Certificate?.GetRSAPrivateKey();
-                result = await client.GetCertificate(existingPrivateKey, token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
-            }
-
-            try
-            {
-                return BuildNewPfx(setupInfo, result.Cert, result.PrivateKey);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
-            }
-        }
-
         private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
         {
             var certWithKey = certificate.CopyWithPrivateKey(privateKey);
@@ -613,30 +588,6 @@ namespace Raven.Server.Commercial
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
             return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-        }
-
-        private static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
-            SetupInfo setupInfo,
-            LetsEncryptClient client,
-            CancellationToken token)
-        {
-            try
-            {
-                var host = (setupInfo.Domain + "." + setupInfo.RootDomain).ToLowerInvariant();
-                var wildcardHost = "*." + host;
-                if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
-                    return (null, certBytes);
-
-                var result = await client.NewOrder(new[] { wildcardHost }, token);
-
-                result.TryGetValue(host, out var challenge);
-                // we may already be authorized for this?
-                return (challenge, null);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to receive challenge(s) information from Let's Encrypt.", e);
-            }
         }
 
         private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
