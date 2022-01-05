@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Voron;
 
 namespace Corax.Queries
@@ -23,8 +24,8 @@ namespace Corax.Queries
             var buffer = MemoryMarshal.Cast<byte, long>(bufferHolder).Slice(0, matchesSize);
             Debug.Assert(buffer.Length == matchesSize);
 
-            var count = match._fillFunc(ref match, buffer);            
-            
+            var count = match._fillFunc(ref match, buffer);
+
             var matchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(matches));
             var baseMatchesPtr = (long*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(buffer));
             var result = MergeHelper.And(matchesPtr, matchesSize, matchesPtr, matchesSize, baseMatchesPtr, count);
@@ -42,7 +43,7 @@ namespace Corax.Queries
 
             var comparer = default(TComparer);
             var currentMatches = matches;
-            int totalResults = 0;            
+            int totalResults = 0;
             int storeIdx = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
 
@@ -51,25 +52,49 @@ namespace Corax.Queries
             {
                 var freeMemory = currentMatches.Slice(storeIdx);
                 results = match._inner.Fill(freeMemory);
-                
+
                 if (results == 0)
                     return totalResults;
 
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
-                    var read = reader.Read(match._fieldId, out var resultX);
-                    if (read && comparer.Compare(currentType, resultX))
+                    var type = reader.GetFieldType(match._fieldId);
+                    var isMatch = false;
+
+                    if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
                     {
-                        // We found a match.
+                        var read = reader.Read(match._fieldId, out var resultX);
+                        if (read && comparer.Compare(currentType, resultX))
+                        {
+                            // We found a match.
+                            isMatch = true;
+                        }
+                    }
+                    else if (type is IndexEntryFieldType.List)
+                    {
+                        var iterator = reader.ReadMany(match._fieldId);
+                        var unacceptableItem = false;
+                        while (iterator.ReadNext())
+                        {
+                            if (comparer.Compare(currentType, iterator.Sequence) == false)
+                            {
+                                unacceptableItem = true;
+                                break;
+                            }
+                        }
+
+                        isMatch = !unacceptableItem;
+                    }
+
+                    if (isMatch)
+                    {
                         currentMatches[storeIdx] = freeMemory[i];
                         storeIdx++;
                         totalResults++;
                     }
                 }
-
-            } 
-            while (results >= totalResults + maxUnusedMatchesSlots);
+            } while (results >= totalResults + maxUnusedMatchesSlots);
 
             return storeIdx;
         }
@@ -97,20 +122,56 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
+                    var type = reader.GetFieldType(match._fieldId);
 
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))
                     {
-                        var read = reader.Read<long>(match._fieldId, out var resultX);
-                        if (read)
-                            isMatch = comparer.Compare((long)(object)currentType, resultX);
+                        if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
+                        {
+                            var read = reader.Read<long>(match._fieldId, out var resultX);
+                            if (read)
+                                isMatch = comparer.Compare((long)(object)currentType, resultX);
+                        }
+                        else if (type is IndexEntryFieldType.List)
+                        {
+                            var iterator = reader.ReadMany(match._fieldId);
+                            var unacceptableItem = false;
+                            while (iterator.ReadNext())
+                            {
+                                if (comparer.Compare((long)(object)currentType, iterator.Long) == false)
+                                {
+                                    unacceptableItem = true;
+                                    break;
+                                }
+                            }
+
+                            isMatch = !unacceptableItem;
+                        }
                     }
                     else if (typeof(TValueType) == typeof(double))
                     {
-                        var read = reader.Read<double>(match._fieldId, out var resultX);
+                        if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
+                        {
+                            var read = reader.Read<double>(match._fieldId, out var resultX);
+                            if (read)
+                                isMatch = comparer.Compare((double)(object)currentType, resultX);
+                        }
+                        else if (type is IndexEntryFieldType.List)
+                        {
+                            var iterator = reader.ReadMany(match._fieldId);
+                            var unacceptableItem = false;
+                            while (iterator.ReadNext())
+                            {
+                                if (comparer.Compare((double)(object)currentType, iterator.Double) == false)
+                                {
+                                    unacceptableItem = true;
+                                    break;
+                                }
+                            }
 
-                        if (read)
-                            isMatch = comparer.Compare((double)(object)currentType, resultX);
+                            isMatch = !unacceptableItem;
+                        }
                     }
 
                     if (isMatch)
@@ -123,7 +184,7 @@ namespace Corax.Queries
                 }
             } while (results >= totalResults + maxUnusedMatchesSlots);
 
-            matches = currentMatches.Slice(0,storeIdx);
+            matches = currentMatches.Slice(0, storeIdx);
             return totalResults;
         }
 
@@ -132,9 +193,9 @@ namespace Corax.Queries
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.GreaterThan, 
-                    searcher, fieldId, value, 
-                    &FillFuncSequence<GreaterThanMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.GreaterThan,
+                    searcher, fieldId, value,
+                    &FillFuncSequence<GreaterThanMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
@@ -152,17 +213,17 @@ namespace Corax.Queries
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.GreaterThanOrEqual, 
-                    searcher, fieldId, value, 
-                    &FillFuncSequence<GreaterThanOrEqualMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.GreaterThanOrEqual,
+                    searcher, fieldId, value,
+                    &FillFuncSequence<GreaterThanOrEqualMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.GreaterThanOrEqual, 
-                    searcher, fieldId, value, 
-                    &FillFuncNumerical<GreaterThanOrEqualMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.GreaterThanOrEqual,
+                    searcher, fieldId, value,
+                    &FillFuncNumerical<GreaterThanOrEqualMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
@@ -172,17 +233,17 @@ namespace Corax.Queries
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.LessThan, 
-                    searcher, fieldId, value, 
-                    &FillFuncSequence<LessThanMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.LessThan,
+                    searcher, fieldId, value,
+                    &FillFuncSequence<LessThanMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.LessThan, 
-                    searcher, fieldId, value, 
-                    &FillFuncNumerical<LessThanMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.LessThan,
+                    searcher, fieldId, value,
+                    &FillFuncNumerical<LessThanMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
@@ -194,15 +255,15 @@ namespace Corax.Queries
                 return new UnaryMatch<TInner, TValueType>(
                     in inner, UnaryMatchOperation.LessThanOrEqual,
                     searcher, fieldId, value,
-                    &FillFuncSequence<LessThanOrEqualMatchComparer>, &AndWith, 
+                    &FillFuncSequence<LessThanOrEqualMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.LessThanOrEqual, 
-                    searcher, fieldId, value, 
-                    &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.LessThanOrEqual,
+                    searcher, fieldId, value,
+                    &FillFuncNumerical<LessThanOrEqualMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
@@ -212,17 +273,17 @@ namespace Corax.Queries
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.NotEquals, 
-                    searcher, fieldId, value, 
-                    &FillFuncSequence<NotEqualsMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.NotEquals,
+                    searcher, fieldId, value,
+                    &FillFuncSequence<NotEqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.NotEquals, 
-                    searcher, fieldId, value, 
-                    &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.NotEquals,
+                    searcher, fieldId, value,
+                    &FillFuncNumerical<NotEqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
@@ -232,17 +293,17 @@ namespace Corax.Queries
             if (typeof(TValueType) == typeof(Slice))
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.Equals, 
-                    searcher, fieldId, value, 
-                    &FillFuncSequence<EqualsMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.Equals,
+                    searcher, fieldId, value,
+                    &FillFuncSequence<EqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
             else
             {
                 return new UnaryMatch<TInner, TValueType>(
-                    in inner, UnaryMatchOperation.Equals, 
-                    searcher, fieldId, value, 
-                    &FillFuncNumerical<EqualsMatchComparer>, &AndWith, 
+                    in inner, UnaryMatchOperation.Equals,
+                    searcher, fieldId, value,
+                    &FillFuncNumerical<EqualsMatchComparer>, &AndWith,
                     inner.Count, inner.Confidence.Min(QueryCountConfidence.Normal), take);
             }
         }
@@ -254,6 +315,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) > 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {
@@ -273,6 +335,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) >= 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {
@@ -292,6 +355,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) < 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {
@@ -303,6 +367,7 @@ namespace Corax.Queries
                 throw new NotSupportedException($"MatchComparer does not support type {nameof(T)}");
             }
         }
+
         private struct LessThanOrEqualMatchComparer : IUnaryMatchComparer
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -310,6 +375,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) <= 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {
@@ -329,6 +395,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) != 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {
@@ -348,6 +415,7 @@ namespace Corax.Queries
             {
                 return sy.SequenceCompareTo(sx) == 0;
             }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public bool Compare<T>(T sx, T sy) where T : unmanaged
             {

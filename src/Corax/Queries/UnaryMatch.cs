@@ -118,6 +118,7 @@ namespace Corax.Queries
         public QueryInspectionNode Inspect()
         {
             return new QueryInspectionNode($"{nameof(UnaryMatch)} [{_operation}]",
+                children: new List<QueryInspectionNode> { _inner.Inspect() },
                 parameters: new Dictionary<string, string>()
                 {
                     { nameof(IsBoosting), IsBoosting.ToString() },

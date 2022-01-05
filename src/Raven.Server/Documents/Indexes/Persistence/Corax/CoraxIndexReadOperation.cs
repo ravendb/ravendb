@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 yield break;
 
 
-            var ids = ArrayPool<long>.Shared.Rent(Math.Max(CoraxGetPageSize(_indexSearcher, BufferSize), BufferSize));
+            var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize));
 
             int read = 0;
             int docsToLoad = pageSize;

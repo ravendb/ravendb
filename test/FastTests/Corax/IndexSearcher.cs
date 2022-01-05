@@ -976,59 +976,7 @@ namespace FastTests.Corax
                 Assert.Equal(0, match.Fill(ids));
             }
         }
-
-        [Fact]
-        public void NotEqualWithList()
-        {
-            var entries = new List<IndexEntry>();
-            var entriesToIndex = new IndexEntry[7];
-            for (int i = 0; i < 7; i++)
-            {
-                var entry = new IndexEntry
-                {
-                    Id = $"entry/{i}",
-                    Content = (i % 7) switch
-                    {
-                        0 => new string[] { "1"},
-                        1 => new string[] { "7" },
-                        2 => new string[] { "1", "2"},
-                        3 => new string[] { "1", "2", "3"},
-                        4 => new string[] { "1", "2", "3", "5" },
-                        5 => new string[] { "2", "5"},
-                        6 => new string[] { "2", "5", "7"},
-                        _ => throw new ArgumentOutOfRangeException()
-                    }
-                };
-                entries.Add(entry);
-                entriesToIndex[i] = entry;
-            }
-            //":{"p0":"8 9 10"}}
-            IndexEntries(entriesToIndex);
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
-
-            Slice.From(bsc, "8", out var eight);
-            Slice.From(bsc, "9", out var nine);
-            Slice.From(bsc, "10", out var ten);
-
-
-            {
-                var match0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, eight);
-                var match1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, nine);
-                var match2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, ten);
-                var firstOr = searcher.Or(match0, match1);
-                var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"),searcher.Or(firstOr, match2));
-
-                
-                Span<long> ids = stackalloc long[256];
-                var xd = finalOr.Fill(ids);
-                xd += finalOr.Fill(ids);
-                xd += finalOr.Fill(ids);
-                Assert.Equal(7, xd);
-            }
-
-        }
-
+        
         [Fact]
         public void SimpleWildcardStatement()
         {
@@ -1428,97 +1376,6 @@ namespace FastTests.Corax
             }        
         }
 
-        [Fact]
-        public void NotEqualWithList()
-        {
-            var entries = new List<IndexEntry>();
-            var entriesToIndex = new IndexEntry[7];
-            for (int i = 0; i < 7; i++)
-            {
-                var entry = new IndexEntry
-                {
-                    Id = $"entry/{i}",
-                    Content = (i % 7) switch
-                    {
-                        0 => new string[] { "1" },
-                        1 => new string[] { "7" },
-                        2 => new string[] { "1", "2" },
-                        3 => new string[] { "1", "2", "3" },
-                        4 => new string[] { "1", "2", "3", "5" },
-                        5 => new string[] { "2", "5" },
-                        6 => new string[] { "2", "5", "7" },
-                        _ => throw new ArgumentOutOfRangeException()
-                    }
-                };
-                entries.Add(entry);
-                entriesToIndex[i] = entry;
-            }
-            //":{"p0":"8 9 10"}}
-            IndexEntries(entriesToIndex);
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env);
-
-            Slice.From(bsc, "1", out var one);
-            Slice.From(bsc, "2", out var two);
-            Slice.From(bsc, "3", out var three);
-            Slice.From(bsc, "5", out var five);
-            Slice.From(bsc, "7", out var seven);
-            Slice.From(bsc, "8", out var eight);
-            Slice.From(bsc, "9", out var nine);
-            Slice.From(bsc, "10", out var ten);
-
-
-            {
-                var match0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, eight);
-                var match1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, nine);
-                var match2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, ten);
-                var firstOr = searcher.Or(match0, match1);
-                var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(firstOr, match2));
-
-
-                Span<long> ids = stackalloc long[256];
-                Assert.Equal(7, finalOr.Fill(ids));
-            }
-
-            {
-                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
-                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
-                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
-                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
-                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
-
-                Span<long> ids = stackalloc long[256];
-                var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
-                Assert.Equal(7, orResult.Fill(ids));
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
-            }
-
-            {
-                Span<long> ids = stackalloc long[256];
-                var startsWith = searcher.StartWithQuery("Id", "e");
-                Assert.Equal(7, startsWith.Fill(ids));
-
-                Assert.True(ids.Slice(0, 7).ToArray().ToList().Select(x => searcher.GetIdentityFor(x)).OrderBy(a => a).SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
-            }
-
-            {
-                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
-                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
-                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
-                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
-                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
-                
-                var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
-                
-                Span<long> ids = stackalloc long[256];
-                var amount = result.Fill(ids.Slice(14));
-                var idsOfResult = ids.Slice(14, amount).ToArray().Select(x => searcher.GetIdentityFor(x)).ToList();
-                Assert.Equal(idsOfResult.Count, idsOfResult.Distinct().Count());
-                Assert.Equal(7, amount);
-                Assert.True(idsOfResult.SequenceEqual(entries.OrderBy(z => z.Id).Select(e => e.Id)));
-            }
-        }
-
         [Theory]
         [InlineData(100, 16)]
         [InlineData(1000, 128)]
@@ -1588,6 +1445,68 @@ namespace FastTests.Corax
                 var amount = random.Next(0, 10);
                 return Enumerable.Range(0, amount).Select(i => words[random.Next(0, words.Count())]).ToArray();
             }
+        }
+
+        [Fact]
+        public void UnaryMatch()
+        {
+            var entries = new List<IndexEntry>();
+            var entriesToIndex = new IndexEntry[7];
+            for (int i = 0; i < 7; i++)
+            {
+                var entry = new IndexEntry
+                {
+                    Id = $"entry/{i}",
+                    Content = (i % 7) switch
+                    {
+                        0 => new string[] { "1" },
+                        1 => new string[] { "7" },
+                        2 => new string[] { "2", "1" },
+                        3 => new string[] { "1", "2", "3" },
+                        4 => new string[] { "1", "2", "3", "5" },
+                        5 => new string[] { "2", "5" },
+                        6 => new string[] { "2", "5", "7" },
+                        _ => throw new ArgumentOutOfRangeException()
+                    }
+                };
+                entries.Add(entry);
+                entriesToIndex[i] = entry;
+            }
+            
+            IndexEntries(entriesToIndex);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(bsc, "1", out var one);
+            Slice.From(bsc, "2", out var two);
+            
+            using var searcher = new IndexSearcher(Env);
+            {
+                var notOne = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
+                var notTwo = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                Span<long> ids = stackalloc long[32];
+                var expected = entries.Count(x => x.Content.Contains("1") == false);
+                var result = notOne.Fill(ids);
+                List<string> xd = new();
+                foreach (var id in ids.Slice(0, result))
+                {
+                    xd.Add(searcher.GetIdentityFor(id));
+                }
+                Assert.Equal(3, result);
+            }
+            {
+                var notTwo = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                Span<long> ids = stackalloc long[32];
+                var expected = entries.Count(x => x.Content.Contains("2") == false);
+                var result = notTwo.Fill(ids);
+                List<string> xd = new();
+                foreach (var id in ids.Slice(0, result))
+                {
+                    xd.Add(searcher.GetIdentityFor(id));
+                }
+                
+                
+                Assert.Equal(expected, result);
+            }
+            
         }
     }
 }
