@@ -81,15 +81,81 @@ namespace FastTests.Corax
             }
         }
 
+        [Theory]
+        [InlineData(256, 29)]
+        [InlineData(512, 29)]
+        [InlineData(1024, 29)]
+        [InlineData(2048, 29)]
+        [InlineData(4096, 31)]
+        public void InBoosting(int amount, int mod)
+        {
+            longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                IQueryMatch match = searcher.InQuery("Content1", new() { "1", "2", "3" }, new ConstantScoreFunction(10f));
+                
+                match = searcher.OrderByScore(match);
+                Span<long> ids = stackalloc long[amount];
+                var read = match.Fill(ids);
+                List<string> result = new();
+                for (int i = 0; i < read; ++i)
+                {
+                    result.Add(searcher.GetIdentityFor(ids[i]));
+                }
+
+                Assert.Equal(result.Count, result.Distinct().Count());
+
+                var localResults = longList.Where(x => x.Content1 is 1 or 2 or 3).Select(y => y.Id).ToArray();
+                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
+                Array.Sort(localResults);
+                Array.Sort(highestScore);
+                Assert.True(localResults.SequenceEqual(highestScore));
+            }
+        }
+
+        [Theory]
+        [InlineData(256, 29)]
+        [InlineData(512, 29)]
+        [InlineData(1024, 29)]
+        [InlineData(2048, 29)]
+        [InlineData(4096, 31)]
+        public void UnaryBoostingTest(int amount, int mod)
+        {
+            longList = Enumerable.Range(0, amount).Select(i => new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % mod }).ToList();
+            IndexEntries();
+            using var searcher = new IndexSearcher(Env);
+            {
+                var match = searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), 1, 10L), 100);
+                Span<long> ids = stackalloc long[amount];
+                var read = match.Fill(ids);
+                // Assert.Equal(longList.Count, read);
+                List<string> result = new();
+                for (int i = 0; i < read; ++i)
+                {
+                    result.Add(searcher.GetIdentityFor(ids[i]));
+                }
+
+                Assert.Equal(result.Count, result.Distinct().Count());
+
+                var localResults = longList.Where(x => x.Content1 > 10).Select(y => y.Id).ToArray();
+                var highestScore = result.ToArray().AsSpan(0, localResults.Length).ToArray();
+                Array.Sort(localResults);
+                Array.Sort(highestScore);
+
+                Assert.True(localResults.SequenceEqual(highestScore));
+            }
+        }
+
         [Fact]
         public void OrderByBoosting()
         {
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 1 });   // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/11", Content1 = 0 });  // 2 * 10
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/1", Content1 = 1 }); // 2 * 10
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/11", Content1 = 0 }); // 2 * 10
             longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/111", Content1 = 0 }); // 2 * 10
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/2", Content1 = 1 });   //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 1 });   //     10
-            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 2 });   //      0
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/2", Content1 = 1 }); //     10
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/4", Content1 = 1 }); //     10
+            longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/3", Content1 = 2 }); //      0
 
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
