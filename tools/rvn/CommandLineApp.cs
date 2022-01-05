@@ -2,7 +2,8 @@
 using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
-
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+using Raven.Server.Commercial;
 namespace rvn
 {
     internal static class CommandLineApp
@@ -34,7 +35,8 @@ namespace rvn
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
-
+            ConfigureSetupPackage();
+            
             _app.OnExecute(() =>
             {
                 _app.ShowHelp();
@@ -51,6 +53,34 @@ namespace rvn
             }
         }
 
+        private static void ConfigureSetupPackage()
+        {
+            _app.Command("create-setup-package", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
+                cmd.HelpOption(HelpOptionString);
+                var setupParameters = ConfigureSetupParameters(cmd);
+                var packageOutputFile = ConfigurePackageOutputFile(cmd);
+
+                cmd.OnExecuteAsync(async token =>
+                {
+                    if (File.Exists(setupParameters?.Value()) == false)
+                        return ExitWithError("Path to setup params has not found", cmd);
+
+                    using (StreamReader file = File.OpenText(setupParameters?.Value() ?? string.Empty))
+                    {
+                        JsonSerializer serializer = new();
+                        var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                        var settingsPath = setupParameters?.Values[0];
+                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
+                        var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
+                        await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
+                    }
+                    return 0;
+                });
+            });
+        }
+        
         private static void ConfigureLogsCommand()
         {
             _app.Command("logstream", cmd =>
@@ -343,6 +373,16 @@ namespace rvn
             return 1;
         }
 
+        private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
+        {
+            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
+        {
+            return cmd.Option("-o|--package-output-file", "default output file", CommandOptionType.SingleValue);
+        }
+        
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
