@@ -398,7 +398,7 @@ interface SubscriptionConnectionPerformanceStatsWithCache extends Raven.Server.D
     HasErrors: boolean;
 }
 
-interface SubscriptionBatchPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.SubscriptionBatchPerformanceStats {
+interface SubscriptionBatchPerformanceStatsWithCache extends Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceStats {
     StartedAsDate: Date;
     CompletedAsDate: Date;
     Type: subscriptionType;
