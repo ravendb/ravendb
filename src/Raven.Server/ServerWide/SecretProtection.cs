@@ -334,7 +334,6 @@ namespace Raven.Server.ServerWide
             ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate, certificateValidationKeyUsages);
-            //ValidateKeyUsages(source, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
 
             AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
 

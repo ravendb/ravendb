@@ -121,7 +121,12 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(NodeTag)] = NodeTag, [nameof(RegisterClientCert)] = RegisterClientCert, [nameof(Zip)] = Zip};
+            return new DynamicJsonValue
+            {
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(RegisterClientCert)] = RegisterClientCert,
+                [nameof(Zip)] = Zip
+            };
         }
     }
 
@@ -131,7 +136,10 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(License)] = License.ToJson(),};
+            return new DynamicJsonValue
+            {
+                [nameof(License)] = License.ToJson(),
+            };
         }
     }
 
@@ -174,7 +182,11 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(Ips)] = new DynamicJsonArray(Ips), [nameof(SubDomain)] = SubDomain,};
+            return new DynamicJsonValue
+            {
+                [nameof(Ips)] = new DynamicJsonArray(Ips),
+                [nameof(SubDomain)] = SubDomain,
+            };
         }
     }
 
@@ -204,7 +216,9 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(), [nameof(MaxClusterSize)] = MaxClusterSize, [nameof(LicenseType)] = LicenseType
+                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(),
+                [nameof(MaxClusterSize)] = MaxClusterSize,
+                [nameof(LicenseType)] = LicenseType
             };
         }
     }
@@ -217,7 +231,12 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(Emails)] = Emails, [nameof(RootDomains)] = RootDomains, [nameof(Domains)] = DynamicJsonValue.Convert(Domains)};
+            return new DynamicJsonValue
+            {
+                [nameof(Emails)] = Emails,
+                [nameof(RootDomains)] = RootDomains,
+                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
+            };
         }
     }
 
@@ -229,7 +248,12 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(Emails)] = Emails, [nameof(RootDomains)] = RootDomains, [nameof(Domains)] = DynamicJsonValue.Convert(Domains)};
+            return new DynamicJsonValue
+            {
+                [nameof(Emails)] = Emails,
+                [nameof(RootDomains)] = RootDomains,
+                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
+            };
         }
     }
 
@@ -276,7 +300,10 @@ namespace Raven.Server.Commercial
         {
             var json = new DynamicJsonValue(GetType())
             {
-                [nameof(Processed)] = Processed, [nameof(Total)] = Total, [nameof(Readme)] = Readme, [nameof(Messages)] = Messages.ToArray()
+                [nameof(Processed)] = Processed,
+                [nameof(Total)] = Total,
+                [nameof(Readme)] = Readme,
+                [nameof(Messages)] = Messages.ToArray()
             };
 
             if (Certificate != null)
@@ -317,7 +344,12 @@ namespace Raven.Server.Commercial
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue {[nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null};
+            return new DynamicJsonValue
+            {
+                [nameof(Nodes)] = Nodes != null
+                    ? new DynamicJsonArray(Nodes.Select(x => x.ToJson()))
+                    : null
+            };
         }
 
         public class Node
@@ -326,7 +358,10 @@ namespace Raven.Server.Commercial
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue {[nameof(Tag)] = Tag};
+                return new DynamicJsonValue
+                {
+                    [nameof(Tag)] = Tag
+                };
             }
         }
     }
