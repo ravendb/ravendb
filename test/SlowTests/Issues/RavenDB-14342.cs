@@ -35,6 +35,8 @@ namespace SlowTests.Issues
         [LicenseRequiredFact]
         public void ServerMonitoringTest()
         {
+            DoNotReuseServer();
+        
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Indexes));
@@ -91,6 +93,7 @@ namespace SlowTests.Issues
         [LicenseRequiredFact]
         public async Task DatabasesMonitoringTest()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Indexes | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments));
@@ -157,6 +160,7 @@ namespace SlowTests.Issues
         [LicenseRequiredFact]
         public async Task IndexesMonitoringTest()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.Indexes |
@@ -207,6 +211,7 @@ namespace SlowTests.Issues
         [LicenseRequiredFact]
         public async Task CollectionsMonitoringTest()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments));
