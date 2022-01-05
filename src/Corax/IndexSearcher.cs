@@ -481,6 +481,13 @@ namespace Corax
             return UnaryMatch.Create(UnaryMatch<TInner, double>.YieldEqualsMatch(set, this, fieldId, value, take));
         }
 
+        public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, string value, int take = TakeAll)
+            where TInner : IQueryMatch
+        {
+            Slice.From(_transaction.Allocator, value, ByteStringType.Immutable, out var slice);
+            return UnaryMatch.Create(UnaryMatch<TInner, Slice>.YieldNotEqualsMatch(set, this, fieldId, slice, take));
+        }
+        
         public UnaryMatch NotEquals<TInner>(in TInner set, int fieldId, Slice value, int take = TakeAll)
             where TInner : IQueryMatch
         {
@@ -713,8 +720,8 @@ namespace Corax
 
             var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();
 
-            searchAnalyzer.GetOutputBuffersSize(searchTerm.Length, out var outputSize, out var tokenSize);
-            wildcardAnalyzer.GetOutputBuffersSize(searchTerm.Length, out var wildcardSize, out var wildcardTokenSize);
+            searchAnalyzer.GetOutputBuffersSize(term.Length, out var outputSize, out var tokenSize);
+            wildcardAnalyzer.GetOutputBuffersSize(term.Length, out var wildcardSize, out var wildcardTokenSize);
 
             var tokenStructSize = Unsafe.SizeOf<Token>();
             var buffer = QueryContext.MatchesPool.Rent(outputSize + wildcardSize + tokenStructSize * (tokenSize + wildcardTokenSize));

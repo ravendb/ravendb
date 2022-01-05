@@ -126,12 +126,13 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected static int CoraxGetPageSize(global::Corax.IndexSearcher searcher, int bufferSize)
         {
             var size = searcher.NumberOfEntries;
-            return size switch
-            {
-                > int.MaxValue => int.MaxValue,
-                <= 0 => bufferSize,
-                _ => (int)size
-            };
+            if ( size > int.MaxValue )
+                return int.MaxValue;
+
+            if (size > bufferSize)
+                return (int)size;
+
+            return bufferSize;
         }
     }
 }
