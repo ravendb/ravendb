@@ -32,7 +32,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             get => _increments?.Values;
             private set
             {
-                if (value == null) return;
+                if (value == null)
+                    return;
                 foreach (var incrementOperation in value)
                 {
                     Increment(incrementOperation);
@@ -290,7 +291,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             };
         }
 
-        public class AppendOperation 
+        public class AppendOperation
         {
             public DateTime Timestamp;
             public double[] Values;
@@ -367,7 +368,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             public DateTime Timestamp;
             public double[] Values;
-            public int? ValuesLength;
+            internal int? ValuesLength;
 
             internal static IncrementOperation Parse(BlittableJsonReaderObject input)
             {
@@ -394,11 +395,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
+                var djv = new DynamicJsonValue
                 {
                     [nameof(Timestamp)] = Timestamp,
                     [nameof(Values)] = new DynamicJsonArray(Values)
                 };
+
+                if (ValuesLength.HasValue)
+                    djv[nameof(ValuesLength)] = ValuesLength;
+
+                return djv;
             }
         }
     }
