@@ -326,7 +326,7 @@ namespace Raven.Server.ServerWide
 
 #if !RVN
 
-        public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
+        public LetsEncryptUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             Process process;
 
@@ -414,7 +414,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
 
-            return new RavenServer.CertificateHolder
+            return new  LetsEncryptUtils.CertificateHolder
             {
                 Certificate = loadedCertificate,
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -579,7 +579,7 @@ namespace Raven.Server.ServerWide
 
 #if !RVN
 
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
+        public static LetsEncryptUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
         {
             ValidateExpiration(source, loadedCertificate, serverStore);
 
@@ -589,7 +589,7 @@ namespace Raven.Server.ServerWide
 
             AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
 
-            return new RavenServer.CertificateHolder
+            return new LetsEncryptUtils.CertificateHolder
             {
                 Certificate = loadedCertificate,
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
@@ -667,7 +667,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
+        public LetsEncryptUtils.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
         {
             try
             {
@@ -683,7 +683,7 @@ namespace Raven.Server.ServerWide
 
                 ValidateKeyUsages(path, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
 
-                return new RavenServer.CertificateHolder
+                return new LetsEncryptUtils.CertificateHolder
                 {
                     Certificate = loadedCertificate,
                     CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),

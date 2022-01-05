@@ -254,8 +254,8 @@ namespace Raven.Server.Commercial
 
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
-                SetupManager.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
+                LetsEncryptUtils.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
 
                 return true;
             }

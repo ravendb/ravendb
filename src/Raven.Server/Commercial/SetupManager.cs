@@ -1106,50 +1106,7 @@ namespace Raven.Server.Commercial
 
             return Uri.CheckHostName(domain) != UriHostNameType.Unknown;
         }
-
-        public static string IndentJsonString(string json)
-        {
-            using (var stringReader = new StringReader(json))
-            using (var stringWriter = new StringWriter())
-            {
-                var jsonReader = new JsonTextReader(stringReader);
-                var jsonWriter = new JsonTextWriter(stringWriter) { Formatting = Formatting.Indented };
-                jsonWriter.WriteToken(jsonReader);
-                return stringWriter.ToString();
-            }
-        }
-
-        public static void WriteSettingsJsonLocally(string settingsPath, string json)
-        {
-            var tmpPath = string.Empty;
-            try
-            {
-                tmpPath = settingsPath + ".tmp";
-                using (var file = SafeFileStream.Create(tmpPath, FileMode.Create))
-                using (var writer = new StreamWriter(file))
-                {
-                    writer.Write(json);
-                    writer.Flush();
-                    file.Flush(true);
-                }
-            }
-            catch (Exception e) when (e is UnauthorizedAccessException || e is SecurityException)
-            {
-                throw new UnsuccessfulFileAccessException(e, tmpPath, FileAccess.Write);
-            }
-
-            try
-            {
-                File.Replace(tmpPath, settingsPath, settingsPath + ".bak");
-                if (PlatformDetails.RunningOnPosix)
-                    Syscall.FsyncDirectoryFor(settingsPath);
-            }
-            catch (UnauthorizedAccessException e)
-            {
-                throw new UnsuccessfulFileAccessException(e, settingsPath, FileAccess.Write);
-            }
-        }
-
+        
         private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
         {
             publicTcpUrl = null;
@@ -1381,8 +1338,8 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
                 onProgress(progress);
 
-                var indentedJson = IndentJsonString(settingsJsonObject.ToString());
-                WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = LetsEncryptUtils.IndentJsonString(settingsJsonObject.ToString());
+                LetsEncryptUtils.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
             }
             catch (Exception e)
             {
@@ -1619,12 +1576,12 @@ namespace Raven.Server.Commercial
 
                             var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
-                            var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                            var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
                             if (node.Key == setupInfo.LocalNodeTag && setupInfo.ModifyLocalServer)
                             {
                                 try
                                 {
-                                    WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+                                    LetsEncryptUtils.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
                                 }
                                 catch (Exception e)
                                 {
@@ -1700,7 +1657,7 @@ namespace Raven.Server.Commercial
 
                             var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
 
-                            var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                            var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
 
                             var entry = archive.CreateEntry("setup.json");
                             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
