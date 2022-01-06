@@ -146,29 +146,14 @@ namespace Raven.Server.Commercial
 
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
-
-                if (parameters.Progress != null)
-                {
-                    parameters.Progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
-                }
-
+                
+                parameters.Progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
                 if (registrationInfo.SubDomains.Count == 0 && registrationInfo.Challenge == null)
                 {
                     // no need to update anything, can skip doing DNS update
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Cached DNS values matched, skipping DNS update");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Cached DNS values matched, skipping DNS update.");
-                    }
+                    parameters.Progress.AddInfo("Cached DNS values matched, skipping DNS update");
 
                     return;
                 }
@@ -177,24 +162,14 @@ namespace Raven.Server.Commercial
                 HttpResponseMessage response;
                 try
                 {
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
-                        parameters.Progress.AddInfo("Please wait between 30 seconds and a few minutes.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
-                    }
+                    parameters.Progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
+                    parameters.Progress.AddInfo("Please wait between 30 seconds and a few minutes.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
 
                     response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), parameters.Token).ConfigureAwait(false);
 
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Waiting for DNS records to update...");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Waiting for DNS records to update...");
-                    }
+                    parameters.Progress.AddInfo("Waiting for DNS records to update...");
                 }
                 catch (Exception e)
                 {
@@ -217,17 +192,7 @@ namespace Raven.Server.Commercial
                     if (existingSubDomain != null &&
                         new HashSet<string>(existingSubDomain.Ips).SetEquals(parameters.SetupInfo.NodeSetupInfos[parameters.SetupInfo.LocalNodeTag].Addresses))
                     {
-                        if (parameters.Progress != null)
-                        {
-                            parameters.Progress.AddInfo("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag +
-                                                        ") DNS record didn't change, not waiting for full DNS propagation.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag +
-                                              ") DNS record didn't change, not waiting for full DNS propagation.");
-                        }
-
+                        parameters.Progress.AddInfo("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag + ") DNS record didn't change, not waiting for full DNS propagation.");
                         return;
                     }
                 }
@@ -261,47 +226,24 @@ namespace Raven.Server.Commercial
                         }
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
-                        if (parameters.Progress != null)
-                        {
-                            if (i % 120 == 0)
-                                parameters.Progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
-                            else if (i % 45 == 0)
-                                parameters.Progress.AddInfo("If everything goes all right, we should be nearly there...");
-                            else if (i % 30 == 0)
-                                parameters.Progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
-                            else if (i % 15 == 0)
-                                parameters.Progress.AddInfo("Please be patient, updating DNS records takes time...");
-                            else if (i % 5 == 0)
-                                parameters.Progress.AddInfo("Waiting...");
+                        if (i % 120 == 0)
+                            parameters.Progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
+                        else if (i % 45 == 0)
+                            parameters.Progress.AddInfo("If everything goes all right, we should be nearly there...");
+                        else if (i % 30 == 0)
+                            parameters.Progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
+                        else if (i % 15 == 0)
+                            parameters.Progress.AddInfo("Please be patient, updating DNS records takes time...");
+                        else if (i % 5 == 0)
+                            parameters.Progress.AddInfo("Waiting...");
 
-                            parameters.OnProgress?.Invoke(parameters.Progress);
-                        }
-                        else
-                        {
-                            if (i % 120 == 0)
-                                Console.WriteLine("This is taking too long, you might want to abort and restart if this goes on like this...");
-                            else if (i % 45 == 0)
-                                Console.WriteLine("If everything goes all right, we should be nearly there...");
-                            else if (i % 30 == 0)
-                                Console.WriteLine("The DNS update is still pending, carry on just a little bit longer...");
-                            else if (i % 15 == 0)
-                                Console.WriteLine("Please be patient, updating DNS records takes time...");
-                            else if (i % 5 == 0)
-                                Console.WriteLine("Waiting...");
-                        }
+                        parameters.OnProgress?.Invoke(parameters.Progress);
 
                         i++;
                     } while (registrationResult?.Status == "PENDING");
 
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Got successful response from api.ravendb.net.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Got successful response from api.ravendb.net.");
-                    }
+                    parameters.Progress.AddInfo("Got successful response from api.ravendb.net.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
                 }
                 catch (Exception e)
                 {
@@ -339,6 +281,7 @@ namespace Raven.Server.Commercial
         public class CompleteAuthorizationAndGetCertificateParameters
         {
             public Action OnValidationSuccessful;
+            public SetupProgressAndResult Progress;
             public SetupInfo SetupInfo;
             public LetsEncryptClient Client;
             public (string Challange, LetsEncryptClient.CachedCertificateResult Cache) ChallengeResult;
@@ -410,15 +353,8 @@ namespace Raven.Server.Commercial
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
                     {
-                        parameters.Progress?.AddInfo("Loading and validating server certificate.");
-                        if (parameters.Progress != null)
-                        {
-                            parameters.OnProgress(parameters.Progress);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Loading and validating server certificate.");
-                        }
+                        parameters.Progress.AddInfo("Loading and validating server certificate.");
+                        parameters.OnProgress?.Invoke(parameters.Progress);
 
                         byte[] serverCertBytes;
                         X509Certificate2 serverCert;
@@ -444,10 +380,7 @@ namespace Raven.Server.Commercial
                                 if (node.Key == parameters.SetupInfo.LocalNodeTag)
                                     continue;
 
-                                if (parameters.Progress != null)
-                                    parameters.Progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
-                                else
-                                    Console.WriteLine($"Adding node '{node.Key}' to the cluster.");
+                                parameters.Progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
 
                                 parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -473,11 +406,7 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException("Could not load the certificate in the local server.", e);
                         }
 
-                        if (parameters.Progress != null)
-                            parameters.Progress.AddInfo("Generating the client certificate.");
-                        else
-                            Console.WriteLine($"Generating the client certificate.");
-
+                        parameters.Progress.AddInfo("Generating the client certificate.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
                         X509Certificate2 clientCert;
@@ -509,11 +438,7 @@ namespace Raven.Server.Commercial
                         if (parameters.RegisterClientCert != null)
                             await parameters.RegisterClientCertInOs(parameters.OnProgress, parameters.Progress, clientCert);
 
-                        if (parameters.Progress != null)
-                            parameters.Progress?.AddInfo("Writing certificates to zip archive.");
-                        else
-                            Console.WriteLine("Writing certificates to zip archive.");
-
+                        parameters.Progress?.AddInfo("Writing certificates to zip archive.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
                         try
@@ -618,11 +543,7 @@ namespace Raven.Server.Commercial
                             var currentNodeSettingsJson = settingsJson.Clone(context);
                             currentNodeSettingsJson.Modifications ??= new DynamicJsonValue(currentNodeSettingsJson);
 
-                            if (parameters.Progress != null)
-                                parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
-                            else
-                                Console.WriteLine($"Creating settings file 'settings.json' for node {node.Key}.");
-
+                            parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
                             parameters.OnProgress?.Invoke(parameters.Progress);
 
                             if (node.Value.Addresses.Count != 0)
@@ -667,11 +588,7 @@ namespace Raven.Server.Commercial
                                 }
                             }
 
-                            if (parameters.Progress != null)
-                                parameters.Progress?.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
-                            else
-                                Console.WriteLine($"Adding settings file for node '{node.Key}' to zip archive.");
-
+                            parameters.Progress?.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
                             parameters.OnProgress?.Invoke(parameters.Progress);
 
                             try
@@ -693,7 +610,7 @@ namespace Raven.Server.Commercial
 
                                 await using (var entryStream = entry.Open())
                                 {
-                                    await entryStream.WriteAsync(serverCertBytes, 0, serverCertBytes.Length);
+                                    await entryStream.WriteAsync(serverCertBytes);
                                 }
                             }
                             catch (Exception e)
@@ -702,20 +619,13 @@ namespace Raven.Server.Commercial
                             }
                         }
 
-                        if (parameters.Progress != null)
-                            parameters.Progress?.AddInfo("Adding readme file to zip archive.");
-                        else
-                            Console.WriteLine("Adding readme file to zip archive.");
-
+                        parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
                         string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag, publicServerUrl, parameters.SetupInfo.NodeSetupInfos.Count > 1,
                             parameters.SetupInfo.RegisterClientCert);
 
-                        if (parameters.Progress != null)
-                            parameters.Progress.Readme = readmeString;
-                        else
-                            Console.WriteLine(readmeString);
+                        parameters.Progress.Readme = readmeString;
                         
                         try
                         {
@@ -738,11 +648,7 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
                         }
 
-                        if (parameters.Progress != null)
-                            parameters.Progress.AddInfo("Adding setup.json file to zip archive.");
-                        else
-                            Console.WriteLine("Adding setup.json file to zip archive.");
-
+                        parameters.Progress.AddInfo("Adding setup.json file to zip archive.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
                         try

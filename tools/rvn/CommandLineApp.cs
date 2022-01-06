@@ -63,20 +63,25 @@ namespace rvn
                 cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
                 cmd.HelpOption(HelpOptionString);
                 var setupParameters = ConfigureSetupParameters(cmd);
-                var packageOutputFile = ConfigurePackageOutputFile(cmd);
+                var packageOutputFileParameter = ConfigurePackageOutputFile(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
-                    if (File.Exists(setupParameters?.Value()) == false)
+                    var setupParam = setupParameters.Value();
+                    var packageOutParam = packageOutputFileParameter.Value();
+                    
+                    if (File.Exists(setupParam) == false)
                         return ExitWithError("Path to setup params has not found", cmd);
-
-                    using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
+                    
+                    using (StreamReader file = File.OpenText(setupParam))
                     {
                         JsonSerializer serializer = new();
                         var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                        if (packageOutParam == null) packageOutParam = setupInfo?.Domain + "-package.zip";
+                        else packageOutParam += "-package.zip";
                         var settingsPath = setupParameters.Values[0];
-                        var setupLetsEncryptTask = await SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
-                        var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
+                        var setupLetsEncryptTask = await SetupLetsEncryptByRvn(setupInfo, settingsPath, new SetupProgressAndResult(), token);
+                        var path = Path.Combine(AppContext.BaseDirectory, packageOutParam);
                         await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
                     }
                     return 0;
@@ -84,14 +89,8 @@ namespace rvn
             });
         }
         
-        private static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath , CancellationToken token)
+        private static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath ,SetupProgressAndResult progress, CancellationToken token)
         {
-            var progress = new SetupProgressAndResult
-            {
-                Processed = 0,
-                Total = 4
-            };
-            
             progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
 
             if (SetupManager.IsValidEmail(setupInfo.Email) == false)
@@ -113,7 +112,8 @@ namespace rvn
                 {
                     Challenge = challengeResult.Challenge,
                     SetupInfo = setupInfo,
-                    Token = CancellationToken.None
+                    Token = CancellationToken.None,
+                    Progress = progress
                 });
                 progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
             }
@@ -136,7 +136,8 @@ namespace rvn
                 SetupInfo = setupInfo,
                 Client = acmeClient,
                 ChallengeResult = challengeResult,
-                Token = CancellationToken.None
+                Token = CancellationToken.None,
+                Progress = progress
             });
 
             progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
@@ -146,7 +147,7 @@ namespace rvn
             {
                 var zipFile = await LetsEncryptUtils.CompleteClusterConfigurationAndGetSettingsZip(new LetsEncryptUtils.CompleteClusterConfigurationParameters
                 {
-                    Progress = null,
+                    Progress = progress,
                     OnProgress = null,
                     SetupInfo = setupInfo,
                     SetupMode = SetupMode.None,
