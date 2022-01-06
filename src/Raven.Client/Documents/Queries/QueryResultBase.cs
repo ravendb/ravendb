@@ -58,6 +58,8 @@ namespace Raven.Client.Documents.Queries
         /// <value><c>true</c> if the index is stale; otherwise, <c>false</c>.</value>
         public bool IsStale { get; set; }
 
+        public bool IsMapReduce { get; set; }
+
         /// <summary>
         /// The last time the index was updated.
         /// This can be used to determine the freshness of the data.
