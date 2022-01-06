@@ -36,7 +36,6 @@ namespace Raven.Server.Documents.Sharding
             //TODO - sharding: We probably want to put it in the ShardedContext, not use the server one 
             ContextPool = context.RavenServer.ServerStore.ContextPool;
             Logger = LoggingSource.Instance.GetLogger(ShardedContext.DatabaseName, GetType().FullName);
-
             var topologyEtag = GetLongFromHeaders(Constants.Headers.TopologyEtag);
             if (topologyEtag.HasValue && ShardedContext.HasTopologyChanged(topologyEtag.Value))
             {

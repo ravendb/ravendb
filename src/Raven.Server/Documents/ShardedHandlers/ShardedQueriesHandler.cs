@@ -8,7 +8,15 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -23,6 +31,7 @@ using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Constants = Raven.Client.Constants;
 using HttpMethod = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
 
 namespace Raven.Server.Documents.ShardedHandlers
@@ -49,7 +58,6 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 try
                 {
-                    //TODO: Sharding
                     //using (var token = CreateTimeLimitedQueryToken())
                     {
                         var debug = GetStringQueryString("debug", required: false);
@@ -103,6 +111,10 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                             // * For order by, we need to merge the results and compute the order again 
                             queryProcessor.OrderResults();
+
+
+                            // * Project
+                            // TODO: queryProcessor.ApplyProjectionIfNeeded();
 
                             var result = queryProcessor.GetResult();
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
@@ -170,7 +182,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             private readonly Dictionary<int, ShardedQueryCommand> _commands;
             private readonly HashSet<int> _filteredShardIndexes;
             private readonly ShardedQueryResult _result;
-
+            private readonly DynamicJsonValue _dummyDynamicJsonValue = new();
 
             // User should also be able to define a query parameter ("Sharding.Context") which is an array
             // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
@@ -224,7 +236,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                         return;
                     }
                 }
-
                 
                 // * For paging queries, we modify the limits on the query to include all the results from all
                 //   shards if there is an offset. But if there isn't an offset, we can just get the limit from
@@ -249,7 +260,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
                     }
 
-                    int limit = ((_query.Limit  ?? 0) + (_query.Offset ?? 0))  * _parent.ShardedContext.NumberOfShardNodes;
+                    int limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * _parent.ShardedContext.NumberOfShardNodes;
                     if (limit < 0) // overflow
                         limit = int.MaxValue;
                     modifiedArgs["__raven_limit"] = limit;
@@ -265,8 +276,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                 // * For indexes, we sent to all shards
                 for (int i = 0; i < _parent.ShardedContext.NumberOfShardNodes; i++)
                 {
-                    if(_filteredShardIndexes?.Contains(i) == false)
+                    if (_filteredShardIndexes?.Contains(i) == false)
                         continue;
+
                     _commands[i] = new ShardedQueryCommand(_parent, queryTemplate);
                 }
             }
@@ -314,6 +326,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 foreach (var (_, cmd) in _commands)
                 {
                     _result.ResultEtag = Hashing.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
+                    _result.IsMapReduce = cmd.Result.IsMapReduce;
                 }
             }
             
@@ -377,7 +390,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public void OrderResults()
             {
-                if(_query.Metadata.OrderBy?.Length > 0)
+                if (_query.Metadata.OrderBy?.Length > 0)
                 {
                     _result.Results.Sort(this);
                 }
@@ -416,7 +429,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
 
             [ThreadStatic]
-            private static Random _random;
+            private static Random Random;
 
             public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
             {
@@ -429,18 +442,18 @@ namespace Raven.Server.Documents.ShardedHandlers
                 return 0;
             }
 
-            private int CompareField(OrderByField order, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
+            private static int CompareField(OrderByField order, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
             {
                 switch (order.OrderingType)
                 {
-                    case Queries.AST.OrderByFieldType.Implicit:
-                    case Queries.AST.OrderByFieldType.String:
+                    case OrderByFieldType.Implicit:
+                    case OrderByFieldType.String:
                         {
                             x.TryGet(order.Name, out string xVal);
                             y.TryGet(order.Name, out string yVal);
                             return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
                         }
-                    case Queries.AST.OrderByFieldType.Long:
+                    case OrderByFieldType.Long:
                         {
                             var hasX = x.TryGetWithoutThrowingOnError(order.Name, out long xLng);
                             var hasY = y.TryGetWithoutThrowingOnError(order.Name, out long yLng);
@@ -452,7 +465,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                                 return -1;
                             return xLng.CompareTo(yLng);
                         }
-                    case Queries.AST.OrderByFieldType.Double:
+                    case OrderByFieldType.Double:
                         {
                             var hasX = x.TryGetWithoutThrowingOnError(order.Name, out double xDbl);
                             var hasY = y.TryGetWithoutThrowingOnError(order.Name, out double yDbl);
@@ -464,7 +477,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                                 return -1;
                             return xDbl.CompareTo(yDbl);
                         }
-                    case Queries.AST.OrderByFieldType.AlphaNumeric:
+                    case OrderByFieldType.AlphaNumeric:
                         {
                             x.TryGet(order.Name, out string xVal);
                             y.TryGet(order.Name, out string yVal);
@@ -476,13 +489,13 @@ namespace Raven.Server.Documents.ShardedHandlers
                                 return -1;
                             return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
                         }
-                    case Queries.AST.OrderByFieldType.Random:
-                        return (_random ??= new Random()).Next(0, int.MaxValue);
+                    case OrderByFieldType.Random:
+                        return (Random ??= new Random()).Next(0, int.MaxValue);
                  
-                    case Queries.AST.OrderByFieldType.Custom:
+                    case OrderByFieldType.Custom:
                         throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
-                    case Queries.AST.OrderByFieldType.Score:
-                    case Queries.AST.OrderByFieldType.Distance:
+                    case OrderByFieldType.Score:
+                    case OrderByFieldType.Distance:
                     default:
                         throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
                 }
@@ -491,17 +504,62 @@ namespace Raven.Server.Documents.ShardedHandlers
             public void ReduceResults()
             {
                 // TODO: what happens when the projection doesn't include the values?
+
                 if (_query.Metadata.IsDynamic)
                 {
                     if (_query.Metadata.IsGroupBy == false)
                     {
                         return;
                     }
+
                     ReduceDynamicResults();
                 }
-                // check the database record to see if 
-                // _query.Metadata.IndexName
-                // is a map/reduce and run it
+                else if (_result.IsMapReduce)
+                {
+                    using (_context.OpenReadTransaction())
+                    {
+                        var rawRecord = _parent.ServerStore.Cluster.ReadRawDatabaseRecord(_context, _parent.ShardedContext.DatabaseName);
+                        if (rawRecord == null)
+                            throw new DatabaseDoesNotExistException("Database doesn't exist. It was probably deleted while running the query.");
+
+                        if (rawRecord.Raw.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject indexes) == false)
+                            throw new InvalidOperationException("Failed to get the indexes from the database record");
+
+                        if (indexes.TryGet(_result.IndexName, out BlittableJsonReaderObject index) == false)
+                            throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
+
+                        var definition = JsonDeserializationServer.IndexDefinition(index);
+                        if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
+                            throw new InvalidOperationException($"Index {_result.IndexName} should be a map reduce index but was of type: {definition.Type}");
+
+                        var ravenConfiguration = RavenConfiguration.CreateForDatabase(_parent.ServerStore.Configuration, _parent.ShardedContext.DatabaseName);
+
+                        foreach (var setting in rawRecord.Settings)
+                            ravenConfiguration.SetSetting(setting.Key, setting.Value);
+
+                        ravenConfiguration.Initialize();
+
+                        var compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                        var reducingFunc = compiled.Reduce;
+                        var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
+                        blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
+
+                        var results = new List<object>();
+                        IPropertyAccessor propertyAccessor = null;
+                        foreach (var output in reducingFunc(blittableToDynamicWrapper))
+                        {
+                            propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
+                            results.Add(output);
+                        }
+
+                        var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, x =>
+                        {
+                            x[Constants.Documents.Metadata.Key] = _dummyDynamicJsonValue;
+                        });
+
+                        _result.Results = objects.GetOutputsToStore().ToList();
+                    }
+                }
             }
 
             private void ReduceDynamicResults()
@@ -552,6 +610,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                                 break;
                         }
                     }
+
                     _result.Results.Add(_context.ReadObject(result, "reduced-result"));
                 }
             }
