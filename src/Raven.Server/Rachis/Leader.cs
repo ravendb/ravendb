@@ -38,6 +38,7 @@ namespace Raven.Server.Rachis
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<Exception> _errorOccurred = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
@@ -46,7 +47,6 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEvent _voterResponded = new ManualResetEvent(false);
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
-        private readonly ManualResetEvent _errorOccurred = new ManualResetEvent(false);
         private readonly ManualResetEvent _noop = new ManualResetEvent(false);
         private long _lowestIndexInEntireCluster;
 
@@ -58,8 +58,6 @@ namespace Raven.Server.Rachis
 
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-
-        private Exception _appendToRaftLogException;
 
         /// <summary>
         /// DEBUG ONLY
@@ -301,7 +299,7 @@ namespace Raven.Server.Rachis
                     _voterResponded,
                     _promotableUpdated,
                     _shutdownRequested,
-                    _errorOccurred
+                    ((IAsyncResult)_errorOccurred.Task).AsyncWaitHandle
                 };
 
                 _newEntry.Set(); //This is so the noop would register right away
@@ -334,8 +332,7 @@ namespace Raven.Server.Rachis
                             _running.Lower();
                             return;
                         case 4: // an error occurred during EmptyQueue()
-                            Debug.Assert(_appendToRaftLogException != null);
-                            throw _appendToRaftLogException;
+                            throw _errorOccurred.Task.Result;
                     }
 
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -800,8 +797,7 @@ namespace Raven.Server.Rachis
                         tcs.TrySetException(e);
                     }
 
-                    _appendToRaftLogException = e;
-                    _errorOccurred.Set();
+                    _errorOccurred.TrySetResult(e);
                 }
             }
         }
@@ -861,7 +857,6 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-
             using (_disposerLock.StartDisposing())
             {
                 bool lockTaken = false;
@@ -886,6 +881,7 @@ namespace Raven.Server.Rachis
                     TaskExecutor.Execute(_ =>
                     {
                         _newEntriesArrived.TrySetCanceled();
+                        _errorOccurred.TrySetCanceled();
                         var lastStateChangeReason = _engine.LastStateChangeReason;
                         NotLeadingException te = null;
                         if (string.IsNullOrEmpty(lastStateChangeReason) == false)
