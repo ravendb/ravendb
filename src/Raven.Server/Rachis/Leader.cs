@@ -46,6 +46,7 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEvent _voterResponded = new ManualResetEvent(false);
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
+        private readonly ManualResetEvent _errorOccurred = new ManualResetEvent(false);
         private readonly ManualResetEvent _noop = new ManualResetEvent(false);
         private long _lowestIndexInEntireCluster;
 
@@ -57,6 +58,8 @@ namespace Raven.Server.Rachis
 
         private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
             new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+
+        private Exception _appendToRaftLogException;
 
         /// <summary>
         /// DEBUG ONLY
@@ -297,7 +300,8 @@ namespace Raven.Server.Rachis
                     _newEntry,
                     _voterResponded,
                     _promotableUpdated,
-                    _shutdownRequested
+                    _shutdownRequested,
+                    _errorOccurred
                 };
 
                 _newEntry.Set(); //This is so the noop would register right away
@@ -329,6 +333,9 @@ namespace Raven.Server.Rachis
                             }
                             _running.Lower();
                             return;
+                        case 4: // an error occurred during EmptyQueue()
+                            Debug.Assert(_appendToRaftLogException != null);
+                            throw _appendToRaftLogException;
                     }
 
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -358,16 +365,18 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                const string msg = "Error when running leader behavior";
+
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Error when running leader behavior", e);
+                    _engine.Log.Info(msg, e);
                 }
 
                 if (e is VoronErrorException)
                 {
                     _engine.Notify(AlertRaised.Create(
                         null,
-                        "Error when running leader behavior",
+                        msg,
                         e.Message,
                         AlertType.ClusterTopologyWarning,
                         NotificationSeverity.Error, details: new ExceptionDetails(e)));
@@ -689,7 +698,8 @@ namespace Raven.Server.Rachis
         {
             var list = new List<TaskCompletionSource<Task<(long, object)>>>();
             var tasks = new List<Task<(long, object)>>();
-            var lostLeadershipException = new NotLeadingException("We are no longer the leader, this leader is disposed");
+            const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
+            var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
 
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -783,12 +793,15 @@ namespace Raven.Server.Rachis
                 {
                     if (_running.IsRaised() == false)
                     {
-                        e = new NotLeadingException("We are no longer the leader, this leader is disposed", e);
+                        e = new NotLeadingException(leaderDisposedMessage, e);
                     }
                     foreach (var tcs in list)
                     {
                         tcs.TrySetException(e);
                     }
+
+                    _appendToRaftLogException = e;
+                    _errorOccurred.Set();
                 }
             }
         }
