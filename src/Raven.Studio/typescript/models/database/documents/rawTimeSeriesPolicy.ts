@@ -7,13 +7,15 @@ class rawTimeSeriesPolicy extends timeSeriesPolicy {
         this.name("rawpolicy");
         this.hasAggregation = false;
     }
-    
+
+    static emptyPolicy: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesPolicy = {
+        AggregationTime: null,
+        RetentionTime: null,
+        Name: null
+    }
+
     static empty() {
-        return new rawTimeSeriesPolicy({
-            AggregationTime: null,
-            RetentionTime: null,
-            Name: null
-        });
+        return new rawTimeSeriesPolicy(rawTimeSeriesPolicy.emptyPolicy);
     }
 }
 
