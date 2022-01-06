@@ -686,6 +686,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     AddToStatusDescription(
                                         $"Acknowledging docs processing progress without sending any documents to client. CV: {_subscriptionConnectionsState.LastChangeVectorSent ?? "None"}");
+                                    
+                                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < 53_000)
+                                    {
+                                        await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+                                            SubscriptionId,
+                                            Options.SubscriptionName,
+                                            LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                                            SubscriptionConnectionsState.LastChangeVectorSent); // the last cv we acked
+                                    }
 
                                     UpdateBatchPerformanceStats(0, false);
 
@@ -788,18 +797,33 @@ namespace Raven.Server.Documents.TcpHandlers
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                {
+                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
                     {
                         await _processor.AcknowledgeBatch(CurrentBatchId);
-
-                        Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-                        Stats.AckRate?.Mark();
-                        await WriteJsonAsync(new DynamicJsonValue
-                        {
-                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                        });
-
-                        break;
                     }
+                    else
+                    {
+                        await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+                            SubscriptionId,
+                            Options.SubscriptionName,
+                            LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                            SubscriptionConnectionsState.LastChangeVectorSent);
+
+                        //since we send the next batch by LastChangeVectorSent, in legacy will represent the last acked cv instead
+                        _subscriptionConnectionsState.LastChangeVectorSent =
+                            ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
+                    }
+
+                    Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+                    Stats.AckRate?.Mark();
+                    await WriteJsonAsync(new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
+                    });
+
+                    break;
+                }
                 //precaution, should not reach this case...
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
@@ -1016,19 +1040,12 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
                                 {
                                     CurrentBatchId = await _processor.RecordBatch(lastChangeVectorSentInThisBatch);
+                                    
+                                    _subscriptionConnectionsState.LastChangeVectorSent =
+                                        ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, lastChangeVectorSentInThisBatch);
+                                    _subscriptionConnectionsState.PreviouslyRecordedChangeVector =
+                                        ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
                                 }
-                                else
-                                {
-                                    //backward comp.
-                                    await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
-                                        SubscriptionId,
-                                        Options.SubscriptionName,
-                                        LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                                        SubscriptionConnectionsState.LastChangeVectorSent);
-                                }
-
-                                _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, lastChangeVectorSentInThisBatch);
-                                _subscriptionConnectionsState.PreviouslyRecordedChangeVector = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
                             }
                         }
                     }

@@ -13,7 +13,9 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
@@ -414,6 +416,152 @@ namespace InterversionTests
                     dbName));
 
                 storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+        }
+
+        [Fact]
+        public async Task SingleSubscriptionMixedClusterEnsureAcknowledgeFallsBackToV52Behavior_RavenDB_17764()
+        {
+            var proccess526List = await CreateCluster(new string[] {"5.2.6", "5.2.6"});
+            await UpgradeServerAsync("current", proccess526List[0]);
+
+            using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
+                       new InterversionTestOptions() {ReplicationFactor = 2, CreateDatabase = true}))
+            {
+                var subscriptionId = await store53.Subscriptions.CreateAsync<User>(new SubscriptionCreationOptions<User>()
+                {
+                    MentorNode = "A", Name = Guid.NewGuid().ToString()
+                });
+
+                using (var session = store53.OpenAsyncSession(store53.Database))
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
+                             {
+                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3), MaxDocsPerBatch = 1,
+                             }))
+                {
+                    try
+                    {
+                        await worker.Run(async x =>
+                        {
+                            if (x.Items[0].Id == "users/1")
+                            {
+                                throw new SubscriptionClosedException("stop the subscription worker without acking users/1 and reconnect", false);
+                            }
+                        });
+                    }
+                    catch
+                    {
+                        //suppress the error
+                    }
+                }
+
+                using (var session = store53.OpenAsyncSession(store53.Database))
+                {
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
+                             {
+                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3), MaxDocsPerBatch = 1,
+                             }))
+                {
+                    AsyncManualResetEvent amre = new();
+                    var users1Resent = false;
+                    
+                    worker.Run(async x =>
+                    {
+                        if (x.Items[0].Id == "users/1")
+                        {
+                            //should get users/1 again since it didn't get to ack
+                            users1Resent = true;
+                        }
+
+                        if (x.Items[0].Id == "users/2")
+                        {
+                            amre.Set();
+                        }
+                    });
+
+                    await amre.WaitAsync(TimeSpan.FromSeconds(15));
+                    Assert.True(users1Resent, "users/1 hasn't been resent");
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SingleSubscriptionMixedClusterStartAgainFromSpecificChangeVector()
+        {
+            var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
+            await UpgradeServerAsync("current", proccess526List[0]);
+
+            using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
+                       new InterversionTestOptions() { ReplicationFactor = 2, CreateDatabase = true }))
+            {
+                var subscriptionName = await store53.Subscriptions.CreateAsync<User>(new SubscriptionCreationOptions<User>()
+                {
+                    MentorNode = "A"
+                });
+
+                using (var session = store53.OpenAsyncSession(store53.Database))
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+                }
+
+                await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
+                             {
+                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
+                                 MaxDocsPerBatch = 1,
+                             }))
+                {
+                    var amre = new AsyncManualResetEvent();
+                    amre.Set();
+                    var filesReceived = 0;
+                    var changeVectorOfFirstDoc = "";
+                    var idOf2ndDoc = "";
+                    var idOf3rdDoc = "";
+                    
+                    worker.AfterAcknowledgment += async batch =>
+                    {
+                        if (batch.Items[0].Id == idOf2ndDoc && filesReceived == 2)
+                        {
+                            await store53.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions()
+                            {
+                                ChangeVector = changeVectorOfFirstDoc,
+                                Name = worker.SubscriptionName
+                            });
+                            amre.Set();
+                        }
+                    };
+
+                    worker.Run(async x =>
+                    {
+                        await amre.WaitAsync(_reasonableWaitTime);
+                        
+                        filesReceived++;
+
+                        if (filesReceived == 1)
+                            changeVectorOfFirstDoc = x.Items[0].ChangeVector;
+
+                        if (filesReceived == 2)
+                        {
+                            idOf2ndDoc = x.Items[0].Id;
+                            amre.Reset();
+                        }
+
+                        if(filesReceived >= 3)
+                            idOf3rdDoc = x.Items[0].Id;
+                        
+                    });
+                    await WaitForValueAsync(() => Task.FromResult(idOf2ndDoc == idOf3rdDoc && string.IsNullOrWhiteSpace(idOf3rdDoc) == false), true);
+                }
             }
         }
 
