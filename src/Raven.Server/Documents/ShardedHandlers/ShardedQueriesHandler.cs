@@ -516,49 +516,25 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
                 else if (_result.IsMapReduce)
                 {
-                    using (_context.OpenReadTransaction())
+                    var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName);
+                    var reducingFunc = compiled.Reduce;
+                    var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
+                    blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
+
+                    var results = new List<object>();
+                    IPropertyAccessor propertyAccessor = null;
+                    foreach (var output in reducingFunc(blittableToDynamicWrapper))
                     {
-                        var rawRecord = _parent.ServerStore.Cluster.ReadRawDatabaseRecord(_context, _parent.ShardedContext.DatabaseName);
-                        if (rawRecord == null)
-                            throw new DatabaseDoesNotExistException("Database doesn't exist. It was probably deleted while running the query.");
-
-                        if (rawRecord.Raw.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject indexes) == false)
-                            throw new InvalidOperationException("Failed to get the indexes from the database record");
-
-                        if (indexes.TryGet(_result.IndexName, out BlittableJsonReaderObject index) == false)
-                            throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
-
-                        var definition = JsonDeserializationServer.IndexDefinition(index);
-                        if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
-                            throw new InvalidOperationException($"Index {_result.IndexName} should be a map reduce index but was of type: {definition.Type}");
-
-                        var ravenConfiguration = RavenConfiguration.CreateForDatabase(_parent.ServerStore.Configuration, _parent.ShardedContext.DatabaseName);
-
-                        foreach (var setting in rawRecord.Settings)
-                            ravenConfiguration.SetSetting(setting.Key, setting.Value);
-
-                        ravenConfiguration.Initialize();
-
-                        var compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
-                        var reducingFunc = compiled.Reduce;
-                        var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
-                        blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
-
-                        var results = new List<object>();
-                        IPropertyAccessor propertyAccessor = null;
-                        foreach (var output in reducingFunc(blittableToDynamicWrapper))
-                        {
-                            propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
-                            results.Add(output);
-                        }
-
-                        var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, x =>
-                        {
-                            x[Constants.Documents.Metadata.Key] = _dummyDynamicJsonValue;
-                        });
-
-                        _result.Results = objects.GetOutputsToStore().ToList();
+                        propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
+                        results.Add(output);
                     }
+
+                    var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv =>
+                    {
+                        djv[Constants.Documents.Metadata.Key] = _dummyDynamicJsonValue;
+                    });
+
+                    _result.Results = objects.GetOutputsToStore().ToList();
                 }
             }
 
