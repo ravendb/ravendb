@@ -86,7 +86,13 @@ namespace rvn
         
         private static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath , CancellationToken token)
         {
-            Console.WriteLine("Setting up RavenDB in Let's Encrypt security mode.");
+            var progress = new SetupProgressAndResult
+            {
+                Processed = 0,
+                Total = 4
+            };
+            
+            progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
 
             if (SetupManager.IsValidEmail(setupInfo.Email) == false)
                 throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
@@ -94,32 +100,38 @@ namespace rvn
             var acmeClient = new LetsEncryptClient(LetsEncryptUtils.AcmeClientUrl);
 
             await acmeClient.Init(setupInfo.Email, token);
-            Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+            progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
             var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
-            Console.WriteLine(challengeResult.Challenge != null
+            progress.AddInfo(challengeResult.Challenge != null
                 ? "Successfully received challenge(s) information from Let's Encrypt."
                 : "Using cached Let's Encrypt certificate.");
             
             try
             {
-                await LetsEncryptUtils.UpdateDnsRecordsTask(new LetsEncryptUtils.UpdateDnsRecordParameters {Challenge = challengeResult.Challenge, SetupInfo = setupInfo, Token = CancellationToken.None});
-                Console.WriteLine($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
+                await LetsEncryptUtils.UpdateDnsRecordsTask(new LetsEncryptUtils.UpdateDnsRecordParameters
+                {
+                    Challenge = challengeResult.Challenge,
+                    SetupInfo = setupInfo,
+                    Token = CancellationToken.None
+                });
+                progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
             }
 
-            Console.WriteLine($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
-            Console.WriteLine("Completing Let's Encrypt challenge(s)...");
+            progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
+            progress.AddInfo("Completing Let's Encrypt challenge(s)...");
 
             await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
             {
-                OnValidationSuccessful = () =>
+                OnValidationSuccessful = ()=>
                 {
-                    Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
-                    Console.WriteLine("Starting validation.");
+                    progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
+                    progress.AddInfo("Acquiring certificate.");
+                    
                 },
                 SetupInfo = setupInfo,
                 Client = acmeClient,
@@ -127,8 +139,8 @@ namespace rvn
                 Token = CancellationToken.None
             });
 
-            Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
-            Console.WriteLine("Starting validation.");
+            progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
+            progress.AddInfo("Starting validation.");
 
             try
             {
