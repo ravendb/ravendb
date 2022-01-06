@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             token.ThrowIfCancellationRequested();
 
-            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType);
+            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && Server.ForTestingPurposesOnly().RoutesToSkip.Contains(x.Path) == false);
             
             if (Server.Certificate.Certificate != null)
             {
