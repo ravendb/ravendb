@@ -82,9 +82,10 @@ namespace Corax.Queries
             var searcher = match._searcher;
             var currentMatches = matches;
             int totalResults = 0;
-            int results = 0;
             int maxUnusedMatchesSlots = matches.Length >= 64 ? matches.Length / 8 : 1;
             int storeIdx = 0;
+
+            int results;
             do
             {
                 var freeMemory = currentMatches.Slice(storeIdx);

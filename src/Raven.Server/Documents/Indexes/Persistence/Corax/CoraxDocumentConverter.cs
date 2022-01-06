@@ -17,6 +17,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Constants = Raven.Client.Constants;
 using Encoding = System.Text.Encoding;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax

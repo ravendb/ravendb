@@ -98,6 +98,36 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public void WithBoosting()
+        {
+            for (int i = 0; i < 100_000; ++i)            
+            {
+                longList.Add(new IndexSingleNumericalEntry<long, long> { Id = $"list/{i}", Content1 = i % 2137, });
+            }
+
+            IndexEntries();
+            longList.Sort(CompareDescending);
+            using var searcher = new IndexSearcher(Env);
+            {
+                //var match = searcher.Or(searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), Content1, 2137), 1000),
+                //    searcher.LessThan(searcher.AllEntries(), Content1, 99L));
+                var match = searcher.Boost(searcher.GreaterThanOrEqual(searcher.AllEntries(), Content1, 2137), 1000);
+                var sorted = SortingMultiMatch.Create(searcher, match, default(BoostingComparer),
+                    new AscendingMatchComparer(searcher, IndexId, MatchCompareFieldType.Sequence));
+                var read = sorted.Fill(_buffer);
+
+                var localResult = longList.Where(x => x.Content1 >= 2137).OrderBy(o => o.Content1).ThenBy(o => o.Id).Select(ll => ll.Id).ToList();
+                Assert.Equal(localResult.Count, read);
+
+                var realIds = new List<string>();
+                for (var i = 0; i < localResult.Count; ++i)
+                    realIds.Add(searcher.GetIdentityFor(_buffer[i]));
+
+                Assert.True(localResult.SequenceEqual(realIds));
+            }
+        }
+
         private static int CompareAscending(IndexSingleNumericalEntry<long, long> value1, IndexSingleNumericalEntry<long, long> value2)
         {
             return value1.Content1.CompareTo(value2.Content1);

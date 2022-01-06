@@ -34,9 +34,12 @@ namespace Corax.Queries
         private readonly TComparer9 _comparer9;
         private readonly int _totalComparers;
         private readonly int _take;
-        private readonly bool _hasBoostingComparer;
 
-        private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[] _compareFuncs;        
+        public bool HasBoostingComparer => typeof(TComparer1) == typeof(BoostingComparer) || typeof(TComparer2) == typeof(BoostingComparer) || typeof(TComparer3) == typeof(BoostingComparer) ||
+                                           typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
+                                           typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer);
+
+        private readonly delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, float, float, int>[] _compareFuncs;        
 
         public long TotalResults;
 
@@ -44,7 +47,7 @@ namespace Corax.Queries
 
         public QueryCountConfidence Confidence => _inner.Confidence;
 
-        public bool IsBoosting => _inner.IsBoosting || _hasBoostingComparer;
+        public bool IsBoosting => _inner.IsBoosting || HasBoostingComparer;
 
         internal SortingMultiMatch(
             IndexSearcher searcher, in TInner inner,
@@ -73,11 +76,7 @@ namespace Corax.Queries
             Unsafe.SkipInit(out _comparer8);
             Unsafe.SkipInit(out _comparer9);
 
-            _hasBoostingComparer = typeof(TComparer1) == typeof(BoostingComparer) || typeof(TComparer2) == typeof(BoostingComparer) || typeof(TComparer3) == typeof(BoostingComparer) ||
-                                   typeof(TComparer4) == typeof(BoostingComparer) || typeof(TComparer5) == typeof(BoostingComparer) || typeof(TComparer6) == typeof(BoostingComparer) ||
-                                   typeof(TComparer7) == typeof(BoostingComparer) || typeof(TComparer8) == typeof(BoostingComparer) || typeof(TComparer9) == typeof(BoostingComparer) ;
-
-            _compareFuncs = new delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, int>[9];
+            _compareFuncs = new delegate*<ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9>, int, UnmanagedSpan, UnmanagedSpan, float, float, int>[9];
 
             TotalResults = 0;
 
@@ -137,13 +136,14 @@ namespace Corax.Queries
             TComparer1, TComparer2, TComparer3, 
             TComparer4, TComparer5, TComparer6, 
             TComparer7, TComparer8, TComparer9>, 
-            int, UnmanagedSpan, UnmanagedSpan, int> GetFunctionCall<TComparer>(MatchCompareFieldType fieldType) where TComparer : IMatchComparer
+            int, UnmanagedSpan, UnmanagedSpan, float, float, int> GetFunctionCall<TComparer>(MatchCompareFieldType fieldType) where TComparer : IMatchComparer
         {
             return fieldType switch
             {
                 MatchCompareFieldType.Sequence => &CompareSequence<TComparer>,
                 MatchCompareFieldType.Integer => &CompareNumerical<TComparer, long>,
                 MatchCompareFieldType.Floating => &CompareNumerical<TComparer, double>,
+                MatchCompareFieldType.Score => &CompareNumerical<TComparer, float>,
                 _ => throw new NotImplementedException(),
             };
         }
@@ -162,6 +162,7 @@ namespace Corax.Queries
                 MatchCompareFieldType.Sequence => Fill<SequenceItem>(matches),
                 MatchCompareFieldType.Integer => Fill<NumericalItem<long>>(matches),
                 MatchCompareFieldType.Floating => Fill<NumericalItem<double>>(matches),
+                MatchCompareFieldType.Score => Fill<NumericalItem<float>>(matches),
                 _ => throw new ArgumentOutOfRangeException(_comparer1.FieldType.ToString())
             };
         }
@@ -203,6 +204,7 @@ namespace Corax.Queries
                 public long Key;
                 public W Value;
                 public UnmanagedSpan Entry;
+                public float Score;
             }
 
             public MultiMatchComparer(SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> multiMatch)
@@ -213,23 +215,31 @@ namespace Corax.Queries
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(Item ix, Item iy)
             {
-                if (ix.Key > 0 && iy.Key > 0)
+                if (typeof(T) == typeof(BoostingComparer))
                 {
-                    int result = Compare<TComparer1, W>(_multiMatch._comparer1, ix, iy);
-                    if (result == 0)
+                    float score = iy.Score - ix.Score;
+                    return Math.Abs(score) < Constants.Boosting.ScoreEpsilon ? 0 : Math.Sign(score);
+                }
+                else
+                {
+                    if (ix.Key > 0 && iy.Key > 0)
                     {
-                        // We will only call this when there is no other choice. 
-                        result = _multiMatch._compareFuncs[0](ref _multiMatch, 0,ix.Entry, iy.Entry);
+                        int result = Compare<TComparer1, W>(_multiMatch._comparer1, ix, iy);
+                        if (result == 0)
+                        {
+                            // We will only call this when there is no other choice. 
+                            result = _multiMatch._compareFuncs[0](ref _multiMatch, 0, ix.Entry, iy.Entry, ix.Score, iy.Score);
+                        }
+
+                        return result;
+                    }
+                    else if (ix.Key > 0)
+                    {
+                        return 1;
                     }
 
-                    return result;
+                    return -1;
                 }
-                else if (ix.Key > 0)
-                {
-                    return 1;
-                }
-
-                return -1;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -237,7 +247,12 @@ namespace Corax.Queries
                 where TComparer : IMatchComparer
                 where TW : struct
             {
-                if (typeof(TW) == typeof(SequenceItem))
+                if (typeof(TComparer) == typeof(BoostingComparer))
+                {
+                    float score = iy.Score - ix.Score;
+                    return Math.Abs(score) < Constants.Boosting.ScoreEpsilon ? 0 : Math.Sign(score);
+                }
+                else if (typeof(TW) == typeof(SequenceItem))
                 {
                     return comparer.CompareSequence(
                         new ReadOnlySpan<byte>(((SequenceItem)(object)ix.Value).Ptr, ((SequenceItem)(object)ix.Value).Size),
@@ -272,9 +287,10 @@ namespace Corax.Queries
             int take = _take <= 0 ? matches.Length : Math.Min(matches.Length, _take);
             TotalResults += totalMatches;
 
+            int floatArraySize = 2 * sizeof(float) * matches.Length;
             int matchesArraySize = sizeof(long) * matches.Length;
             int itemArraySize = 2 * Unsafe.SizeOf<MultiMatchComparer<TComparer1, W>.Item>() * matches.Length;
-            var bufferHolder = QueryContext.MatchesPool.Rent(itemArraySize + matchesArraySize);
+            var bufferHolder = QueryContext.MatchesPool.Rent(itemArraySize + matchesArraySize + floatArraySize);
 
             var matchesKeysSpan = MemoryMarshal.Cast<byte, MultiMatchComparer<TComparer1, W>.Item>(bufferHolder.AsSpan().Slice(0, itemArraySize));
             Debug.Assert(matchesKeysSpan.Length == 2 * matches.Length);
@@ -283,23 +299,38 @@ namespace Corax.Queries
             var matchesKeys = matchesKeysSpan[0..matches.Length];
             var bKeys = matchesKeysSpan[^matches.Length..];
 
+            Span<float> allScoresValues = MemoryMarshal.Cast<byte, float>(bufferHolder.AsSpan().Slice(itemArraySize, floatArraySize));
+            var matchesScores = allScoresValues[..matches.Length];
+            var bScores = allScoresValues[^matches.Length..];
+
+            if (HasBoostingComparer)
+            {
+                // Initializing the scores and retrieve them.
+                matchesScores.Fill(1);
+                _inner.Score(matches[0..totalMatches], matchesScores[0..totalMatches]);
+            }
 
             var searcher = _searcher;
-            var fieldId = _comparer1.FieldId;
+            var fieldId = typeof(TComparer1) != typeof(BoostingComparer) ? _comparer1.FieldId : 0;
             var comparer = new MultiMatchComparer<TComparer1, W>(this);            
             for (int i = 0; i < totalMatches; i++)
             {
                 UnmanagedSpan matchIndexEntry = searcher.GetIndexEntryPointer(matches[i]);
-                var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value);
+                var read = typeof(TComparer1) != typeof(BoostingComparer) ? 
+                                Get(new IndexEntryReader(matchIndexEntry), fieldId, matches[i], out matchesKeys[i].Value) : 
+                                true;
                 matchesKeys[i].Key = read ? matches[i] : -matches[i];
                 matchesKeys[i].Entry = matchIndexEntry;
+
+                if (HasBoostingComparer)
+                    matchesKeys[i].Score = matchesScores[i];
             }
 
             // We sort the first batch. That will also mean that we will sort the indexes too. 
             var sorter = new Sorter<MultiMatchComparer<TComparer1, W>.Item, long, MultiMatchComparer<TComparer1, W>>(comparer);
             sorter.Sort(matchesKeys[0..totalMatches], matches);
 
-            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(itemArraySize, matchesArraySize));
+            Span<long> bValues = MemoryMarshal.Cast<byte, long>(bufferHolder.AsSpan().Slice(floatArraySize + itemArraySize, matchesArraySize));
             Debug.Assert(bValues.Length == matches.Length);
 
             while (true)
@@ -315,6 +346,13 @@ namespace Corax.Queries
                     return totalMatches;
                 }
 
+                if (HasBoostingComparer)
+                {
+                    // Initialize the scores and retrieve scores from the new batch. 
+                    bScores.Fill(1);
+                    _inner.Score(bValues[0..bTotalMatches], bScores[0..bTotalMatches]);
+                }
+
                 // We get the keys to sort.
                 for (int i = 0; i < bTotalMatches; i++)
                 {
@@ -322,6 +360,9 @@ namespace Corax.Queries
                     var read = Get(new IndexEntryReader(matchIndexEntry), fieldId, bValues[i], out bKeys[i].Value);
                     bKeys[i].Key = read ? bValues[i] : -bValues[i];
                     bKeys[i].Entry = matchIndexEntry;
+                    
+                    if (HasBoostingComparer)
+                        bKeys[i].Score = bScores[i];
                 }
 
                 int bIdx = 0;
@@ -377,7 +418,9 @@ namespace Corax.Queries
                     if (result == 0)
                     {
                         // We will only call this when there is no other choice. 
-                        result = _compareFuncs[0](ref this, 0, matchesKeys[aIdx].Entry, bKeys[bIdx].Entry);                        
+                        ref var aItem = ref matchesKeys[aIdx];
+                        ref var bItem = ref matchesKeys[bIdx];
+                        result = _compareFuncs[0](ref this, 0, aItem.Entry, bItem.Entry, aItem.Score, bItem.Score);
                     }
 
                     if (result < 0)
@@ -439,7 +482,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static int CompareSequence<TComparer>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
+        private static int CompareSequence<TComparer>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2, float scoreItem1, float scoreItem2)
             where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
@@ -454,7 +497,7 @@ namespace Corax.Queries
                 int nextComparer = comparerIdx + 1;
                 if (result == 0 && nextComparer < current._totalComparers)
                 {
-                    return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                    return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2, scoreItem1, scoreItem2);
                 }
                 return result;
             }
@@ -465,7 +508,7 @@ namespace Corax.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static int CompareNumerical<TComparer, T>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2)
+        private static int CompareNumerical<TComparer, T>(ref SortingMultiMatch<TInner, TComparer1, TComparer2, TComparer3, TComparer4, TComparer5, TComparer6, TComparer7, TComparer8, TComparer9> current, int comparerIdx, UnmanagedSpan item1, UnmanagedSpan item2, float scoreItem1, float scoreItem2)
             where TComparer : IMatchComparer
         {
             var comparer = (TComparer)GetComparer(ref current, comparerIdx);
@@ -474,17 +517,17 @@ namespace Corax.Queries
 
             bool read1, read2;
 
-            if (typeof(T) == typeof(long) )
+            if (typeof(T) == typeof(long))
             {
                 read1 = comp1Reader.Read<long>(comparer.FieldId, out var si1);
                 read2 = comp2Reader.Read<long>(comparer.FieldId, out var si2);
                 if (read1 && read2)
                 {
-                    var result = comparer.CompareNumerical<long>(si1, si2);
+                    var result = comparer.CompareNumerical(si1, si2);
                     int nextComparer = comparerIdx + 1;
                     if (result == 0 && nextComparer < current._totalComparers)
                     {
-                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2, scoreItem1, scoreItem2);
                     }
                     return result;
                 }
@@ -499,7 +542,7 @@ namespace Corax.Queries
                     int nextComparer = comparerIdx + 1;
                     if (result == 0 && nextComparer < current._totalComparers)
                     {
-                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2);
+                        return current._compareFuncs[nextComparer](ref current, nextComparer, item1, item2, scoreItem1, scoreItem2);
                     }
                     return result;
                 }
