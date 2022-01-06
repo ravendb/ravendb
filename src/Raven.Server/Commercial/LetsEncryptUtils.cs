@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -19,14 +18,11 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Json;
@@ -55,7 +51,7 @@ namespace Raven.Server.Commercial
             await acmeClient.Init(setupInfo.Email, token);
             Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
             Console.WriteLine(challengeResult.Challenge != null
                 ? "Successfully received challenge(s) information from Let's Encrypt."
                 : "Using cached Let's Encrypt certificate.");
@@ -103,7 +99,6 @@ namespace Raven.Server.Commercial
 
                 });
                 
-                
                 return zipFile;
             }
             catch (Exception e)
@@ -129,7 +124,7 @@ namespace Raven.Server.Commercial
 
                 if (item.Certificate.Thumbprint == certificate.Thumbprint)
                 {
-                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.PrivateKey).Private);
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
                     store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
                     continue;
                 }
@@ -184,7 +179,6 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
             }
         }
-
 
         public class UpdateDnsRecordParameters
         {
@@ -474,20 +468,6 @@ namespace Raven.Server.Commercial
             return (certBytes, newCertDef);
         }
 
-        public static async Task PutValuesAfterGenerateCertificateTask(ServerStore serverStore, string thumbprint, CertificateDefinition certificateDefinition)
-        {
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(thumbprint, certificateDefinition, RaftIdGenerator.DontCareId));
-            await serverStore.Cluster.WaitForIndexNotification(res.Index);
-        }
-
-        public static async Task OnPutServerWideStudioConfigurationValues(ServerStore serverStore, StudioConfiguration.StudioEnvironment studioEnvironment)
-        {
-            var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
-                new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
-
-            await serverStore.Cluster.WaitForIndexNotification(res.Index);
-        }
-
         public static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(CompleteClusterConfigurationParameters parameters)
         {
             try
@@ -686,12 +666,12 @@ namespace Raven.Server.Commercial
                             {
                                 if (parameters.Token != CancellationToken.None)
                                 {
-                                    await certFile.WriteAsync(serverCertBytes, 0, serverCertBytes.Length, parameters.Token);
+                                    await certFile.WriteAsync(serverCertBytes, parameters.Token);
                                     await certFile.FlushAsync(parameters.Token);
                                 }
                                 else
                                 {
-                                    await certFile.WriteAsync(serverCertBytes, 0, serverCertBytes.Length, CancellationToken.None);
+                                    await certFile.WriteAsync(serverCertBytes, CancellationToken.None);
                                     await certFile.FlushAsync(CancellationToken.None);
                                 }
                             } // we'll be flushing the directory when we'll write the settings.json
@@ -880,12 +860,10 @@ namespace Raven.Server.Commercial
             foreach (var alias in a.Aliases)
             {
                 var aliasKey = a.GetKey(alias.ToString());
-                if (aliasKey != null)
-                {
-                    entry = a.GetCertificate(alias.ToString());
-                    key = aliasKey;
-                    break;
-                }
+                if (aliasKey == null) continue;
+                entry = a.GetCertificate(alias.ToString());
+                key = aliasKey;
+                break;
             }
 
             if (entry == null)
@@ -939,8 +917,7 @@ namespace Raven.Server.Commercial
             var node = setupInfo.NodeSetupInfos[nodeTag];
 
             var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
-            Debug.Assert(cn != null, nameof(cn) + " != null");
-            if (cn[0] == '*')
+            if (cn != null && cn[0] == '*')
             {
                 var parts = cn.Split("*.");
                 if (parts.Length != 2)

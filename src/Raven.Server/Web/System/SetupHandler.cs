@@ -470,7 +470,7 @@ namespace Raven.Server.Web.System
                     writer.WriteStartArray();
 
                     var first = true;
-                    foreach (var value in SetupManager.GetCertificateAlternativeNames(certificate))
+                    foreach (var value in LetsEncryptUtils.GetCertificateAlternativeNames(certificate))
                     {
                         if (first == false)
                             writer.WriteComma();
