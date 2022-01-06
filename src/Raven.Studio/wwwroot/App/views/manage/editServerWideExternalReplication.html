@@ -135,6 +135,15 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="form-group margin-top margin-top-lg">
+                            <label for="connStrInfo" class="control-label">Connection String</label>
+                            <div id="connStrInfo" class="flex-grow">
+                                <div class="text-info bg-info padding padding-xs">
+                                    A connection string will be automatically created per database.<br>
+                                    The source database name will be used as the destination database.
+                                </div>
+                            </div>
+                        </div>
                         <div data-bind="with: connectionString">
                             <div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName">
                                 <label class="control-label">Discovery URLs</label>
