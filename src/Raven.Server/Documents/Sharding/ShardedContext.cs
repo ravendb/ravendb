@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -23,6 +28,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly ServerStore _server;
         public QueryMetadataCache QueryMetadataCache = new QueryMetadataCache();
 
+        private readonly ServerStore _serverStore;
         private DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
@@ -34,24 +40,29 @@ namespace Raven.Server.Documents.Sharding
         public int[] FullRange;
 
         public ShardedContext(ServerStore server, RawDatabaseRecord record)
+        private ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+
+        public ShardedContext(ServerStore serverStore, DatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
 
-            _server = server;
+            //TODO: update the record when it's updated
+
+            _serverStore = serverStore;
             _record = record;
-            _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
+            _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
             for (int i = 0; i < record.Shards.Length; i++)
             {
-                var allNodes = server.GetClusterTopology().AllNodes;
+                var allNodes = serverStore.GetClusterTopology().AllNodes;
                 var urls = record.Shards[i].AllNodes.Select(tag => allNodes[tag]).ToArray();
                 // TODO: pool request executors?
                 RequestExecutors[i] = RequestExecutor.Create(
                     urls,
                     record.DatabaseName + "$" + i,
-                    server.Server.Certificate.Certificate,
+                    serverStore.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
 
@@ -160,5 +171,28 @@ namespace Raven.Server.Documents.Sharding
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
         }
-    }
+
+        public AbstractStaticIndexBase GetCompiledIndex(string indexName)
+        {
+            if (_cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled))
+                return compiled;
+
+            //TODO: check if case sensitive
+            if (_record.Indexes.TryGetValue(indexName, out var definition) == false)
+                throw new IndexDoesNotExistException($"Index {indexName} doesn't exist");
+
+            if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
+                throw new InvalidOperationException($"Index {indexName} should be a map reduce index but was of type: {definition.Type}");
+
+            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration,DatabaseName);
+
+            foreach ((string key, string value) in _record.Settings)
+                ravenConfiguration.SetSetting(key, value);
+
+            ravenConfiguration.Initialize();
+
+            compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+            _cachedMapReduceIndexDefinitions[indexName] = compiled;
+            return compiled;
+        }
 }
