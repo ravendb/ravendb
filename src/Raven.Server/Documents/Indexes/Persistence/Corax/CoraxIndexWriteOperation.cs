@@ -11,6 +11,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
 using Voron.Impl;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {

@@ -16,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.Indexes;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {

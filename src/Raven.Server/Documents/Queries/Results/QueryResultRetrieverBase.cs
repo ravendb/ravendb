@@ -27,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Results
 {
