@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Linq;
@@ -16,6 +16,8 @@ namespace SlowTests.Authentication
 {
     public class AuthenticationDebugPackageTests : RavenTestBase
     {
+        private readonly string[] _routesToSkip = new string[] { "/admin/debug/threads/stack-trace" };
+
         public AuthenticationDebugPackageTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -23,12 +25,14 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanGetDatabaseRecordInDebugPackageFromUnsecuredServerWithoutClientCert()
         {
+            DoNotReuseServer();
             var databaseName = GetDatabaseName();
             using (var store = GetDocumentStore(new Options()
                    {
                        ModifyDatabaseName = s => databaseName
                    }))
             {
+                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(store.Database);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -36,7 +40,7 @@ namespace SlowTests.Authentication
                 var allDatabaseEntries = DebugInfoPackageUtils.Routes.Where(route => route.TypeOfRoute == RouteInformation.RouteType.Databases)
                     .Select(route => DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, store.Database)).ToList();
                 allDatabaseEntries.Add($"{store.Database}/database-record.json");
-                var allServerEntries = DebugInfoPackageUtils.Routes.Where(route => route.TypeOfRoute == RouteInformation.RouteType.None)
+                var allServerEntries = DebugInfoPackageUtils.Routes.Where(route => route.TypeOfRoute == RouteInformation.RouteType.None && _routesToSkip.Contains(route.Path) == false)
                     .Select(route => DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, ServerWideDebugInfoPackageHandler._serverWidePrefix)).ToArray();
                 var allExistingRouteEntries = allDatabaseEntries.Concat(allServerEntries).ToHashSet();
 
@@ -47,6 +51,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task GetOnlyOperatorAccessDebugPackageInfoFromSecuredServer()
         {
+            DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = SetupServerAuthentication();
             var adminCert = RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
@@ -57,6 +62,7 @@ namespace SlowTests.Authentication
 
             using (var store = GetDocumentStore(new Options() {ClientCertificate = userCert, AdminCertificate = adminCert, ModifyDatabaseName = _ => databaseName}))
             {
+                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -66,7 +72,7 @@ namespace SlowTests.Authentication
                     .Select(route => DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, store.Database)).ToHashSet();
                 databaseEntries.Add($"{store.Database}/database-record.json");
                 var serverEntries = DebugInfoPackageUtils.Routes
-                    .Where(route => route.TypeOfRoute == RouteInformation.RouteType.None && OperatorAccess(route))
+                    .Where(route => route.TypeOfRoute == RouteInformation.RouteType.None && OperatorAccess(route) && _routesToSkip.Contains(route.Path) == false)
                     .Select(route => DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, ServerWideDebugInfoPackageHandler._serverWidePrefix)).ToArray();
                 var routeEntries = databaseEntries.Concat(serverEntries).ToHashSet();
 
@@ -77,6 +83,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task GetNonAdminDebugInfoFromDatabaseDebugPackageHandler()
         {
+            DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = SetupServerAuthentication();
             var adminCert = RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
@@ -92,6 +99,7 @@ namespace SlowTests.Authentication
                        ModifyDatabaseName = _ => databaseName
                    }))
             {
+                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -107,6 +115,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task GetAllDebugInfoFromDatabaseDebugPackageHandlerWhenAdminDBAccess()
         {
+            DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = SetupServerAuthentication();
             var adminCert = RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
@@ -121,6 +130,7 @@ namespace SlowTests.Authentication
                        ModifyDatabaseName = _ => databaseName
                    }))
             {
+                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
                 using var archive = new ZipArchive(response);
