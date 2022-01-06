@@ -37,76 +37,8 @@ namespace Raven.Server.Commercial
 {
     public static class LetsEncryptUtils
     {
-        private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
-
-        public static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath , CancellationToken token)
-        {
-            Console.WriteLine("Setting up RavenDB in Let's Encrypt security mode.");
-
-            if (SetupManager.IsValidEmail(setupInfo.Email) == false)
-                throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
-
-            var acmeClient = new LetsEncryptClient(AcmeClientUrl);
-
-            await acmeClient.Init(setupInfo.Email, token);
-            Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
-
-            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
-            Console.WriteLine(challengeResult.Challenge != null
-                ? "Successfully received challenge(s) information from Let's Encrypt."
-                : "Using cached Let's Encrypt certificate.");
-            
-            try
-            {
-                await UpdateDnsRecordsTask(new UpdateDnsRecordParameters {Challenge = challengeResult.Challenge, SetupInfo = setupInfo, Token = CancellationToken.None});
-                Console.WriteLine($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
-            }
-
-            Console.WriteLine($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
-            Console.WriteLine("Completing Let's Encrypt challenge(s)...");
-
-            await CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
-            {
-                OnValidationSuccessful = () =>
-                {
-                    Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
-                    Console.WriteLine("Starting validation.");
-                },
-                SetupInfo = setupInfo,
-                Client = acmeClient,
-                ChallengeResult = challengeResult,
-                Token = CancellationToken.None
-            });
-
-            Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
-            Console.WriteLine("Starting validation.");
-
-            try
-            {
-                var zipFile = await CompleteClusterConfigurationAndGetSettingsZip(new CompleteClusterConfigurationParameters
-                {
-                    Progress = null,
-                    OnProgress = null,
-                    SetupInfo = setupInfo,
-                    SetupMode = SetupMode.None,
-                    SettingsPath = settingsPath,
-                    LicenseType = LicenseType.None,
-                    Token = CancellationToken.None,
-
-                });
-                
-                return zipFile;
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to create the configuration settings.", e);
-            }
-        }
-
+        public const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
+        
         private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
         {
             var certWithKey = certificate.CopyWithPrivateKey(privateKey);

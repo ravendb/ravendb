@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Raven.Server.Commercial;
 using Sparrow.Platform;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
-using Raven.Server.Commercial;
+
 namespace rvn
 {
     internal static class CommandLineApp
@@ -67,12 +70,12 @@ namespace rvn
                     if (File.Exists(setupParameters?.Value()) == false)
                         return ExitWithError("Path to setup params has not found", cmd);
 
-                    using (StreamReader file = File.OpenText(setupParameters?.Value() ?? string.Empty))
+                    using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
                     {
                         JsonSerializer serializer = new();
                         var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                        var settingsPath = setupParameters?.Values[0];
-                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
+                        var settingsPath = setupParameters.Values[0];
+                        var setupLetsEncryptTask = await SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
                         var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
                         await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
                     }
@@ -81,6 +84,73 @@ namespace rvn
             });
         }
         
+        private static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath , CancellationToken token)
+        {
+            Console.WriteLine("Setting up RavenDB in Let's Encrypt security mode.");
+
+            if (SetupManager.IsValidEmail(setupInfo.Email) == false)
+                throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
+
+            var acmeClient = new LetsEncryptClient(LetsEncryptUtils.AcmeClientUrl);
+
+            await acmeClient.Init(setupInfo.Email, token);
+            Console.WriteLine($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            Console.WriteLine(challengeResult.Challenge != null
+                ? "Successfully received challenge(s) information from Let's Encrypt."
+                : "Using cached Let's Encrypt certificate.");
+            
+            try
+            {
+                await LetsEncryptUtils.UpdateDnsRecordsTask(new LetsEncryptUtils.UpdateDnsRecordParameters {Challenge = challengeResult.Challenge, SetupInfo = setupInfo, Token = CancellationToken.None});
+                Console.WriteLine($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
+            }
+
+            Console.WriteLine($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
+            Console.WriteLine("Completing Let's Encrypt challenge(s)...");
+
+            await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
+            {
+                OnValidationSuccessful = () =>
+                {
+                    Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
+                    Console.WriteLine("Starting validation.");
+                },
+                SetupInfo = setupInfo,
+                Client = acmeClient,
+                ChallengeResult = challengeResult,
+                Token = CancellationToken.None
+            });
+
+            Console.WriteLine("Successfully acquired certificate from Let's Encrypt.");
+            Console.WriteLine("Starting validation.");
+
+            try
+            {
+                var zipFile = await LetsEncryptUtils.CompleteClusterConfigurationAndGetSettingsZip(new LetsEncryptUtils.CompleteClusterConfigurationParameters
+                {
+                    Progress = null,
+                    OnProgress = null,
+                    SetupInfo = setupInfo,
+                    SetupMode = SetupMode.None,
+                    SettingsPath = settingsPath,
+                    LicenseType = LicenseType.None,
+                    Token = CancellationToken.None,
+
+                });
+                
+                return zipFile;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to create the configuration settings.", e);
+            }
+        }
         private static void ConfigureLogsCommand()
         {
             _app.Command("logstream", cmd =>
