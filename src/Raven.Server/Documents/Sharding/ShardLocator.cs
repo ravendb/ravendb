@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Sharding
         public static Dictionary<int, List<string>> GroupIdsByShardIndex(IEnumerable<string> ids,
             ShardedContext shardedContext, TransactionOperationContext context)
         {
-            var result  = new Dictionary<int, List<string>>();
+            var result = new Dictionary<int, List<string>>();
 
             foreach (var id in ids)
             {

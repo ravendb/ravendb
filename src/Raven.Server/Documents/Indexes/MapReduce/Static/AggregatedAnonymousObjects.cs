@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Sparrow.Json;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json.Parsing;
@@ -12,13 +13,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly List<BlittableJsonReaderObject> _jsons;
         private readonly IPropertyAccessor _propertyAccessor;
         private readonly JsonOperationContext _indexContext;
+        private readonly Action<DynamicJsonValue> _modifyOutputToStore;
 
-        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
+        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext, Action<DynamicJsonValue> modifyOutputToStore = null)
         {
             _outputs = results;
             _propertyAccessor = propertyAccessor;
             _jsons = new List<BlittableJsonReaderObject>(results.Count);
             _indexContext = indexContext;
+            _modifyOutputToStore = modifyOutputToStore;
         }
 
         public override int Count => _outputs.Count;
@@ -39,6 +42,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     var value = property.Value;
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
                 }
+
+                _modifyOutputToStore?.Invoke(djv);
 
                 var item = _indexContext.ReadObject(djv, "map/reduce result to store");
                 _jsons.Add(item);
