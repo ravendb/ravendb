@@ -46,13 +46,11 @@ namespace FastTests.Corax
             Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-            var knownFields = new Dictionary<Slice, int>()
-            {
-                [aSlice] = 0,
-                [bSlice] = 1,
-                [cSlice] = 2,
-                [dSlice] = 3
-            };
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
 
             var writer = new IndexEntryWriter(buffer, knownFields);
             writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
@@ -108,13 +106,12 @@ namespace FastTests.Corax
             Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-            var knownFields = new Dictionary<Slice, int>()
-            {
-                [aSlice] = 0,
-                [bSlice] = 1,
-                [cSlice] = 2,
-                [dSlice] = 3
-            };
+
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
 
             string[] values =
             {

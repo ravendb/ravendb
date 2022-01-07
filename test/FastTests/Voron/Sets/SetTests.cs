@@ -281,7 +281,6 @@ namespace FastTests.Voron.Sets
             using (var wtx = Env.WriteTransaction())
             {
                 var tree = wtx.OpenSet("test");
-                int count = 0;
                 foreach (long i in _data)
                 {
                     tree.Remove(i);

@@ -64,7 +64,7 @@ namespace Corax
 
         private static int LocationMask = 0x7FFF_FFFF;
 
-        private readonly Dictionary<Slice, int> _knownFields;
+        private readonly IndexFieldsMapping _knownFields;
 
         // The usable part of the buffer, the metadata space will be removed from the usable space.
         private readonly Span<byte> _buffer;        
@@ -82,12 +82,18 @@ namespace Corax
         // so we wont even try to make the process more complex just to deal with them efficienly.
         private int _dynamicFieldIndex; 
 
-        private static readonly Dictionary<Slice, int> Empty = new();
-
-        public IndexEntryWriter(Span<byte> buffer, Dictionary<Slice, int> knownFields = null)
+        public IndexEntryWriter(Span<byte> buffer, IndexFieldsMapping knownFields = null)
         {
             // TODO: For now we will assume that the max size of an index entry is 32Kb, revisit this...
-            _knownFields = knownFields ?? Empty;
+            if (knownFields == null)
+            {
+                _knownFields = IndexFieldsMapping.Instance;
+                Debug.Assert(_knownFields.Count == 0);
+            }
+            else
+            {
+                _knownFields = knownFields;
+            }                
 
             int knownFieldMetadataSize = _knownFields.Count * sizeof(uint);
             int knownFieldsCount = _knownFields.Count;
@@ -278,9 +284,9 @@ namespace Corax
 
         public void Write(Slice name, ReadOnlySpan<byte> value)
         {
-            if (_knownFields.TryGetValue(name, out int field))
+            if (_knownFields.TryGetByFieldName(name, out var binding))
             {
-                Write(field, value);
+                Write(binding.FieldId, value);
                 return;
             }
 
@@ -295,9 +301,9 @@ namespace Corax
 
         public void Write(Slice name, ReadOnlySpan<byte> value, long longValue, double doubleValue)
         {
-            if (_knownFields.TryGetValue(name, out int field))
+            if (_knownFields.TryGetByFieldName(name, out var binding))
             {
-                Write(field, value, longValue, doubleValue);
+                Write(binding.FieldId, value, longValue, doubleValue);
                 return;
             }
 

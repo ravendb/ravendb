@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -512,9 +513,22 @@ namespace Voron.Data.Containers
             }
 
             var container = new Container(page);
+            container.ValidatePage();
             ItemMetadata* metadata = (ItemMetadata*)(container._page.Pointer + offset);
             Debug.Assert(metadata->Size != 0);
             return new Item(page, metadata->Offset, metadata->Size);
+        }
+
+        [Conditional("DEBUG")]
+        private void ValidatePage()
+        {
+            if (_page.Flags != (PageFlags.Single | PageFlags.Other))
+                throw new InvalidDataException("Page " + _page.PageNumber + " is not a container page");
+            
+            ref var header = ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
+
+            if (header.ContainerFlags != ExtendedPageType.Container && header.ContainerFlags != ExtendedPageType.ContainerOverflow)
+                throw new InvalidDataException("Page " + _page.PageNumber + " is not a container page");
         }
 
         private Span<byte> Get(int offset)

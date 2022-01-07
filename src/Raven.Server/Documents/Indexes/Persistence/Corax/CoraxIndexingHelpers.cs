@@ -79,8 +79,6 @@ public static class CoraxIndexingHelpers
                                 index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
                         break;
 
-                        break;
-
                     case null:
                     case FieldIndexing.No:
                     case FieldIndexing.Default:
@@ -116,14 +114,14 @@ public static class CoraxIndexingHelpers
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
 
-                    perFieldAnalyzerWrapper.AddAnalyzer(fieldId, keywordAnalyzer);
+                    perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, keywordAnalyzer);
                     break;
 
                 case FieldIndexing.Search:
                     var analyzer = GetCoraxAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, analyzer);
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, analyzer);
                         continue;
                     }
 
@@ -135,7 +133,7 @@ public static class CoraxIndexingHelpers
                     {
                         defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
 
-                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, defaultAnalyzer);
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, defaultAnalyzer);
                     }
 
                     break;
@@ -158,7 +156,7 @@ public static class CoraxIndexingHelpers
         {
             var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
 
-            perFieldAnalyzerWrapper.AddAnalyzer(fieldId, standardAnalyzer);
+            perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, standardAnalyzer);
         }
 
         CoraxAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)

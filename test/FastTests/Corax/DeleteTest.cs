@@ -15,13 +15,13 @@ namespace FastTests.Corax
     {
         private List<IndexSingleNumericalEntry<long>> _longList = new();
         private const int IndexId = 0, ContentId = 1;
-        private readonly Dictionary<Slice, int> _knownFields;
+        private readonly IndexFieldsMapping _analyzers;
         private readonly ByteStringContext _bsc;
 
         public DeleteTest(ITestOutputHelper output) : base(output)
         {
             _bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            _knownFields = CreateKnownFields(_bsc);
+            _analyzers = CreateKnownFields(_bsc);
         }
 
         [Fact]
@@ -32,31 +32,31 @@ namespace FastTests.Corax
 
             Span<long> ids = stackalloc long[1024];
             {
-                using var indexSearcher = new IndexSearcher(Env);
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(_longList.Count, match.Fill(ids));
             }
 
-            using (var indexWriter = new IndexWriter(Env))
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
             {
                 indexWriter.TryDeleteEntry("Id", "list/0");
-                indexWriter.Commit(_knownFields);
+                indexWriter.Commit();
             }
 
             {
-                using var indexSearcher = new IndexSearcher(Env);
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Content", "0");
                 Assert.Equal(_longList.Count - 1, match.Fill(ids));
             }
 
             {
-                using var indexSearcher = new IndexSearcher(Env);
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match = indexSearcher.TermQuery("Id", "list/0");
                 Assert.Equal(0, match.Fill(ids));
             }
 
             {
-                using var indexSearcher = new IndexSearcher(Env);
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
                 var match1 = indexSearcher.AllEntries();
                 Assert.Equal(_longList.Count - 1, match1.Fill(ids));
             }
@@ -82,9 +82,9 @@ namespace FastTests.Corax
                 using var indexWriter = new IndexWriter(Env);
                 foreach (var entry in _longList)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _analyzers);
                     var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data, _knownFields);
+                    indexWriter.Index(entry.Id, data, _analyzers);
                 }
 
                 indexWriter.Commit();
@@ -99,12 +99,14 @@ namespace FastTests.Corax
             return output;
         }
 
-        private Dictionary<Slice, int> CreateKnownFields(ByteStringContext bsc)
+        private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {
-            Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
-            Slice.From(bsc, "Content", ByteStringType.Immutable, out Slice contentSlice);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new Dictionary<Slice, int> { [idSlice] = IndexId, [contentSlice] = ContentId, };
+            return new IndexFieldsMapping(ctx)
+                            .AddBinding(IndexId, idSlice)
+                            .AddBinding(ContentId, contentSlice);
         }
 
         private class IndexSingleNumericalEntry<T>
