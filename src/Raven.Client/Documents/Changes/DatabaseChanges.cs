@@ -372,7 +372,15 @@ namespace Raven.Client.Documents.Changes
                 // nothing we can do here
             }
 
-            ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch
+            {
+               // we are disposing
+            }
+
             ConnectionStatusChanged -= OnConnectionStatusChanged;
 
             _onDispose?.Invoke();
@@ -525,9 +533,9 @@ namespace Raven.Client.Documents.Changes
 
                     await ProcessChanges().ConfigureAwait(false);
                 }
-                catch (OperationCanceledException e)
+                catch (OperationCanceledException) when (_cts.Token.IsCancellationRequested)
                 {
-                    NotifyAboutError(e);
+                    // disposing
                     return;
                 }
                 catch (ChangeProcessingException)
@@ -565,6 +573,7 @@ namespace Raven.Client.Documents.Changes
                     {
                         // we couldn't reconnect
                         NotifyAboutError(e);
+                        _tcs.TrySetException(e);
                         throw;
                     }
                 }

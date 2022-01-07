@@ -440,7 +440,7 @@ namespace SlowTests.Client.Attachments
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));
 
                     var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
+                    var exportResult = (SmugglerResult)await exportOperation.WaitForCompletionAsync();
 
                     Assert.Equal(1, exportResult.Documents.ReadCount);
                     Assert.Equal(4, exportResult.RevisionDocuments.ReadCount);
@@ -467,12 +467,19 @@ namespace SlowTests.Client.Attachments
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
                     {
                         var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                        var importResult = (SmugglerResult)importOperation.WaitForCompletion();
+
+                        Assert.Equal(await WaitForValueAsync(async () =>
+                        {
+                            var backupOperation = await store2.Maintenance.SendAsync(new GetOperationStateOperation(importOperation.Id));
+                            return backupOperation.Status;
+                        },OperationStatus.Completed), OperationStatus.Completed);
+
+                        var importResult = (SmugglerResult)await importOperation.WaitForCompletionAsync();
 
                         Assert.Equal(1, importResult.Documents.ReadCount);
-                        Assert.Equal(4, importResult.RevisionDocuments.ReadCount);
-                        Assert.Equal(4, importResult.Documents.Attachments.ReadCount);
-                        Assert.Equal(4, importResult.RevisionDocuments.Attachments.ReadCount);
+                        Assert.True(4 == importResult.RevisionDocuments.ReadCount, $"{i} : importResult.RevisionDocuments.ReadCount = {importResult.RevisionDocuments.ReadCount}");
+                        Assert.True(4 == importResult.Documents.Attachments.ReadCount, $"{i} : importResult.Documents.Attachments.ReadCount = {importResult.Documents.Attachments.ReadCount}");
+                        Assert.True(4 == importResult.RevisionDocuments.Attachments.ReadCount, $"{i} : importResult.RevisionDocuments.Attachments.ReadCount = {importResult.RevisionDocuments.Attachments.ReadCount}");
 
                         var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                         Assert.Equal(1, stats.CountOfDocuments);

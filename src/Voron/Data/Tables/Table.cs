@@ -711,9 +711,6 @@ namespace Voron.Data.Tables
                 if (_compressionDictionaries.TryGetValue(id, out var current))
                     return current;
 
-                if (_compressionDictionaries.TryGetValue(id, out current))
-                    return current;
-
                 current = CreateCompressionDictionary(tx, id);
 
                 var result = _compressionDictionaries.GetOrAdd(id, current);
@@ -757,6 +754,13 @@ namespace Voron.Data.Tables
                     dic.Dispose();
 
                 }
+            }
+
+            public void Remove(int id)
+            {
+                // Intentionally orphaning the dictionary here, we'll let the 
+                // GC's finalizer to clear it up, this is a *very* rare operation.
+                _compressionDictionaries.TryRemove(id, out _);
             }
         }
 

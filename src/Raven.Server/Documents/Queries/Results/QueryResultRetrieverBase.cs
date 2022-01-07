@@ -440,7 +440,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                if (ReferenceEquals(newData, doc.Data) == false)
+                if (ReferenceEquals(newData, doc.Data) == false
+                    && doc.IgnoreDispose == false) // this is being referenced by the _loadedDocuments still...
                     doc.Data?.Dispose();
             }
             catch (Exception)
@@ -449,7 +450,14 @@ namespace Raven.Server.Documents.Queries.Results
                 throw;
             }
 
+            if (doc.IgnoreDispose)// this is being retained by the _loadedDocuments
+            {
+                doc = doc.CloneWith(context, newData);
+            }
+            else
+            {
             doc.Data = newData;
+            }
 
             if (scoreDoc != null)
                 FinishDocumentSetup(doc, scoreDoc);
@@ -948,7 +956,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
-            using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings))
+            using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings, token))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
                 _includeRevisionsCommand?.AddRange(run.IncludeRevisionsChangeVectors);

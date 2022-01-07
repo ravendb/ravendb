@@ -522,7 +522,7 @@ namespace Raven.Server.Documents.Queries
             if (exact || index == null || valueFirst == null || valueSecond == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
                 return false;
 
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(valueFirst, out ticksFirst) && TryGetTime(valueSecond, out ticksSecond))
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index,valueFirst, out ticksFirst) && TryGetTime(index,valueSecond, out ticksSecond))
                 return true;
 
             return false;
@@ -535,13 +535,13 @@ namespace Raven.Server.Documents.Queries
             if (exact || index == null || value == null || index.Definition.Version < IndexDefinitionBase.IndexVersion.TimeTicks)
                 return false;
 
-            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(value, out ticks))
+            if (index.IndexFieldsPersistence.HasTimeValues(fieldName) && TryGetTime(index, value, out ticks))
                 return true;
 
             return false;
         }
 
-        private unsafe static bool TryGetTime(object value, out long ticks)
+        private unsafe static bool TryGetTime(Index index, object value, out long ticks)
         {
             ticks = -1;
             DateTime dt = default;
@@ -551,16 +551,16 @@ namespace Raven.Server.Documents.Queries
             switch (value)
             {
                 case LazyStringValue lsv:
-                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto);
+                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 case string valueAsString:
                     fixed (char* buffer = valueAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto);
+                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 default:
                     var otherAsString = value.ToString();
                     fixed (char* buffer = otherAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto);
+                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
             }
 

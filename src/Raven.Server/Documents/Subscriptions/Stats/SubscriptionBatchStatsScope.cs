@@ -44,16 +44,18 @@ namespace Raven.Server.Documents.Subscriptions.Stats
             _stats.SizeOfIncludedDocumentsInBytes += includedDocumentsSize;
         }
         
-        public void RecordIncludedCountersInfo(long includedCountersCount)
+        public void RecordIncludedCountersInfo(long includedCountersCount, long includedCountersSize)
         {
             _stats.NumberOfIncludedCounters += includedCountersCount;
+            _stats.SizeOfIncludedCountersInBytes += includedCountersSize;
         }
         
-        public void RecordIncludedTimeSeriesInfo(long includedTimeSeriesEntriesCount)
+        public void RecordIncludedTimeSeriesInfo(long includedTimeSeriesEntriesCount, long includedTimeSeriesSize)
         {
             _stats.NumberOfIncludedTimeSeriesEntries += includedTimeSeriesEntriesCount;
+            _stats.SizeOfIncludedTimeSeriesInBytes += includedTimeSeriesSize;
         }
-        
+
         public void RecordException(string exceptionMsg)
         {
             _stats.Exception = exceptionMsg;
