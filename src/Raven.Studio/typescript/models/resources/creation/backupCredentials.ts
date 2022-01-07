@@ -143,7 +143,14 @@ export class amazonS3Credentials extends restoreSettings {
     }
 
     isValid(): boolean {
-        return !!_.trim(this.accessKey()) && !!_.trim(this.secretKey()) && !!_.trim(this.regionName()) && !!_.trim(this.bucketName()) && (!this.useCustomS3Host() || !!_.trim(this.customServerUrl()));
+        const useCustomHost = this.useCustomS3Host();
+        const isRegionValid = useCustomHost || !!_.trim(this.regionName()) 
+        
+        return !!_.trim(this.accessKey()) &&
+               !!_.trim(this.secretKey()) &&
+               isRegionValid &&
+               !!_.trim(this.bucketName()) &&
+               (!useCustomHost || !!_.trim(this.customServerUrl()));
     }
 
     onCredentialsChange(onChange: () => void) {

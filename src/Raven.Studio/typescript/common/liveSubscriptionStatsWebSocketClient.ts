@@ -195,7 +195,7 @@ class liveSubscriptionStatsWebSocketClient extends abstractWebSocketClient<resul
         withCache.Type = "SubscriptionConnection";
     }
 
-    static fillBatchCache(perf: Raven.Server.Documents.Subscriptions.SubscriptionBatchPerformanceStats) {
+    static fillBatchCache(perf: Raven.Server.Documents.Subscriptions.Stats.SubscriptionBatchPerformanceStats) {
         const withCache = perf as SubscriptionBatchPerformanceStatsWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveSubscriptionStatsWebSocketClient.isoParser.parse(perf.Started);

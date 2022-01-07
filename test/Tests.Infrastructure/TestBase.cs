@@ -40,6 +40,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Tests.Infrastructure.Utils;
+using Voron.Exceptions;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
@@ -98,6 +99,8 @@ namespace FastTests
             RachisStateMachine.EnableDebugLongCommit = true;
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+            ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
+
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;
 

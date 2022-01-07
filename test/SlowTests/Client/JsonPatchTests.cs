@@ -24,6 +24,59 @@ namespace SlowTests.Client
         }
 
         [Fact]
+        public void PatchingWithEscaping()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string documentId = null;
+                IDictionary<string, object> originalCompany = new ExpandoObject();
+
+                originalCompany["~"] = "~";
+                originalCompany["/"] = "/";
+                originalCompany["foo/bar~"] = "foo/bar~";
+
+                var list = new List<ExpandoObject>();
+                IDictionary<string, object> prop1 = new ExpandoObject();
+                prop1["~"] = "Nested~";
+                list.Add((ExpandoObject)prop1);
+                IDictionary<string, object> prop2 = new ExpandoObject();
+                prop2["/"] = "Nested/";
+                list.Add((ExpandoObject)prop2);
+                IDictionary<string, object> prop3 = new ExpandoObject();
+                prop3["foo/bar~"] = "NestedFoo/Bar~";
+                list.Add((ExpandoObject)prop3);
+
+                originalCompany["biscuits"] = list;
+
+                dynamic originalCompany2 = originalCompany;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(originalCompany2);
+                    documentId = originalCompany2.Id;
+                    session.SaveChanges();
+                }
+               
+                var jpd = new JsonPatchDocument();
+                jpd.Add("/~0", "Hibernating Rhinos1");
+                jpd.Replace("/~1", "Hibernating Rhinos2");
+                jpd.Add("/foo~1bar~0", "Hibernating Rhinos3");
+                jpd.Add("/biscuits/0/~0", "Hibernating Rhinos1");
+                jpd.Add("/biscuits/1/~1", "Hibernating Rhinos2");
+                jpd.Replace("/biscuits/1/~1", "Hibernating Rhinos replaced");
+                jpd.Add("/biscuits/2/foo~1bar~0", "Hibernating Rhinos3");
+                JsonPatchResult op = store.Operations.Send(new JsonPatchOperation(documentId, jpd));
+                Assert.Equal(PatchStatus.Patched, op.Status);
+
+                using (var session = store.OpenSession())
+                {
+                    IDictionary<string, object> dbCompany = session.Load<ExpandoObject>(documentId);
+                    jpd.ApplyTo(originalCompany2);
+                    AssertExpandosEqual(originalCompany2, (dynamic)dbCompany);
+                }
+            }
+        }
+
+        [Fact]
         public void PatchingWithAdd()
         {
             using (var store = GetDocumentStore())
@@ -75,6 +128,39 @@ namespace SlowTests.Client
 
                 var error = Assert.ThrowsAny<RavenException>(() => store.Operations.Send(new JsonPatchOperation(documentId + "1", jpd)));
                 Assert.Contains("Cannot apply json patch because the document ExpandoObjects/1-A1 does not exist", error.Message);
+            }
+        }
+
+        [Fact]
+        public void PatchingWithReplaceNestedPathEscaping()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string documentId = null;
+                IDictionary<string, object> originalCompany = new ExpandoObject();
+                originalCompany["/"] = new ExpandoObject();
+                ((IDictionary<string,object>)originalCompany["/"])["Name"] = "Hibernating";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store((dynamic)originalCompany);
+                    documentId = ((dynamic)originalCompany).Id;
+                    session.SaveChanges();
+                }
+
+                var jpd = new JsonPatchDocument();
+
+                jpd.Replace("/~1/Name", "Developer");
+
+                store.Operations.Send(new JsonPatchOperation(documentId, jpd));
+
+                using (var session = store.OpenSession())
+                {
+                    dynamic dbCompany = session.Load<ExpandoObject>(documentId);
+                    jpd.ApplyTo(originalCompany);
+
+                    AssertExpandosEqual((dynamic)originalCompany, dbCompany);
+                }
             }
         }
 
@@ -838,11 +924,10 @@ namespace SlowTests.Client
         [Fact]
         public void PatchingWithTestMultipleOperationsFailure()
         {
-            var originalObject = new MyClass
-            {
-                Name = "Hibernating",
-                MyArray = new List<object> { 1, 2, 5 }
-            };
+            dynamic originalObject = new ExpandoObject();
+            originalObject.Name = "Hibernating";
+            originalObject.MyArray = new List<object> {1, 2, 5};
+
             var innerArrObject = new SinglePropClass { City = "Netanya" };
 
             using (var store = GetDocumentStore())
@@ -868,6 +953,10 @@ namespace SlowTests.Client
 
                     var error = Assert.ThrowsAny<RavenException>(() => store.Operations.Send(new JsonPatchOperation(documentId, jpd)));
                     Assert.Contains("The current value '[1,{\"City\":\"Hadera\"},5]' is not equal to the test value '[1,{\"City\":\"Netanya\"},5]", error.Message);
+
+                    //operations should not be applied in case of failure
+                    var dbObject = session.Load<dynamic>(originalObject.Id);
+                    AssertExpandosEqual(originalObject, dbObject);
                 }
             }
         }

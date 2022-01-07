@@ -2,7 +2,7 @@ import { BaseAutocompleteProvider, filterTokens, QuerySource } from "./baseProvi
 import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
 import { Scanner } from "../scanner";
 import { RqlParser } from "../RqlParser";
-import { AutocompleteUtils } from "../autocompleteUtils";
+import { QuoteUtils } from "../quoteUtils";
 import { CandidateRule } from "antlr4-c3/out/src/CodeCompletionCore";
 import { LiteralContext } from "../generated/BaseRqlParser";
 
@@ -34,7 +34,7 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
                 if (scanner.previous()) {
                     switch (scanner.tokenType()) {
                         case RqlParser.STRING:
-                            parts.unshift(AutocompleteUtils.unquote(scanner.tokenText()));
+                            parts.unshift(QuoteUtils.unquote(scanner.tokenText()));
                             break;
                         case RqlParser.WORD:
                             parts.unshift(scanner.tokenText());
@@ -266,7 +266,7 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
             const clearWrittenText = writtenText.startsWith('"') || writtenText.startsWith("'") ? writtenText.substring(1) : writtenText;
             
             const filteredFields = filterTokens(clearWrittenText, fields).map(field => {
-                const escapedField = AutocompleteUtils.quote(field, preferredQuote);
+                const escapedField = QuoteUtils.quote(field, preferredQuote);
                 return {
                     meta: AUTOCOMPLETE_META.field,
                     score: AUTOCOMPLETE_SCORING.field,

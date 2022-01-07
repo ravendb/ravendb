@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public const string BatchSendDocuments = "BatchSendDocuments";
         public const string BatchWaitForAcknowledge = "BatchWaitForAcknowledge";
     }
-    
+
     public class SubscriptionConnection : IDisposable
     {
         public const long NonExistentBatch = -1;
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         public readonly CancellationTokenSource CancellationTokenSource;
-        
+
         private SubscriptionWorkerOptions _options;
 
         public string WorkerId => _options.WorkerId ??= Guid.NewGuid().ToString();
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public SubscriptionConnectionsState SubscriptionConnectionsState => _subscriptionConnectionsState;
 
         public long CurrentBatchId;
-        
+
         public string LastSentChangeVectorInThisConnection;
 
         private bool _isDisposed;
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 _logger.Info(message);
             }
-            
+
             // first, validate details and make sure subscription exists
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
 
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                while(true)
+                while (true)
                 {
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -570,7 +570,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                         });
                         break;
-                    case RachisApplyException {InnerException: SubscriptionException} commandExecution:
+                    case RachisApplyException { InnerException: SubscriptionException } commandExecution:
                         await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
                         break;
                     default:
@@ -596,7 +596,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 // ignored
             }
         }
-        
+
         private async Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
         {
             try
@@ -637,7 +637,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 };
             }
         }
-        
+
         private readonly IDisposable _subscriptionConnectionInProgress;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
@@ -778,7 +778,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
-                
+
                 await SendHeartBeat("Waiting for client ACK");
                 await SendNoopAck();
             }
@@ -788,18 +788,18 @@ namespace Raven.Server.Documents.TcpHandlers
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                {
-                    await _processor.AcknowledgeBatch(CurrentBatchId);
-
-                    Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-                    Stats.AckRate?.Mark();
-                    await WriteJsonAsync(new DynamicJsonValue
                     {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                    });
+                        await _processor.AcknowledgeBatch(CurrentBatchId);
 
-                    break;
-                }
+                        Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+                        Stats.AckRate?.Mark();
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
+                        });
+
+                        break;
+                    }
                 //precaution, should not reach this case...
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     int docsToFlush = 0;
                     string lastChangeVectorSentInThisBatch = null;
-                    
+
                     await using (var writer = new AsyncBlittableJsonTextWriter(docsContext, _buffer))
                     {
                         using (TcpConnection.DocumentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterOperationContext))
@@ -869,7 +869,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     lastChangeVectorSentInThisBatch,
                                     ChangeVectorUtils.NewChangeVector(SubscriptionConnectionsState.DocumentDatabase, result.Doc.Etag),
                                     result.Doc.ChangeVector); //merge with this node's local etag
-                                
+
                                 if (result.Doc.Data == null)
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -881,7 +881,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     continue;
                                 }
                                 anyDocumentsSentInCurrentIteration = true;
-                                
+
                                 writer.WriteStartObject();
 
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
@@ -889,7 +889,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WriteComma();
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(DataSegment));
                                 result.Doc.EnsureMetadata();
-                                
+
                                 if (result.Exception != null)
                                 {
                                     if (result.Doc.Data.Modifications != null)
@@ -899,7 +899,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
                                     writer.WriteValue(BlittableJsonToken.StartObject,
-                                        docsContext.ReadObject(new DynamicJsonValue {[Client.Constants.Documents.Metadata.Key] = metadata}, result.Doc.Id)
+                                        docsContext.ReadObject(new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = metadata }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(ExceptionSegment));
@@ -965,7 +965,14 @@ namespace Raven.Server.Documents.TcpHandlers
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                                     writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
 
-                                    batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count));
+                                    var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp => kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
+                                        + includeCountersCommand.Results.Sum(kvp => kvp.Value.Sum(counter => counter.CounterName.Length
+                                                                                                             + counter.DocumentId.Length
+                                                                                                             + sizeof(long) //Etag
+                                                                                                             + sizeof(long) //Total Value
+                                        ));
+                                    batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
+
 
                                     writer.WriteEndObject();
                                 }
@@ -979,10 +986,10 @@ namespace Raven.Server.Documents.TcpHandlers
                                     writer.WriteComma();
 
                                     writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
-                                    writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
+                                    var size = writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
 
                                     batchScope.RecordIncludedTimeSeriesInfo(includeTimeSeriesCommand.Results.Sum(x =>
-                                        x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))));
+                                    x.Value.Sum(y => y.Value.Sum(z => z.Entries.Length))), size);
 
                                     writer.WriteEndObject();
                                 }
@@ -1019,7 +1026,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                         SubscriptionConnectionsState.LastChangeVectorSent);
                                 }
 
-                                _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent,lastChangeVectorSentInThisBatch);
+                                _subscriptionConnectionsState.LastChangeVectorSent = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, lastChangeVectorSentInThisBatch);
                                 _subscriptionConnectionsState.PreviouslyRecordedChangeVector = ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.PreviouslyRecordedChangeVector, lastChangeVectorSentInThisBatch);
                             }
                         }
@@ -1109,7 +1116,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                     NonExistentBatch, docsToResend: null);
             }
-               
+
             return TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
                 SubscriptionId,
                 Options.SubscriptionName,
@@ -1482,7 +1489,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             return new DynamicJsonValue
             {
-                [nameof(Results)] = new DynamicJsonArray(Results.Select(d=>d.ToJson())),
+                [nameof(Results)] = new DynamicJsonArray(Results.Select(d => d.ToJson())),
                 [nameof(SubscriptionMode)] = SubscriptionMode
             };
         }
@@ -1493,7 +1500,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public string ClientUri { get; set; }
         public string WorkerId { get; set; }
         public SubscriptionOpeningStrategy? Strategy { get; set; }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

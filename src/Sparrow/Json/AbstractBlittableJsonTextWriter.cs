@@ -192,11 +192,13 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteDateTime(DateTime value, bool isUtc)
+        public int WriteDateTime(DateTime value, bool isUtc)
         {
             int size = value.GetDefaultRavenFormat(_auxiliarBuffer, _auxiliarBufferLength, isUtc);
 
             WriteRawStringWhichMustBeWithoutEscapeChars(_auxiliarBuffer, size);
+
+            return size;
         }
 
         public void WriteString(string str, bool skipEscaping = false)
@@ -696,6 +698,7 @@ namespace Sparrow.Json
             try
             {
                 FlushInternal();
+                _stream.Flush();
             }
             catch (ObjectDisposedException)
             {

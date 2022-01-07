@@ -345,7 +345,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Result TryParseDateTime(char* buffer, int len, out DateTime dt, out DateTimeOffset dto)
+        public static Result TryParseDateTime(char* buffer, int len, out DateTime dt, out DateTimeOffset dto, bool properlyParseThreeDigitsMilliseconds)
         {
             // PERF: We want this part of the code to be embedded into the caller code instead. 
             if (len < 19 || len > 33)
@@ -355,7 +355,7 @@ namespace Sparrow.Json
                 buffer[13] != ':' || buffer[16] != ':' || buffer[16] != ':')
                 goto Failed;
 
-            return TryParseDateTimeInternal(buffer, len, out dt, out dto);
+            return TryParseDateTimeInternal(buffer, len, out dt, out dto, properlyParseThreeDigitsMilliseconds);
 
             Failed:
             dt = default(DateTime);
@@ -363,7 +363,7 @@ namespace Sparrow.Json
             return Result.Failed;
         }
 
-        public static Result TryParseDateTimeInternal(char* buffer, int len, out DateTime dt, out DateTimeOffset dto)
+        public static Result TryParseDateTimeInternal(char* buffer, int len, out DateTime dt, out DateTimeOffset dto, bool properlyParseThreeDigitsMilliseconds)
         {
             if (TryParseNumber4(buffer, 0, out int year) == false)
                 goto Failed;
@@ -407,6 +407,8 @@ namespace Sparrow.Json
                         goto Failed;
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
+                    if (properlyParseThreeDigitsMilliseconds)
+                        fractions *= 10000;
                     goto Finished_DT;
                 case 25://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'+'dd':'dd'",
                     if (buffer[22] != ':' || (buffer[19] != '+' && buffer[19] != '-'))
@@ -473,7 +475,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Result TryParseDateTime(byte* buffer, int len, out DateTime dt, out DateTimeOffset dto)
+        public static Result TryParseDateTime(byte* buffer, int len, out DateTime dt, out DateTimeOffset dto, bool properlyParseThreeDigitsMilliseconds)
         {
             // PERF: We want this part of the code to be embedded into the caller code instead. 
             if (len < 19 || len > 33)
@@ -483,7 +485,7 @@ namespace Sparrow.Json
                 buffer[13] != ':' || buffer[16] != ':' || buffer[16] != ':')
                 goto Failed;
 
-            return TryParseDateTimeInternal(buffer, len, out dt, out dto);
+            return TryParseDateTimeInternal(buffer, len, out dt, out dto, properlyParseThreeDigitsMilliseconds);
 
             Failed:
             dt = default(DateTime);
@@ -491,7 +493,7 @@ namespace Sparrow.Json
             return Result.Failed;
         }
 
-        private static Result TryParseDateTimeInternal(byte* buffer, int len, out DateTime dt, out DateTimeOffset dto)
+        private static Result TryParseDateTimeInternal(byte* buffer, int len, out DateTime dt, out DateTimeOffset dto, bool properlyParseThreeDigitsMilliseconds)
         {
             if (TryParseNumber4(buffer, 0, out int year) == false)
                 goto Failed;
@@ -535,6 +537,8 @@ namespace Sparrow.Json
                         goto Failed;
                     if (TryParseNumber3(buffer, 20, out fractions) == false)
                         goto Failed;
+                    if (properlyParseThreeDigitsMilliseconds)
+                        fractions *= 10000;
                     goto Finished_DT;
                 case 25://"yyyy'-'MM'-'dd'T'HH':'mm':'ss'+'dd':'dd'",
                     if (buffer[22] != ':' || (buffer[19] != '+' && buffer[19] != '-'))

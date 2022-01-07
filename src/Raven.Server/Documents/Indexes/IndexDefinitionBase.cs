@@ -140,6 +140,8 @@ namespace Raven.Server.Documents.Indexes
             
             public const long ReduceKeyProcessorHashDoubleFix = 52_001; // RavenDB-17572
 
+            public const long ProperlyParseThreeDigitsMillisecondsDates = 52_002; // RavenDB-17711
+
             public const long Corax = 60_000;
             /// <summary>
             /// Remember to bump this

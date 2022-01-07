@@ -1319,11 +1319,11 @@ namespace SlowTests.Server.Replication
             var (nodes, leader) = await CreateRaftCluster(3);
 
             var nodeA = nodes.First(n => n.ServerStore.NodeTag == "A");
-            const string nodeTagToRemove = "B";
+            using var store = GetDocumentStore(new Options { Server = nodeA, ReplicationFactor = 3 });
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
 
-            using var store = GetDocumentStore(new Options {Server = nodeA, ReplicationFactor = 3});
-
-            var config = new RevisionsConfiguration {Default = new RevisionsCollectionConfiguration()};
+            string nodeTagToRemove = res.Topology.Members.Last(m => m.Equals("A") == false);
+            var config = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() };
             await RevisionsHelper.SetupRevisions(store, leader.ServerStore, config);
 
             var entity = new User();
@@ -1340,46 +1340,80 @@ namespace SlowTests.Server.Replication
             }
 
             await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTagToRemove, TimeSpan.FromSeconds(30)));
-            await WaitForValueAsync(async () =>
+            Assert.Equal(1, await WaitForValueAsync(async () =>
+            {
+                var records = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                return records.DeletionInProgress.Count;
+            }, 1));
+
+            Assert.True(await WaitForValueAsync(async () =>
             {
                 var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 return res != null && res.Topology.Count == 2;
-            }, true);
+            }, true));
 
-            await WaitForValueAsync(async () =>
+            Assert.Equal(0, await WaitForValueAsync(async () =>
+            {
+                var records = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                return records.DeletionInProgress.Count;
+            }, 0));
+
+            Assert.True(await WaitForValueAsync(async () =>
             {
                 await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database, nodeTagToRemove));
                 return true; 
-            }, true, interval: 1000);
-            
-            await WaitForValueAsync(async () =>
+            }, true, interval: 1000));
+
+            Assert.True(await WaitForValueAsync(async () =>
             {
                 var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 return res != null && res.Topology.Members.Count == 3;
-            }, true);
-            
-            using var storeA = new DocumentStore
-            {
-                Database = store.Database,
-                Urls = new []{nodeA.WebUrl}
-            }.Initialize();
-            
+            }, true));
+
             using (var session = store.OpenAsyncSession())
             {
-                entity.Name = "Change after adding again node B";
+                entity.Name = $"Change after adding again node {nodeTagToRemove} ";
                 await session.StoreAsync(entity);
                 await session.SaveChangesAsync();
             }
+            Assert.Equal(await WaitForValueAsync(async () =>
+            {
+                var conflicts = await store.Commands().GetConflictsForAsync(entity.Id);
+                return conflicts.Length;
+            }, 0), 0 );
 
-            await Task.Delay(15 * 1000);
-            var conflicts = await store.Commands().GetConflictsForAsync(entity.Id);
-            Assert.Empty(conflicts);
-            using (var session = store.OpenAsyncSession())
+            using var storeA = new DocumentStore
+            {
+                Database = store.Database,
+                Urls = new[] { nodeA.WebUrl }
+            }.Initialize();
+            using (var session = storeA.OpenAsyncSession())
             {
                 var loaded = await session.LoadAsync<User>(entity.Id);
                 var metadata = session.Advanced.GetMetadataFor(loaded);
                 var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
-                Assert.DoesNotContain(DocumentFlags.Resolved.ToString(), flags);
+                var info = "";
+                if (flags.Contains(DocumentFlags.Resolved.ToString()))
+                {
+                    info += $"Flags: {flags}\n";
+                    res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    info += $"Topology: \n";
+                    foreach (var member in res.Topology.Members)
+                    {
+                        info += $"{member} \n";
+                    }
+
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>(entity.Id);
+                    info += $"Revisions: \n";
+                    foreach (var rev in revisions)
+                    {
+                        var ch = session.Advanced.GetChangeVectorFor(rev);
+                        var fl = session.Advanced.GetMetadataFor(rev).GetString(Constants.Documents.Metadata.Flags);
+                        info += $"{rev.Name} : {fl} - {ch} \n";
+                    }
+                    info += $"Flags: {flags}\n";
+                }
+                Assert.False(flags.Contains(DocumentFlags.Resolved.ToString()), info);
             }
         }
 

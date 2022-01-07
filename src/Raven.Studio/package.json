@@ -50,6 +50,7 @@
         "jest": "^27.1.0",
         "jest-cli": "^27.1.0",
         "jest-extended": "^0.11.5",
+        "jest-junit": "^13.0.0",
         "less": "^3.7.1",
         "less-loader": "^10.2.0",
         "mini-css-extract-plugin": "^2.4.3",
