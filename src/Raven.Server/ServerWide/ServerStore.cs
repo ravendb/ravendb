@@ -83,7 +83,8 @@ using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Constants = Raven.Client.Constants;
-using MemoryCache = Raven.Server.Utils.MemoryCache;
+using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
+using MemoryCacheOptions = Raven.Server.Utils.Imports.Memory.MemoryCacheOptions;
 
 namespace Raven.Server.ServerWide
 {

@@ -13,7 +13,7 @@ using Sparrow.Collections;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Index = Raven.Server.Documents.Indexes.Index;
-using MemoryCache = Raven.Server.Utils.MemoryCache;
+using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
