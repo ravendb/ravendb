@@ -27,7 +27,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
          
         private readonly ByteStringContext _allocator;
         private readonly List<IDisposable> _slicesToDispose;
-        private readonly Dictionary<Slice, int> _knownFields;
+        private readonly IndexFieldsMapping _knownFields;
+
         private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
         private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
         private static readonly StandardFormat _standardFormat = new StandardFormat('g');
@@ -46,25 +47,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _knownFields = GetKnownFields();
         }
 
-        public Dictionary<Slice, int> GetKnownFields()
+        public IndexFieldsMapping GetKnownFields()
         {
             if (_knownFields != null)
                 return _knownFields;
-            var knownFields = new Dictionary<Slice, int>();
+
+            var knownFields = new IndexFieldsMapping(_allocator);
             
             //todo maciej: will optimize it while doing static indexes.
             _slicesToDispose.Add(Slice.From(_allocator, _index.Type.IsMapReduce() ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value));
-            knownFields.Add(value, 0);
+
+            knownFields = knownFields.AddBinding(0, value, null);
             foreach (var field in _fields.Values)
             {
                 _slicesToDispose.Add(Slice.From(_allocator, field.Name, ByteStringType.Immutable, out value));
-                knownFields.Add(value, field.Id);
+                knownFields = knownFields.AddBinding(field.Id, value, null);
             }
 
             if (_index.Type.IsMapReduce())
             {
                 _slicesToDispose.Add(Slice.From(_allocator, Constants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey));
-                knownFields.Add(storedKey, knownFields.Count);
+                knownFields = knownFields.AddBinding(knownFields.Count, value, null);
             }
 
             return knownFields;

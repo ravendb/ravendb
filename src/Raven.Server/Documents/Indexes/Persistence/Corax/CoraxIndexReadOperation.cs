@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
     {
-        private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
+        private readonly CoraxRavenPerFieldAnalyzerWrapper _fieldMappings;
         private readonly IndexSearcher _indexSearcher;
         private readonly CoraxQueryEvaluator _coraxQueryEvaluator;
         private long _entriesCount = 0;
@@ -34,8 +34,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _analyzers = CoraxIndexingHelpers.CreateCoraxAnalyzers(index, index.Definition, true);
-            _indexSearcher = new IndexSearcher(readTransaction, _analyzers.Analyzers);
+            _fieldMappings = CoraxIndexingHelpers.CreateCoraxAnalyzers(index, index.Definition, true);
+            _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings.Analyzers);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
         }
 
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 Skip(ref allItems, skip, ref read, null, out _, ref ids, token);
 
-                var analyzer = _analyzers.Analyzers[fieldId];
+                var analyzer = _fieldMappings.Analyzers.GetByFieldId(fieldId).Analyzer;
                 analyzer.GetOutputBuffersSize(512, out int outputSize, out int tokenSize);
                 var encodedBuffer = new byte[outputSize];
                 var tokensBuffer = new Token[tokenSize];
@@ -212,8 +212,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             int outputSize = 0;
             int tokenSize = 0;
-            foreach (var analyzer in _analyzers.Analyzers.Values.Where(analyzer => analyzer is not null))
+            foreach (var binding in _fieldMappings.Analyzers)
             {
+                var analyzer = binding.Analyzer;
+                if (analyzer == null)
+                    continue;        
+                
                 analyzer.GetOutputBuffersSize(512, out int tempOutputSize, out int tempTokenSize);
 
                 if (tempTokenSize > tokenSize)
@@ -257,7 +261,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         {
                             token.ThrowIfCancellationRequested();
 
-                            var analyzer = _analyzers.Analyzers[fieldId];
+                            var binding = _fieldMappings.Analyzers.GetByFieldId(fieldId);
+
+                            var analyzer = binding.Analyzer;
                             var name = names[fieldId];
                             var reader = _indexSearcher.GetReaderFor(ids[i]);
                             Span<byte> encoded = encodedBuffer;
@@ -409,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxIndexReadOperation)} of {_index.Name}");
 
             exceptionAggregator.Execute(() => _indexSearcher?.Dispose());
-            exceptionAggregator.Execute(() => _analyzers?.Dispose());
+            exceptionAggregator.Execute(() => _fieldMappings?.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
         }

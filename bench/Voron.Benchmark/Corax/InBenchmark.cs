@@ -120,7 +120,11 @@ namespace Voron.Benchmark.Corax
                 Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
                 Span<byte> buffer = new byte[256];
-                var fields = new Dictionary<Slice, int> { [nameSlice] = 0, [familySlice] = 1, [ageSlice] = 2, [typeSlice] = 3 };
+                var fields = new IndexFieldsMapping(bsc)
+                                    .AddBinding(0, nameSlice)
+                                    .AddBinding(1, familySlice)
+                                    .AddBinding(2, ageSlice)
+                                    .AddBinding(3, typeSlice);
 
                 {
                     var entryWriter = new IndexEntryWriter(buffer, fields);

@@ -104,13 +104,11 @@ namespace Tryouts
             Slice.From(ctx, "D", ByteStringType.Immutable, out Slice dSlice);
 
             // The idea is that GetField will return an struct we can use later on a loop (we just get it once).
-            var knownFields = new Dictionary<Slice, int>()
-            { 
-                [aSlice] = 0,
-                [bSlice] = 1,
-                [cSlice] = 2,
-                [dSlice] = 3
-            };
+            var knownFields = new IndexFieldsMapping(ctx)
+                                    .AddBinding(0, aSlice)
+                                    .AddBinding(1, bSlice)
+                                    .AddBinding(2, cSlice)
+                                    .AddBinding(3, dSlice);
 
             var writer = new IndexEntryWriter(buffer, knownFields);
             writer.Write(0, Encoding.UTF8.GetBytes("1.001"), 1, 1.001);
@@ -262,7 +260,12 @@ namespace Tryouts
                 Slice.From(bsc, "Type", ByteStringType.Immutable, out var typeSlice);
 
                 Span<byte> buffer = new byte[256];
-                var fields = new Dictionary<Slice, int> {[nameSlice] = 0, [familySlice] = 1, [ageSlice] = 2, [typeSlice] = 3};
+
+                var fields = new IndexFieldsMapping(bsc)
+                                    .AddBinding(0, nameSlice)
+                                    .AddBinding(1, familySlice)
+                                    .AddBinding(2, ageSlice)
+                                    .AddBinding(3, typeSlice);
 
                 {
                     var entryWriter = new IndexEntryWriter(buffer, fields);

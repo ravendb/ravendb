@@ -2,20 +2,27 @@
 using System.Collections.Generic;
 using Corax;
 using Raven.Server.Utils;
+using Sparrow.Server;
+using Sparrow.Threading;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public sealed class CoraxRavenPerFieldAnalyzerWrapper : IDisposable
     {
-        private readonly Dictionary<int, Analyzer> _analyzers;
-        public Dictionary<int, Analyzer> Analyzers => _analyzers;
+        private readonly IndexFieldsMapping _analyzers;
+        private readonly ByteStringContext _context;
+        public IndexFieldsMapping Analyzers => _analyzers;
         
         public CoraxRavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, int fieldCount)
         {
-            _analyzers = new();
+            _context = new ByteStringContext(SharedMultipleUseFlag.None);
+
+            _analyzers = new IndexFieldsMapping(_context);
             for(int i = 0; i < fieldCount; ++i)
             {
-                _analyzers.Add(i, defaultAnalyzer);
+                Slice.From(_context, $"Field{i}", out var fieldName);
+                _analyzers.AddBinding(i, fieldName, defaultAnalyzer);
             }
         }
 
@@ -24,26 +31,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             : this(defaultAnalyzer, fieldCount)
         {
         }
-        
-        public void AddAnalyzer(int fieldId, Analyzer analyzer)
-        {
-            if (_analyzers.TryAdd(fieldId, analyzer) == false)
-            {
-                _analyzers[fieldId] = analyzer;
-            }
-        }
 
         public void Dispose()
         {
-            var exceptionAggregator = new ExceptionAggregator($"Could not dispose {nameof(CoraxRavenPerFieldAnalyzerWrapper)}.");
-            
-            exceptionAggregator.Execute(() =>
-            {
-                foreach(var disposableItem in _analyzers.Values)
-                    disposableItem?.Dispose();
-            });
-            
-            exceptionAggregator.ThrowIfNeeded();
+            _context.Dispose();
+        }
+
+        public void AddAnalyzer(int fieldId, string fieldName, Analyzer analyzer)
+        {
+            Slice.From(_context, fieldName, out var fieldSlice);
+            _analyzers.AddBinding(fieldId, fieldSlice, analyzer);
         }
     }
 }

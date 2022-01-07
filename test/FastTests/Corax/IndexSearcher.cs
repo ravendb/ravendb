@@ -71,12 +71,14 @@ namespace FastTests.Corax
         public const int IdIndex = 0,
             ContentIndex = 1;
 
-        private static Dictionary<Slice, int> CreateKnownFields(ByteStringContext ctx)
+        private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx, Analyzer analyzer = null)
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new Dictionary<Slice, int> { [idSlice] = IdIndex, [contentSlice] = ContentIndex, };
+            return new IndexFieldsMapping(ctx)
+                .AddBinding(IdIndex, idSlice, analyzer)
+                .AddBinding(ContentIndex, contentSlice, analyzer);
         }
 
 
@@ -85,21 +87,18 @@ namespace FastTests.Corax
         }
 
 
-        private void IndexEntries(IEnumerable<IndexEntry> list, Dictionary<int, Analyzer> analyzers = null)
-        {
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
-
-            const int bufferSize = 4096;
+        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexEntry> list, IndexFieldsMapping mapping)
+        {        
+            const int bufferSize = 4096;                        
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env, analyzers);
+                using var indexWriter = new IndexWriter(Env, mapping);
                 foreach (var entry in list)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), mapping);
                     var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data, knownFields);
+                    indexWriter.Index(entry.Id, data, mapping);
                 }
 
                 indexWriter.Commit();
@@ -110,7 +109,9 @@ namespace FastTests.Corax
         public void EmptyTerm()
         {
             var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            IndexEntries(new[] { entry });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry }, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -130,7 +131,9 @@ namespace FastTests.Corax
         public void SingleTerm()
         {
             var entry = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
-            IndexEntries(new[] { entry });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry }, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -152,7 +155,8 @@ namespace FastTests.Corax
                 entries[i] = new IndexEntry { Id = $"entry/{i}", Content = new string[] { "road" }, };
             }
 
-            IndexEntries(entries);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[12];
@@ -185,7 +189,8 @@ namespace FastTests.Corax
                 entries[i] = new IndexEntry { Id = $"entry/{i}", Content = content, };
             }
 
-            IndexEntries(entries);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -225,7 +230,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -244,7 +250,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -264,7 +271,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake", "mountain" }, };
             var entry2 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -284,7 +292,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -304,7 +313,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 Span<long> ids = stackalloc long[16];
@@ -332,7 +342,8 @@ namespace FastTests.Corax
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -354,7 +365,8 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
             var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "trail", "mountain" }, };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -376,7 +388,8 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
             var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -434,7 +447,8 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
             {
                 using var searcher = new IndexSearcher(Env);
@@ -464,7 +478,8 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "road", "mountain" }, };
             var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "sky", "space" }, };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -529,7 +544,8 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex);
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -574,7 +590,9 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "a road", "the mountain" }, };
             var entry3 = new IndexEntry { Id = "entry/3", Content = new string[] { "the sky", "the space", "an animal" }, };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -627,21 +645,18 @@ namespace FastTests.Corax
             return output;
         }
 
-        private void IndexEntries(IEnumerable<IndexSingleEntry> list)
+        private void IndexEntries(ByteStringContext bsc, IEnumerable<IndexSingleEntry> list, IndexFieldsMapping mapping)
         {
-            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
-
             const int bufferSize = 4096;
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
 
             {
-                using var indexWriter = new IndexWriter(Env);
+                using var indexWriter = new IndexWriter(Env, mapping);
                 foreach (var entry in list)
                 {
-                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), knownFields);
+                    var entryWriter = new IndexEntryWriter(buffer.ToSpan(), mapping);
                     var data = CreateIndexEntry(ref entryWriter, entry);
-                    indexWriter.Index(entry.Id, data, knownFields);
+                    indexWriter.Index(entry.Id, data, mapping);
                 }
 
                 indexWriter.Commit();
@@ -655,8 +670,9 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
-            IndexEntries(new[] { entry1, entry3 });
-            IndexEntries(new[] { entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] { entry2 }, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -677,8 +693,9 @@ namespace FastTests.Corax
             var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "4", "2" }, };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
-            IndexEntries(new[] { entry1, entry3 });
-            IndexEntries(new[] { entry2 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry3 }, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] { entry2 }, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -703,8 +720,10 @@ namespace FastTests.Corax
                 list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}", Content = i.ToString() });
             }
 
-            IndexEntries(list);
-            IndexEntries(new[] { new IndexEntry() { Id = $"entry/{i + 1}" } });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, list, CreateKnownFields(bsc));
+            IndexEntries(bsc, new[] { new IndexEntry() { Id = $"entry/{i + 1}" } }, CreateKnownFields(bsc));
+
             list.Add(new IndexSingleEntry() { Id = $"entry/{i + 1}" });
 
             using var searcher = new IndexSearcher(Env);
@@ -734,7 +753,8 @@ namespace FastTests.Corax
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
 
             using var searcher = new IndexSearcher(Env);
 
@@ -763,7 +783,7 @@ namespace FastTests.Corax
         private void IndexEntriesDouble(IEnumerable<IndexSingleEntryDouble> list)
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+            var knownFields = CreateKnownFields(bsc);
 
             const int bufferSize = 4096;
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
@@ -881,9 +901,9 @@ namespace FastTests.Corax
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "1", out var one);
@@ -933,9 +953,9 @@ namespace FastTests.Corax
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "2" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "1", out var one);
@@ -984,9 +1004,9 @@ namespace FastTests.Corax
             var entry2 = new IndexSingleEntry { Id = "entry/2", Content = "Running" };
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "Runner" };
 
-            IndexEntries(new[] { entry1, entry2, entry3 });
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "1", out var one);
@@ -1032,9 +1052,9 @@ namespace FastTests.Corax
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
             var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
 
-            IndexEntries(new[] { entry1, entry2, entry3, entry4 });
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4 }, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "0", out var zero);
@@ -1087,9 +1107,9 @@ namespace FastTests.Corax
             var entry3 = new IndexSingleEntry { Id = "entry/3", Content = "1" };
             var entry4 = new IndexSingleEntry { Id = "entry/4", Content = "4" };
 
-            IndexEntries(new[] { entry1, entry2, entry3, entry4 });
-
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4 }, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "0", out var zero);
@@ -1143,12 +1163,6 @@ namespace FastTests.Corax
         [InlineData(new object[] { 11859, 18 })]
         public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
         {
-            var analyzer = Analyzer.Create<KeywordTokenizer, LowerCaseTransformer>();
-            var analyzers = new Dictionary<int, Analyzer>()
-            {
-                {IdIndex, analyzer},
-                {ContentIndex, analyzer}
-            };
             setSize = setSize - (setSize % 3);
             var entries = new List<IndexEntry>();
             var entriesToIndex = new IndexEntry[setSize];
@@ -1168,7 +1182,15 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex, analyzers);
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
+            var analyzer = Analyzer.Create<KeywordTokenizer, LowerCaseTransformer>();
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc, analyzer));
+
 
             using var searcher = new IndexSearcher(Env);
             {
@@ -1218,8 +1240,6 @@ namespace FastTests.Corax
         [InlineData(new object[] { 11859, 18 })]
         public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
         {
-            var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
-
             setSize = setSize - (setSize % 3);
 
             var entriesToIndex = new IndexEntry[setSize];
@@ -1239,13 +1259,18 @@ namespace FastTests.Corax
                 entriesToIndex[i] = entry;
             }
 
-            IndexEntries(entriesToIndex, new Dictionary<int, Analyzer>()
-            {
-                {0, analyzer},
-                {1, analyzer}
-            });
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            using var searcher = new IndexSearcher(Env);
+            var analyzer = Analyzer.Create<WhitespaceTokenizer, LowerCaseTransformer>();
+            var mapping = new IndexFieldsMapping(ctx)
+                                .AddBinding(IdIndex, idSlice, analyzer)
+                                .AddBinding(ContentIndex, contentSlice, analyzer);
+
+            IndexEntries(ctx, entriesToIndex, mapping);
+
+            using var searcher = new IndexSearcher(Env, mapping);
             {
                 var match1 = searcher.InQuery("Content", new() { "lake", "mountain" });
                 var match2 = searcher.TermQuery("Content", "sky");
@@ -1309,12 +1334,18 @@ namespace FastTests.Corax
 
             try
             {
+                using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
                 var list = Enumerable.Range(0, 128_000).Select(x => new IndexSingleEntry() { Id = $"entry/{x}", Content = GetRandomText() }).ToList();
 
-                IndexEntries(list);
-                using var searcher = new IndexSearcher(Env);
+                Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+                Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+                var mapping = new IndexFieldsMapping(ctx)
+                    .AddBinding(IdIndex, idSlice)
+                    .AddBinding(ContentIndex, contentSlice);
 
+                IndexEntries(ctx, list, mapping);
 
+                using var searcher = new IndexSearcher(Env, mapping);
                 {
                     var match = searcher.ContainsQuery("Content", "ing");
                     int read;
@@ -1367,9 +1398,15 @@ namespace FastTests.Corax
                 entries.Add(entry);
                 entriesToIndex[i] = entry;
             }
-            //":{"p0":"8 9 10"}}
-            IndexEntries(entriesToIndex);
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
+
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            //":{"p0":"8 9 10"}}
+            IndexEntries(bsc, entriesToIndex, CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
 
             Slice.From(bsc, "1", out var one);
@@ -1458,9 +1495,14 @@ namespace FastTests.Corax
                 Content = GetContent()
 
             }).ToList();
-            IndexEntries(entries.ToArray());
+
+            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
+            Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
+            Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, entries.ToArray(), CreateKnownFields(bsc));
+
             using var searcher = new IndexSearcher(Env);
             {
                 //MultiTermMatch And TermMatch
