@@ -138,18 +138,13 @@ class timeSeriesConfigurationEntry {
     static empty() {
         const emptyRetentionDto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration = {
             Disabled: false,
-            RawPolicy: {
-                RetentionTime: null,
-                AggregationTime: null,
-                Name: null
-            },
+            RawPolicy: rawTimeSeriesPolicy.emptyPolicy,
             Policies: []
         };
         const entry = new timeSeriesConfigurationEntry("");
         entry.withRetention(emptyRetentionDto);
         entry.withNamedValues({});
         return entry;
-        
     }
 }
 

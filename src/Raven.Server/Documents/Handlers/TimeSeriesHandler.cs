@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     totalCount = stats.Count;
                 }
-                
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     if (rangeResult != null)
@@ -618,16 +618,17 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteEndObject();
         }
 
-        internal static void WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        internal static int WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
         {
             if (dictionary == null)
             {
                 writer.WriteNull();
-                return;
+                return 0;
             }
 
             writer.WriteStartObject();
 
+            int size = 0;
             bool first = true;
             foreach (var (name, ranges) in dictionary)
             {
@@ -637,6 +638,7 @@ namespace Raven.Server.Documents.Handlers
                 first = false;
 
                 writer.WritePropertyName(name);
+                size += name.Length;
 
                 writer.WriteStartArray();
 
@@ -659,34 +661,46 @@ namespace Raven.Server.Documents.Handlers
                         totalCount = stats.Count;
                     }
 
-                    WriteRange(writer, ranges[i], totalCount);
+                    size += WriteRange(writer, ranges[i], totalCount);
                 }
+
                 writer.WriteEndArray();
             }
 
             writer.WriteEndObject();
+
+            return size;
         }
 
-        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
+        private static int WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
         {
+            int size = 0;
             writer.WriteStartObject();
             {
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.From));
                 if (rangeResult.From == DateTime.MinValue)
+                {
                     writer.WriteNull();
+                }
                 else
-                    writer.WriteDateTime(rangeResult.From, true);
+                {
+                    size += writer.WriteDateTime(rangeResult.From, true);
+                }
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
                 if (rangeResult.To == DateTime.MaxValue)
+                {
                     writer.WriteNull();
+                }
                 else
-                    writer.WriteDateTime(rangeResult.To, true);
+                {
+                    size += writer.WriteDateTime(rangeResult.To, true);
+                }
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
-                WriteEntries(writer, rangeResult.Entries);
+                size += WriteEntries(writer, rangeResult.Entries);
 
                 if (totalCount.HasValue)
                 {
@@ -694,6 +708,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.TotalResults));
                     writer.WriteInteger(totalCount.Value);
+                    size += sizeof(long);
                 }
 
                 if (rangeResult.Includes != null)
@@ -702,13 +717,18 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.Includes));
                     writer.WriteObject(rangeResult.Includes);
+                    size += rangeResult.Includes.Size;
                 }
             }
+
             writer.WriteEndObject();
+
+            return size;
         }
 
-        private static void WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
+        private static int WriteEntries(AsyncBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
+            int size = 0;
             writer.WriteStartArray();
 
             for (var i = 0; i < entries.Length; i++)
@@ -719,23 +739,32 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 {
                     writer.WritePropertyName(nameof(TimeSeriesEntry.Timestamp));
-                    writer.WriteDateTime(entries[i].Timestamp, true);
+                    size += writer.WriteDateTime(entries[i].Timestamp, true);
                     writer.WriteComma();
+
                     writer.WritePropertyName(nameof(TimeSeriesEntry.Tag));
                     writer.WriteString(entries[i].Tag);
+                    size += entries[i].Tag?.Length ?? 0;
                     writer.WriteComma();
+
                     writer.WriteArray(nameof(TimeSeriesEntry.Values), new Memory<double>(entries[i].Values));
+                    size += entries[i].Values.Length * sizeof(double);
                     writer.WriteComma();
+
                     writer.WritePropertyName(nameof(TimeSeriesEntry.IsRollup));
                     writer.WriteBool(entries[i].IsRollup);
 
                     if (entries[i].NodeValues != null && entries[i].NodeValues.Count > 0)
                         WriteNodeValues(writer, entries[i].NodeValues);
+
+                    size += 1;
                 }
                 writer.WriteEndObject();
             }
 
             writer.WriteEndArray();
+
+            return size;
         }
 
         private static void WriteNodeValues(AsyncBlittableJsonTextWriter writer, Dictionary<string, double[]> nodeValues)
@@ -1109,7 +1138,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static readonly TimeSeriesStorage.AppendOptions AppendOptionsForSmuggler = new TimeSeriesStorage.AppendOptions
         {
-            VerifyName = false, 
+            VerifyName = false,
             FromSmuggler = true
         };
 
