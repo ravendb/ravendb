@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Buffers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -29,14 +30,106 @@ namespace Corax
         Set = 2
     }
 
+
+    public class IndexFieldsMapping : IEnumerable<IndexFieldBinding>
+    {
+        public static readonly IndexFieldsMapping Instance = new IndexFieldsMapping(null);
+
+        private readonly ByteStringContext _context;
+        private readonly Dictionary<Slice, IndexFieldBinding> _fields;
+        private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
+        private readonly List<IndexFieldBinding> _fieldsList;
+
+        public int Count => _fieldsById.Count;
+
+        public IndexFieldsMapping(ByteStringContext context)        
+        {
+            _context = context;
+            _fields = new Dictionary<Slice, IndexFieldBinding>();
+            _fieldsById = new Dictionary<int, IndexFieldBinding>();
+            _fieldsList = new List<IndexFieldBinding>();
+        }
+
+        public IndexFieldsMapping AddBinding(int fieldId, Slice fieldName, Analyzer analyzer = null)
+        {
+            if (!_fieldsById.TryGetValue(fieldId, out var storedAnalyzer))
+            {
+                var binding = new IndexFieldBinding(fieldId, fieldName, analyzer);
+                _fields[fieldName] = binding;
+                _fieldsById[fieldId] = binding;
+                _fieldsList.Add(binding);
+            }
+            else
+            {
+                Debug.Assert(analyzer == storedAnalyzer.Analyzer);
+            }
+
+            return this;
+        }
+
+        public IndexFieldBinding GetByFieldId(int fieldId)
+        {
+            return _fieldsById[fieldId];
+        }
+
+        public bool TryGetByFieldId(int fieldId, out IndexFieldBinding binding)
+        {
+            return _fieldsById.TryGetValue(fieldId, out binding);
+        }
+
+        public IndexFieldBinding GetByFieldName(string fieldName)
+        {
+            // This method is a convenience method that should not be used in high performance sections of the code.
+            using var _ = Slice.From(_context, fieldName, out var str);
+            return _fields[str];
+        }
+
+        public IndexFieldBinding GetByFieldName(Slice fieldName)
+        {
+            return _fields[fieldName];
+        }
+
+        public bool TryGetByFieldName(Slice fieldName, out IndexFieldBinding binding)
+        {
+            return _fields.TryGetValue(fieldName, out binding);
+        }
+
+        public IEnumerator<IndexFieldBinding> GetEnumerator()
+        {
+            return _fieldsList.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return _fieldsList.GetEnumerator();
+        }
+    }
+
+    public class IndexFieldBinding
+    {
+        public readonly int FieldId;
+        public readonly Slice FieldName;
+        public readonly Analyzer Analyzer;
+
+        public IndexFieldBinding(int fieldId, Slice fieldName, Analyzer analyzer = null)
+        {
+            FieldId = fieldId;
+            FieldName = fieldName;
+            Analyzer = analyzer;
+        }
+    }
+
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        //PERF need to get rid off TryGetValue (_analyzers)
-        private readonly Dictionary<int, Analyzer> _analyzers;
+        public const int MaxTermLength = 1024;
+
+        private readonly IndexFieldsMapping _fieldsMapping;        
+
         private readonly StorageEnvironment _environment;
-        private readonly TransactionPersistentContext _transactionPersistentContext;
+
         private readonly bool _ownsTransaction;
         public readonly Transaction Transaction;
+        private readonly TransactionPersistentContext _transactionPersistentContext;
 
         public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice;
 
@@ -69,34 +162,38 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexWriter([NotNull] StorageEnvironment environment, Dictionary<int, Analyzer> analyzers = null)
+        public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null)
         {
             _environment = environment;
             _transactionPersistentContext = new TransactionPersistentContext(true);
             Transaction = _environment.WriteTransaction(_transactionPersistentContext);
+
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
-            _analyzers = analyzers;
+
+            _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
         }
 
-        public IndexWriter([NotNull] Transaction tx, Dictionary<int, Analyzer> analyzers = null)
+        public IndexWriter([NotNull] Transaction tx, IndexFieldsMapping fieldsMapping = null)
         {
             Transaction = tx;
+
             _ownsTransaction = false;
             _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
-            _analyzers = analyzers;
+
+            _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
         }
 
-        
-        public long Index(string id, Span<byte> data, Dictionary<Slice, int> knownFields)
+
+        public long Index(string id, Span<byte> data, IndexFieldsMapping knownFields)
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data, knownFields);
         }                
 
-        public long Index(Slice id, Span<byte> data, Dictionary<Slice, int> knownFields)
+        public long Index(Slice id, Span<byte> data, IndexFieldsMapping knownFields)
         {
             long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
             Transaction.LowLevelTransaction.RootObjects.Add(NumberOfEntriesSlice, entriesCount + 1);
@@ -111,22 +208,20 @@ namespace Corax
             data.CopyTo(space);
 
             var context = Transaction.Allocator;
-
-            //entryReader.DebugDump(knownFields);
-
             var entryReader = new IndexEntryReader(data);
-
             
-            foreach (var (key, tokenField) in knownFields)
+            foreach (var binding in knownFields)
             {
+                var key = binding.FieldName;
                 if (_buffer.TryGetValue(key, out var field) == false)
                 {
                     //PERF: avoid creating dictionary
                     _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 
-                if (_analyzers is not null && _analyzers.ContainsKey(tokenField))
-                    InsertAnalyzedToken(context, ref entryReader, tokenField, field, entryId);
+                var tokenField = binding.FieldId;
+                if (binding.Analyzer is not null)                
+                    InsertAnalyzedToken(context, ref entryReader, tokenField, field, entryId, binding.Analyzer);
                 else
                     InsertToken(context, ref entryReader, tokenField, field, entryId);
 
@@ -141,10 +236,8 @@ namespace Corax
         }
 
         [SkipLocalsInit]
-        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId)
-        {
-            var analyzer = _analyzers[tokenField];
-            
+        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, int tokenField, Dictionary<Slice, List<long>> field, long entryId, Analyzer analyzer)
+        {           
             analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
 
             byte* tempWordsSpace = stackalloc byte[bufferSize];
@@ -249,44 +342,43 @@ namespace Corax
             }
         }
 
-        private unsafe void DeleteCommit(Dictionary<Slice, int> knownFields, Span<byte> tmpBuf, Tree fieldsTree)
+        private unsafe void DeleteCommit(Span<byte> tmpBuf, Tree fieldsTree)
         {
             if (_entriesToDelete.Count == 0)
                 return;
             
             Page page = default;
             var llt = Transaction.LowLevelTransaction;
-            List<long> ids = null;
             
-            Span<int> buffersLength = stackalloc int [_analyzers?.Count*2 ?? 0]; 
+            List<long> ids = null;
             int maxWordsSpaceLength = 0;
             int maxTokensSpaceLength = 0;
-            if (_analyzers is not null)
+            Span<int> buffersLength = stackalloc int [_fieldsMapping.Count * 2]; 
+            foreach (var binding in _fieldsMapping)
             {
-                foreach (var (fieldId, analyzer) in _analyzers)
-                {
-                    if (analyzer is null)
-                        continue;
+                var analyzer = binding.Analyzer;
+                if (analyzer is null)
+                    continue;
 
-                    analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out buffersLength[fieldId * 2], out buffersLength[fieldId * 2 + 1]);
-                    maxWordsSpaceLength = Math.Max(maxWordsSpaceLength, buffersLength[fieldId * 2]);
-                    maxTokensSpaceLength = Math.Max(maxTokensSpaceLength, buffersLength[fieldId * 2 + 1]);
-                }
+                var fieldId = binding.FieldId;
+
+                analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out buffersLength[fieldId * 2], out buffersLength[fieldId * 2 + 1]);
+                maxWordsSpaceLength = Math.Max(maxWordsSpaceLength, buffersLength[fieldId * 2]);
+                maxTokensSpaceLength = Math.Max(maxTokensSpaceLength, buffersLength[fieldId * 2 + 1]);
             }
 
             Span<byte> tempWordsSpace = stackalloc byte[maxWordsSpaceLength];
-            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];
-            
+            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];            
 
             foreach (var id in _entriesToDelete)
             {
                 var entryReader = IndexSearcher.GetReaderFor(Transaction, ref page, id);
 
-                foreach (var (fieldName, fieldId) in knownFields) // TODO maciej: this is wrong, need to get all the fields from the entry
+                foreach (var fieldBinding in _fieldsMapping) // TODO maciej: this is wrong, need to get all the fields from the entry
                 {
-                    Analyzer analyzer = null;
-                    if (_analyzers?.TryGetValue(fieldId, out analyzer) == false)
-                        analyzer = null;
+                    int fieldId = fieldBinding.FieldId;
+                    Slice fieldName = fieldBinding.FieldName;
+                    Analyzer analyzer = fieldBinding.Analyzer;  
                     
                     var fieldType = entryReader.GetFieldType(fieldId);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
@@ -419,13 +511,13 @@ namespace Corax
             return true;
         }
 
-        public void Commit(Dictionary<Slice, int> knownFields = null)
+        public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
             Tree fieldsTree = Transaction.CreateTree(FieldsSlice);
             
-            if(knownFields != null)
-                DeleteCommit(knownFields, tmpBuf, fieldsTree);
+            if(_fieldsMapping.Count != 0)
+                DeleteCommit(tmpBuf, fieldsTree);
             
             foreach (var (field, terms) in _buffer)
             {

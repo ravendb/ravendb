@@ -19,7 +19,7 @@ namespace FastTests.Corax
     {
         private List<Entry> _entries;
         private const int IndexId = 0, LongValue = 1;
-        private Dictionary<Slice, int> _knownFields;
+        private IndexFieldsMapping _knownFields;
         public CoraxQueries(ITestOutputHelper output) : base(output)
         {
         }
@@ -147,12 +147,14 @@ namespace FastTests.Corax
             return output;
         }
 
-        private Dictionary<Slice, int> CreateKnownFields(ByteStringContext ctx)
+        private IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice longSlice);
 
-            return new Dictionary<Slice, int> { [idSlice] = IndexId, [longSlice] = LongValue};
+            return new IndexFieldsMapping(ctx)
+                        .AddBinding(IndexId, idSlice)
+                        .AddBinding(LongValue, longSlice);
         }
         
         private void PrepareData(int size = 1000)

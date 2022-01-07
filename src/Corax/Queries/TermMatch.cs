@@ -30,6 +30,10 @@ namespace Corax.Queries
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
 
+#if DEBUG
+        public string Term;
+#endif
+
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
 
         private TermMatch(
@@ -50,6 +54,9 @@ namespace Corax.Queries
 
             _container = default;
             _set = default;
+#if DEBUG
+            Term = null;
+#endif
         }
 
         public static TermMatch CreateEmpty()
@@ -78,7 +85,12 @@ namespace Corax.Queries
                     });
             }
 
-            return new TermMatch(0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc);
+            return new TermMatch(0, &FillFunc, &AndWithFunc, inspectFunc: &InspectFunc)
+            {
+#if DEBUG
+                Term = "<empty>"
+#endif
+            };            
         }
 
         public static TermMatch YieldOnce(long value)

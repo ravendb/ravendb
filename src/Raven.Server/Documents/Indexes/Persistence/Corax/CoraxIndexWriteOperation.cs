@@ -19,9 +19,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     {
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverter _converter;
-        private readonly Dictionary<Slice, int> _knownFields;
-        private int _entriesCount = 0;
+        private readonly IndexFieldsMapping _knownFields;        
         private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
+
+        private int _entriesCount = 0;
+
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverter converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
@@ -29,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             try
             {
                 _analyzers = CoraxIndexingHelpers.CreateCoraxAnalyzers(index, index.Definition);
-                _indexWriter = new IndexWriter(writeTransaction, _analyzers.Analyzers);
+                _indexWriter = new IndexWriter(writeTransaction, _knownFields);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
             catch (Exception e) when (e.IsOutOfMemory())
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 using (stats.For(IndexingOperation.Corax.Commit))
                 {
-                    _indexWriter.Commit(_knownFields);
+                    _indexWriter.Commit();
                 }
             }
         }

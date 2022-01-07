@@ -167,7 +167,7 @@ namespace Tryouts
                     var bufferSpan = buffer.ToSpan();
 
                     using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-                    Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+                    var knownFields = CreateKnownFields(bsc);
 
                     while (tar.MoveToNextEntry())
                     {
@@ -349,7 +349,7 @@ namespace Tryouts
             SenderIndex = 13,
             InReplyToIndex = 14;
 
-        private static Dictionary<Slice, int> CreateKnownFields(ByteStringContext ctx)
+        private static IndexFieldsMapping CreateKnownFields(ByteStringContext ctx)
         {
             Slice.From(ctx, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(ctx, "Bcc", ByteStringType.Immutable, out Slice bccSlice);
@@ -367,24 +367,22 @@ namespace Tryouts
             Slice.From(ctx, "Sender", ByteStringType.Immutable, out Slice senderSlice);
             Slice.From(ctx, "InReplyTo", ByteStringType.Immutable, out Slice inReplyToSlice);
 
-            return new Dictionary<Slice, int>
-            {
-                [idSlice] = IdIndex,
-                [bccSlice] = BccIndex,
-                [ccSlice] = CcIndex,
-                [toSlice] = ToIndex,
-                [fromSlice] = FromIndex,
-                [replyToSlice] = ReplyToIndex,
-                [bodySlice] = BodyIndex,
-                [refSlice] = RefIndex,
-                [subjectSlice] = SubjectIndex,
-                [messageIdSlice] = MessageIdIndex,
-                [dateSlice] = DateIndex,
-                [importanceSlice] = ImportanceIndex,
-                [prioritySlice] = PriorityIndex,
-                [senderSlice] = SenderIndex,
-                [inReplyToSlice] = InReplyToIndex,
-            };
+            return new IndexFieldsMapping(ctx)
+                        .AddBinding(IdIndex, idSlice)
+                        .AddBinding(BccIndex, bccSlice)
+                        .AddBinding(CcIndex, ccSlice)
+                        .AddBinding(ToIndex, toSlice)
+                        .AddBinding(FromIndex, fromSlice)
+                        .AddBinding(ReplyToIndex, replyToSlice)
+                        .AddBinding(BodyIndex, bodySlice)
+                        .AddBinding(RefIndex, refSlice)
+                        .AddBinding(SubjectIndex, subjectSlice)
+                        .AddBinding(MessageIdIndex, messageIdSlice)
+                        .AddBinding(DateIndex, dateSlice)
+                        .AddBinding(ImportanceIndex, importanceSlice)
+                        .AddBinding(PriorityIndex, prioritySlice)
+                        .AddBinding(SenderIndex, senderSlice)
+                        .AddBinding(InReplyToIndex, inReplyToSlice);
         }
     }
 }

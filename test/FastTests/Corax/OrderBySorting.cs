@@ -75,7 +75,7 @@ namespace FastTests.Corax
         private void IndexEntries()
         {
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
-            Dictionary<Slice, int> knownFields = CreateKnownFields(bsc);
+            var knownFields = CreateKnownFields(bsc);
 
             const int bufferSize = 4096;
             using var _ = bsc.Allocate(bufferSize, out ByteString buffer);
@@ -100,16 +100,14 @@ namespace FastTests.Corax
             return output;
         }
 
-        private Dictionary<Slice, int> CreateKnownFields(ByteStringContext bsc)
+        private IndexFieldsMapping CreateKnownFields(ByteStringContext bsc)
         {
             Slice.From(bsc, "Id", ByteStringType.Immutable, out Slice idSlice);
             Slice.From(bsc, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
-            return new Dictionary<Slice, int>
-            {
-                [idSlice] = IndexId,
-                [contentSlice] = ContentId,
-            };
+            return new IndexFieldsMapping(bsc)
+                .AddBinding(IndexId, idSlice)
+                .AddBinding(ContentId, contentSlice);
         }
 
         private class IndexSingleNumericalEntry<T>

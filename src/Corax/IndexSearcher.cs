@@ -19,12 +19,14 @@ using Corax.Pipeline;
 namespace Corax
 {
     public sealed unsafe class IndexSearcher : IDisposable
-    {
-        
+    {        
         private const int NonAnalyzer = -1;
+
         private readonly Transaction _transaction;
-        private readonly Dictionary<int, Analyzer> _analyzers;
+        private readonly IndexFieldsMapping _fieldMapping;
+        
         private Page _lastPage = default;
+
         /// <summary>
         /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
         /// way than reference algorithms. 
@@ -45,20 +47,20 @@ namespace Corax
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index searcher with opening semantics and also every new
         // searcher becomes essentially a unit of work which makes reusing assets tracking more explicit.
-        public IndexSearcher(StorageEnvironment environment, Dictionary<int, Analyzer> analyzers = null)
+        public IndexSearcher(StorageEnvironment environment, IndexFieldsMapping fieldsMapping = null)
         {
-            _transaction = environment.ReadTransaction();
-            _analyzers = analyzers;
             _ownsTransaction = true;
+            _transaction = environment.ReadTransaction();
+            _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         }
 
-        public IndexSearcher(Transaction tx, Dictionary<int, Analyzer> analyzers = null)
+        public IndexSearcher(Transaction tx, IndexFieldsMapping fieldsMapping = null)
         {
             _ownsTransaction = false;
-            _analyzers = analyzers;
             _transaction = tx;
+            _fieldMapping = fieldsMapping ?? new IndexFieldsMapping(_transaction.Allocator);
         }
-        
+
         public UnmanagedSpan GetIndexEntryPointer(long id)
         {
             var data = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref _lastPage, id);
@@ -133,7 +135,9 @@ namespace Corax
             {
                 matches = TermMatch.YieldOnce(value);
             }
-
+#if DEBUG
+            matches.Term = term;
+#endif
             return matches;
         }
 
@@ -609,14 +613,19 @@ namespace Corax
         [SkipLocalsInit]
         private unsafe ReadOnlySpan<byte> KeywordEncodeTerm(Span<byte> originalTerm, int fieldId)
         {
-            if (_analyzers?[fieldId] is null)
+            if (_fieldMapping.Count == 0)
                 return originalTerm;
-            
-            _analyzers[fieldId].GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
+
+            var binding = _fieldMapping.GetByFieldId(fieldId);
+
+            var analyzer = binding.Analyzer;
+            analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
+
             Span<byte> encoded = new byte[outputSize];
             Token* tokensPtr = stackalloc Token[tokenSize];
             var tokens = new Span<Token>(tokensPtr, tokenSize);
-            _analyzers[fieldId].Execute(originalTerm, ref encoded, ref tokens);
+            analyzer.Execute(originalTerm, ref encoded, ref tokens);
+
             return encoded;
         }
         
@@ -624,13 +633,6 @@ namespace Corax
         {
             if (_ownsTransaction)
                 _transaction?.Dispose();
-            if (_analyzers is not null)
-            {
-                foreach (var analyzer in _analyzers.Values)
-                {
-                    analyzer?.Dispose();
-                }
-            }
         }
     }
 }
