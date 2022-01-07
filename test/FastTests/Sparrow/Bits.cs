@@ -97,7 +97,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Bits_NextPowerOf2()
         {
-            for (int i = 1; i < 31; i++)
+            for (int i = 1; i < 30; i++)
             {
                 int v = 1 << i;
                 Assert.Equal(v << 1, Bits.PowerOf2(v + 1));
