@@ -38,7 +38,7 @@ namespace Raven.Server.Rachis
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly TaskCompletionSource<Exception> _errorOccurred = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
@@ -332,7 +332,8 @@ namespace Raven.Server.Rachis
                             _running.Lower();
                             return;
                         case 4: // an error occurred during EmptyQueue()
-                            throw _errorOccurred.Task.Result;
+                            _errorOccurred.Task.Wait();
+                            break;
                     }
 
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -797,7 +798,7 @@ namespace Raven.Server.Rachis
                         tcs.TrySetException(e);
                     }
 
-                    _errorOccurred.TrySetResult(e);
+                    _errorOccurred.TrySetException(e);
                 }
             }
         }
