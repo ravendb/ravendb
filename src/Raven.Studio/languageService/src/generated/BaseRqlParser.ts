@@ -352,20 +352,20 @@ export class BaseRqlParser extends Parser {
 			this.state = 176;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la === BaseRqlParser.LOAD) {
+			if (_la === BaseRqlParser.ORDER_BY) {
 				{
 				this.state = 175;
-				this.loadStatement();
+				this.orderByStatement();
 				}
 			}
 
 			this.state = 179;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
-			if (_la === BaseRqlParser.ORDER_BY) {
+			if (_la === BaseRqlParser.LOAD) {
 				{
 				this.state = 178;
-				this.orderByStatement();
+				this.loadStatement();
 				}
 			}
 
@@ -4803,8 +4803,8 @@ export class BaseRqlParser extends Parser {
 		"\xAC\x05\n\x06\x02\xAB\xAD\x05\x14\v\x02\xAC\xAB\x03\x02\x02\x02\xAC\xAD" +
 		"\x03\x02\x02\x02\xAD\xAF\x03\x02\x02\x02\xAE\xB0\x05\x1A\x0E\x02\xAF\xAE" +
 		"\x03\x02\x02\x02\xAF\xB0\x03\x02\x02\x02\xB0\xB2\x03\x02\x02\x02\xB1\xB3" +
-		"\x05.\x18\x02\xB2\xB1\x03\x02\x02\x02\xB2\xB3\x03\x02\x02\x02\xB3\xB5" +
-		"\x03\x02\x02\x02\xB4\xB6\x054\x1B\x02\xB5\xB4\x03\x02\x02\x02\xB5\xB6" +
+		"\x054\x1B\x02\xB2\xB1\x03\x02\x02\x02\xB2\xB3\x03\x02\x02\x02\xB3\xB5" +
+		"\x03\x02\x02\x02\xB4\xB6\x05.\x18\x02\xB5\xB4\x03\x02\x02\x02\xB5\xB6" +
 		"\x03\x02\x02\x02\xB6\xB8\x03\x02\x02\x02\xB7\xB9\x05\x06\x04\x02\xB8\xB7" +
 		"\x03\x02\x02\x02\xB8\xB9\x03\x02\x02\x02\xB9\xBB\x03\x02\x02\x02\xBA\xBC" +
 		"\x05@!\x02\xBB\xBA\x03\x02\x02\x02\xBB\xBC\x03\x02\x02\x02\xBC\xBE\x03" +
@@ -5137,11 +5137,11 @@ export class ProgContext extends ParserRuleContext {
 	public whereStatement(): WhereStatementContext | undefined {
 		return this.tryGetRuleContext(0, WhereStatementContext);
 	}
-	public loadStatement(): LoadStatementContext | undefined {
-		return this.tryGetRuleContext(0, LoadStatementContext);
-	}
 	public orderByStatement(): OrderByStatementContext | undefined {
 		return this.tryGetRuleContext(0, OrderByStatementContext);
+	}
+	public loadStatement(): LoadStatementContext | undefined {
+		return this.tryGetRuleContext(0, LoadStatementContext);
 	}
 	public updateStatement(): UpdateStatementContext | undefined {
 		return this.tryGetRuleContext(0, UpdateStatementContext);

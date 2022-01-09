@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Xunit;
 using Xunit.Abstractions;
 using Index = SlowTests.Issues.Index;

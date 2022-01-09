@@ -1,27 +1,21 @@
-/// <reference path="../../../../../src/Raven.Studio/typings/globals/mocha/index.d.ts" />
-/// <reference path="../../../../../src/Raven.Studio/typings/globals/chai/index.d.ts" />
+import document = require("models/database/documents/document");
+import documentHelpers from "common/helpers/database/documentHelpers";
 
-import helper = require("src/Raven.Studio/typescript/common/helpers/database/documentHelpers");
-import document = require("src/Raven.Studio/typescript/models/database/documents/document");
-import chai = require("chai");
-
-const helperUnderTest = 'common/helpers/database/documentHelpers';
-
-describe(helperUnderTest, () => {
+describe("documentHelpers", function () {
 
     it('should find intersection on simple documents', () => {
-
         const doc1: any = document.empty();
         doc1.name = "John";
 
         const doc2: any = document.empty();
         doc2.name = "Greg";
 
-        const schema = helper.findSchema([doc1, doc2]);
+        const schema = documentHelpers.findSchema([doc1, doc2]);
 
-        chai.expect(schema.toDto(false)).to.deep.equal({ name: "", "@metadata": undefined });
+        expect(schema.toDto(false))
+            .toMatchObject({ name: "", "@metadata": undefined });
     });
-
+    
     it('should find intersection on complex object', () => {
         const doc1: any = document.empty();
         doc1.name = "John";
@@ -39,9 +33,9 @@ describe(helperUnderTest, () => {
         };
         doc2.name = "Greg";
 
-        const schema = helper.findSchema([doc1, doc2]);
+        const schema = documentHelpers.findSchema([doc1, doc2]);
 
-        chai.expect(schema.toDto((false))).to.deep.equal({ name: "", address: { zipCode: 0, street: "" }, "@metadata": undefined });
+        expect(schema.toDto(false)).toMatchObject({ name: "", address: { zipCode: 0, street: "" }, "@metadata": undefined });
     });
 
     it('should infer @collection and ClrType from metadata', () => {
@@ -57,12 +51,11 @@ describe(helperUnderTest, () => {
         doc2.__metadata.ravenClrType = "Acme.Models.People";
         doc2.__metadata.anotherProperty = "test";
 
-        const schema = helper.findSchema([doc1, doc2]);
+        const schema = documentHelpers.findSchema([doc1, doc2]);
 
-        chai.expect(schema.toDto(false)).to.deep.equal({ name: "", "@metadata": undefined });
+        expect(schema.toDto(false)).toMatchObject({ name: "", "@metadata": undefined });
 
-        chai.expect(schema.__metadata.ravenClrType).to.equal("Acme.Models.People");
-        chai.expect(schema.__metadata.collection).to.equal("People");
+        expect(schema.__metadata.ravenClrType).toEqual("Acme.Models.People");
+        expect(schema.__metadata.collection).toEqual("People");
     });
-
 });

@@ -334,18 +334,25 @@ namespace Raven.Server.Documents.TransactionCommands
                 {
                     if(paths[i].IsNullOrWhiteSpace())
                         throw new ArgumentException($"Invalid path {path}. Paths must be of format /*/*/*... ");
+                    paths[i] = EscapePathMember(paths[i]);
                 }
 
                 for (int i = 1; fromPaths != null && i < fromPaths.Length; i++)
                 {
                     if (fromPaths[i].IsNullOrWhiteSpace())
                         throw new ArgumentException($"Invalid 'from' path {path}. Paths must be of format /*/*/*... ");
+                    fromPaths[i] = EscapePathMember(fromPaths[i]);
                 }
 
                 commands.Add(new Command(type, paths, fromPaths, path, from, value));
             }
 
             return commands;
+        }
+
+        private static string EscapePathMember(string member)
+        {
+            return member.Replace("~0", "~").Replace("~1", "/");
         }
 
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)

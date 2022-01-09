@@ -1274,7 +1274,7 @@ loadToOrders(orderData);
 
                             var stats = etlProcess.GetPerformanceStats();
 
-                            Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchCompleteReason).ToList());
+                            Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
                         }
                     }
                 }

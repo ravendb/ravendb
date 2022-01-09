@@ -27,6 +27,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
 using NativeMemory = Sparrow.Utils.NativeMemory;
@@ -43,6 +44,7 @@ namespace Tests.Infrastructure
             XunitLogging.EnableExceptionCapture();
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+            ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
             RachisStateMachine.EnableDebugLongCommit = true;
 
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
@@ -482,7 +484,7 @@ namespace Tests.Infrastructure
             public TestCommandWithRaftId(string name, string uniqueRequestId) : base(uniqueRequestId)
             {
                 Name = name;
-    }
+            }
 
             public override DynamicJsonValue ToJson(JsonOperationContext context)
             {
@@ -491,7 +493,7 @@ namespace Tests.Infrastructure
                 djv[nameof(Value)] = Value;
 
                 return djv;
-}
+            }
         }
     }
 }

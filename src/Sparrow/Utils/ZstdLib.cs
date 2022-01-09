@@ -11,9 +11,12 @@ namespace Sparrow.Utils
     {
         private const string LIBZSTD = @"libzstd";
 
+        internal static Func<string, Exception> CreateDictionaryException;
+
         static ZstdLib()
         {
             DynamicNativeLibraryResolver.Register(typeof(ZstdLib).Assembly, LIBZSTD);
+            CreateDictionaryException = message => new InvalidOperationException(message);
         }
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
@@ -134,9 +137,10 @@ namespace Sparrow.Utils
             string ptrToStringAnsi = Marshal.PtrToStringAnsi(ZSTD_getErrorName(v));
             if (dictionary != null)
             {
-                throw new InvalidOperationException(ptrToStringAnsi + " on " + dictionary);
+                throw CreateDictionaryException(ptrToStringAnsi + " on " + dictionary);
             }
-            throw new InvalidOperationException(ptrToStringAnsi);
+
+            throw CreateDictionaryException(ptrToStringAnsi);
         }
 
         public class CompressContext : IDisposable
@@ -295,7 +299,7 @@ namespace Sparrow.Utils
 
             public override string ToString()
             {
-                return "Dic #" + Id
+                return "Dictionary #" + Id 
 #if DEBUG
                      + " - " + DictionaryHash
 #endif

@@ -1939,8 +1939,8 @@ class ongoingTasksStats extends viewModelBase {
                             tooltipHtml += `<div class="tooltip-li text-danger">ETL task has Load errors:<div class="value">Open Notification Center for details </div></div>`;
                         }
                         
-                        if (elementWithData.BatchCompleteReason) {
-                            tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchCompleteReason} </div></div>`;
+                        if (elementWithData.BatchTransformationCompleteReason) {
+                            tooltipHtml += `<div class="tooltip-li">Batch complete reason: <div class="value">${elementWithData.BatchTransformationCompleteReason} </div></div>`;
                         }
 
                         if (elementWithData.CurrentlyAllocated && elementWithData.CurrentlyAllocated.SizeInBytes) {
@@ -1955,11 +1955,10 @@ class ongoingTasksStats extends viewModelBase {
                     case "SubscriptionBatch": {
                         const elementWithData = context.rootStats as SubscriptionBatchPerformanceStatsWithCache;
                        
-                        tooltipHtml += `<div class="tooltip-li">Documents sent in batch: <div class="value">${elementWithData.NumberOfDocuments.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Documents size: <div class="value">${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Included Documents: <div class="value">${elementWithData.NumberOfIncludedDocuments.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Included Counters: <div class="value">${elementWithData.NumberOfIncludedCounters.toLocaleString()} </div></div>`;
-                        tooltipHtml += `<div class="tooltip-li">Included Time Series entries: <div class="value">${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()} </div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Documents sent in batch: <div class="value">${elementWithData.NumberOfDocuments.toLocaleString()} (size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfDocumentsInBytes)})</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Documents: <div class="value">${elementWithData.NumberOfIncludedDocuments.toLocaleString()} (size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfIncludedDocumentsInBytes)})</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Counters: <div class="value">${elementWithData.NumberOfIncludedCounters.toLocaleString()} (size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfIncludedCountersInBytes)})</div></div>`;
+                        tooltipHtml += `<div class="tooltip-li">Included Time Series entries: <div class="value">${elementWithData.NumberOfIncludedTimeSeriesEntries.toLocaleString()} (size: ${generalUtils.formatBytesToSize(elementWithData.SizeOfIncludedTimeSeriesInBytes)})</div></div>`;
 
                         if (elementWithData.Exception) {
                             tooltipHtml += `<div class="tooltip-li">Message: <div class="value">${elementWithData.Exception} </div></div>`;

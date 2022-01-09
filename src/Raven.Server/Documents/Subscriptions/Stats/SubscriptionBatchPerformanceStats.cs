@@ -5,9 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.Server.Documents.Subscriptions.Stats;
 
-namespace Raven.Server.Documents.Subscriptions
+namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public class SubscriptionBatchPerformanceStats
     {
@@ -21,8 +20,11 @@ namespace Raven.Server.Documents.Subscriptions
         public long SizeOfIncludedDocumentsInBytes { get; set; }
         
         public long NumberOfIncludedCounters { get; set; }
+        public long SizeOfIncludedCountersInBytes { get; set; }
+
         public long NumberOfIncludedTimeSeriesEntries { get; set; }
-        
+        public long SizeOfIncludedTimeSeriesInBytes { get; set; }
+
         public DateTime Started { get; set; }
         public DateTime? Completed { get; set; }
         

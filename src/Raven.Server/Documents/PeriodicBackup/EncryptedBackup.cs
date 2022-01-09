@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly Stream _inner;
         private readonly byte[] _pullState;
         private readonly byte[] _encryptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
-        private readonly byte[] _plainTextBufer = new byte[Constants.Encryption.DefaultBufferSize];
+        private readonly byte[] _plainTextBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private Memory<byte> _plainTextWindow = Memory<byte>.Empty;
 
         public unsafe DecryptingXChaCha20Oly1305Stream(Stream inner, byte[] key)
@@ -77,12 +77,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private unsafe void DecryptBuffer(int read)
         {
-            fixed (byte* ciphertextPtr = _encryptedBuffer, statePtr = _pullState, plain = _plainTextBufer)
+            fixed (byte* ciphertextPtr = _encryptedBuffer, statePtr = _pullState, plain = _plainTextBuffer)
             {
                 ulong s;
                 if (Sodium.crypto_secretstream_xchacha20poly1305_pull(statePtr, plain, &s, null, ciphertextPtr, (ulong)read, null, 0) != 0)
                     throw new CryptographicException("Failed to decryped file. Wrong or corrupted file or key");
-                _plainTextWindow = new Memory<byte>(_plainTextBufer, 0, (int)s);
+                _plainTextWindow = new Memory<byte>(_plainTextBuffer, 0, (int)s);
             }
         }
 
@@ -163,9 +163,10 @@ namespace Raven.Server.Documents.PeriodicBackup
     {
         private readonly Stream _inner;
         private readonly byte[] _pushState;
-        private readonly byte[] _cyrptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
+        private readonly byte[] _encryptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
         private readonly byte[] _innerBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private int _pos = 0;
+        private bool _shouldFlush;
 
         public unsafe EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key)
         {
@@ -190,38 +191,42 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override void Flush()
         {
-            if (_pos > 0)
+            // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
+            // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
+            // will allow it
+            if (_shouldFlush)
             {
-                var sizeToWrite = EncryptBuffer();
-                _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
-                _pos = 0;
+                _inner.Flush();
+                _shouldFlush = false;
             }
-            _inner.Flush();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            if (_pos > 0)
+            // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
+            // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
+            // will allow it
+            if (_shouldFlush)
             {
-                var sizeToWrite = EncryptBuffer();
-                await _inner.WriteAsync(_cyrptedBuffer, 0, sizeToWrite, cancellationToken);
-                _pos = 0;
+                await _inner.FlushAsync(cancellationToken);
+                _shouldFlush = false;
             }
-            await _inner.FlushAsync(cancellationToken);
         }
 
         public void Flush(bool flushToDisk)
         {
-            if (_pos > 0)
+            // no-op - because we *cannot* do anything here, we *require* that all writes, except the last one
+            // will be on 4Kb aligned value. This is already handled, but we may want to flush past writes, so
+            // will allow it
+            if (_shouldFlush)
             {
-                var sizeToWrite = EncryptBuffer();
-                _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
-                _pos = 0;
+                if (_inner is FileStream innerFS)
+                    innerFS.Flush(flushToDisk: flushToDisk);
+                else
+                    _inner.Flush();
+
+                _shouldFlush = false;
             }
-            if (_inner is FileStream innerFS)
-                innerFS.Flush(flushToDisk: flushToDisk);
-            else
-                _inner.Flush();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -241,13 +246,34 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private unsafe int EncryptBuffer()
         {
-            fixed (byte* fileBlockPtr = _innerBuffer, ciphertextPtr = _cyrptedBuffer, statePtr = _pushState)
+            fixed (byte* fileBlockPtr = _innerBuffer, ciphertextPtr = _encryptedBuffer, statePtr = _pushState)
             {
                 ulong size;
                 if (Sodium.crypto_secretstream_xchacha20poly1305_push(statePtr, ciphertextPtr, &size, fileBlockPtr, (ulong)_pos, null, 0, 0) != 0)
                     throw new CryptographicException("Failed to encrypt backup");
+
                 return (int)size;
             }
+        }
+
+        private void FlushAndEncryptBuffer()
+        {
+            if (_pos == 0)
+                return;
+            var sizeToWrite = EncryptBuffer();
+            _inner.Write(_encryptedBuffer, 0, sizeToWrite);
+            _pos = 0;
+            _shouldFlush = true;
+        }
+
+        private async Task FlushAndEncryptBufferAsync()
+        {
+            if (_pos == 0)
+                return;
+            var sizeToWrite = EncryptBuffer();
+            await _inner.WriteAsync(_encryptedBuffer, 0, sizeToWrite);
+            _pos = 0;
+            _shouldFlush = true;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -261,9 +287,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _pos += sizeToWrite;
                 if (_pos == Constants.Encryption.DefaultBufferSize)
                 {
-                    sizeToWrite = EncryptBuffer();
-                    _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
-                    _pos = 0;
+                    FlushAndEncryptBuffer();
                 }
             }
         }
@@ -279,9 +303,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _pos += sizeToWrite;
                 if (_pos == Constants.Encryption.DefaultBufferSize)
                 {
-                    sizeToWrite = EncryptBuffer();
-                    await _inner.WriteAsync(_cyrptedBuffer, 0, sizeToWrite, cancellationToken);
-                    _pos = 0;
+                    await FlushAndEncryptBufferAsync();
                 }
             }
         }
@@ -300,7 +322,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         protected override void Dispose(bool disposing)
         {
             GC.SuppressFinalize(this);
-
+            FlushAndEncryptBuffer();
             Flush(flushToDisk: true);
             _inner.Dispose();
         }
@@ -308,7 +330,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public override async ValueTask DisposeAsync()
         {
             GC.SuppressFinalize(this);
-
+            await FlushAndEncryptBufferAsync();
             await FlushAsync();
             await _inner.DisposeAsync();
         }

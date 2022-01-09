@@ -3,7 +3,7 @@ parser grammar BaseRqlParser;
 
 options { tokenVocab = BaseRqlLexer; }
 prog
-   : functionStatment* fromStatement groupByStatement? whereStatement? loadStatement? orderByStatement? updateStatement? selectStatement? includeStatement? limitStatement? EOF
+   : functionStatment* fromStatement groupByStatement? whereStatement? orderByStatement? loadStatement? updateStatement? selectStatement? includeStatement? limitStatement? EOF
    ;
    //          FROM STATEMENT          //
    
