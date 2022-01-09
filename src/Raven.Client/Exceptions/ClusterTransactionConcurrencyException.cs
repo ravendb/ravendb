@@ -47,8 +47,8 @@ namespace Raven.Client.Exceptions
         {
             public ConflictType Type { get; set; }
             public string Id { get; set; }
-            public string Expected { get; set; }
-            public string Actual { get; set; }
+            public long Expected { get; set; }
+            public long Actual { get; set; }
 
             public DynamicJsonValue ToJson()
             {

@@ -240,8 +240,8 @@ namespace Raven.Server.ServerWide.Commands
                 Conflict = new Conflict
                 {
                     Id = clusterCommand.Id, 
-                    Actual = actualIndex.ToString(), 
-                    Expected = clusterCommand.Index.ToString(), 
+                    Actual = actualIndex, 
+                    Expected = clusterCommand.Index, 
                     Type = type
                 }
             };
@@ -568,10 +568,10 @@ namespace Raven.Server.ServerWide.Commands
             if (conflict.TryGet(nameof(Conflict.Type), out ConflictType type))
                 current.Type = type;
 
-            if (conflict.TryGet(nameof(Conflict.Expected), out string expected))
+            if (conflict.TryGet(nameof(Conflict.Expected), out long expected))
                 current.Expected = expected;
 
-            if (conflict.TryGet(nameof(Conflict.Actual), out string actual))
+            if (conflict.TryGet(nameof(Conflict.Actual), out long actual))
                 current.Actual = actual;
 
             return errorInfo;
