@@ -22,7 +22,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Theory]
+        [Theory64Bit]
         [InlineData(6)]
         [InlineData(100)]
         [InlineData(600)]
@@ -45,6 +45,14 @@ namespace StressTests.Issues
                     await bulkInsert.StoreAsync(bigObj);
                 }
             }
+        }
+
+        [Theory32Bit]
+        [InlineData(6)]
+        [InlineData(10)]
+        public async Task SendingDocumentWithLargeFieldInBulkInsert_32bit(int sizeInMb)
+        {
+            await SendingDocumentWithLargeFieldInBulkInsert(sizeInMb);
         }
 
         public class BigFieldObject
