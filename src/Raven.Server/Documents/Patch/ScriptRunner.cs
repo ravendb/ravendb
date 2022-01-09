@@ -17,6 +17,7 @@ using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents.Patch
             var s = arg.AsString();
             fixed (char* pValue = s)
             {
-                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _, properlyParseThreeDigitsMilliseconds: true);
                 if (result != LazyStringParser.Result.DateTime)
                     ThrowInvalidDateArgument();
 
@@ -183,9 +184,9 @@ namespace Raven.Server.Documents.Patch
 
             return TimeSeriesRetriever.ParseDateTime(arg.AsString());
         }
-        
+
         private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
-        
+
         public class SingleRun
         {
             private readonly DocumentDatabase _database;
@@ -206,6 +207,7 @@ namespace Raven.Server.Documents.Patch
             public DateTime? IncludeRevisionByDateTimeBefore;
             public HashSet<string> CompareExchangeValueIncludes;
             private HashSet<string> _documentIds;
+            private CancellationToken _token;
 
             public bool ReadOnly
             {
@@ -270,7 +272,7 @@ namespace Raven.Server.Documents.Patch
 
                 // includes - backward compatibility
                 ScriptEngine.SetValue("include", includeDocumentFunc);
-                
+
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
 
@@ -387,6 +389,9 @@ namespace Raven.Server.Documents.Patch
                 var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
                     AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
+                var increment = new ClrFunctionInstance(ScriptEngine, "increment", (thisObj, values) =>
+                    IncrementTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+
                 var delete = new ClrFunctionInstance(ScriptEngine, "delete", (thisObj, values) =>
                     DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
@@ -398,6 +403,7 @@ namespace Raven.Server.Documents.Patch
 
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
+                obj.Set("increment", increment);
                 obj.Set("delete", delete);
                 obj.Set("get", get);
                 obj.Set("doc", args[0]);
@@ -463,24 +469,8 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     var valuesArg = args[1];
-                    Memory<double> values;
-                    if (valuesArg.IsArray())
-                    {
-                        var jsValues = valuesArg.AsArray();
-                        valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
-                        FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
-                        values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
-                    }
-                    else if (valuesArg.IsNumber())
-                    {
-                        valuesBuffer = ArrayPool<double>.Shared.Rent(1);
-                        valuesBuffer[0] = valuesArg.AsNumber();
-                        values = new Memory<double>(valuesBuffer, 0, 1);
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
-                    }
+
+                    GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
 
                     var tss = _database.DocumentsStorage.TimeSeriesStorage;
                     var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
@@ -504,7 +494,7 @@ namespace Raven.Server.Documents.Patch
                         id,
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
-                        new[] { toAppend }, 
+                        new[] { toAppend },
                         AppendOptionsForScript);
 
                     if (DebugMode)
@@ -526,6 +516,107 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return Undefined.Instance;
+            }
+
+            private JsValue IncrementTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            {
+                AssertValidDatabaseContext("timeseries(doc, name).increment");
+
+                const string signature1Args = "timeseries(doc, name).increment(values)";
+                const string signature2Args = "timeseries(doc, name).increment(timestamp, values)";
+
+                string signature;
+                DateTime timestamp;
+                JsValue valuesArg;
+
+                switch (args.Length)
+                {
+                    case 1:
+                        signature = signature1Args;
+                        timestamp = DateTime.UtcNow.EnsureMilliseconds();
+                        valuesArg = args[0];
+                        break;
+                    case 2:
+                        signature = signature2Args;
+                        timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
+                        valuesArg = args[1];
+                        break;
+                    default:
+                        throw new ArgumentException($"There is no overload with {args.Length} arguments for this method should be {signature1Args} or {signature2Args}");
+                }
+
+                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+
+                double[] valuesBuffer = null;
+                try
+                {
+                    GetTimeSeriesValues(valuesArg, ref valuesBuffer, signature, out var values);
+
+                    var tss = _database.DocumentsStorage.TimeSeriesStorage;
+                    var newSeries = tss.Stats.GetStats(_docsCtx, id, timeSeries).Count == 0;
+
+                    if (newSeries)
+                    {
+                        DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        DocumentTimeSeriesToUpdate.Add(id);
+                    }
+
+                    var toIncrement = new TimeSeriesOperation.IncrementOperation
+                    {
+                        Values = valuesBuffer,
+                        ValuesLength = values.Length,
+                        Timestamp = timestamp
+                    };
+
+                    tss.IncrementTimestamp(
+                        _docsCtx,
+                        id,
+                        CollectionName.GetCollectionName(doc),
+                        timeSeries,
+                        new[] { toIncrement },
+                        AppendOptionsForScript);
+
+                    if (DebugMode)
+                    {
+                        DebugActions.IncrementTimeSeries.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = timeSeries,
+                            ["Timestamp"] = timestamp,
+                            ["Values"] = values.ToArray().Cast<object>(),
+                            ["Created"] = newSeries
+                        });
+                    }
+                }
+                finally
+                {
+                    if (valuesBuffer != null)
+                        ArrayPool<double>.Shared.Return(valuesBuffer);
+                }
+
+                return Undefined.Instance;
+            }
+
+            private void GetTimeSeriesValues(JsValue valuesArg, ref double[] valuesBuffer, string signature, out Memory<double> values)
+            {
+                if (valuesArg.IsArray())
+                {
+                    var jsValues = valuesArg.AsArray();
+                    valuesBuffer = ArrayPool<double>.Shared.Rent((int)jsValues.Length);
+                    FillDoubleArrayFromJsArray(valuesBuffer, jsValues, signature);
+                    values = new Memory<double>(valuesBuffer, 0, (int)jsValues.Length);
+                }
+                else if (valuesArg.IsNumber())
+                {
+                    valuesBuffer = ArrayPool<double>.Shared.Rent(1);
+                    valuesBuffer[0] = valuesArg.AsNumber();
+                    values = new Memory<double>(valuesBuffer, 0, 1);
+                }
+                else
+                {
+                    throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
+                }
             }
 
             private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
@@ -899,7 +990,7 @@ namespace Raven.Server.Documents.Patch
                         return boi.Blittable.ToString();
                     }
 
-                    using (var blittable =  JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, obj.AsObject()))
+                    using (var blittable = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, obj.AsObject()))
                     {
                         return blittable.ToString();
                     }
@@ -1037,20 +1128,20 @@ namespace Raven.Server.Documents.Patch
                 if (_docsCtx == null)
                     throw new InvalidOperationException($"Unable to use `{functionName}` when this instance is not attached to a database operation");
             }
-            
+
             private JsValue IncludeRevisions(JsValue self, JsValue[] args)
             {
                 if (args == null)
                     return JsValue.Null;
 
                 IncludeRevisionsChangeVectors ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                
+
                 foreach (JsValue arg in args)
                 {
                     switch (arg.Type)
                     {
                         case Types.String:
-                            if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,DateTimeStyles.AssumeUniversal, out var dateTime))
+                            if (DateTime.TryParseExact(arg.ToString(), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime))
                             {
                                 IncludeRevisionByDateTimeBefore = dateTime.ToUniversalTime();
                                 continue;
@@ -1067,10 +1158,10 @@ namespace Raven.Server.Documents.Patch
                             break;
                     }
                 }
-                
+
                 return JsValue.Null;
             }
-            
+
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
                 using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
@@ -1373,8 +1464,7 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[^1]).Data;
 
-                //TODO: properly pass cancellation token
-                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null, token: default);
+                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, loadedDocuments: null, token: _token);
 
                 var streamableResults = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs, out var type);
                 var result = retriever.MaterializeResults(streamableResults, type, addProjectionToResult: false, fromStudio: false);
@@ -1673,7 +1763,7 @@ namespace Raven.Server.Documents.Patch
                     var s = args[0].AsString();
                     fixed (char* pValue = s)
                     {
-                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _, properlyParseThreeDigitsMilliseconds: true);
                         switch (result)
                         {
                             case LazyStringParser.Result.DateTime:
@@ -1801,7 +1891,7 @@ namespace Raven.Server.Documents.Patch
                     return jsValue.AsObject().Get(Constants.CompareExchange.ObjectFieldName);
                 }
             }
-            
+
             private JsValue LoadDocumentInternal(string id)
             {
                 if (string.IsNullOrEmpty(id))
@@ -1824,16 +1914,17 @@ namespace Raven.Server.Documents.Patch
             private JsValue[] _args = Array.Empty<JsValue>();
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)
             {
-                return Run(jsonCtx, docCtx, method, null, args, scope);
+                return Run(jsonCtx, docCtx, method, null, args, scope, token);
             }
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null, CancellationToken token = default)
             {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
                 _scope = scope;
+                _token = token;
 
                 JavaScriptUtils.Reset(_jsonCtx);
 
@@ -1866,6 +1957,7 @@ namespace Raven.Server.Documents.Patch
                     _loadScope = null;
                     _docsCtx = null;
                     _jsonCtx = null;
+                    _token = default;
                     Array.Clear(_args, 0, _args.Length);
                 }
             }

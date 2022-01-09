@@ -24,6 +24,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
+using Voron.Exceptions;
 using Voron.Impl;
 
 namespace Raven.Server
@@ -35,6 +36,7 @@ namespace Raven.Server
         public static unsafe int Main(string[] args)
         {
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+            ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);
 
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = NativeMemory.AllocateMemory;
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = NativeMemory.Free;

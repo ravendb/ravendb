@@ -1,7 +1,7 @@
 import { BaseAutocompleteProvider } from "./baseProvider";
 import { AUTOCOMPLETE_META, AUTOCOMPLETE_SCORING, AutocompleteContext, AutocompleteProvider } from "./common";
 import { RqlParser } from "../RqlParser";
-import { AutocompleteUtils } from "../autocompleteUtils";
+import { QuoteUtils } from "../quoteUtils";
 
 export class AutocompleteFrom extends BaseAutocompleteProvider implements AutocompleteProvider {
     
@@ -24,7 +24,7 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
                 meta: AUTOCOMPLETE_META.collection,
                 score: AUTOCOMPLETE_SCORING.collection,
                 caption: c,
-                value: AutocompleteUtils.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
+                value: QuoteUtils.quote(c, quoteType === "Single" ? "Single" : "Double") + " "
             }));
             
             const indexSuggestion: autoCompleteWordList = {
@@ -43,7 +43,7 @@ export class AutocompleteFrom extends BaseAutocompleteProvider implements Autoco
                 meta: AUTOCOMPLETE_META.index,
                 score: AUTOCOMPLETE_SCORING.index,
                 caption: index,
-                value: AutocompleteUtils.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
+                value: QuoteUtils.quote(index, quoteType === "Single" ? "Single" : "Double") + " "
             }));
         }
         

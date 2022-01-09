@@ -37,6 +37,7 @@ class virtualGrid<T> {
     private isGridVisible = false;
     private selectionDiff: number[] = [];
     private inIncludeSelectionMode: boolean = true;
+    private generation: number = 1; // used for concurrency control 
     
     private sortByColumn = ko.observable<sortableVirtualColumn>();
     private sortMode = ko.observable<sortMode>("asc");
@@ -334,15 +335,26 @@ class virtualGrid<T> {
                 this.isLoading(true);
 
                 const fetcherTask = this.settings.fetcher(safeSkip, safeTake);
-
+                const requestGeneration = this.generation;
+                
                 const fetcherPostprocessor = () => {
                     fetcherTask
-                        .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
-                        .fail(error => this.chunkFetchFailed(skip, safeTake))
+                        .then((results: pagedResult<T>) => {
+                            if (requestGeneration === this.generation) {
+                                this.chunkFetched(results, safeSkip, safeTake);
+                            }
+                        })
+                        .fail(() => {
+                            if (requestGeneration === this.generation) {
+                                this.chunkFetchFailed(skip, safeTake);
+                            }
+                        })
                         .always(() => {
-                            // When we're done loading, run the next queued fetch as necessary.
-                            this.isLoading(false);
-                            this.runQueuedFetch();
+                            if (requestGeneration === this.generation) {
+                                // When we're done loading, run the next queued fetch as necessary.
+                                this.isLoading(false);
+                                this.runQueuedFetch();
+                            }
                         });
                 };
 
@@ -696,6 +708,8 @@ class virtualGrid<T> {
         if (!this.settings.fetcher) {
             throw new Error("No fetcher defined, call init() method on virtualGridController");
         }
+        
+        this.generation++;
         
         this.items.clear();
         this.totalItemCount = null;

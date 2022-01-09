@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Queries
 
                         fixed (char* pValue = value)
                         {
-                            var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
+                            var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _, properlyParseThreeDigitsMilliseconds: true);
                             switch (result)
                             {
                                 case LazyStringParser.Result.DateTime:

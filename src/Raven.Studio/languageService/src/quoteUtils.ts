@@ -1,16 +1,16 @@
 ﻿import { QuoteType } from "./providers/baseProvider";
 
 
-export class AutocompleteUtils {
+export class QuoteUtils {
 
     static quote(input: string, preferredQuoteType: QuoteType): string {
         switch (preferredQuoteType) {
             case "None":
                 if (input.includes('"')) {
-                    return AutocompleteUtils.quote(input, "Double");
+                    return QuoteUtils.quote(input, "Double");
                 }
                 if (input.includes("'")) {
-                    return AutocompleteUtils.quote(input, "Single");
+                    return QuoteUtils.quote(input, "Single");
                 }
                 return input;
             case "Double":

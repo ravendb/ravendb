@@ -1781,8 +1781,9 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteTimeSeries(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
+        public static int WriteTimeSeries(this AsyncBlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
         {
+            int size = 0;
             writer.WriteStartObject();
 
             var first = true;
@@ -1794,11 +1795,13 @@ namespace Raven.Server.Json
                 first = false;
 
                 writer.WritePropertyName(kvp.Key);
-
-                TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
+                size += kvp.Key.Length;
+                size += TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
             }
 
             writer.WriteEndObject();
+
+            return size;
         }
 
         private static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,

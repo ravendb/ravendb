@@ -40,6 +40,8 @@ namespace FastTests.Client
                 {
                     [dbName] = DatabaseAccess.ReadWrite
                 });
+
+                Server.ForTestingPurposesOnly().PrintExceptionDuringBulkInsertProcessingToConsole = true;
             }
 
             using (var store = GetDocumentStore(new Options

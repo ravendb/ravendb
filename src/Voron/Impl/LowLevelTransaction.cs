@@ -114,6 +114,13 @@ namespace Voron.Impl
             }
         }
         public event Action<IPagerLevelTransactionState> OnDispose;
+        
+        /// <summary>
+        /// This is called *under the write transaction lock* and will
+        /// allow us to clean up any in memory state that shouldn't be preserved
+        /// passed the transaction rollback
+        /// </summary>
+        public event Action<IPagerLevelTransactionState> OnRollBack;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -1222,6 +1229,8 @@ namespace Voron.Impl
 
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
+
+            OnRollBack?.Invoke(this);
 
             ValidateReadOnlyPages();
 

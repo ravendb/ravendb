@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
-import timeHelpers = require("common/timeHelpers");
 import moment = require("moment");
 import d3 = require("d3");
 

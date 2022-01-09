@@ -8,7 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_15608 : RavenTestBase
     {

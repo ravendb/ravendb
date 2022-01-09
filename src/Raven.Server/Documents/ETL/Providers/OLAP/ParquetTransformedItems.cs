@@ -730,7 +730,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         {
             fixed (char* c = str)
             {
-                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out dto);
+                var result = LazyStringParser.TryParseDateTime(c, str.Length, out var dt, out dto, properlyParseThreeDigitsMilliseconds: true);
                 switch (result)
                 {
                     case LazyStringParser.Result.DateTime:

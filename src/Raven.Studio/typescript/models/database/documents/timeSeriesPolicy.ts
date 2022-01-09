@@ -65,6 +65,12 @@ class timeSeriesPolicy {
             () => timeSeriesPolicy.allTimeUnits.find(x => this.retention().unit() === x.value).label);
         this.aggregationLabel = ko.pureComputed(
             () => timeSeriesPolicy.allTimeUnits.find(x => this.aggregation().unit() === x.value).label);
+
+        this.hasRetention.subscribe((toggledOn) => {
+            if (toggledOn) {
+                this.retention().unit("day");
+            }
+        });
         
         this.initPolicyValidation();
     }
@@ -215,9 +221,9 @@ class timeSeriesPolicy {
     static empty() {
         return new timeSeriesPolicy({
             RetentionTime: null,
-            AggregationTime: { // daily by default
+            AggregationTime: {
                 Unit: "Second",
-                Value: 3600 * 24
+                Value: 3600 // 1 hr
             },
             Name: null
         });

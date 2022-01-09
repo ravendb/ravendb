@@ -449,6 +449,10 @@ namespace Sparrow.Json
 
             var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(str, out _);
             int size = Encodings.Utf8.GetMaxByteCount(str.Length) + escapePositionsMaxSize;
+            if (size > 8 * 1024 * 1024)
+            {
+                size = Encodings.Utf8.GetByteCount(str) + escapePositionsMaxSize;
+            }
 
             AllocatedMemoryData buffer = null;
             try

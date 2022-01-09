@@ -5,7 +5,7 @@ import {
     CollectionByNameContext, JsFunctionContext,
 } from "./generated/BaseRqlParser";
 import { QuerySource } from "./providers/baseProvider";
-import { AutocompleteUtils } from "./autocompleteUtils";
+import { QuoteUtils } from "./quoteUtils";
 
 export interface JsFunctionDeclaration {
     name: string;
@@ -37,7 +37,7 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
             this.meta.fromAlias = alias;
         }
         this.meta.querySourceType = "index";
-        this.meta.querySourceName = AutocompleteUtils.unquote(ctx.indexName().text);
+        this.meta.querySourceName = QuoteUtils.unquote(ctx.indexName().text);
         return this.visitChildren(ctx);
     }
     
@@ -47,7 +47,7 @@ export class RqlQueryVisitor extends AbstractParseTreeVisitor<RqlQueryMetaInfo> 
             this.meta.fromAlias = alias;
         }
         this.meta.querySourceType = "collection";
-        this.meta.querySourceName = AutocompleteUtils.unquote(ctx.collectionName().text);
+        this.meta.querySourceName = QuoteUtils.unquote(ctx.collectionName().text);
         return this.visitChildren(ctx);
     }
 

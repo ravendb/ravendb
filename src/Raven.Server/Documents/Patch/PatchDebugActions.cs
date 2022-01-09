@@ -14,6 +14,7 @@ namespace Raven.Server.Documents.Patch
         
         public readonly DynamicJsonArray GetTimeSeries = new DynamicJsonArray();
         public readonly DynamicJsonArray AppendTimeSeries = new DynamicJsonArray();
+        public readonly DynamicJsonArray IncrementTimeSeries = new DynamicJsonArray();
         public readonly DynamicJsonArray DeleteTimeSeries = new DynamicJsonArray();
      
         public DynamicJsonValue GetDebugActions()
@@ -30,6 +31,7 @@ namespace Raven.Server.Documents.Patch
                   
                 [nameof(GetTimeSeries)] = new DynamicJsonArray(GetTimeSeries.Items),
                 [nameof(AppendTimeSeries)] = new DynamicJsonArray(AppendTimeSeries.Items),
+                [nameof(IncrementTimeSeries)] = new DynamicJsonArray(IncrementTimeSeries.Items),
                 [nameof(DeleteTimeSeries)] = new DynamicJsonArray(DeleteTimeSeries.Items)
             };
         }
@@ -46,6 +48,7 @@ namespace Raven.Server.Documents.Patch
             
             GetTimeSeries.Clear();
             AppendTimeSeries.Clear();
+            IncrementTimeSeries.Clear();
             DeleteTimeSeries.Clear();
         }
     }

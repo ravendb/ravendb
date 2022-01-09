@@ -235,7 +235,7 @@ namespace Raven.Client.Http
             return httpClientCache.GetOrAdd(name, new Lazy<HttpClient>(CreateClient)).Value;
         }
 
-        private void RemoveHttpClient()
+        internal void RemoveHttpClient()
         {
             var httpClientCache = GetHttpClientCache();
 
