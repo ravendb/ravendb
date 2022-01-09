@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;

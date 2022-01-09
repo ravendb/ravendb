@@ -3,24 +3,24 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Stats;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public class LiveReplicationPerformanceCollector : DatabaseAwareLivePerformanceCollector<LiveReplicationPerformanceCollector.IReplicationPerformanceStats>
     {
         private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming =
             new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing =
-            new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
+        private readonly ConcurrentDictionary<OutgoingReplicationHandlerBase, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandlerBase, OutgoingReplicationStatsAggregator>> _outgoing =
+            new ConcurrentDictionary<OutgoingReplicationHandlerBase, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandlerBase, OutgoingReplicationStatsAggregator>>();
 
         private readonly ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter> _outgoingErrors = new ConcurrentDictionary<ReplicationNode, OutgoingReplicationFailureToConnectReporter>();
         private readonly ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter> _incomingErrors = new ConcurrentDictionary<ReplicationNode, IncomingReplicationFailureToConnectReporter>();
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Replication
                     stats = new IncomingReplicationPerformanceStats[] { new IncomingReplicationPerformanceStats() };
                 }
                 
-                yield return handler.PullReplication
+                yield return handler is IncomingPullReplicationHandler
                     ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
                     : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.GetReplicationPerformanceType(), handler.SourceFormatted, stats);
             }
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Replication
                     stats = new OutgoingReplicationPerformanceStats[] { new OutgoingReplicationPerformanceStats() };
                 }
 
-                yield return handler.IsPullReplicationAsHub
+                yield return handler is OutgoingPullReplicationHandler
                     ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
                     : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.GetReplicationPerformanceType(), handler.DestinationFormatted, stats);
             }
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Replication
                 if (itemsToSend.Count > 0)
                 {
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
-                    results.Add(handler.PullReplication
+                    results.Add(handler is IncomingPullReplicationHandler
                         ? IncomingPerformanceStats.ForPullReplication(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats)
                         : IncomingPerformanceStats.ForPushReplication(handler.ConnectionInfo.SourceDatabaseId, handler.GetReplicationPerformanceType(), handler.SourceFormatted, stats));
                 }
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Replication
                 if (itemsToSend.Count > 0)
                 {
                     var stats = itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray();
-                    results.Add(handler.IsPullReplicationAsHub
+                    results.Add(handler is OutgoingPullReplicationHandler
                         ? OutgoingPerformanceStats.ForPullReplication(handler.DestinationDbId, handler.DestinationFormatted, stats)
                         : OutgoingPerformanceStats.ForPushReplication(handler.DestinationDbId, handler.GetReplicationPerformanceType(), handler.DestinationFormatted, stats));
                 }
@@ -200,23 +200,23 @@ namespace Raven.Server.Documents.Replication
             writer.WriteEndObject();
         }
 
-        private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
+        private void OutgoingHandlerRemoved(OutgoingReplicationHandlerBase handler)
         {
             if (_outgoing.TryRemove(handler, out var stats))
                 stats.Handler.DocumentsSend -= OutgoingDocumentsSend;
         }
 
-        private void OutgoingHandlerAdded(OutgoingReplicationHandler handler)
+        private void OutgoingHandlerAdded(OutgoingReplicationHandlerBase handler)
         {
             _outgoing.GetOrAdd(handler, key =>
             {
                 handler.DocumentsSend += OutgoingDocumentsSend;
 
-                return new ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>(handler);
+                return new ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandlerBase, OutgoingReplicationStatsAggregator>(handler);
             });
         }
 
-        private void OutgoingDocumentsSend(OutgoingReplicationHandler handler)
+        private void OutgoingDocumentsSend(OutgoingReplicationHandlerBase handler)
         {
             if (_outgoing.TryGetValue(handler, out var stats) == false)
             {

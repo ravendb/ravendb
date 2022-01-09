@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,7 +7,6 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using JetBrains.Annotations;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -17,15 +15,15 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Tcp.Sync;
 using Raven.Server.Utils;
@@ -37,19 +35,18 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Outgoing
 {
-    public class OutgoingReplicationHandler : IDisposable, IReportOutgoingReplicationPerformance
+    public abstract class OutgoingReplicationHandlerBase : IDisposable, IReportOutgoingReplicationPerformance
     {
         public const string AlertTitle = "Replication";
 
-        public event Action<OutgoingReplicationHandler> DocumentsSend;
 
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
         internal readonly DocumentDatabase _database;
         private readonly Logger _log;
-        private readonly AsyncManualResetEvent _waitForChanges;
+        protected readonly AsyncManualResetEvent _waitForChanges;
         private readonly CancellationTokenSource _cts;
         private PoolOfThreads.LongRunningWork _longRunningSendingWork;
         internal readonly ReplicationLoader _parent;
@@ -73,15 +70,15 @@ namespace Raven.Server.Documents.Replication
         private Stream _stream;
         private InterruptibleRead _interruptibleRead;
 
-        public event Action<OutgoingReplicationHandler, Exception> Failed;
+        public event Action<OutgoingReplicationHandlerBase, Exception> Failed;
 
-        public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
+        public event Action<OutgoingReplicationHandlerBase> SuccessfulTwoWaysCommunication;
 
-        public event Action<OutgoingReplicationHandler> SuccessfulReplication;
+        public event Action<OutgoingReplicationHandlerBase> SuccessfulReplication;
+
+        public event Action<OutgoingReplicationHandlerBase> DocumentsSend;
 
         public readonly ReplicationNode Destination;
-
-        public readonly ReplicationLatestEtagRequest.ReplicationType ReplicationType;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
@@ -89,14 +86,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly TcpConnectionOptions _tcpConnectionOptions;
 
-        // In case this is an outgoing pull replication from the hub
-        // we need to associate this instance to the replication definition.
-        public string PullReplicationDefinitionName;
-
-        [CanBeNull]
-        public ReplicationLoader.PullReplicationParams _outgoingPullReplicationParams;
-
-        public OutgoingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
+        protected OutgoingReplicationHandlerBase(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo)
         {
             _parent = parent;
             _database = database;
@@ -105,10 +95,12 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges = new AsyncManualResetEvent(_database.DatabaseShutdown);
 
             Destination = node;
-            ReplicationType = external ? ReplicationLatestEtagRequest.ReplicationType.External : ReplicationLatestEtagRequest.ReplicationType.Internal;
-            _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
-            _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication };
+            _log = LoggingSource.Instance.GetLogger(_database.Name, GetType().FullName);
+            _tcpConnectionOptions = new TcpConnectionOptions
+            {
+                DocumentDatabase = database, 
+                Operation = TcpConnectionHeaderMessage.OperationTypes.Replication
+            };
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
@@ -129,10 +121,10 @@ namespace Raven.Server.Documents.Replication
                 return true;
             if (obj.GetType() != GetType())
                 return false;
-            return Equals((OutgoingReplicationHandler)obj);
+            return Equals((OutgoingReplicationHandlerBase)obj);
         }
 
-        public bool Equals(OutgoingReplicationHandler other)
+        public bool Equals(OutgoingReplicationHandlerBase other)
         {
             return Destination.Equals(other.Destination);
         }
@@ -148,9 +140,15 @@ namespace Raven.Server.Documents.Replication
 
         public LiveReplicationPerformanceCollector.ReplicationPerformanceType GetReplicationPerformanceType()
         {
-            return ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal
-                ? LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal
-                : LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal;
+            switch (this)
+            {
+                case OutgoingExternalReplicationHandler:
+                    return LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal;
+                case OutgoingInternalReplicationHandler:
+                    return LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingInternal;
+                default:
+                    return LiveReplicationPerformanceCollector.ReplicationPerformanceType.OutgoingExternal;
+            }
         }
 
         public OutgoingReplicationStatsAggregator GetLatestReplicationPerformance()
@@ -168,7 +166,6 @@ namespace Raven.Server.Documents.Replication
         {
             SupportedFeatures = supportedVersions;
             _stream = stream;
-            IsPullReplicationAsHub = true;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, OutgoingReplicationThreadName);
@@ -181,8 +178,6 @@ namespace Raven.Server.Documents.Replication
             set => _outgoingReplicationThreadName = value;
             get => _outgoingReplicationThreadName ?? (_outgoingReplicationThreadName = $"Outgoing replication {FromToString}");
         }
-
-        public bool IsPullReplicationAsHub;
 
         public string GetNode()
         {
@@ -213,7 +208,6 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
 
             var certificate = _parent.GetCertificateForReplication(Destination, out var authorizationInfo);
-            CertificateThumbprint = certificate?.Thumbprint;
             var database = _parent.Database;
             if (database == null)
                 throw new InvalidOperationException("The database got disposed. Stopping the replication.");
@@ -433,9 +427,11 @@ namespace Raven.Server.Documents.Replication
 
         public long NextReplicateTicks;
 
+        public abstract ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger);
+
         private void Replicate()
         {
-            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, PathsToSend, _destinationAcceptablePaths);
+            using var documentSender = CreateDocumentSender(_stream, _log);
 
             while (_cts.IsCancellationRequested == false)
             {
@@ -470,13 +466,6 @@ namespace Raven.Server.Documents.Replication
 
                                 if (didWork == false)
                                     break;
-
-                                if (Destination is ExternalReplication externalReplication &&
-                                    IsPullReplicationAsHub == false) // we might have a lot of pull connections and we don't want to keep track of them.
-                                {
-                                    var taskId = externalReplication.TaskId;
-                                    UpdateExternalReplicationInfo(taskId);
-                                }
 
                                 DocumentsSend?.Invoke(this);
 
@@ -569,6 +558,20 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private ReplicationLatestEtagRequest.ReplicationType GetReplicationType()
+        {
+            switch (this)
+            {
+                case OutgoingExternalReplicationHandler:
+                case OutgoingPullReplicationHandler:
+                    return ReplicationLatestEtagRequest.ReplicationType.External;
+                case OutgoingInternalReplicationHandler:
+                    return ReplicationLatestEtagRequest.ReplicationType.Internal;
+                default:
+                    throw new ArgumentException($"Unknown type: {GetType()}");
+            }
+        }
+
         private void InitialHandshake()
         {
             //start request/response for fetching last etag
@@ -580,7 +583,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(),
                 [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
                 [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
-                [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = ReplicationType
+                [nameof(ReplicationLatestEtagRequest.ReplicationsType)] = GetReplicationType()
             };
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
@@ -593,45 +596,13 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var response = HandleServerResponse(getFullResponse: true);
-                switch (response.ReplyType)
-                {
-                    //The first time we start replication we need to register the destination current CV
-                    case ReplicationMessageReply.ReplyType.Ok:
-                        LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
-                        // this is used when the other side lets us know what paths it is going to accept from us
-                        // it supplements (but does not extend) what we are willing to send out 
-                        _destinationAcceptablePaths = response.Reply.AcceptablePaths;
-                        if (Destination is PullReplicationAsSink)
-                        {
-                            _outgoingPullReplicationParams = new ReplicationLoader.PullReplicationParams
-                            {
-                                PreventDeletionsMode = response.Reply.PreventDeletionsMode,
-                                Type = ReplicationLoader.PullReplicationParams.ConnectionType.Outgoing
-                            };
-                        }
-
-                        break;
-
-                    case ReplicationMessageReply.ReplyType.Error:
-                        var exception = new InvalidOperationException(response.Reply.Exception);
-                        if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
-                            response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
-                        {
-                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
-                            DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
-                        }
-
-                        AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, $"Got error: {response.Reply.Exception}");
-                        throw exception;
-                }
+                ProcessHandshakeResponse(response);
             }
             catch (DatabaseDoesNotExistException e)
             {
                 var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} " +
                           "on the other end. ";
-                if (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External)
-                    msg += "In order for the replication to work, a database with the same name needs to be created at the destination";
-
+           
                 var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
                 if (young)
                     msg += "This can happen if the other node wasn't yet notified about being assigned this database and should be resolved shortly.";
@@ -670,23 +641,30 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void UpdateExternalReplicationInfo(long taskId)
+        protected virtual void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
         {
-            var command = new UpdateExternalReplicationStateCommand(_database.Name, RaftIdGenerator.NewId())
+            switch (response.ReplyType)
             {
-                ExternalReplicationState = new ExternalReplicationState
-                {
-                    TaskId = taskId,
-                    NodeTag = _parent._server.NodeTag,
-                    LastSentEtag = _lastSentDocumentEtag,
-                    SourceChangeVector = _lastSentChangeVectorDuringHeartbeat,
-                    DestinationChangeVector = LastAcceptedChangeVector
-                }
-            };
+                //The first time we start replication we need to register the destination current CV
+                case ReplicationMessageReply.ReplyType.Ok:
+                    LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
+                    break;
 
-            // we don't wait to see if the command was applied on purpose
-            _parent._server.SendToLeaderAsync(command)
-                .IgnoreUnobservedExceptions();
+                case ReplicationMessageReply.ReplyType.Error:
+                    var exception = new InvalidOperationException(response.Reply.Exception);
+                    if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
+                        response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
+                    {
+                        AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
+                        DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
+                    }
+
+                    AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, $"Got error: {response.Reply.Exception}");
+                    throw exception;
+
+                default:
+                    throw new ArgumentException($"Unknown handshake response type: '{response.ReplyType}'");
+            }
         }
 
         private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
@@ -696,7 +674,7 @@ namespace Raven.Server.Documents.Replication
                 OccurredAt = SystemTime.UtcNow,
                 Direction = direction,
                 To = Destination,
-                IsExternal = ReplicationType == ReplicationLatestEtagRequest.ReplicationType.External,
+                IsExternal = GetType() != typeof(OutgoingInternalReplicationHandler),
                 ExceptionMessage = exceptionMessage
             });
         }
@@ -865,129 +843,12 @@ namespace Raven.Server.Documents.Replication
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
-        internal class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
-        {
-            private readonly ReplicationMessageReply _replicationBatchReply;
-            private readonly AsyncManualResetEvent _trigger;
-            private string _dbId;
-
-            public UpdateSiblingCurrentEtag(ReplicationMessageReply replicationBatchReply, AsyncManualResetEvent trigger)
-            {
-                _replicationBatchReply = replicationBatchReply;
-                _trigger = trigger;
-            }
-
-            public bool InitAndValidate(long lastReceivedEtag)
-            {
-                if (false == Init())
-                {
-                    return false;
-                }
-
-                return _replicationBatchReply.CurrentEtag >= lastReceivedEtag;
-            }
-
-            internal bool Init()
-            {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out Guid dbGuid) == false)
-                    return false;
-
-                if (_replicationBatchReply.CurrentEtag == 0)
-                    return false;
-
-                _dbId = dbGuid.ToBase64Unpadded();
-
-                return true;
-            }
-
-            internal bool DryRun(DocumentsOperationContext context)
-            {
-                var changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
-                    changeVector);
-
-                if (status != ConflictStatus.AlreadyMerged)
-                    return false;
-
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, changeVector);
-                return result.IsValid;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
-                    context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
-                    context.LastDatabaseChangeVector);
-
-                if (status != ConflictStatus.AlreadyMerged)
-                    return 0;
-
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);
-                if (result.IsValid)
-                {
-                    if (context.LastReplicationEtagFrom == null)
-                        context.LastReplicationEtagFrom = new Dictionary<string, long>();
-
-                    if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
-                    {
-                        context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
-                    }
-
-                    context.LastDatabaseChangeVector = result.ChangeVector;
-
-                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-                    {
-                        try
-                        {
-                            _trigger.Set();
-                        }
-                        catch
-                        {
-                            //
-                        }
-                    };
-                }
-
-                return result.IsValid ? 1 : 0;
-            }
-
-            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
-            {
-                return new UpdateSiblingCurrentEtagDto
-                {
-                    ReplicationBatchReply = _replicationBatchReply
-                };
-            }
-        }
-
-        private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
+        protected virtual void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
-            if (ReplicationType != ReplicationLatestEtagRequest.ReplicationType.External)
-            {
-                var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
-                if (update.InitAndValidate(_lastDestinationEtag))
-                {
-                    using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        if (update.DryRun(ctx))
-                        {
-                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
-                            // is purely advisory. We just want to have the information up to date at some point, and we won't
-                            // miss anything much if this isn't there.
-                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
-                        }
-                    }
-                }
-            }
 
-            _lastDestinationEtag = replicationBatchReply.CurrentEtag;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
@@ -1005,14 +866,11 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private long _lastDestinationEtag;
-
-        public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}" +
-                                      $"{(PullReplicationDefinitionName == null ? null : $"(pull definition: {PullReplicationDefinitionName})")}";
+        public virtual string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}";
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
-        private string _lastSentChangeVectorDuringHeartbeat;
+        public string LastSentChangeVectorDuringHeartbeat;
 
         internal void SendHeartbeat(string changeVector)
         {
@@ -1031,7 +889,7 @@ namespace Raven.Server.Documents.Replication
                     };
                     if (changeVector != null)
                     {
-                        _lastSentChangeVectorDuringHeartbeat = changeVector;
+                        LastSentChangeVectorDuringHeartbeat = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
                     documentsContext.Write(writer, heartbeat);
@@ -1135,17 +993,10 @@ namespace Raven.Server.Documents.Replication
             switch (replicationBatchReply.Type)
             {
                 case ReplicationMessageReply.ReplyType.Ok:
+                    
                     UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
-                    break;
 
-                case ReplicationMessageReply.ReplyType.MissingAttachments:
-                    break;
-            }
-
-            switch (replicationBatchReply.Type)
-            {
-                case ReplicationMessageReply.ReplyType.Ok:
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
@@ -1203,12 +1054,9 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        public string[] PathsToSend;
-        private string[] _destinationAcceptablePaths;
-        public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             // There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
             if (!_disposed.Raise())
@@ -1296,18 +1144,6 @@ namespace Raven.Server.Documents.Replication
         string DestinationFormatted { get; }
 
         IncomingReplicationPerformanceStats[] GetReplicationPerformance();
-    }
-
-    internal class UpdateSiblingCurrentEtagDto : TransactionOperationsMerger.IReplayableCommandDto<OutgoingReplicationHandler.UpdateSiblingCurrentEtag>
-    {
-        public ReplicationMessageReply ReplicationBatchReply;
-
-        public OutgoingReplicationHandler.UpdateSiblingCurrentEtag ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-        {
-            var command = new OutgoingReplicationHandler.UpdateSiblingCurrentEtag(ReplicationBatchReply, new AsyncManualResetEvent());
-            command.Init();
-            return command;
-        }
     }
 
     public static class ReplicationMessageType

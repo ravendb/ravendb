@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Utils.Stats;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;

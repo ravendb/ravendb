@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public class IncomingConnectionInfo : IEquatable<IncomingConnectionInfo>
     {

@@ -17,6 +17,8 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
@@ -139,8 +141,7 @@ namespace SlowTests.Issues
                         using (context1.OpenReadTransaction())
                         {
                             Assert.NotNull(database);
-
-                            firstReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database, context1, etag, new ReplicationDocumentSender.ReplicationStats
+                            firstReplicationOrder.AddRange(ReplicationDocumentSenderBase.GetReplicationItems(database, context1, etag, new ReplicationDocumentSenderBase.ReplicationStats
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
@@ -162,7 +163,7 @@ namespace SlowTests.Issues
                         Assert.True(WaitForValue(() => AssertReplication(firstDestination, firstDestination.Database, stats), true, reasonableWaitTime, 333));
                         using (context1.OpenReadTransaction())
                         {
-                            firstReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database, context1, etag, new ReplicationDocumentSender.ReplicationStats
+                            firstReplicationOrder.AddRange(ReplicationDocumentSenderBase.GetReplicationItems(database, context1, etag, new ReplicationDocumentSenderBase.ReplicationStats
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())
@@ -176,7 +177,7 @@ namespace SlowTests.Issues
                         using var disposable3 = database2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
                         using (context.OpenReadTransaction())
                         {
-                            secondReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database2, context, 0, new ReplicationDocumentSender.ReplicationStats
+                            secondReplicationOrder.AddRange(ReplicationDocumentSenderBase.GetReplicationItems(database2, context, 0, new ReplicationDocumentSenderBase.ReplicationStats
                             {
                                 DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()),
                                 AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats())

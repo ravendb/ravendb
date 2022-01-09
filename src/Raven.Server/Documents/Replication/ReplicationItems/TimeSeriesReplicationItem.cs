@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using Raven.Client.Util;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow;

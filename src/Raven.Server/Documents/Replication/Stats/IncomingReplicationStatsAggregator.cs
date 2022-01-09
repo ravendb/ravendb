@@ -4,7 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Utils.Stats;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public class IncomingReplicationStatsAggregator : StatsAggregator<IncomingReplicationRunStats, IncomingReplicationStatsScope>
     {

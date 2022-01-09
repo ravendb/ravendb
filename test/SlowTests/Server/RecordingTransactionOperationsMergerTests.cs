@@ -36,6 +36,8 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -614,7 +616,7 @@ namespace SlowTests.Server
                     DatabaseId = senderDatabaseId,
                 };
 
-                var command = new OutgoingReplicationHandler.UpdateSiblingCurrentEtag(message, new AsyncManualResetEvent());
+                var command = new OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtag(message, new AsyncManualResetEvent());
                 command.Init();
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
@@ -655,8 +657,11 @@ namespace SlowTests.Server
                 //Recording
                 store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
-                var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(
-                    expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), isHub: false);
+                var command = new IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand(
+                    expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), new ReplicationLoader.PullReplicationParams
+                    {
+                        Mode = PullReplicationMode.HubToSink
+                    });
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);

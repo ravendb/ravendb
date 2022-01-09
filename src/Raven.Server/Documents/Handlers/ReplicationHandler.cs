@@ -9,6 +9,8 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
