@@ -75,45 +75,20 @@ namespace Raven.Server.Documents.ShardedHandlers
             using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
             using (var exportOutputStream = new GZipStream(outputStream, CompressionMode.Compress))
             {
+                await exportOutputStream.WriteAsync(Encoding.UTF8.GetBytes($"{{  \"BuildVersion\" : {ServerVersion.Build}"));
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
-                    if (i > 0) //Only first shard write build version
-                    {
-                        blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.SkipBuildVersion), true);
-                    }
-
                     if (i == ShardedContext.ShardCount - 1) // Last shard need to bring all server wide information
                     {
                         blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.OperateOnTypes), oldOperateOnType);
-
                     }
 
                     var cmd = new ShardedStreamCommand(this, async stream =>
                     {
                         using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
-                            var reader = PipeReader.Create(gzipStream);
                             var firstLoop = true;
-                            while (true)
-                            {
-                                var result = await reader.ReadAsync();
-                                var buffer = result.Buffer;
-                                reader.AdvanceTo(buffer.Start, buffer.End);
-
-                                if (result.IsCompleted)
-                                    break;
-
-                                await exportOutputStream.WriteAsync(new ReadOnlyMemory<byte>(result.Buffer.ToArray(), 0, (int)result.Buffer.Length - 1));
-
-                                if (firstLoop)
-                                {
-                                    reader.AdvanceTo(buffer.GetPosition(result.Buffer.First.Length - 1), buffer.End);
-                                    firstLoop = false;
-                                    continue;
-                                }
-
-                                reader.AdvanceTo(buffer.GetPosition(result.Buffer.Length - 1), buffer.End);
-                            }
+                            await gzipStream.CopyToAsync(exportOutputStream);
                         }
 
                     }, tcs, blittableJson);

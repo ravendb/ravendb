@@ -17,7 +17,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerDestination
     {
-        IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
+        IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion, bool sharded = false);
 
         IDatabaseRecordActions DatabaseRecord();
 

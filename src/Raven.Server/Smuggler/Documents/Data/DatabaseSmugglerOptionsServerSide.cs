@@ -23,8 +23,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public bool SkipRevisionCreation { get; set; }
 
-        public bool SkipBuildVersion { get; set; }
-
         public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();

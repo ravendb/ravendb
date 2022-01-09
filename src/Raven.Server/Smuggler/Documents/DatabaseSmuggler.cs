@@ -68,9 +68,20 @@ namespace Raven.Server.Smuggler.Documents
         public override async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
+            var sharded = false;
+            if (_source is DatabaseSource)
+            {
+                var record = await _source.GetDatabaseRecordAsync();
+
+                if (ShardHelper.IsShardedName(record.DatabaseName))
+                {
+                    sharded = true;
+                }
+            }
+
             using (_patcher?.Initialize())
             using (var initializeResult = await _source.InitializeAsync(_options, result))
-            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber))
+            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber, sharded))
             {
                 ModifyV41OperateOnTypes(initializeResult.BuildNumber, isLastFile);
 

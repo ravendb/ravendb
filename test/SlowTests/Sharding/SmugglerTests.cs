@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Identities;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries.Sorting;
@@ -29,6 +30,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using SlowTests.Smuggler;
@@ -147,17 +149,28 @@ namespace SlowTests.Sharding
             await new Index().ExecuteAsync(store1);
         }
 
-        private static async Task CheckData(IDocumentStore store2, string[] names)
+        private async Task CheckData(DocumentStore store2, string[] names)
         {
-            var detailedStats = store2.Maintenance.Send(new GetDetailedStatisticsOperation());
+            var db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
             //doc
-            Assert.Equal(3, detailedStats.CountOfDocuments);
+            Assert.Equal(3, db.DocumentsStorage.GetNumberOfDocuments());
             //Assert.Equal(1, detailedStats.CountOfCompareExchangeTombstones); //TODO - Not working for 4.2
             //tombstone
-            Assert.Equal(1, detailedStats.CountOfTombstones);
-            //Index
-            Assert.Equal(1, detailedStats.Indexes.Length);
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                Assert.Equal(1, db.DocumentsStorage.GetNumberOfTombstones(context));
+                Assert.Equal(16, db.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context));
+            }
             
+            //Index
+            var indexes = await store2.Maintenance.SendAsync(new GetIndexesOperation(0, 128));
+            Assert.Equal(1, indexes.Length);
+
+            //Subscriptions
+            var subscriptionDocuments = await store2.Subscriptions.GetSubscriptionsAsync(0, 10);
+            Assert.Equal(1, subscriptionDocuments.Count);
+
             using (var session = store2.OpenSession())
             {
                 //Time series
@@ -360,7 +373,7 @@ namespace SlowTests.Sharding
                             
 
                         }, file);
-                        WaitForUserToContinueTheTest(store1);
+                        //WaitForUserToContinueTheTest(store1);
                         //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
                         await Task.Delay(TimeSpan.FromSeconds(20));
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
