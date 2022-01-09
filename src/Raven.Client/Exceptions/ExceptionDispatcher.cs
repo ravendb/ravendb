@@ -157,10 +157,10 @@ namespace Raven.Client.Exceptions
                     if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Type), out ClusterTransactionConcurrencyException.ConflictType type))
                         current.Type = type;
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Expected), out string expected))
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Expected), out long expected))
                         current.Expected = expected;
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Actual), out string actual))
+                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Actual), out long actual))
                         current.Actual = actual;
                 }
 

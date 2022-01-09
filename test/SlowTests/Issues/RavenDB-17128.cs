@@ -48,13 +48,13 @@ namespace SlowTests.Issues
 
                     Assert.Equal(CompareExchange, ex.ConcurrencyViolations[0].Type);
                     Assert.Equal("usernames/ravendb", ex.ConcurrencyViolations[0].Id);
-                    Assert.NotNull(ex.ConcurrencyViolations[0].Expected);
-                    Assert.NotNull(ex.ConcurrencyViolations[0].Actual);
+                    Assert.Equal(0 ,ex.ConcurrencyViolations[0].Expected);
+                    Assert.True(ex.ConcurrencyViolations[0].Actual > 0);
 
                     Assert.Equal(CompareExchange, ex.ConcurrencyViolations[1].Type);
                     Assert.Equal("emails/info@ravendb.net", ex.ConcurrencyViolations[1].Id);
-                    Assert.NotNull(ex.ConcurrencyViolations[1].Expected);
-                    Assert.NotNull(ex.ConcurrencyViolations[1].Actual);
+                    Assert.Equal(0, ex.ConcurrencyViolations[1].Expected);
+                    Assert.True(ex.ConcurrencyViolations[1].Actual > 0);
                 }
             }
         }
@@ -95,13 +95,13 @@ namespace SlowTests.Issues
 
                     Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[0].Type);
                     Assert.Equal("rvn-atomic/objects/1", ex.ConcurrencyViolations[0].Id);
-                    Assert.NotNull(ex.ConcurrencyViolations[0].Expected);
-                    Assert.NotNull(ex.ConcurrencyViolations[0].Actual);
+                    Assert.True(ex.ConcurrencyViolations[0].Expected > 0);
+                    Assert.True(ex.ConcurrencyViolations[0].Actual > 0);
 
                     Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[1].Type);
                     Assert.Equal("rvn-atomic/objects/2", ex.ConcurrencyViolations[1].Id);
-                    Assert.NotNull(ex.ConcurrencyViolations[1].Expected);
-                    Assert.NotNull(ex.ConcurrencyViolations[1].Actual);
+                    Assert.True(ex.ConcurrencyViolations[1].Expected > 0);
+                    Assert.True(ex.ConcurrencyViolations[1].Actual > 0);
                 }
             }
         }
