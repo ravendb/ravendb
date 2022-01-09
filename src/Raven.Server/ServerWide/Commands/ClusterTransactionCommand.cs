@@ -537,17 +537,44 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var rc = new List<string>();
+            var errors = new List<ClusterTransactionErrorInfo>();
             if (remoteResult is BlittableJsonReaderArray array)
             {
                 foreach (var o in array)
                 {
-                    rc.Add(o.ToString());
+                    if (o is not BlittableJsonReaderObject blittable)
+                        continue;
+
+                    errors.Add(ToClusterTransactionErrorInfo(blittable));
                 }
 
-                return rc;
+                return errors;
             }
             return base.FromRemote(remoteResult);
+        }
+
+        private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)
+        {
+            var current = new Conflict();
+            var errorInfo = new ClusterTransactionErrorInfo { Conflict = current };
+            bjro.TryGet(nameof(ClusterTransactionErrorInfo.Message), out errorInfo.Message);
+
+            if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Conflict), out BlittableJsonReaderObject conflict))
+                return errorInfo;
+
+            if (conflict.TryGet(nameof(Conflict.Id), out string id))
+                current.Id = id;
+
+            if (conflict.TryGet(nameof(Conflict.Type), out ConflictType type))
+                current.Type = type;
+
+            if (conflict.TryGet(nameof(Conflict.Expected), out string expected))
+                current.Expected = expected;
+
+            if (conflict.TryGet(nameof(Conflict.Actual), out string actual))
+                current.Actual = actual;
+
+            return errorInfo;
         }
 
         public override string AdditionalDebugInformation(Exception exception)

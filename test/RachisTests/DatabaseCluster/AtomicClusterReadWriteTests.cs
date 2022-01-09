@@ -109,7 +109,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(2, exceptions.Count);
             foreach (var exception in exceptions)
             {
-                Assert.IsType<ConcurrencyException>(exception);
+                Assert.IsType<ClusterTransactionConcurrencyException>(exception);
             }
         }
 
