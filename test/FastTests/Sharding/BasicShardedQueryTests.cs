@@ -1,25 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client;
-using Raven.Client;
+using FastTests.Issues;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
-using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using DocumentsChanges = Raven.Client.Documents.Session.DocumentsChanges;
 
 namespace FastTests.Sharding
 {
@@ -185,7 +176,6 @@ namespace FastTests.Sharding
                 }
             }
         }
-
 
         [Fact]
         public void Query_Simple()
@@ -532,6 +522,7 @@ namespace FastTests.Sharding
             using (var store = GetShardedDocumentStore())
             {
                 new DogsIndex().Execute(store);
+
                 using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true }, "dogs/1");
@@ -547,25 +538,11 @@ namespace FastTests.Sharding
                 }
                 using (var newSession = store.OpenSession())
                 {
-                    List<DogsIndex.Result> queryResult;
-                    try
-                    {
-                        queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
-                            .Where(x => x.Age > 2)
-                            .ToList();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        for (int i = 0; i < 3; i++)
-                        {
-                            Console.Beep();
-                        }
-                        Console.ReadLine();
-                        throw;
-                    }
+                    var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
+                        .Where(x => x.Age > 2)
+                        .ToList();
 
                     Assert.Equal(queryResult[0].Name, "Brian");
                     Assert.Equal(queryResult[1].Name, "Django");
@@ -644,6 +621,133 @@ namespace FastTests.Sharding
             }
         }
 
+        [Fact]
+        public void Simple_Projection_With_Order_By()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Age = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Age = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    Thread.Sleep(5000);
+
+                    var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
+                        .OrderBy(x => x.Name)
+                        .As<User>()
+                        .Select(x => new
+                        {
+                            x.Age
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(3, queryResult[0].Age);
+                    Assert.Equal(1, queryResult[1].Age);
+                    Assert.Equal(2, queryResult[2].Age);
+                }
+            }
+        }
+
+        [Fact]
+        public void Simple_Projection_With_Order_By2()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Age = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Age = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    Thread.Sleep(5000);
+
+                    var queryResult = (from user in session.Query<User, UserMapIndex>()
+                        let age = user.Age
+                        orderby user.Name
+                        select new AgeResult
+                        {
+                            Age = age
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(3, queryResult[0].Age);
+                    Assert.Equal(1, queryResult[1].Age);
+                    Assert.Equal(2, queryResult[2].Age);
+                }
+            }
+        }
+
+        [Fact]
+        public void Simple_Projection_With_Order_By_And_Raw_Query()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Age = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Age = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    Thread.Sleep(5000);
+
+                    var queryResult = (session.Advanced.RawQuery<AgeResult>(@$"from index {new UserMapIndex().IndexName} as user
+order by user.Name
+select {{
+    Age: user.Age
+}}
+")).ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(3, queryResult[0].Age);
+                    Assert.Equal(1, queryResult[1].Age);
+                    Assert.Equal(2, queryResult[2].Age);
+                }
+            }
+        }
+
+        private class AgeResult
+        {
+            public int Age { get; set; }
+        }
+
+        [Fact]
+        public void Simple_Map_Reduce()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "Jane", Count = 1 }, "users/1");
+                    newSession.Store(new User { Name = "Jane", Count = 2 }, "users/2");
+                    newSession.Store(new User { Name = "Jane", Count = 3 }, "users/3");
+                    newSession.SaveChanges();
+
+                    Thread.Sleep(5000);
+                    var queryResult = newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                        .ToList();
+
+                    Assert.Equal(queryResult.Count, 1);
+                }
+            }
+        }
+
+        
+
         public class Dog
         {
             public string Id { get; set; }
@@ -672,6 +776,54 @@ namespace FastTests.Sharding
                                   dog.Age,
                                   dog.IsVaccinated
                               };
+            }
+        }
+
+        public class UserMapIndex : AbstractIndexCreationTask<User>
+        {
+            public class Result
+            {
+                public string Name;
+            }
+
+            public UserMapIndex()
+            {
+                Map = users =>
+                    from user in users
+                    select new Result
+                    {
+                        Name = user.Name
+                    };
+            }
+        }
+
+        public class UserMapReduce : AbstractIndexCreationTask<User, UserMapReduce.Result>
+        {
+            public class Result
+            {
+                public string Name;
+                public int Sum;
+            }
+
+            public UserMapReduce()
+            {
+                Map = users =>
+                    from user in users
+                    select new Result
+                    {
+                        Name = user.Name,
+                        Sum = user.Count
+                    };
+
+                Reduce = results =>
+                    from result in results
+                    group result by result.Name
+                    into g
+                    select new Result
+                    {
+                        Name = g.Key,
+                        Sum = g.Sum(x => x.Sum)
+                    };
             }
         }
     }
