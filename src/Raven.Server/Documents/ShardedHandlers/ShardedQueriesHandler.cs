@@ -331,6 +331,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         toAdd += $",\r\n    {fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
+                    //TODO: remove the last }
                     // removing the `\r\n}`
                     clone.SelectFunctionBody.FunctionText =
                         clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.Length - 3, 3);
@@ -338,8 +339,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                     clone.SelectFunctionBody.FunctionText += $"{toAdd}\r\n}}";
                     clone.DeclaredFunctions.Clear();
                 }
-
-                //TODO: if (_query.Metadata.)
 
                 queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
                 {
@@ -588,7 +587,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void ReduceMapReduceIndexResults()
             {
-                var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName);
+                var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName, _context);
                 var reducingFunc = compiled.Reduce;
                 var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
                 blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);

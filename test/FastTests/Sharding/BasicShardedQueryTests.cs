@@ -741,7 +741,8 @@ select {{
                     var queryResult = newSession.Query<UserMapReduce.Result, UserMapReduce>()
                         .ToList();
 
-                    Assert.Equal(queryResult.Count, 1);
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(6, queryResult[0].Sum);
                 }
             }
         }

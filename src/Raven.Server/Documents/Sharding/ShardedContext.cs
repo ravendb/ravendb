@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -40,6 +41,8 @@ namespace Raven.Server.Documents.Sharding
 
         public ShardedContext(ServerStore server, RawDatabaseRecord record)
         private ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
 
         public ShardedContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -171,28 +174,31 @@ namespace Raven.Server.Documents.Sharding
             return actual > clientConfigurationEtag;
         }
 
-        public AbstractStaticIndexBase GetCompiledIndex(string indexName)
+        public AbstractStaticIndexBase GetCompiledIndex(string indexName, TransactionOperationContext context)
         {
             if (_cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled))
                 return compiled;
 
-            //TODO: check if case sensitive
-            if (_record.Indexes.TryGetValue(indexName, out var definition) == false)
-                throw new IndexDoesNotExistException($"Index {indexName} doesn't exist");
+            using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName))
+            {
+                if (rawRecord.MapReduceIndexes.TryGetValue(indexName, out var definition) == false)
+                    throw new IndexDoesNotExistException($"Index {indexName} doesn't exist");
 
-            if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
-                throw new InvalidOperationException($"Index {indexName} should be a map reduce index but was of type: {definition.Type}");
+                if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
+                    throw new InvalidOperationException($"Index {indexName} should be a map reduce index but was of type: {definition.Type}");
 
-            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
+                var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
 
-            foreach ((string key, string value) in _record.Settings)
-                ravenConfiguration.SetSetting(key, value);
+                foreach ((string key, string value) in _record.Settings)
+                    ravenConfiguration.SetSetting(key, value);
 
-            ravenConfiguration.Initialize();
+                ravenConfiguration.Initialize();
 
-            compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
-            _cachedMapReduceIndexDefinitions[indexName] = compiled;
-            return compiled;
+                compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                _cachedMapReduceIndexDefinitions[indexName] = compiled;
+                return compiled;
+            }
         }
     }
 }
