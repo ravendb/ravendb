@@ -48,27 +48,5 @@ namespace Raven.Server.ServerWide
                 sw.Flush();
             }
         }
-
-        public static bool CanAccessRoute(RavenServer.AuthenticateConnection authenticateConnection, RouteInformation route, string db = null)
-        {
-            switch (authenticateConnection.Status)
-            {
-                case RavenServer.AuthenticationStatus.ClusterAdmin:
-                    return true;
-                case RavenServer.AuthenticationStatus.Operator:
-                    return (route.AuthorizationStatus != AuthorizationStatus.ClusterAdmin);
-                case RavenServer.AuthenticationStatus.Allowed:
-                    if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin || route.AuthorizationStatus == AuthorizationStatus.Operator)
-                        return false;
-                    if (route.TypeOfRoute == RouteInformation.RouteType.Databases
-                        && (db == null || authenticateConnection.CanAccess(db, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin) == false))
-                        return false;
-                    return true;
-                default:
-                    if (route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
-                        return true;
-                    return false;
-            }
-        }
     }
 }
