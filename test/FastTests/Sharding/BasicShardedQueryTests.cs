@@ -335,6 +335,70 @@ select {{
             }
         }
 
+        [Fact]
+        public void Simple_Map_Reduce_With_Order_By_And_Projection()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    newSession.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    newSession.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    newSession.SaveChanges();
+
+                    Thread.Sleep(5000);
+
+                    var queryResult = newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                        .OrderBy(x => x.Sum)
+                        .Select(x => new
+                        {
+                            x.Sum
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(1, queryResult[0].Sum);
+                    Assert.Equal(2, queryResult[1].Sum);
+                    Assert.Equal(3, queryResult[2].Sum);
+                }
+            }
+        }
+
+        [Fact]
+        public void Simple_Map_Reduce_With_Order_By_And_Projection2()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    newSession.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    newSession.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    newSession.SaveChanges();
+
+                    Thread.Sleep(5000);
+
+                    var queryResult = (from user in newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                            orderby user.Sum
+                            select new
+                            {
+                                Sum = user.Sum
+                            })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(1, queryResult[0].Sum);
+                    Assert.Equal(2, queryResult[1].Sum);
+                    Assert.Equal(3, queryResult[2].Sum);
+                }
+            }
+        }
+
         private class AgeResult
         {
             public int Age { get; set; }

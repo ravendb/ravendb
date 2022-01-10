@@ -174,19 +174,19 @@ namespace Raven.Server.Documents.Sharding
             return actual > clientConfigurationEtag;
         }
 
-        public AbstractStaticIndexBase GetCompiledIndex(string indexName, TransactionOperationContext context)
+        public CompiledIndexResult GetCompiledIndex(string indexName, TransactionOperationContext context, out AbstractStaticIndexBase compiled)
         {
-            if (_cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled))
-                return compiled;
+            if (_cachedMapReduceIndexDefinitions.TryGetValue(indexName, out compiled))
+                return CompiledIndexResult.Exists;
 
             using (context.OpenReadTransaction())
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName))
             {
                 if (rawRecord.MapReduceIndexes.TryGetValue(indexName, out var definition) == false)
-                    throw new IndexDoesNotExistException($"Index {indexName} doesn't exist");
+                    return CompiledIndexResult.NotExists;
 
                 if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
-                    throw new InvalidOperationException($"Index {indexName} should be a map reduce index but was of type: {definition.Type}");
+                    return CompiledIndexResult.NotMapReduce;
 
                 var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
 
@@ -197,8 +197,15 @@ namespace Raven.Server.Documents.Sharding
 
                 compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
                 _cachedMapReduceIndexDefinitions[indexName] = compiled;
-                return compiled;
+                return CompiledIndexResult.Exists;
             }
+        }
+
+        public enum CompiledIndexResult
+        {
+            NotExists,
+            NotMapReduce,
+            Exists
         }
     }
 }
