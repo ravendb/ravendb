@@ -118,6 +118,12 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
+                            foreach (var db in _shardedDatabases)
+                            {
+                                var shardedContext = db.Value.Result;
+                                shardedContext?.UpdateMapReduceIndexes(rawRecord.MapReduceIndexes);
+                            }
+
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(

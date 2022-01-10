@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
@@ -53,6 +52,10 @@ namespace Raven.Server.Documents.Sharding
 
             _serverStore = serverStore;
             _record = record;
+            UpdateMapReduceIndexes(record.Indexes
+                .Where(x => x.Value.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce)
+                .ToDictionary(x => x.Key, x => x.Value));
+
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
@@ -174,38 +177,31 @@ namespace Raven.Server.Documents.Sharding
             return actual > clientConfigurationEtag;
         }
 
-        public CompiledIndexResult GetCompiledIndex(string indexName, TransactionOperationContext context, out AbstractStaticIndexBase compiled)
+        public void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> mapReduceIndexes)
         {
-            if (_cachedMapReduceIndexDefinitions.TryGetValue(indexName, out compiled))
-                return CompiledIndexResult.Exists;
-
-            using (context.OpenReadTransaction())
-            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName))
+            foreach ((string indexName, IndexDefinition definition) in mapReduceIndexes)
             {
-                if (rawRecord.MapReduceIndexes.TryGetValue(indexName, out var definition) == false)
-                    return CompiledIndexResult.NotExists;
-
-                if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
-                    return CompiledIndexResult.NotMapReduce;
-
-                var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
-
-                foreach ((string key, string value) in _record.Settings)
-                    ravenConfiguration.SetSetting(key, value);
-
-                ravenConfiguration.Initialize();
-
-                compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var ravenConfiguration = GetRavenConfiguration();
+                var compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
                 _cachedMapReduceIndexDefinitions[indexName] = compiled;
-                return CompiledIndexResult.Exists;
             }
         }
 
-        public enum CompiledIndexResult
+        public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
         {
-            NotExists,
-            NotMapReduce,
-            Exists
+            _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled);
+            return compiled;
+        }
+
+        private RavenConfiguration GetRavenConfiguration()
+        {
+            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
+
+            foreach ((string key, string value) in _record.Settings)
+                ravenConfiguration.SetSetting(key, value);
+
+            ravenConfiguration.Initialize();
+            return ravenConfiguration;
         }
     }
 }

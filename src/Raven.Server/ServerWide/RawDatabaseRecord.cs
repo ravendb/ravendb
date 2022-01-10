@@ -853,9 +853,9 @@ namespace Raven.Server.ServerWide
 
                             if (propertyDetails.Value is BlittableJsonReaderObject bjro == false)
                                 continue;
-                            
-                            if (bjro.TryGet(nameof(IndexDefinition.Reduce), out string reduce) == false ||
-                                string.IsNullOrWhiteSpace(reduce))
+
+                            if (bjro.TryGet(nameof(IndexDefinition.Type), out IndexType indexType) == false ||
+                                (indexType != IndexType.MapReduce && indexType != IndexType.JavaScriptMapReduce))
                                 continue;
 
                             _mapReduceIndexes[propertyDetails.Name] = JsonDeserializationCluster.IndexDefinition(bjro);
