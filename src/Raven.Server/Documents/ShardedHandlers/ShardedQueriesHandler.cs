@@ -5,9 +5,12 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Esprima.Ast;
+using NuGet.Packaging;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -277,10 +280,21 @@ namespace Raven.Server.Documents.ShardedHandlers
                 if (_query.Metadata.OrderBy == null || _query.Metadata.OrderBy.Length == 0)
                     return;
 
-                var fieldsToAddToProjection = new List<string>();
+                var fieldsToAddToProjection = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var orderByField in _query.Metadata.OrderBy)
                 {
                     fieldsToAddToProjection.Add(orderByField.Name);
+                }
+
+                if (_query.Metadata.IndexName != null)
+                {
+                    if (_parent.ShardedContext.GetCompiledIndex(_query.Metadata.IndexName, _context, out var compiled) == ShardedContext.CompiledIndexResult.Exists)
+                    {
+                        foreach (var outputField in compiled.OutputFields)
+                        {
+                            fieldsToAddToProjection.Add(outputField);
+                        }
+                    }
                 }
 
                 if (fieldsToAddToProjection.Count == 0)
@@ -295,9 +309,14 @@ namespace Raven.Server.Documents.ShardedHandlers
                     if (clone.DeclaredFunctions.TryGetValue(me.Name.Value, out var declaredFunction) == false)
                         throw new InvalidOperationException($"Failed to find the declared function for {me.Name}");
 
+                    var alreadySelected = GetAllIdentifiers(declaredFunction.JavaScript.Body[0].ChildNodes, false, Nodes.Program);
+
                     var toAdd = string.Empty;
                     foreach (var fieldName in fieldsToAddToProjection)
                     {
+                        if (alreadySelected.Contains(fieldName))
+                            continue;
+
                         toAdd += $",{fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
@@ -305,16 +324,25 @@ namespace Raven.Server.Documents.ShardedHandlers
                     // removing the `};\r\n}`
                     declaredFunction.FunctionText =
                         declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.Length - 5, 5);
-
                     declaredFunction.FunctionText += $"{toAdd}}};\r\n}}";
                 }
                 else if (clone.Select?.Count > 0)
                 {
                     // select Property1, Property2
-
+                    var alreadySelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var keyValue in clone.Select)
+                    {
+                        if (keyValue.Expression is FieldExpression fe)
+                        {
+                            alreadySelected.Add(fe.FieldValue);
+                        }
+                    }
                     var select = new List<(QueryExpression Expression, StringSegment? Alias)>(_query.Metadata.Query.Select);
                     foreach (var fieldName in fieldsToAddToProjection)
                     {
+                        if (alreadySelected.Contains(fieldName))
+                            continue;
+
                         var fieldExpression = new FieldExpression(new List<StringSegment> { new(fieldName) });
                         select.Add((fieldExpression, null));
                     }
@@ -346,6 +374,32 @@ namespace Raven.Server.Documents.ShardedHandlers
                 };
 
                 queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
+            }
+
+            private static HashSet<string> GetAllIdentifiers(NodeCollection nodeCollection, bool ancestorIsReturnStatement, Nodes currentAncestor)
+            {
+                HashSet<string> result = null;
+
+                var alreadyAdded = false;
+                foreach (var node in nodeCollection)
+                {
+                    if (alreadyAdded == false && ancestorIsReturnStatement && node is Identifier i && currentAncestor == Nodes.Property)
+                    {
+                        result ??= new HashSet<string>();
+                        result.Add(i.Name);
+                        alreadyAdded = true;
+                    }
+
+                    ancestorIsReturnStatement |= node.Type == Nodes.ReturnStatement;
+                    var identifiers = GetAllIdentifiers(node.ChildNodes, ancestorIsReturnStatement, node.Type);
+                    if (identifiers != null)
+                    {
+                        result ??= new HashSet<string>();
+                        result.AddRange(identifiers);
+                    }
+                }
+
+                return result;
             }
 
             private void GenerateLoadByIdQueries(IEnumerable<string> ids, Dictionary<int, ShardedQueryCommand> cmds)
@@ -587,7 +641,15 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void ReduceMapReduceIndexResults()
             {
-                var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName, _context);
+                var result = _parent.ShardedContext.GetCompiledIndex(_result.IndexName, _context, out var compiled);
+                switch (result)
+                {
+                    case ShardedContext.CompiledIndexResult.NotExists:
+                        throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
+                    case ShardedContext.CompiledIndexResult.NotMapReduce:
+                        throw new InvalidOperationException($"Index {_result.IndexName} should be a map reduce index");
+                }
+
                 var reducingFunc = compiled.Reduce;
                 var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
                 blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
