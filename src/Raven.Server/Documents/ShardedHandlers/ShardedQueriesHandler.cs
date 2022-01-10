@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     return;
 
                 var clone = _query.Metadata.Query.ShallowCopy();
-                if (clone.Select.Count == 1 &&
+                if (clone.Select?.Count == 1 &&
                     clone.Select[0].Expression is MethodExpression me)
                 {
                     // select output(ALIAS)
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     declaredFunction.FunctionText += $"{toAdd}}};\r\n}}";
                 }
-                else if (clone.Select.Count > 0)
+                else if (clone.Select?.Count > 0)
                 {
                     // select Property1, Property2
 
