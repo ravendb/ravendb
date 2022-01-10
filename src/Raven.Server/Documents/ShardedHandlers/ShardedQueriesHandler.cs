@@ -288,7 +288,8 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 if (_query.Metadata.IndexName != null)
                 {
-                    if (_parent.ShardedContext.GetCompiledIndex(_query.Metadata.IndexName, _context, out var compiled) == ShardedContext.CompiledIndexResult.Exists)
+                    var compiled = _parent.ShardedContext.GetCompiledMapReduceIndex(_query.Metadata.IndexName, _context);
+                    if (compiled != null)
                     {
                         foreach (var outputField in compiled.OutputFields)
                         {
@@ -320,10 +321,11 @@ namespace Raven.Server.Documents.ShardedHandlers
                         toAdd += $",{fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
-                    //TODO: get to the return part and inject it there
                     // removing the `};\r\n}`
                     declaredFunction.FunctionText =
-                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.Length - 5, 5);
+                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.LastIndexOf('}'));
+                    declaredFunction.FunctionText =
+                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.LastIndexOf('}'));
                     declaredFunction.FunctionText += $"{toAdd}}};\r\n}}";
                 }
                 else if (clone.Select?.Count > 0)
@@ -359,11 +361,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                         toAdd += $",\r\n    {fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
-                    //TODO: remove the last }
                     // removing the `\r\n}`
                     clone.SelectFunctionBody.FunctionText =
-                        clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.Length - 3, 3);
-                    
+                        clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.LastIndexOf('}'));
+
                     clone.SelectFunctionBody.FunctionText += $"{toAdd}\r\n}}";
                     clone.DeclaredFunctions.Clear();
                 }
@@ -641,14 +642,9 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void ReduceMapReduceIndexResults()
             {
-                var result = _parent.ShardedContext.GetCompiledIndex(_result.IndexName, _context, out var compiled);
-                switch (result)
-                {
-                    case ShardedContext.CompiledIndexResult.NotExists:
-                        throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
-                    case ShardedContext.CompiledIndexResult.NotMapReduce:
-                        throw new InvalidOperationException($"Index {_result.IndexName} should be a map reduce index");
-                }
+                var compiled = _parent.ShardedContext.GetCompiledMapReduceIndex(_result.IndexName, _context);
+                if (compiled == null)
+                    throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
 
                 var reducingFunc = compiled.Reduce;
                 var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();

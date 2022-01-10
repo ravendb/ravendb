@@ -384,10 +384,11 @@ select {{
                     Thread.Sleep(5000);
 
                     var queryResult = (from user in newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                            let sum = user.Sum
                             orderby user.Sum
                             select new
                             {
-                                Sum = user.Sum
+                                Sum = sum
                             })
                         .ToList();
 
