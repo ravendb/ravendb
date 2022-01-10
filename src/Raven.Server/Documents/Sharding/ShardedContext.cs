@@ -15,7 +15,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Utils;
 
@@ -81,7 +80,7 @@ namespace Raven.Server.Documents.Sharding
         public string DatabaseName => _record.DatabaseName;
 
         public int NumberOfShardNodes => _record.Shards.Length;
-        
+
         public char IdentitySeparator => _record.Client?.IdentityPartsSeparator ?? Constants.Identities.DefaultSeparator;
 
         public bool Encrypted => _record.Encrypted;
@@ -134,7 +133,7 @@ namespace Raven.Server.Documents.Sharding
 
             return _record.ShardAllocations[^1].Shard;
         }
-        
+
         public int GetShardIndex(TransactionOperationContext context, string key)
         {
             var shardId = GetShardId(context, key);
@@ -184,7 +183,7 @@ namespace Raven.Server.Documents.Sharding
             if (definition.Type.IsMapReduce() == false || definition.Type == IndexType.AutoMapReduce)
                 throw new InvalidOperationException($"Index {indexName} should be a map reduce index but was of type: {definition.Type}");
 
-            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration,DatabaseName);
+            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
 
             foreach ((string key, string value) in _record.Settings)
                 ravenConfiguration.SetSetting(key, value);
@@ -195,4 +194,5 @@ namespace Raven.Server.Documents.Sharding
             _cachedMapReduceIndexDefinitions[indexName] = compiled;
             return compiled;
         }
+    }
 }

@@ -8,15 +8,9 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.ServerWide;
-using Raven.Server.Config;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
@@ -112,10 +106,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                             // * For order by, we need to merge the results and compute the order again 
                             queryProcessor.OrderResults();
 
-
-                            // * Project
-                            // TODO: queryProcessor.ApplyProjectionIfNeeded();
-
                             var result = queryProcessor.GetResult();
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
                             {
@@ -182,7 +172,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             private readonly Dictionary<int, ShardedQueryCommand> _commands;
             private readonly HashSet<int> _filteredShardIndexes;
             private readonly ShardedQueryResult _result;
-            private readonly DynamicJsonValue _dummyDynamicJsonValue = new();
+            private static readonly DynamicJsonValue DummyDynamicJsonValue = new();
 
             // User should also be able to define a query parameter ("Sharding.Context") which is an array
             // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
@@ -268,8 +258,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
                 }
 
-                // TODO: Make sure that if using projection, the order by fields are returned
-                // TODO: This can be hard, because user may do projection with JS, for example
+                UpdateQueryTemplateForOrderBy(ref queryTemplate);
 
                 // * For collection queries that specify startsWith by id(), we need to send to all shards
                 // * For collection queries without any where clause, we need to send to all shards
@@ -281,6 +270,83 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     _commands[i] = new ShardedQueryCommand(_parent, queryTemplate);
                 }
+            }
+
+            private void UpdateQueryTemplateForOrderBy(ref BlittableJsonReaderObject queryTemplate)
+            {
+                if (_query.Metadata.OrderBy == null || _query.Metadata.OrderBy.Length == 0)
+                    return;
+
+                var fieldsToAddToProjection = new List<string>();
+                foreach (var orderByField in _query.Metadata.OrderBy)
+                {
+                    fieldsToAddToProjection.Add(orderByField.Name);
+                }
+
+                if (fieldsToAddToProjection.Count == 0)
+                    return;
+
+                var clone = _query.Metadata.Query.ShallowCopy();
+                if (clone.Select.Count == 1 &&
+                    clone.Select[0].Expression is MethodExpression me)
+                {
+                    // select output(ALIAS)
+
+                    if (clone.DeclaredFunctions.TryGetValue(me.Name.Value, out var declaredFunction) == false)
+                        throw new InvalidOperationException($"Failed to find the declared function for {me.Name}");
+
+                    var toAdd = string.Empty;
+                    foreach (var fieldName in fieldsToAddToProjection)
+                    {
+                        toAdd += $",{fieldName}: {clone.From.Alias}.{fieldName}";
+                    }
+
+                    //TODO: get to the return part and inject it there
+                    // removing the `};\r\n}`
+                    declaredFunction.FunctionText =
+                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.Length - 5, 5);
+
+                    declaredFunction.FunctionText += $"{toAdd}}};\r\n}}";
+                }
+                else if (clone.Select.Count > 0)
+                {
+                    // select Property1, Property2
+
+                    var select = new List<(QueryExpression Expression, StringSegment? Alias)>(_query.Metadata.Query.Select);
+                    foreach (var fieldName in fieldsToAddToProjection)
+                    {
+                        var fieldExpression = new FieldExpression(new List<StringSegment> { new(fieldName) });
+                        select.Add((fieldExpression, null));
+                    }
+
+                    clone.Select = select;
+                }
+                else if (clone.SelectFunctionBody.FunctionText != null)
+                {
+                    // select { Property1: alias.Property1, Property2: alias.Property2 }
+
+                    var toAdd = string.Empty;
+                    foreach (var fieldName in fieldsToAddToProjection)
+                    {
+                        toAdd += $",\r\n    {fieldName}: {clone.From.Alias}.{fieldName}";
+                    }
+
+                    // removing the `\r\n}`
+                    clone.SelectFunctionBody.FunctionText =
+                        clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.Length - 3, 3);
+                    
+                    clone.SelectFunctionBody.FunctionText += $"{toAdd}\r\n}}";
+                    clone.DeclaredFunctions.Clear();
+                }
+
+                //TODO: if (_query.Metadata.)
+
+                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
+                {
+                    [nameof(IndexQuery.Query)] = clone.ToString()
+                };
+
+                queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
             }
 
             private void GenerateLoadByIdQueries(IEnumerable<string> ids, Dictionary<int, ShardedQueryCommand> cmds)
@@ -299,7 +365,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     if (_filteredShardIndexes?.Contains(shardId) == false)
                         continue;
                     //TODO: have a way to turn the _query into a json file and then we'll modify that, instead of building it manually
-                    var q = new DynamicJsonValue()
+                    var q = new DynamicJsonValue
                     {
                         [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
                         {
@@ -516,26 +582,28 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
                 else if (_result.IsMapReduce)
                 {
-                    var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName);
-                    var reducingFunc = compiled.Reduce;
-                    var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
-                    blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
-
-                    var results = new List<object>();
-                    IPropertyAccessor propertyAccessor = null;
-                    foreach (var output in reducingFunc(blittableToDynamicWrapper))
-                    {
-                        propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
-                        results.Add(output);
-                    }
-
-                    var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv =>
-                    {
-                        djv[Constants.Documents.Metadata.Key] = _dummyDynamicJsonValue;
-                    });
-
-                    _result.Results = objects.GetOutputsToStore().ToList();
+                    ReduceMapReduceIndexResults();
                 }
+            }
+
+            private void ReduceMapReduceIndexResults()
+            {
+                var compiled = _parent.ShardedContext.GetCompiledIndex(_result.IndexName);
+                var reducingFunc = compiled.Reduce;
+                var blittableToDynamicWrapper = new ReduceMapResultsOfStaticIndex.DynamicIterationOfAggregationBatchWrapper();
+                blittableToDynamicWrapper.InitializeForEnumeration(_result.Results);
+
+                var results = new List<object>();
+                IPropertyAccessor propertyAccessor = null;
+                foreach (var output in reducingFunc(blittableToDynamicWrapper))
+                {
+                    propertyAccessor ??= PropertyAccessor.Create(output.GetType(), output);
+                    results.Add(output);
+                }
+
+                var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv => { djv[Constants.Documents.Metadata.Key] = DummyDynamicJsonValue; });
+
+                _result.Results = objects.GetOutputsToStore().ToList();
             }
 
             private void ReduceDynamicResults()

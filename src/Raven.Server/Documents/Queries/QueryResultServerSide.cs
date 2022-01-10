@@ -27,8 +27,6 @@ namespace Raven.Server.Documents.Queries
         /// </summary>
         public List<string> TimeSeriesFields { get; set; }
 
-        public bool IsMapReduce { get; set; }
-
         public void RegisterTimeSeriesFields(IndexQueryServerSide query, FieldsToFetch fields)
         {
             if (query.AddTimeSeriesNames == false || fields.AnyTimeSeries == false)
