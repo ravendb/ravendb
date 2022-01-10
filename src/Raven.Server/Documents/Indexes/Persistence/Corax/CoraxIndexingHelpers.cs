@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Corax.Pipeline;
 using Lucene.Net.Analysis;
-using Raven.Client;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
@@ -14,7 +13,10 @@ using CoraxAnalyzer = Corax.Analyzer;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
-
+using Corax;
+using Constants = Raven.Client.Constants;
+using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -44,7 +46,7 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static CoraxRavenPerFieldAnalyzerWrapper CreateCoraxAnalyzers(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+    public static IndexFieldsMapping CreateCoraxAnalyzers(ByteStringContext context, Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(
@@ -96,17 +98,12 @@ public static class CoraxIndexingHelpers
             analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
         }
 
-        var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
-            ? new CoraxRavenPerFieldAnalyzerWrapper(
-                defaultAnalyzerToUse,
-                fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer),
-                fieldName => GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer),
-                indexDefinition.IndexFields.Count + 1)
-            : new CoraxRavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse, indexDefinition.IndexFields.Count + 1);
-
+        var perFieldAnalyzerWrapper = new IndexFieldsMapping(context);
         foreach (var field in indexDefinition.IndexFields)
         {
             var fieldName = field.Value.Name;
+            Slice.From(context, field.Value.Name, out Slice fieldNameSlice);      
+            
             var fieldId = field.Value.Id;
 
             switch (field.Value.Indexing)
@@ -114,18 +111,20 @@ public static class CoraxIndexingHelpers
                 case FieldIndexing.Exact:
                     var keywordAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultExactAnalyzerType.Value.Type, CreateKeywordAnalyzer);
 
-                    perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, keywordAnalyzer);
+                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, keywordAnalyzer);
                     break;
 
                 case FieldIndexing.Search:
                     var analyzer = GetCoraxAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying, index.DocumentDatabase.Name);
                     if (analyzer != null)
                     {
-                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, analyzer);
+                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, analyzer);
                         continue;
                     }
 
-                    AddStandardAnalyzer(fieldName, fieldId);
+                    var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
+                    perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, standardAnalyzer);
+
                     break;
 
                 case FieldIndexing.Default:
@@ -133,7 +132,7 @@ public static class CoraxIndexingHelpers
                     {
                         defaultAnalyzer ??= CreateDefaultAnalyzer(fieldName, index.Configuration.DefaultAnalyzerType.Value.Type);
 
-                        perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, defaultAnalyzer);
+                        perFieldAnalyzerWrapper.AddBinding(fieldId, fieldNameSlice, defaultAnalyzer);
                     }
 
                     break;
@@ -152,19 +151,12 @@ public static class CoraxIndexingHelpers
             return analyzer;
         }
 
-        void AddStandardAnalyzer(string fieldName, int fieldId)
-        {
-            var standardAnalyzer = GetOrCreateAnalyzer(fieldName, index.Configuration.DefaultSearchAnalyzerType.Value.Type, CreateStandardAnalyzer);
-
-            perFieldAnalyzerWrapper.AddAnalyzer(fieldId, fieldName, standardAnalyzer);
-        }
-
         CoraxAnalyzer CreateDefaultAnalyzer(string fieldName, Type analyzerType)
         {
             if (analyzerType == typeof(LowerCaseKeywordAnalyzer))
                 return CoraxAnalyzer.Create(default(KeywordTokenizer), default(LowerCaseTransformer));
 
-            if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
                 return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
 
             return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
@@ -175,7 +167,7 @@ public static class CoraxIndexingHelpers
             if (analyzerType == typeof(KeywordAnalyzer))
                 return CoraxAnalyzer.Create(default(KeywordTokenizer), default(ExactTransformer));
 
-            if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
                 return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
             
             return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);
@@ -186,7 +178,7 @@ public static class CoraxIndexingHelpers
             if (analyzerType == typeof(RavenStandardAnalyzer))
                 return LuceneAnalyzerAdapter.Create(new RavenStandardAnalyzer(Version.LUCENE_29));    
 
-            if (analyzerType.IsSubclassOf(typeof(Analyzer)))
+            if (analyzerType.IsSubclassOf(typeof(LuceneAnalyzer)))
                 return LuceneAnalyzerAdapter.Create(LuceneIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType));
             
             return CoraxIndexingExtensions.CreateAnalyzerInstance(fieldName, analyzerType);

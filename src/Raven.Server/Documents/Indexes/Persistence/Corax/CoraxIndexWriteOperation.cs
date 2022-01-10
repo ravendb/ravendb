@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     {
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverter _converter;
-        private readonly IndexFieldsMapping _knownFields;        
-        private readonly CoraxRavenPerFieldAnalyzerWrapper _analyzers;
+        private readonly IndexFieldsMapping _knownFields;                
 
         private int _entriesCount = 0;
 
@@ -30,7 +29,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _knownFields = _converter.GetKnownFields();
             try
             {
-                _analyzers = CoraxIndexingHelpers.CreateCoraxAnalyzers(index, index.Definition);
                 _indexWriter = new IndexWriter(writeTransaction, _knownFields);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
@@ -125,8 +123,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         public override void Dispose()
         {
-            _indexWriter?.Dispose();
-            _analyzers?.Dispose();
+            _indexWriter?.Dispose();           
         }
     }
 }
