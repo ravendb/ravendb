@@ -283,28 +283,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 { "database", new Microsoft.Extensions.Primitives.StringValues(databaseName) }
             };
-            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.Databases, databaseName, endpointParameters, token);
+            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.Databases, databaseName, databaseName, endpointParameters, token);
         }
 
         private async Task WriteServerInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
         {
-            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.None, _serverWidePrefix, null, token);
+            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.None, _serverWidePrefix, null, null, token);
         }
 
         private async Task WriteForServerOrDatabase(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
-            RouteInformation.RouteType routeType, string path,
+            RouteInformation.RouteType routeType, string path, string databaseName,
             Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
 
-            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && Server.ForTestingPurposesOnly().RoutesToSkip.Contains(x.Path) == false);
+            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && (Server._forTestingPurposes == null || Server._forTestingPurposes.RoutesToSkip.Contains(x.Path) == false));
             
             if (Server.Certificate.Certificate != null)
             {
                 var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                 Debug.Assert(feature != null);
-                routes = routes.Where(route => DebugInfoPackageUtils.CanAccessRoute(feature, route, routeType == RouteInformation.RouteType.Databases ? path : null));
+                routes = routes.Where(route => feature.CanAccess(databaseName, route.AuthorizationStatus != AuthorizationStatus.ValidUser));
             }
 
             foreach (var route in routes)
@@ -353,10 +353,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.Flush();
                     await entryStream.FlushAsync(token);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
             }
             catch (Exception e)
             {
