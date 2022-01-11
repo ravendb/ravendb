@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -38,6 +37,7 @@ namespace FastTests.Sharding
 
                     session.Store(new Order
                     {
+                        Id = "orders/1$Companies/1",
                         Company = "companies/1",
                         Lines = new List<OrderLine>
                         {
@@ -47,6 +47,7 @@ namespace FastTests.Sharding
                     });
                     session.Store(new Order
                     {
+                        Id = "orders/2$Companies/1",
                         Company = "companies/1",
                         Lines = new List<OrderLine>
                         {
@@ -55,6 +56,7 @@ namespace FastTests.Sharding
                     });
                     session.Store(new Order
                     {
+                        Id = "orders/3$Companies/2",
                         Company = "companies/2",
                         Lines = new List<OrderLine>
                         {
@@ -66,7 +68,7 @@ namespace FastTests.Sharding
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, sharded: true);
 
                 using (var session = store.OpenSession())
                 {
@@ -120,35 +122,35 @@ namespace FastTests.Sharding
 
                     session.Store(new Order
                     {
-                        Company = "companies/1",
+                        Company = "Companies/1",
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
                             new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
                         }
-                    });
+                    }, "orders/1$Companies/1");
                     session.Store(new Order
                     {
-                        Company = "companies/1",
+                        Company = "Companies/1",
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
                         }
-                    });
+                    }, "orders/2$Companies/1");
                     session.Store(new Order
                     {
-                        Company = "companies/2",
+                        Company = "Companies/2",
                         Lines = new List<OrderLine>
                         {
                             new OrderLine{ PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
                             new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
                             new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
                         }
-                    });
+                    }, "orders/3$Companies/2");
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, sharded: true);
 
                 using (var session = store.OpenSession())
                 {
@@ -176,9 +178,6 @@ namespace FastTests.Sharding
             }
         }
 
- 
-
-
         [Fact]
         public void Query_With_Customize()
         {
@@ -199,6 +198,7 @@ namespace FastTests.Sharding
 
                     session.SaveChanges();
                 }
+
                 using (var session = store.OpenSession())
                 {
                     var queryResult = session.Query<DogsIndex.Result, DogsIndex>()
@@ -229,7 +229,7 @@ namespace FastTests.Sharding
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
 
                     var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
                         .OrderBy(x => x.Name)
@@ -262,7 +262,7 @@ namespace FastTests.Sharding
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<User, UserMapIndex>()
                         let age = user.Age
@@ -295,7 +295,7 @@ namespace FastTests.Sharding
                     session.Store(new User { Name = "Egor", Age = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
 
                     var queryResult = (session.Advanced.RawQuery<AgeResult>(@$"from index {new UserMapIndex().IndexName} as user
 order by user.Name
@@ -326,7 +326,8 @@ select {{
                     session.Store(new User { Name = "Jane", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
+
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .ToList();
 
@@ -350,7 +351,7 @@ select {{
                     session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
 
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .OrderBy(x => x.Sum)
@@ -382,7 +383,7 @@ select {{
                     session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
                     session.SaveChanges();
 
-                    Thread.Sleep(5000);
+                    WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                             let sum = user.Sum

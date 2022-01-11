@@ -472,7 +472,7 @@ namespace FastTests
                         catch (ConcurrencyException)
                         {
                             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(name));
-                            Assert.Equal(options.ReplicationFactor, record.Topology.ReplicationFactor);
+                            Assert.Equal(options.ReplicationFactor, record.IsSharded ? record.Shards[0].Count : record.Topology.ReplicationFactor);
                             raftCommand = record.Etag;
                         }
 
@@ -623,7 +623,7 @@ namespace FastTests
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
-        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
+        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null, bool sharded = false)
         {
             var admin = store.Maintenance.ForDatabase(dbName);
 
@@ -632,28 +632,61 @@ namespace FastTests
                 : TimeSpan.FromMinutes(1));
 
             var sp = Stopwatch.StartNew();
+            var nonStaleShards = new HashSet<int>();
+
             while (sp.Elapsed < timeout.Value)
             {
-                var databaseStatistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
-                var indexes = databaseStatistics.Indexes
-                    .Where(x => x.State != IndexState.Disabled);
+                var staleStatus = RavenTestBase.StaleStatus.NonStale;
 
-                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
-                if (staleIndexesCount == 0)
+                if (sharded)
+                {
+                    for (var i = 0; i < 3; i++)
+                    {
+                        if (nonStaleShards.Contains(i))
+                            continue;
+
+                        var shardStatus = StaleStatus(shardId: i);
+                        if (shardStatus == RavenTestBase.StaleStatus.NonStale)
+                            nonStaleShards.Add(i);
+
+                        staleStatus |= shardStatus;
+                    }
+                }
+                else
+                {
+                    staleStatus = StaleStatus();
+                }
+
+                if (staleStatus.HasFlag(RavenTestBase.StaleStatus.Error))
+                    break;
+
+                if (staleStatus == RavenTestBase.StaleStatus.NonStale)
                     return;
 
-                var erroredIndexesCount = databaseStatistics.Indexes.Count(x => x.State == IndexState.Error);
-                if (allowErrors)
+                StaleStatus StaleStatus(int? shardId = null)
                 {
-                    // wait for all indexes to become non stale
-                }
-                else if (erroredIndexesCount > 0)
-                {
-                    // have at least some errors
-                    break;
-                }
+                    var databaseStatistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag, shardId));
+                    var indexes = databaseStatistics.Indexes
+                        .Where(x => x.State != IndexState.Disabled);
 
-                Thread.Sleep(32);
+                    var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith("ReplacementOf/"));
+                    if (staleIndexesCount == 0)
+                        return RavenTestBase.StaleStatus.NonStale;
+
+                    var erroredIndexesCount = databaseStatistics.Indexes.Count(x => x.State == IndexState.Error);
+                    if (allowErrors)
+                    {
+                        // wait for all indexes to become non stale
+                    }
+                    else if (erroredIndexesCount > 0)
+                    {
+                        // have at least some errors
+                        return RavenTestBase.StaleStatus.Error;
+                    }
+
+                    Thread.Sleep(32);
+                    return RavenTestBase.StaleStatus.Stale;
+                }
             }
 
             if (allowErrors)
@@ -696,6 +729,13 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
+        [Flags]
+        public enum StaleStatus
+        {
+            NonStale = 2,
+            Stale = 2,
+            Error = 4
+        }
         public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
         {
             if (errorsShouldExists is null)
