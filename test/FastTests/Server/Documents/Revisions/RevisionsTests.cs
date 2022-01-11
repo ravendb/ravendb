@@ -163,16 +163,27 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenSession())
                 {
-                    var revision =  session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
-                    Assert.NotNull(revision);
-                    var revisionLazily  =  session.Advanced.Revisions.Lazily.Get<User>("users/1",DateTime.UtcNow);
-                    Assert.False(revisionLazily == null, $"{DateTime.UtcNow}");
-                    var revisionLazily2  =  session.Advanced.Revisions.Lazily.Get<User>("users/2",DateTime.UtcNow);
+                    var time = DateTime.UtcNow;
+                    var info = $"{time:hh.mm.ss.fffffff} : ";
+
+                    var revision =  session.Advanced.Revisions.GetFor<User>("users/1");
+                    info += $"revision == null : {revision == null}, ";
+                    Assert.False(revision == null, info);
+
+                    info += $"revsion name = {revision.First().Name}, ";
+                    var revisionByTime =  session.Advanced.Revisions.Get<User>("users/1", time);
+                    info += $"revisionByTime == null : {revisionByTime == null}, ";
+                    Assert.False(revisionByTime == null, info);
+
+                    info += $"revisionByTime name = {revisionByTime.Name}, ";
+                    var revisionLazily  =  session.Advanced.Revisions.Lazily.Get<User>("users/1", time);
+                    info += $"revisionLazily == null : {revisionLazily == null}, ";
+                    Assert.False(revisionLazily == null, info);
                     var revisionLazilyResult =  revisionLazily.Value;
                     
-                    Assert.Equal(revision.Id, revisionLazilyResult.Id);
-                    Assert.Equal(revision.Name, revisionLazilyResult.Name);
-                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.Equal(revisionByTime.Id, revisionLazilyResult.Id);
+                    Assert.Equal(revisionByTime.Name, revisionLazilyResult.Name);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
                 }
             }
         }
@@ -384,17 +395,30 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
 
-                var dateTime = DateTime.Now;
+                var dateTime = DateTime.UtcNow;
                 using (var session = store.OpenAsyncSession())
                 {
+                    var info = $"{dateTime:hh.mm.ss.fffffff} : ";
+
                     var revision = await session.Advanced.Revisions.GetAsync<User>("users/1", dateTime);
-                    var revisionLazily = session.Advanced.Revisions.Lazily.GetAsync<User>("users/1",dateTime);
-                    var revisionLazily2 = session.Advanced.Revisions.Lazily.GetAsync<User>("users/2",dateTime);
+                    info += $"revision == null : {revision == null}, ";
+                    Assert.False(revision == null, info);
+
+                    info += $"revsion name = {revision.Name}, ";
+                    var revisionByTime = await session.Advanced.Revisions.GetAsync<User>("users/1", dateTime);
+                    info += $"revisionByTime == null : {revisionByTime == null}, ";
+                    Assert.False(revisionByTime == null, info);
+
+                    info += $"revisionByTime name = {revisionByTime.Name}, ";
+                    var revisionLazily = session.Advanced.Revisions.Lazily.GetAsync<User>("users/1", dateTime);
+                    info += $"revisionLazily == null : {revisionLazily == null}, ";
+                    Assert.False(revisionLazily == null, info);
                     var revisionLazilyResult = await revisionLazily.Value;
+                    var revisionLazily2 = session.Advanced.Revisions.Lazily.GetAsync<User>("users/2",dateTime);
                     
                     Assert.Equal(revision.Id, revisionLazilyResult.Id);
                     Assert.Equal(revision.Name, revisionLazilyResult.Name);
-                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
                 }
             }
         }
