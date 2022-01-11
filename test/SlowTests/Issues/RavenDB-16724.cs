@@ -29,16 +29,15 @@ namespace SlowTests.Issues
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
-                        {
-                            Name = "Hibernating",
-                        },
-                        id);
+                    {
+                        Name = "Hibernating",
+                    }, id);
 
                     byte[] byteArray = Encoding.UTF8.GetBytes("Rhinos");
                     
                     await session.SaveChangesAsync();
                      
-                    session.Advanced.Attachments.Store("users/Hibernating",
+                    session.Advanced.Attachments.Store(id,
                         "invoice.pdf",
                         new MemoryStream(byteArray),
                         "application/pdf");
@@ -53,14 +52,11 @@ namespace SlowTests.Issues
                     Assert.Equal(2, metadatas.Count);
                     
                     changeVector = metadatas.First().GetString(Constants.Documents.Metadata.ChangeVector);
-                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
-                { 
-                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
-
-                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(id, DateTime.Now);
+                {
+                    var revision1 = await session.Advanced.Revisions.GetAsync<User>(id, DateTime.UtcNow);
                     var revision2 = await session.Advanced.Revisions.GetAsync<User>(changeVector:changeVector);
                     var revision3 = await session.Advanced.Revisions.GetAsync<User>(new[]{changeVector});
                     
@@ -68,8 +64,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
 
-                    using (var attachment = await session.Advanced.Attachments.GetAsync("users/Hibernating",
-                        "invoice.pdf"))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync(id, "invoice.pdf"))
                     {
                         Assert.NotNull(attachment);
                     }
@@ -79,15 +74,13 @@ namespace SlowTests.Issues
                 
                 using (var session = store.OpenSession())
                 {
-                    var revision1 =  session.Advanced.Revisions.Get<User>(id,DateTime.Now);
-                    var revision2 =  session.Advanced.Revisions.Get<User>(changeVector:changeVector);
-                    var revision3 =  session.Advanced.Revisions.Get<User>(new[]{changeVector});
+                    var revision1 = session.Advanced.Revisions.Get<User>(id, DateTime.UtcNow);
+                    var revision2 = session.Advanced.Revisions.Get<User>(changeVector:changeVector);
+                    var revision3 = session.Advanced.Revisions.Get<User>(new[]{changeVector});
                     
                     Assert.NotNull(revision1);
                     Assert.NotNull(revision2);
                     Assert.NotNull(revision3);
-                    
-                    session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
                     
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
                 }   
