@@ -959,12 +959,14 @@ namespace Raven.Server.Documents.TcpHandlers
                                 writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                                 writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
 
-                                var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp => kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
-                                    + includeCountersCommand.Results.Sum(kvp => kvp.Value.Sum(counter => counter.CounterName.Length
-                                                                                                         + counter.DocumentId.Length
-                                                                                                         + sizeof(long) //Etag
-                                                                                                         + sizeof(long) //Total Value
-                                    ));
+                                var size = includeCountersCommand.CountersToGetByDocId.Sum(kvp =>
+                                               kvp.Key.Length + kvp.Value.Sum(name => name.Length)) //CountersToGetByDocId
+                                    + includeCountersCommand.Results.Sum(kvp =>
+                                        kvp.Value.Sum(counter => counter == null ? 0 : counter.CounterName.Length
+                                                                                         + counter.DocumentId.Length
+                                                                                         + sizeof(long) //Etag
+                                                                                         + sizeof(long) //Total Value
+                                   ));
                                 batchScope.RecordIncludedCountersInfo(includeCountersCommand.Results.Sum(x => x.Value.Count), size);
 
 
