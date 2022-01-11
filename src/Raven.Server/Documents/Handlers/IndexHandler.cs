@@ -385,14 +385,13 @@ namespace Raven.Server.Documents.Handlers
             var name = GetStringQueryString("name", required: false);
 
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             {
-                IndexStats[] indexStats;
+                IndexStats[] indexesStats;
                 using (context.OpenReadTransaction())
                 {
                     if (string.IsNullOrEmpty(name))
                     {
-                        indexStats = Database.IndexStore
+                        indexesStats = Database.IndexStore
                             .GetIndexes()
                             .OrderBy(x => x.Name)
                             .Select(x =>
@@ -471,15 +470,12 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         }
 
-                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
+                        indexesStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
                     }
                 }
 
-                writer.WriteStartObject();
-
-                writer.WriteArray(context.Documents, "Results", indexStats, (w, c, stats) => w.WriteIndexStats(context.Documents, stats));
-
-                writer.WriteEndObject();
+                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+                    writer.WriteIndexesStats(context.Documents, indexesStats);
             }
         }
 
@@ -787,35 +783,11 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WriteArray(context, "Results", indexes, (w, c, index) =>
+                writer.WriteIndexErrors(context, indexes.Select(x => new IndexErrors
                 {
-                    w.WriteStartObject();
-                    w.WritePropertyName("Name");
-                    w.WriteString(index.Name);
-                    w.WriteComma();
-                    w.WriteArray(c, "Errors", index.GetErrors(), (ew, ec, error) =>
-                    {
-                        ew.WriteStartObject();
-                        ew.WritePropertyName(nameof(error.Timestamp));
-                        ew.WriteDateTime(error.Timestamp, isUtc: true);
-                        ew.WriteComma();
-
-                        ew.WritePropertyName(nameof(error.Document));
-                        ew.WriteString(error.Document);
-                        ew.WriteComma();
-
-                        ew.WritePropertyName(nameof(error.Action));
-                        ew.WriteString(error.Action);
-                        ew.WriteComma();
-
-                        ew.WritePropertyName(nameof(error.Error));
-                        ew.WriteString(error.Error);
-                        ew.WriteEndObject();
-                    });
-                    w.WriteEndObject();
-                });
-                writer.WriteEndObject();
+                    Name = x.Name,
+                    Errors = x.GetErrors().ToArray()
+                }));
             }
         }
 

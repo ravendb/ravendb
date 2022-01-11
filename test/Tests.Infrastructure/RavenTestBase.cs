@@ -694,39 +694,71 @@ namespace FastTests
                 return;
             }
 
-            var perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
-            var errors = admin.Send(new GetIndexErrorsOperation());
-            var stats = admin.Send(new GetIndexesStatisticsOperation());
-
-            var total = new
+            var files = new List<string>();
+            if (sharded)
             {
-                Errors = errors,
-                Stats = stats,
-                Performance = perf,
-                NodeTag = nodeTag
-            };
-
-            var file = Path.GetTempFileName() + ".json";
-            using (var stream = File.Open(file, FileMode.OpenOrCreate))
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var writer = new BlittableJsonTextWriter(context, stream))
+                for (var i = 0; i < 3; i++)
+                {
+                    files.Add(OutputIndexInfo(i));
+                }
+            }
+            else
             {
-                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(total);
-                var json = context.ReadObject(djv, "errors");
-                writer.WriteObject(json);
-                writer.Flush();
+                files.Add(OutputIndexInfo(null));
             }
 
-            var statistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+            string OutputIndexInfo(int? shard)
+            {
+                var perf = admin.Send(new GetIndexPerformanceStatisticsOperation(shard));
+                var errors = admin.Send(new GetIndexErrorsOperation(shard));
+                var stats = admin.Send(new GetIndexesStatisticsOperation(shard));
 
-            var corrupted = statistics.Indexes.Where(x => x.State == IndexState.Error).ToList();
+                var total = new
+                {
+                    Errors = errors,
+                    Stats = stats,
+                    Performance = perf,
+                    NodeTag = nodeTag
+                };
+
+                var file = $"{Path.GetTempFileName()}{(shard != null ? $"_shard{shard}" : "")}.json";
+
+                using (var stream = File.Open(file, FileMode.OpenOrCreate))
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (var writer = new BlittableJsonTextWriter(context, stream))
+                {
+                    var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(total);
+                    var json = context.ReadObject(djv, "errors");
+                    writer.WriteObject(json);
+                    writer.Flush();
+                }
+
+                return file;
+            }
+
+            List<IndexInformation> allIndexes = new();
+
+            if (sharded)
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    var statistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag, i));
+                    allIndexes.AddRange(statistics.Indexes);
+                }
+            }
+            else
+            {
+                allIndexes.AddRange(admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag)).Indexes);
+            }
+
+            var corrupted = allIndexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
             {
                 throw new InvalidOperationException(
-                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
+                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + string.Join(", ", files));
             }
 
-            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + string.Join(", ", files));
         }
 
         [Flags]

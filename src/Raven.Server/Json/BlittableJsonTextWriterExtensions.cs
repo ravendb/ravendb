@@ -33,6 +33,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Data.BTrees;
+using IndexStats = Raven.Client.Documents.Indexes.IndexStats;
 
 namespace Raven.Server.Json
 {
@@ -1338,10 +1339,50 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
+        public static void WriteIndexesStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexStats[] indexesStats)
         {
-            var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
-            writer.WriteObject(context.ReadObject(djv, "index/stats"));
+            writer.WriteStartObject();
+
+            writer.WriteArray(context, "Results", indexesStats, (w, c, stats) =>
+            {
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
+                writer.WriteObject(context.ReadObject(djv, "index/stats"));
+            });
+
+            writer.WriteEndObject();
+        }
+        
+        public static void WriteIndexErrors(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexErrors> indexErrors)
+        {
+            writer.WriteStartObject();
+            writer.WriteArray(context, "Results", indexErrors, (w, c, index) =>
+            {
+                w.WriteStartObject();
+                w.WritePropertyName("Name");
+                w.WriteString(index.Name);
+                w.WriteComma();
+                w.WriteArray(c, "Errors", index.Errors, (ew, ec, error) =>
+                {
+                    ew.WriteStartObject();
+                    ew.WritePropertyName(nameof(error.Timestamp));
+                    ew.WriteDateTime(error.Timestamp, isUtc: true);
+                    ew.WriteComma();
+
+                    ew.WritePropertyName(nameof(error.Document));
+                    ew.WriteString(error.Document);
+                    ew.WriteComma();
+
+                    ew.WritePropertyName(nameof(error.Action));
+                    ew.WriteString(error.Action);
+                    ew.WriteComma();
+
+                    ew.WritePropertyName(nameof(error.Error));
+                    ew.WriteString(error.Error);
+                    ew.WriteEndObject();
+                });
+                w.WriteEndObject();
+            });
+            writer.WriteEndObject();
         }
 
         private static void WriteIndexFieldOptions(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options, bool removeAnalyzers)
