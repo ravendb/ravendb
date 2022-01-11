@@ -528,8 +528,6 @@ namespace Raven.Server.Documents.Revisions
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                 metadata.TryGet(snapshotFlag, out BlittableJsonReaderObject bjro))
             {
-                bool isSnapshot = snapshotFlag == Constants.Documents.Metadata.RevisionCounters;
-
                 var names = bjro.GetPropertyNames();
 
                 metadata.Modifications = new DynamicJsonValue(metadata);
@@ -540,7 +538,7 @@ namespace Raven.Server.Documents.Revisions
                     arr.Add(name);
                 }
 
-                metadata.Modifications[flag] = arr; 
+                metadata.Modifications[flag] = arr;
                 document.Modifications ??= new DynamicJsonValue();
                 document.Modifications[Constants.Documents.Metadata.Key] = metadata;
 
@@ -755,7 +753,7 @@ namespace Raven.Server.Documents.Revisions
 
                 revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
 
-                if (table.IsOwned(tvr.Id) == false) 
+                if (table.IsOwned(tvr.Id) == false)
                 {
                     // We request to delete revision with the wrong collection
                     var revision = TableValueToRevision(context, ref tvr);
@@ -1540,7 +1538,7 @@ namespace Raven.Server.Documents.Revisions
                         InsertNewMetadataInfo(context, documentsStorage, document, collectionName);
 
                         var flag = document.Flags | DocumentFlags.Reverted;
-                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved) );
+                        documentsStorage.Put(context, document.Id, null, document.Data, flags: flag.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved));
                     }
                     else
                     {
