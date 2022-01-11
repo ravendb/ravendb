@@ -163,8 +163,10 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenSession())
                 {
-                    var revision                 =  session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
+                    var revision =  session.Advanced.Revisions.Get<User>("users/1", DateTime.Now);
+                    Assert.NotNull(revision);
                     var revisionLazily  =  session.Advanced.Revisions.Lazily.Get<User>("users/1",DateTime.UtcNow);
+                    Assert.False(revisionLazily == null, $"{DateTime.UtcNow}");
                     var revisionLazily2  =  session.Advanced.Revisions.Lazily.Get<User>("users/2",DateTime.UtcNow);
                     var revisionLazilyResult =  revisionLazily.Value;
                     
