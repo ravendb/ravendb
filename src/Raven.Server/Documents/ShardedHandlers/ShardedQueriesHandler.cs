@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     if (_filteredShardIndexes?.Contains(i) == false)
                         continue;
 
-                    _commands[i] = new ShardedQueryCommand(_parent, queryTemplate);
+                    _commands[i] = new ShardedQueryCommand(_parent, queryTemplate, _query.Metadata.IndexName);
                 }
             }
 
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         toAdd += $",{fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
-                    // removing the `};\r\n}`
+                    // removing the last 2 `}`
                     declaredFunction.FunctionText =
                         declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.LastIndexOf('}'));
                     declaredFunction.FunctionText =
@@ -361,12 +361,18 @@ namespace Raven.Server.Documents.ShardedHandlers
                         toAdd += $",\r\n    {fieldName}: {clone.From.Alias}.{fieldName}";
                     }
 
-                    // removing the `\r\n}`
+                    // removing the last `}`
                     clone.SelectFunctionBody.FunctionText =
                         clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.LastIndexOf('}'));
 
                     clone.SelectFunctionBody.FunctionText += $"{toAdd}\r\n}}";
                     clone.DeclaredFunctions.Clear();
+                }
+                else
+                {
+                    // TODO: what if we have an order by for a field that is only in the index?
+                    // doesn't have a select
+                    return;
                 }
 
                 queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
@@ -427,7 +433,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         }, 
                         [nameof(IndexQuery.Query)] = sb.ToString(),
                     };
-                    cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"));
+                    cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
                 }
             }
 
