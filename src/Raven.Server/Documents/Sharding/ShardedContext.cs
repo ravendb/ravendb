@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -179,9 +180,17 @@ namespace Raven.Server.Documents.Sharding
 
         public void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> mapReduceIndexes)
         {
+            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
+
+            foreach ((string key, string value) in _record.Settings)
+                ravenConfiguration.SetSetting(key, value);
+
+            ravenConfiguration.Initialize();
+
             foreach ((string indexName, IndexDefinition definition) in mapReduceIndexes)
             {
-                var ravenConfiguration = GetRavenConfiguration();
+                Debug.Assert(definition.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce);
+
                 var compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
                 _cachedMapReduceIndexDefinitions[indexName] = compiled;
             }
@@ -191,17 +200,6 @@ namespace Raven.Server.Documents.Sharding
         {
             _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled);
             return compiled;
-        }
-
-        private RavenConfiguration GetRavenConfiguration()
-        {
-            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
-
-            foreach ((string key, string value) in _record.Settings)
-                ravenConfiguration.SetSetting(key, value);
-
-            ravenConfiguration.Initialize();
-            return ravenConfiguration;
         }
     }
 }

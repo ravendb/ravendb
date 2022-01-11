@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
@@ -185,22 +186,22 @@ namespace FastTests.Sharding
             {
                 new DogsIndex().Execute(store);
 
-                using (var newSession = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    newSession.Store(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true }, "dogs/1");
-                    newSession.Store(new Dog { Name = "Brian", Breed = "Labrador", Color = "White", Age = 12, IsVaccinated = false }, "dogs/2");
-                    newSession.Store(new Dog { Name = "Django", Breed = "Jack Russel", Color = "Black", Age = 3, IsVaccinated = true }, "dogs/3");
-                    newSession.Store(new Dog { Name = "Beethoven", Breed = "St. Bernard", Color = "Brown", Age = 1, IsVaccinated = false }, "dogs/4");
-                    newSession.Store(new Dog { Name = "Scooby Doo", Breed = "Great Dane", Color = "Brown", Age = 0, IsVaccinated = false }, "dogs/5");
-                    newSession.Store(new Dog { Name = "Old Yeller", Breed = "Black Mouth Cur", Color = "White", Age = 2, IsVaccinated = true }, "dogs/6");
-                    newSession.Store(new Dog { Name = "Benji", Breed = "Mixed", Color = "White", Age = 0, IsVaccinated = false }, "dogs/7");
-                    newSession.Store(new Dog { Name = "Lassie", Breed = "Collie", Color = "Brown", Age = 6, IsVaccinated = true }, "dogs/8");
+                    session.Store(new Dog { Name = "Snoopy", Breed = "Beagle", Color = "White", Age = 6, IsVaccinated = true }, "dogs/1");
+                    session.Store(new Dog { Name = "Brian", Breed = "Labrador", Color = "White", Age = 12, IsVaccinated = false }, "dogs/2");
+                    session.Store(new Dog { Name = "Django", Breed = "Jack Russel", Color = "Black", Age = 3, IsVaccinated = true }, "dogs/3");
+                    session.Store(new Dog { Name = "Beethoven", Breed = "St. Bernard", Color = "Brown", Age = 1, IsVaccinated = false }, "dogs/4");
+                    session.Store(new Dog { Name = "Scooby Doo", Breed = "Great Dane", Color = "Brown", Age = 0, IsVaccinated = false }, "dogs/5");
+                    session.Store(new Dog { Name = "Old Yeller", Breed = "Black Mouth Cur", Color = "White", Age = 2, IsVaccinated = true }, "dogs/6");
+                    session.Store(new Dog { Name = "Benji", Breed = "Mixed", Color = "White", Age = 0, IsVaccinated = false }, "dogs/7");
+                    session.Store(new Dog { Name = "Lassie", Breed = "Collie", Color = "Brown", Age = 6, IsVaccinated = true }, "dogs/8");
 
-                    newSession.SaveChanges();
+                    session.SaveChanges();
                 }
-                using (var newSession = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
+                    var queryResult = session.Query<DogsIndex.Result, DogsIndex>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
                         .Where(x => x.Age > 2)
@@ -318,15 +319,15 @@ select {{
             {
                 store.ExecuteIndex(new UserMapReduce());
 
-                using (var newSession = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    newSession.Store(new User { Name = "Jane", Count = 1 }, "users/1");
-                    newSession.Store(new User { Name = "Jane", Count = 2 }, "users/2");
-                    newSession.Store(new User { Name = "Jane", Count = 3 }, "users/3");
-                    newSession.SaveChanges();
+                    session.Store(new User { Name = "Jane", Count = 1 }, "users/1");
+                    session.Store(new User { Name = "Jane", Count = 2 }, "users/2");
+                    session.Store(new User { Name = "Jane", Count = 3 }, "users/3");
+                    session.SaveChanges();
 
                     Thread.Sleep(5000);
-                    var queryResult = newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .ToList();
 
                     Assert.Equal(1, queryResult.Count);
@@ -342,16 +343,16 @@ select {{
             {
                 store.ExecuteIndex(new UserMapReduce());
 
-                using (var newSession = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    newSession.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
-                    newSession.Store(new User { Name = "Igal", Count = 2 }, "users/2");
-                    newSession.Store(new User { Name = "Egor", Count = 3 }, "users/3");
-                    newSession.SaveChanges();
+                    session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    session.SaveChanges();
 
                     Thread.Sleep(5000);
 
-                    var queryResult = newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                    var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
                         .OrderBy(x => x.Sum)
                         .Select(x => new
                         {
@@ -374,16 +375,16 @@ select {{
             {
                 store.ExecuteIndex(new UserMapReduce());
 
-                using (var newSession = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
-                    newSession.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
-                    newSession.Store(new User { Name = "Igal", Count = 2 }, "users/2");
-                    newSession.Store(new User { Name = "Egor", Count = 3 }, "users/3");
-                    newSession.SaveChanges();
+                    session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    session.SaveChanges();
 
                     Thread.Sleep(5000);
 
-                    var queryResult = (from user in newSession.Query<UserMapReduce.Result, UserMapReduce>()
+                    var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
                             let sum = user.Sum
                             orderby user.Sum
                             select new
@@ -396,6 +397,18 @@ select {{
                     Assert.Equal(1, queryResult[0].Sum);
                     Assert.Equal(2, queryResult[1].Sum);
                     Assert.Equal(3, queryResult[2].Sum);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_An_Index_That_Doesnt_Exist()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<IndexDoesNotExistException>(() => session.Query<UserMapReduce.Result, UserMapReduce>().ToList());
                 }
             }
         }
