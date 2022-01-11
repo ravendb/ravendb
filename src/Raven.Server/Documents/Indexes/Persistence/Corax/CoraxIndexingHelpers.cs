@@ -99,11 +99,13 @@ public static class CoraxIndexingHelpers
         }
 
         var perFieldAnalyzerWrapper = new IndexFieldsMapping(context);
+        perFieldAnalyzerWrapper.DefaultAnalyzer = defaultAnalyzerToUse;
+        
         foreach (var field in indexDefinition.IndexFields)
         {
             var fieldName = field.Value.Name;
-            Slice.From(context, field.Value.Name, out Slice fieldNameSlice);      
-            
+            Slice.From(context, field.Value.Name, out Slice fieldNameSlice);
+
             var fieldId = field.Value.Id;
 
             switch (field.Value.Indexing)
@@ -138,7 +140,7 @@ public static class CoraxIndexingHelpers
                     break;
             }
         }
-
+        
         return perFieldAnalyzerWrapper;
 
         CoraxAnalyzer GetOrCreateAnalyzer(string fieldName, Type analyzerType, Func<string, Type, CoraxAnalyzer> createAnalyzer)

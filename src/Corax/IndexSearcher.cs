@@ -619,6 +619,10 @@ namespace Corax
             var binding = _fieldMapping.GetByFieldId(fieldId);
 
             var analyzer = binding.Analyzer;
+
+            if (analyzer is null)
+                return originalTerm;
+            
             analyzer.GetOutputBuffersSize(originalTerm.Length, out int outputSize, out int tokenSize);
 
             Span<byte> encoded = new byte[outputSize];
