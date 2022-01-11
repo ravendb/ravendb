@@ -298,13 +298,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             token.ThrowIfCancellationRequested();
 
-            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && (Server._forTestingPurposes == null || Server._forTestingPurposes.RoutesToSkip.Contains(x.Path) == false));
+            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && (Server._forTestingPurposes == null || Server._forTestingPurposes.DebugPackage.RoutesToSkip.Contains(x.Path) == false));
             
             if (Server.Certificate.Certificate != null)
             {
                 var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                 Debug.Assert(feature != null);
-                routes = routes.Where(route => feature.CanAccess(databaseName, route.AuthorizationStatus != AuthorizationStatus.ValidUser));
+                routes = routes.Where(route => Server.Router.CanAccessRoute(route, HttpContext, databaseName, feature, out _));
             }
 
             foreach (var route in routes)

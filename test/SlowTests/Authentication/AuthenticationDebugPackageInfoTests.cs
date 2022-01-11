@@ -32,7 +32,7 @@ namespace SlowTests.Authentication
                        ModifyDatabaseName = s => databaseName
                    }))
             {
-                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
+                Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(store.Database);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -62,7 +62,7 @@ namespace SlowTests.Authentication
 
             using (var store = GetDocumentStore(new Options() {ClientCertificate = userCert, AdminCertificate = adminCert, ModifyDatabaseName = _ => databaseName}))
             {
-                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
+                Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -99,7 +99,7 @@ namespace SlowTests.Authentication
                        ModifyDatabaseName = _ => databaseName
                    }))
             {
-                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
+                Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
                 using var archive = new ZipArchive(response);
@@ -130,7 +130,7 @@ namespace SlowTests.Authentication
                        ModifyDatabaseName = _ => databaseName
                    }))
             {
-                Server.ForTestingPurposesOnly().RoutesToSkip = _routesToSkip;
+                Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(databaseName);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/databases/{store.Database}/debug/info-package");
                 using var archive = new ZipArchive(response);

@@ -2616,7 +2616,11 @@ namespace Raven.Server
             internal bool ThrowExceptionInTrafficWatchTcp = false;
             internal bool GatherVerboseDatabaseDisposeInformation = false;
             internal bool PrintExceptionDuringBulkInsertProcessingToConsole = false;
-            internal string[] RoutesToSkip = new string[]{};
+            internal DebugPackageTestingStuff DebugPackage = new DebugPackageTestingStuff();
+            internal class DebugPackageTestingStuff
+            {
+                internal string[] RoutesToSkip = new string[] { };
+            }
         }
     }
 }

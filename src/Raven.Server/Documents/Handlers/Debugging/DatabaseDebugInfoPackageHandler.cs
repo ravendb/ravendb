@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                             Debug.Assert(feature != null);
-                            routes = routes.Where(route => feature.CanAccess(Database.Name, route.AuthorizationStatus != AuthorizationStatus.ValidUser));
+                            routes = routes.Where(route => Server.Router.CanAccessRoute(route, HttpContext, Database.Name, feature, out _));
                         }
 
                         foreach (var route in routes)
