@@ -21,7 +21,7 @@ namespace Voron
             var term = s1.AsReadOnlySpan();
             
             return term.Length > 1 
-                ? s1.AsReadOnlySpan()[..(term.Length-1)].EndsWith(s2)
+                ? s1.AsReadOnlySpan()[..(term.Length - 1)].EndsWith(s2)
                 : s1.AsReadOnlySpan().EndsWith(s2);
         }
     }

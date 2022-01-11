@@ -12,5 +12,25 @@ namespace Corax
         {
             public static float ScoreEpsilon = 1e-8F;
         }
+
+        public static class Search
+        {
+            public const byte Wildcard = (byte)'*';
+            [Flags]
+            internal enum SearchMatchOptions
+            {
+                TermMatch = 0,
+                StartsWith = 1,
+                EndsWith = 2,
+                Contains = 4
+            }
+
+            public enum Operator
+            {
+                Or,
+                And
+            }
+        }
+        
     }
 }

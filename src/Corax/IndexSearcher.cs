@@ -692,32 +692,32 @@ namespace Corax
                     this, new NotContainsTermProvider(this, _transaction.Allocator, terms, field, containsTerm, fieldId), scoreFunction));
         }
 
-        public IQueryMatch SearchQuery(string field, string searchTerm, SearchOperator @operator, bool isNegated, int analyzerId)
+        public IQueryMatch SearchQuery(string field, string searchTerm, Constants.Search.Operator @operator, bool isNegated, int analyzerId)
         {
             return SearchQuery<NullScoreFunction>(field, searchTerm, default, @operator, analyzerId, isNegated);
         }
 
-        public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, SearchOperator @operator, int analyzerId,
+        public IQueryMatch SearchQuery<TScoreFunction>(string field, string searchTerm, TScoreFunction scoreFunction, Constants.Search.Operator @operator, int analyzerId,
             bool isNegated = false)
             where TScoreFunction : IQueryScoreFunction
         {
-            const byte wildcard = (byte)'*';
             ReadOnlySpan<byte> term = Encoding.UTF8.GetBytes(searchTerm).AsSpan();
             if (isNegated)
             {
                 @operator = @operator switch
                 {
-                    SearchOperator.Or => SearchOperator.And,
-                    SearchOperator.And => SearchOperator.Or,
+                    Constants.Search.Operator.Or => Constants.Search.Operator.And,
+                    Constants.Search.Operator.And => Constants.Search.Operator.Or,
                     _ => throw new ArgumentOutOfRangeException(nameof(@operator), @operator, null)
                 };
             }
 
-            if (_analyzers.TryGetValue(analyzerId, out var searchAnalyzer) == false)
+            if (_fieldMapping.TryGetByFieldId(analyzerId, out var indexFieldBinding) == false && indexFieldBinding.Analyzer is null)
             {
-                throw new InvalidDataException($"{nameof(SearchQuery)} requires analyzer.");
+                throw new InvalidOperationException($"{nameof(SearchQuery)} requires analyzer.");
             }
 
+            var searchAnalyzer = indexFieldBinding.Analyzer;
             var wildcardAnalyzer = Analyzer.Create<WhitespaceTokenizer, ExactTransformer>();
 
             searchAnalyzer.GetOutputBuffersSize(term.Length, out var outputSize, out var tokenSize);
@@ -747,30 +747,30 @@ namespace Corax
                     continue;
 
 
-                SearchMatchOptions mode = SearchMatchOptions.Exact;
-                if (originalWord[0] is wildcard)
-                    mode |= SearchMatchOptions.EndsWith;
-                if (originalWord[^1] is wildcard)
-                    mode |= SearchMatchOptions.StartsWith;
-                if (mode.HasFlag(SearchMatchOptions.StartsWith | SearchMatchOptions.EndsWith))
-                    mode = SearchMatchOptions.Contains;
+                Constants.Search.SearchMatchOptions mode = Constants.Search.SearchMatchOptions.TermMatch;
+                if (originalWord[0] is Constants.Search.Wildcard)
+                    mode |= Constants.Search.SearchMatchOptions.EndsWith;
+                if (originalWord[^1] is Constants.Search.Wildcard)
+                    mode |= Constants.Search.SearchMatchOptions.StartsWith;
+                if (mode.HasFlag(Constants.Search.SearchMatchOptions.StartsWith | Constants.Search.SearchMatchOptions.EndsWith))
+                    mode = Constants.Search.SearchMatchOptions.Contains;
 
                 Slice.From(_transaction.Allocator, encoded.Slice(tokens[0].Offset, (int)tokens[0].Length), ByteStringType.Immutable, out var encodedString);
                 if (typeof(TScoreFunction) == typeof(NullScoreFunction))
-                    BuildExpressionWithoutScoring(mode, encodedString);
-                else
-                    BuildExpressionWithScoring(mode, encodedString);
+                    BuildExpression(mode, encodedString);
             }
 
             QueryContext.MatchesPool.Return(buffer);
           
-            return match;
+            return typeof(TScoreFunction) == typeof(NullScoreFunction) 
+                ? match
+                : Boost(match, scoreFunction);
             
-            void BuildExpressionWithoutScoring(SearchMatchOptions mode, Slice encodedString)
+            void BuildExpression(Constants.Search.SearchMatchOptions mode, Slice encodedString)
             {
                    switch (mode)
                 {
-                    case SearchMatchOptions.Exact:
+                    case Constants.Search.SearchMatchOptions.TermMatch:
                         IQueryMatch exactMatch = isNegated
                             ? NotEquals(AllEntries(), analyzerId, encodedString)
                             : TermQuery(field, encodedString.ToString());
@@ -781,40 +781,40 @@ namespace Corax
                             return;
                         }
 
-                        match = @operator is SearchOperator.Or
+                        match = @operator is Constants.Search.Operator.Or
                             ? Or(match, exactMatch)
                             : And(match, exactMatch);
                         break;
-                    case SearchMatchOptions.StartsWith:
+                    case Constants.Search.SearchMatchOptions.StartsWith:
                         if (match is null)
                         {
                             match = StartWithQuery(field, encodedString.ToString(), isNegated);
                             return;
                         }
 
-                        match = @operator is SearchOperator.Or
+                        match = @operator is Constants.Search.Operator.Or
                             ? Or(match, StartWithQuery(field, encodedString.ToString(), isNegated))
                             : And(match, StartWithQuery(field, encodedString.ToString(), isNegated));
                         break;
-                    case SearchMatchOptions.EndsWith:
+                    case Constants.Search.SearchMatchOptions.EndsWith:
                         if (match is null)
                         {
                             match = EndsWithQuery(field, encodedString.ToString(), isNegated);
                             return;
                         }
 
-                        match = @operator is SearchOperator.Or
+                        match = @operator is Constants.Search.Operator.Or
                             ? Or(match, EndsWithQuery(field, encodedString.ToString(), isNegated))
                             : And(match, EndsWithQuery(field, encodedString.ToString(), isNegated));
                         break;
-                    case SearchMatchOptions.Contains:
+                    case Constants.Search.SearchMatchOptions.Contains:
                         if (match is null)
                         {
                             match = ContainsQuery(field, encodedString.ToString(), isNegated);
                             return;
                         }
 
-                        match = @operator is SearchOperator.Or
+                        match = @operator is Constants.Search.Operator.Or
                             ? Or(match, ContainsQuery(field, encodedString.ToString(), isNegated))
                             : And(match, ContainsQuery(field, encodedString.ToString(), isNegated));
                         break;
@@ -822,79 +822,8 @@ namespace Corax
                         throw new InvalidExpressionException("Unknown flag inside Search match.");
                 }
             }
-            void BuildExpressionWithScoring(SearchMatchOptions mode, Slice encodedString)
-            {
-                switch (mode)
-                {
-                    case SearchMatchOptions.Exact:
-                        IQueryMatch exactMatch = isNegated
-                            ? NotEquals(AllEntries(), analyzerId, encodedString)
-                            : TermQuery(field, encodedString.ToString());
-
-                        if (match is null)
-                        {
-                            match = exactMatch;
-                            return;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, exactMatch)
-                            : And(match, exactMatch);
-                        break;
-                    case SearchMatchOptions.StartsWith:
-                        if (match is null)
-                        {
-                            match = StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated);
-                            return;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated))
-                            : And(match, StartWithQuery(field, encodedString.ToString(), scoreFunction, isNegated));
-                        break;
-                    case SearchMatchOptions.EndsWith:
-                        if (match is null)
-                        {
-                            match = EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated);
-                            return;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated))
-                            : And(match, EndsWithQuery(field, encodedString.ToString(), scoreFunction, isNegated));
-                        break;
-                    case SearchMatchOptions.Contains:
-                        if (match is null)
-                        {
-                            match = ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated);
-                            return;
-                        }
-
-                        match = @operator is SearchOperator.Or
-                            ? Or(match, ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated))
-                            : And(match, ContainsQuery(field, encodedString.ToString(), scoreFunction, isNegated));
-                        break;
-                    default:
-                        throw new InvalidExpressionException("Unknown flag inside Search match.");
-                }
-            }
         }
-
-        [Flags]
-        private enum SearchMatchOptions
-        {
-            Exact = 0,
-            StartsWith = 1,
-            EndsWith = 2,
-            Contains = 4
-        }
-
-
-        public enum SearchOperator
-        {
-            Or,
-            And
-        }
+        
 
         public BoostingMatch Boost<TInner>(TInner match, IQueryScoreFunction scoreFunction)
             where TInner : IQueryMatch

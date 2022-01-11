@@ -35,7 +35,7 @@ namespace Corax.Queries
             var suffix = _endsWith;
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                if (!termSlice.EndsWith(suffix))
+                if (termSlice.EndsWith(suffix) == false)
                     continue;
 
                 term = _searcher.TermQuery(_field, termSlice.ToString());
