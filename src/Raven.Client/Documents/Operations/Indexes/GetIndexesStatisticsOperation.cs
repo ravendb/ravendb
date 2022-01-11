@@ -9,16 +9,38 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class GetIndexesStatisticsOperation : IMaintenanceOperation<IndexStats[]>
     {
-        public RavenCommand<IndexStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        private readonly int? _shard;
+
+        public GetIndexesStatisticsOperation()
         {
-            return new GetIndexesStatisticsCommand();
+            
         }
 
-        private class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
+        public GetIndexesStatisticsOperation(int? shard)
         {
+            _shard = shard;
+        }
+
+        public RavenCommand<IndexStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new GetIndexesStatisticsCommand(_shard);
+        }
+
+        internal class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
+        {
+            private readonly int? _shard;
+
+            public GetIndexesStatisticsCommand(int? shard = null)
+            {
+                _shard = shard;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/stats";
+
+                if (_shard != null)
+                    url += $"?shard={_shard}";
 
                 return new HttpRequestMessage
                 {

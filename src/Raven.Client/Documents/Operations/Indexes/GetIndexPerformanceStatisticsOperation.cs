@@ -9,10 +9,16 @@ namespace Raven.Client.Documents.Operations.Indexes
 {
     public class GetIndexPerformanceStatisticsOperation : IMaintenanceOperation<IndexPerformanceStats[]>
     {
+        private readonly int? _shard;
         private readonly string[] _indexNames;
 
         public GetIndexPerformanceStatisticsOperation()
         {
+        }
+
+        public GetIndexPerformanceStatisticsOperation(int? shard)
+        {
+            _shard = shard;
         }
 
         public GetIndexPerformanceStatisticsOperation(string[] indexNames)
@@ -20,18 +26,26 @@ namespace Raven.Client.Documents.Operations.Indexes
             _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
         }
 
-        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public GetIndexPerformanceStatisticsOperation(string[] indexNames, int shard)
         {
-            return new GetIndexPerformanceStatisticsCommand(_indexNames);
+            _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
+            _shard = shard;
         }
 
-        private class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
+        public RavenCommand<IndexPerformanceStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new GetIndexPerformanceStatisticsCommand(_indexNames, _shard);
+        }
+
+        internal class GetIndexPerformanceStatisticsCommand : RavenCommand<IndexPerformanceStats[]>
         {
             private readonly string[] _indexNames;
+            private readonly int? _shard;
 
-            public GetIndexPerformanceStatisticsCommand(string[] indexNames)
+            public GetIndexPerformanceStatisticsCommand(string[] indexNames, int? shard)
             {
                 _indexNames = indexNames;
+                _shard = shard;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -66,18 +80,22 @@ namespace Raven.Client.Documents.Operations.Indexes
             {
                 var url = $"{node.Url}/databases/{node.Database}/indexes/performance";
 
-                if (_indexNames == null)
-                    return url;
-
                 var first = true;
-                foreach (var indexName in _indexNames)
+                if (_indexNames != null)
+                {
+                    url += "?";
+                    foreach (var indexName in _indexNames)
+                    {
+                        url += $"&name={Uri.EscapeDataString(indexName)}";
+                    }
+                    first = false;
+                }
+
+                if (_shard != null)
                 {
                     if (first)
-                        url += $"?name={Uri.EscapeDataString(indexName)}";
-                    else
-                        url += $"&name={Uri.EscapeDataString(indexName)}";
-
-                    first = false;
+                        url += "?";
+                    url += $"&shard={_shard}";
                 }
 
                 return url;

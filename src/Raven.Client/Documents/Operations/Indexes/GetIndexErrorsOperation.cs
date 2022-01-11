@@ -11,15 +11,27 @@ namespace Raven.Client.Documents.Operations.Indexes
     public class GetIndexErrorsOperation : IMaintenanceOperation<IndexErrors[]>
     {
         private readonly string[] _indexNames;
+        private readonly int? _shard;
         private readonly string _nodeTag;
 
         public GetIndexErrorsOperation()
         {
         }
 
+        public GetIndexErrorsOperation(int? shard)
+        {
+            _shard = shard;
+        }
+
         public GetIndexErrorsOperation(string[] indexNames)
         {
             _indexNames = indexNames;
+        }
+        
+        public GetIndexErrorsOperation(string[] indexNames, int shard)
+        {
+            _indexNames = indexNames;
+            _shard = shard;
         }
 
         internal GetIndexErrorsOperation(string[] indexNames, string nodeTag)
@@ -30,32 +42,38 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public RavenCommand<IndexErrors[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetIndexErrorsCommand(_indexNames, _nodeTag);
+            return new GetIndexErrorsCommand(_indexNames, _nodeTag, _shard);
         }
 
-        private class GetIndexErrorsCommand : RavenCommand<IndexErrors[]>
+        internal class GetIndexErrorsCommand : RavenCommand<IndexErrors[]>
         {
             private readonly string[] _indexNames;
+            private readonly int? _shard;
 
-            public GetIndexErrorsCommand(string[] indexNames)
+            internal GetIndexErrorsCommand(string[] indexNames, string nodeTag, int? shard)
             {
                 _indexNames = indexNames;
-            }
-
-            internal GetIndexErrorsCommand(string[] indexNames, string nodeTag)
-            {
-                _indexNames = indexNames;
+                _shard = shard;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/errors";
+                var first = true;
                 if (_indexNames != null && _indexNames.Length > 0)
                 {
                     url += "?";
                     foreach (var indexName in _indexNames)
                         url += $"&name={Uri.EscapeDataString(indexName)}";
+                    first = false;
+                }
+
+                if (_shard != null)
+                {
+                    if (first)
+                        url += "?";
+                    url += $"&shard={_shard}";
                 }
 
                 return new HttpRequestMessage
