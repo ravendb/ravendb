@@ -38,6 +38,7 @@ namespace Raven.Server.Rachis
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<object> _errorOccurred = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
@@ -297,7 +298,8 @@ namespace Raven.Server.Rachis
                     _newEntry,
                     _voterResponded,
                     _promotableUpdated,
-                    _shutdownRequested
+                    _shutdownRequested,
+                    ((IAsyncResult)_errorOccurred.Task).AsyncWaitHandle
                 };
 
                 _newEntry.Set(); //This is so the noop would register right away
@@ -329,6 +331,9 @@ namespace Raven.Server.Rachis
                             }
                             _running.Lower();
                             return;
+                        case 4: // an error occurred during EmptyQueue()
+                            _errorOccurred.Task.Wait();
+                            break;
                     }
 
                     EnsureThatWeHaveLeadership(VotersMajority);
@@ -358,16 +363,18 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                const string msg = "Error when running leader behavior";
+
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Error when running leader behavior", e);
+                    _engine.Log.Info(msg, e);
                 }
 
                 if (e is VoronErrorException)
                 {
                     _engine.Notify(AlertRaised.Create(
                         null,
-                        "Error when running leader behavior",
+                        msg,
                         e.Message,
                         AlertType.ClusterTopologyWarning,
                         NotificationSeverity.Error, details: new ExceptionDetails(e)));
@@ -688,7 +695,8 @@ namespace Raven.Server.Rachis
         {
             var list = new List<TaskCompletionSource<Task<(long, object)>>>();
             var tasks = new List<Task<(long, object)>>();
-            var lostLeadershipException = new NotLeadingException("We are no longer the leader, this leader is disposed");
+            const string leaderDisposedMessage = "We are no longer the leader, this leader is disposed";
+            var lostLeadershipException = new NotLeadingException(leaderDisposedMessage);
 
             using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             {
@@ -782,12 +790,14 @@ namespace Raven.Server.Rachis
                 {
                     if (_running.IsRaised() == false)
                     {
-                        e = new NotLeadingException("We are no longer the leader, this leader is disposed", e);
+                        e = new NotLeadingException(leaderDisposedMessage, e);
                     }
                     foreach (var tcs in list)
                     {
                         tcs.TrySetException(e);
                     }
+
+                    _errorOccurred.TrySetException(e);
                 }
             }
         }
@@ -847,7 +857,6 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-
             using (_disposerLock.StartDisposing())
             {
                 bool lockTaken = false;
@@ -872,6 +881,7 @@ namespace Raven.Server.Rachis
                     TaskExecutor.Execute(_ =>
                     {
                         _newEntriesArrived.TrySetCanceled();
+                        _errorOccurred.TrySetCanceled();
                         var lastStateChangeReason = _engine.LastStateChangeReason;
                         NotLeadingException te = null;
                         if (string.IsNullOrEmpty(lastStateChangeReason) == false)
