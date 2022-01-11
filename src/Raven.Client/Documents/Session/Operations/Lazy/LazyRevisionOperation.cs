@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Commands;
@@ -44,7 +45,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             if(response.Result is null) return;
             BlittableJsonReaderObject responseAsBlittableReaderObject = (BlittableJsonReaderObject)response.Result;
-            responseAsBlittableReaderObject.TryGet("Results", out BlittableJsonReaderArray blittableJsonReaderArray);
+            if (responseAsBlittableReaderObject.TryGet("Results", out BlittableJsonReaderArray blittableJsonReaderArray) == false)
+                throw new InvalidDataException("Response is invalid");
 
             _getRevisionOperation.SetResult(new BlittableArrayResult {Results = blittableJsonReaderArray});
             switch (_mode)
