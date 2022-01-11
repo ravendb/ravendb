@@ -1613,8 +1613,8 @@ namespace FastTests.Corax
                 entries.Add(entry);
                 entriesToIndex[i] = entry;
             }
-            
-            IndexEntries(entriesToIndex);
+            IndexEntries(Allocator, entries.ToArray(), CreateKnownFields(Allocator));
+
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             Slice.From(bsc, "1", out var one);
             Slice.From(bsc, "2", out var two);

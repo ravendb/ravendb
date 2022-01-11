@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         {
             var fieldName = $"search({GetField(expression.Arguments[0])})";
             var fieldId = GetFieldIdInIndex(fieldName);
-            IndexSearcher.SearchOperator @operator = IndexSearcher.SearchOperator.Or;
+            Constants.Search.Operator @operator = Constants.Search.Operator.Or;
             string searchTerm;
 
 
@@ -141,8 +141,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             @operator = operatorType.FieldValue.ToLowerInvariant() switch
             {
-                "and" => IndexSearcher.SearchOperator.And,
-                "or" => IndexSearcher.SearchOperator.Or,
+                "and" => Constants.Search.Operator.And,
+                "or" => Constants.Search.Operator.Or,
                 _ => throw new InvalidQueryException($"Expected AND or OR in third argument of {nameof(MethodType.Search)}.")
             };
 
@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             return fieldName switch
             {
-                "id()" => 0,
+                Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName => 0,
                 _ => throw new InvalidDataException($"Field {fieldName} does not found in current index.")
             };
         }
@@ -370,8 +370,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             FieldExpression fieldExpression => _query.Metadata.GetIndexFieldName(fieldExpression, _query.QueryParameters).Value,
             ValueExpression valueExpression => valueExpression.Token.Value,
             MethodExpression methodExpression => methodExpression.Name.Value switch
-            {
-                "id" => "id()",
+            { 
+                Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName => Raven.Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName,
                 _ => methodExpression.Name.Value
             },
             _ => throw new InvalidDataException("Unknown type for now.")

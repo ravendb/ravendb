@@ -82,7 +82,7 @@ namespace Corax.Queries
                             }
                         }
 
-                        isMatch = !unacceptableItem;
+                        isMatch = unacceptableItem == false;
                     }
 
                     if (isMatch)
@@ -145,7 +145,7 @@ namespace Corax.Queries
                                 }
                             }
 
-                            isMatch = !unacceptableItem;
+                            isMatch = unacceptableItem == false;
                         }
                     }
                     else if (typeof(TValueType) == typeof(double))
@@ -169,7 +169,7 @@ namespace Corax.Queries
                                 }
                             }
 
-                            isMatch = !unacceptableItem;
+                            isMatch = unacceptableItem == false;
                         }
                     }
 
