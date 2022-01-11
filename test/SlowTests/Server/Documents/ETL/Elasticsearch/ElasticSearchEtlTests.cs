@@ -196,9 +196,13 @@ loadToOrders(orderData);
                                 Name = "a"
                             }
                         },
-                    }, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:9300" } }); //wrong elastic search url
+                    }, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:1234" } }); //wrong elastic search url
 
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                var processes = GetDatabase(store.Database).Result.EtlLoader.Processes;
+
+                Assert.Equal(1, processes.Length);
+
+                var etlProcess = processes[0];
 
                 using (var session = store.OpenSession())
                 {
@@ -212,7 +216,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(5));
+                WaitForValue(() => etlProcess.Statistics.LoadErrors, 1);
 
                 var key = "AlertRaised/Etl_LoadError/ElasticSearch ETL/myFirstEtl/a";
                 var alert = GetDatabase(store.Database).Result.NotificationCenter.GetStoredMessage(key);

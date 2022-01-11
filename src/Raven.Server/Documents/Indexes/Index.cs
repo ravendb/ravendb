@@ -48,7 +48,6 @@ using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
