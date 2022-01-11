@@ -34,7 +34,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _fieldMappings = CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true);
+            _fieldMappings = CoraxDocumentConverter.GetKnownFields(readTransaction.Allocator, index);
+            _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
         }

@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using Corax;
+using Corax.Pipeline;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes;
@@ -47,8 +48,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _knownFields = GetKnownFields();
         }
 
+        public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index)
+        {
+            var knownFields = new IndexFieldsMapping(allocator);
+            //todo maciej: will optimize it while doing static indexes.
+            Slice.From(allocator, index.Type.IsMapReduce() 
+                ? Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName 
+                : Constants.Documents.Indexing.Fields.DocumentIdFieldName, ByteStringType.Immutable, out var value);
+
+            knownFields = knownFields.AddBinding(0, value, null);
+            foreach (var field in index.Definition.IndexFields.Values)
+            {
+                Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
+                knownFields = knownFields.AddBinding(field.Id, value, null);
+            }
+
+            if (index.Type.IsMapReduce())
+            {
+                Slice.From(allocator, Constants.Documents.Indexing.Fields.AllStoredFields, ByteStringType.Immutable, out var storedKey);
+                knownFields = knownFields.AddBinding(knownFields.Count, storedKey, null, true);
+            }
+
+            return knownFields;
+        }
+        
         public IndexFieldsMapping GetKnownFields()
         {
+            return GetKnownFields(_allocator, _index);
             if (_knownFields != null)
                 return _knownFields;
 

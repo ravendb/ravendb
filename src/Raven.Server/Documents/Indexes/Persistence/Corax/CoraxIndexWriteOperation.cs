@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _knownFields = _converter.GetKnownFields();
             try
             {
+                _knownFields.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(writeTransaction.Allocator, index, index.Definition));
                 _indexWriter = new IndexWriter(writeTransaction, _knownFields);
                 _entriesCount = Convert.ToInt32(_indexWriter.GetNumberOfEntries());
             }
