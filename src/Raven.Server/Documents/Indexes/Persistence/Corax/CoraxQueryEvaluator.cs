@@ -26,7 +26,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private readonly ByteStringContext _allocator;
         private IndexQueryServerSide _query;
         private const int TakeAll = -1;
-
+        private const int ScoreId = -1;
+        
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
 
@@ -41,13 +42,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _fieldsToFetch = fieldsToFetch;
             _query = query;
 
-            var match = _query.Metadata.Query.Where is null ? _searcher.AllEntries() : Evaluate(query.Metadata.Query.Where, false, take, default(NullScoreFunction));
-
-
-            var match = _query.Metadata.Query.Where is null
+            var match = _query.Metadata.Query.Where is null 
                 ? _searcher.AllEntries()
-                : Evaluate(query.Metadata.Query.Where, false, take);
-
+                : Evaluate(query.Metadata.Query.Where, false, take, default(NullScoreFunction));
+            
             if (query.Metadata.OrderBy is not null)
                 match = OrderBy(match, query.Metadata.Query.OrderBy, take);
 
@@ -77,12 +75,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.StartWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, isNegated, fieldId);
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.EndsWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, isNegated, fieldId);
+                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, scoreFunction, isNegated, fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take, scoreFunction);
                         case MethodType.Boost:
@@ -92,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             return Evaluate(methodExpression.Arguments[0], isNegated, TakeAll, new ConstantScoreFunction(constantValue));
                         case MethodType.Search:
-                            return SearchMethod(methodExpression, isNegated);
+                            return SearchMethod(methodExpression, isNegated, scoreFunction);
                         case MethodType.Exists:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             return _searcher.ExistsQuery(fieldName);
@@ -116,7 +114,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         [SkipLocalsInit]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private IQueryMatch SearchMethod(MethodExpression expression, bool isNegated)
+        private IQueryMatch SearchMethod<TScoreFunction>(MethodExpression expression, bool isNegated, TScoreFunction scoreFunction)
+            where TScoreFunction : IQueryScoreFunction
         {
             var fieldName = $"search({GetField(expression.Arguments[0])})";
             var fieldId = GetFieldIdInIndex(fieldName);
@@ -156,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             };
 
 
-            return _searcher.SearchQuery(fieldName, searchTerm, @operator, isNegated, fieldId);
+            return _searcher.SearchQuery<TScoreFunction>(fieldName, searchTerm, scoreFunction, @operator, fieldId, isNegated);
         }
 
         [SkipLocalsInit]
@@ -175,9 +174,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     return _searcher.Or(Evaluate(expression.Left, isNegated, take, scoreFunction), Evaluate(expression.Right, isNegated, take, scoreFunction));
                 case OperatorType.Equal:
                 {
-                    var value = (ValueExpression)expression.Right;
-                    var field = (FieldExpression)expression.Left;
-                    var fieldName = GetField(field);
+                    value = (ValueExpression)expression.Right;
+                    field = (FieldExpression)expression.Left;
+                    fieldName = GetField(field);
                     var match = _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName));
                     return scoreFunction is NullScoreFunction
                         ? match
