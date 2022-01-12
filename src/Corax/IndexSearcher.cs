@@ -630,6 +630,9 @@ namespace Corax
             int fieldId = NonAnalyzer)
             where TScoreFunction : IQueryScoreFunction
         {
+            if (typeof(TScoreFunction) == typeof(NullScoreFunction))
+                return PrefixSuffixQuery<StartWithTermProvider>(field, startWith, isNegated, fieldId);
+            
             return PrefixSuffixQuery<TScoreFunction, StartWithTermProvider>(field, startWith, scoreFunction, isNegated, fieldId);
         }
 
@@ -637,6 +640,9 @@ namespace Corax
             int fieldId = NonAnalyzer)
             where TScoreFunction : IQueryScoreFunction
         {
+            if (typeof(TScoreFunction) == typeof(NullScoreFunction))
+                return PrefixSuffixQuery<EndsWithTermProvider>(field, endsWith, isNegated, fieldId);
+            
             return PrefixSuffixQuery<TScoreFunction, EndsWithTermProvider>(field, endsWith, scoreFunction, isNegated, fieldId);
         }
 
