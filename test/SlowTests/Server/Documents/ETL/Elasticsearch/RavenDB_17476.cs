@@ -48,7 +48,7 @@ loadToOrders(orderData);
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                SetupElasticEtl(store, ScriptWithNoIdMethodUsage, new List<string> { "Orders" });
+                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, new List<string> { "Orders" });
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -65,7 +65,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCount = client.Count<object>(c => c.Index("orders"));
                 var orderLinesCount = client.Count<object>(c => c.Index("orderlines"));
@@ -85,7 +85,7 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index("orders"));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index("orderlines"));
