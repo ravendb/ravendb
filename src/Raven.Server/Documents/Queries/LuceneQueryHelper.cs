@@ -358,7 +358,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         private static Query MaybeCacheQuery(Index index, Query query)
         {
-            if (index.Configuration.QueryClauseCacheDisabled)
+            if (index is null || index.Configuration.QueryClauseCacheDisabled)
                 return query;
             return new CachingQuery(query, index, query.ToString());
         }
