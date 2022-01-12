@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Tests.Infrastructure.ConnectionString;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
@@ -27,35 +28,36 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             
         }
 
-        protected void SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
+        protected ElasticSearchEtlConfiguration SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
             global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null, string[] nodes = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
 
-            AddEtl(store,
-                new ElasticSearchEtlConfiguration
+            var config = new ElasticSearchEtlConfiguration
+            {
+                Name = configurationName ?? connectionStringName,
+                ConnectionStringName = connectionStringName,
+                ElasticIndexes =
                 {
-                    Name = configurationName ?? connectionStringName,
-                    ConnectionStringName = connectionStringName,
-                    ElasticIndexes =
-                    {
-                        new ElasticSearchIndex {IndexName = $"Orders", DocumentIdProperty = "Id"},
-                        new ElasticSearchIndex {IndexName = $"OrderLines", DocumentIdProperty = "OrderId"},
-                        new ElasticSearchIndex {IndexName = $"Users", DocumentIdProperty = "UserId"},
-                    },
-                    Transforms =
-                    {
-                        new Transformation
-                        {
-                            Name = transformationName ?? $"ETL : {connectionStringName}",
-                            Collections = new List<string>(collections),
-                            Script = script,
-                            ApplyToAllDocuments = applyToAllDocuments
-                        }
-                    }
+                    new ElasticSearchIndex {IndexName = $"Orders", DocumentIdProperty = "Id"},
+                    new ElasticSearchIndex {IndexName = $"OrderLines", DocumentIdProperty = "OrderId"},
+                    new ElasticSearchIndex {IndexName = $"Users", DocumentIdProperty = "UserId"},
                 },
+                Transforms =
+                {
+                    new Transformation
+                    {
+                        Name = transformationName ?? $"ETL : {connectionStringName}",
+                        Collections = new List<string>(collections),
+                        Script = script,
+                        ApplyToAllDocuments = applyToAllDocuments
+                    }
+                }
+            };
 
-                new ElasticSearchConnectionString { Name = connectionStringName, Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
+            AddEtl(store, config, new ElasticSearchConnectionString { Name = connectionStringName, Nodes = nodes ?? ElasticSearchTestNodes.Instance.VerifiedNodes.Value, Authentication = authentication });
+
+            return config;
         }
 
         protected IDisposable GetElasticClient(out ElasticClient client)
@@ -92,6 +94,17 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         protected void CleanupIndexes(ElasticClient client)
         {
             var response = client.Indices.Delete(Indices.All);
+        }
+
+        protected void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
+        {
+            if (etlDone.Wait(timeout) == false)
+            {
+                TryGetLoadError(databaseName, config, out var loadError);
+                TryGetTransformationError(databaseName, config, out var transformationError);
+
+                Assert.True(false, $"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+            }
         }
     }
 }
