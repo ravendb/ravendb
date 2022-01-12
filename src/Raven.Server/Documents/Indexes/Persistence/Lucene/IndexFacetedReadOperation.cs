@@ -180,12 +180,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var kvp in termsForField)
                 {
+                    if(kvp.Value.Length ==0)
+                        continue;
+                    
                     token.ThrowIfCancellationRequested();
 
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                     var intersectCount = intersectedDocuments.Count;
                     if (intersectCount == 0)
+                    {
+                        if (intersectedDocuments.Documents != null)
+                        {
+                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+                        }
                         continue;
+                    }
 
                     if (facetValues.TryGetValue(kvp.Key, out var collectionOfFacetValues) == false)
                     {
@@ -313,22 +322,36 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var name = FieldUtil.ApplyRangeSuffixIfNecessary(kvp.Key.Name, RangeType.Double);
                 var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
 
+                var val = kvp.Value;
+                double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0;
+                int[] array = docsInQuery.Array;
                 for (var index = 0; index < docsInQuery.Count; index++)
                 {
-                    var doc = docsInQuery.Array[index];
+                    var doc = array[index];
                     var currentVal = doubles[doc - docBase];
+                    sum += currentVal;
+                    min = Math.Min(min, currentVal);
+                    max = Math.Max(max, currentVal);
+                }
 
-                    if (kvp.Value.Average)
-                        value.Average = currentVal + (value.Average ?? 0d);
+                if (val.Min)
+                {
+                    value.Min = min;
+                }
 
-                    if (kvp.Value.Min)
-                        value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
+                if (val.Average)
+                {
+                    value.Average = sum; // actual average handled later
+                }
 
-                    if (kvp.Value.Max)
-                        value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+                if (val.Max)
+                {
+                    value.Max = max;
+                }
 
-                    if (kvp.Value.Sum)
-                        value.Sum = currentVal + (value.Sum ?? 0d);
+                if (val.Sum)
+                {
+                    value.Sum = sum;
                 }
             }
         }
@@ -355,6 +378,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         /// </summary>
         private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, bool needToApplyAggregation)
         {
+            if (a.Count == 0 || b.Count == 0)
+                return IntersectDocs.Empty;
+            
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
             {
@@ -370,6 +396,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int nSize = n.Count;
             int mSize = m.Count;
 
+            int[] nArray = n.Array;
+            int[] mArray = m.Array;
+
+            if(n[0] > m[^1] || m[0] > n[^1]) // quick check if intersection is even possible
+                return IntersectDocs.Empty;
+            
             double o1 = nSize + mSize;
             double o2 = mSize * Math.Log(nSize, 2);
 
@@ -384,8 +416,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 int mi = m.Offset, ni = n.Offset;
                 while (mi < mSize && ni < nSize)
                 {
-                    var nVal = n.Array[ni];
-                    var mVal = m.Array[mi];
+                    var nVal = nArray[ni];
+                    var mVal = mArray[mi];
 
                     if (nVal > mVal)
                     {
@@ -409,12 +441,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 for (int i = m.Offset; i < mSize; i++)
                 {
-                    int docId = m.Array[i];
-                    if (Array.BinarySearch(n.Array, n.Offset, n.Count, docId) >= 0)
+                    int docId = mArray[i];
+                    if (Array.BinarySearch(nArray, n.Offset, n.Count, docId) >= 0)
                     {
                         result.AddIntersection(docId);
                     }
                 }
+            }
+
+            if (result.Count == 0 && needToApplyAggregation)
+            {
+                IntArraysPool.Instance.FreeArray(result.Documents);
+                result.Documents = null;
             }
             return result;
         }
@@ -427,6 +465,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private class IntersectDocs
         {
+            public static readonly IntersectDocs Empty = new();
+            
             public int Count;
             public int[] Documents;
 
