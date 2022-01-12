@@ -66,8 +66,12 @@ namespace SlowTests.Issues
             DocumentDatabase documentDatabase = null;
             using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } }.Initialize())
             {
-                await new SimpleIndex().ExecuteAsync(store);
-
+                var indexDefinition = new SimpleIndex().CreateIndexDefinition();
+                indexDefinition.Name = indexName;
+                
+                var putIndexResults =  await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
+                await WaitForRaftIndexToBeAppliedInCluster(putIndexResults.First().RaftCommandIndex);
+                
                 await store.Maintenance.SendAsync(new DisableIndexOperation(indexName, true));
 
                 foreach (var server in Servers)
