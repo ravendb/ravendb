@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Commands
         public GetRevisionsCommand(string id, DateTime before)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
-            Before = before;
+            Before = before.ToUniversalTime();
         }
 
         public GetRevisionsCommand(string id, int? start, int? pageSize, bool metadataOnly = false)
