@@ -21,7 +21,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
-
+using CoraxConstants = Corax.Constants;
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexReadOperation : IndexReadOperationBase
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             var take = pageSize + position;
             if (take > _indexSearcher.NumberOfEntries)
-                take = IndexSearcher.TakeAll;
+                take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch result = _coraxQueryEvaluator.Search(query, fieldsToFetch, take);
             if (result is null)

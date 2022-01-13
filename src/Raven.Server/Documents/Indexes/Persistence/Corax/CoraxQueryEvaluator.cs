@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IndexQueryServerSide _query;
         private const int TakeAll = -1;
         private const int ScoreId = -1;
-        
+
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
 
@@ -42,10 +42,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _fieldsToFetch = fieldsToFetch;
             _query = query;
 
-            var match = _query.Metadata.Query.Where is null 
+            var match = _query.Metadata.Query.Where is null
                 ? _searcher.AllEntries()
                 : Evaluate(query.Metadata.Query.Where, false, take, default(NullScoreFunction));
-            
+
             if (query.Metadata.OrderBy is not null)
                 match = OrderBy(match, query.Metadata.Query.OrderBy, take);
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     fieldName = GetField(field);
                     return isNegated
                         ? _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName))
-                        : _searcher.NotEquals(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), value.GetValue(_query.QueryParameters).ToString());
+                        : _searcher.UnaryQuery(_searcher.AllEntries(), GetFieldIdInIndex(fieldName), value.GetValue(_query.QueryParameters).ToString(), UnaryMatchOperation.NotEquals);
             }
 
             if (expression.IsRangeOperation)
@@ -223,28 +223,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)value.Left));
             var field = GetValue((ValueExpression)value.Right);
             var fieldValue = field.FieldValue;
-            Slice sliceValue = default;
-            if (fieldValue is ValueTokenType.String)
-                Slice.From(_allocator, fieldValue.ToString(), out sliceValue);
-
-            var match = (type, field.ValueType) switch
+            var operation = UnaryMatchOperationTranslator(type);
+            var match = field.ValueType switch
             {
-                (OperatorType.LessThan, ValueTokenType.Double) => _searcher.LessThan(previousMatch, fieldId, (double)fieldValue, take),
-                (OperatorType.LessThan, ValueTokenType.Long) => _searcher.LessThan(previousMatch, fieldId, (long)fieldValue, take),
-                (OperatorType.LessThan, ValueTokenType.String) => _searcher.LessThan(previousMatch, fieldId, sliceValue, take),
-
-                (OperatorType.LessThanEqual, ValueTokenType.Double) => _searcher.LessThanOrEqual(previousMatch, fieldId, (double)fieldValue, take),
-                (OperatorType.LessThanEqual, ValueTokenType.Long) => _searcher.LessThanOrEqual(previousMatch, fieldId, (long)fieldValue, take),
-                (OperatorType.LessThanEqual, ValueTokenType.String) => _searcher.LessThanOrEqual(previousMatch, fieldId, sliceValue, take),
-
-                (OperatorType.GreaterThan, ValueTokenType.Double) => _searcher.GreaterThan(previousMatch, fieldId, (double)fieldValue, take),
-                (OperatorType.GreaterThan, ValueTokenType.Long) => _searcher.GreaterThan(previousMatch, fieldId, (long)fieldValue, take),
-                (OperatorType.GreaterThan, ValueTokenType.String) => _searcher.GreaterThan(previousMatch, fieldId, sliceValue, take),
-
-                (OperatorType.GreaterThanEqual, ValueTokenType.Double) => _searcher.GreaterThanOrEqual(previousMatch, fieldId, (double)fieldValue, take),
-                (OperatorType.GreaterThanEqual, ValueTokenType.Long) => _searcher.GreaterThanOrEqual(previousMatch, fieldId, (long)fieldValue, take),
-                (OperatorType.GreaterThanEqual, ValueTokenType.String) => _searcher.GreaterThanOrEqual(previousMatch, fieldId, sliceValue, take),
-
+                ValueTokenType.Double => _searcher.UnaryQuery(previousMatch, fieldId, (double)fieldValue, operation, take),
+                ValueTokenType.String => _searcher.UnaryQuery(previousMatch, fieldId, fieldValue.ToString(), operation, take),
+                ValueTokenType.Long => _searcher.UnaryQuery(previousMatch, fieldId, (long)fieldValue, operation, take),
                 _ => throw new EvaluateException($"Got {type} and the value: {field.ValueType} at UnaryMatch.")
             };
 
@@ -260,23 +244,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var exprMax = GetValue(betweenExpression.Max);
             var fieldId = GetFieldIdInIndex(GetField((FieldExpression)betweenExpression.Source));
 
-            IQueryMatch match = (exprMin.ValueType, exprMax.ValueType, negated) switch
+            IQueryMatch match = (exprMin.ValueType, exprMax.ValueType) switch
             {
-                (ValueTokenType.Long, ValueTokenType.Long, false) => _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
-                    (long)exprMax.FieldValue, take),
-                (ValueTokenType.Long, ValueTokenType.Long, true) => _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
-                    (long)exprMax.FieldValue, take),
-
-                (ValueTokenType.Double, ValueTokenType.Double, false) => _searcher.Between(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue,
-                    (double)exprMax.FieldValue, take),
-                (ValueTokenType.Double, ValueTokenType.Double, true) => _searcher.NotBetween(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue,
-                    (double)exprMax.FieldValue, take),
-
-                (ValueTokenType.String, ValueTokenType.String, false) => _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
-                    (long)exprMax.FieldValue, take),
-                (ValueTokenType.String, ValueTokenType.String, true) => _searcher.NotBetween(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
-                    (long)exprMax.FieldValue, take),
-
+                (ValueTokenType.Long, ValueTokenType.Long) => _searcher.Between(_searcher.AllEntries(), fieldId, (long)exprMin.FieldValue,
+                    (long)exprMax.FieldValue, negated, take),
+                (ValueTokenType.String, ValueTokenType.String) => _searcher.Between(_searcher.AllEntries(), fieldId, (string)exprMin.FieldValue,
+                    (string)exprMax.FieldValue, negated, take),
+                (ValueTokenType.Double, ValueTokenType.Double) => _searcher.Between(_searcher.AllEntries(), fieldId, (double)exprMin.FieldValue,
+                    (double)exprMax.FieldValue, negated, take),
                 _ => throw new EvaluateException(
                     $"Got {(exprMin.ValueType is ValueTokenType.Double or ValueTokenType.Long or ValueTokenType.String ? exprMax.ValueType : exprMin.ValueType)} but expected: {ValueTokenType.String}, {ValueTokenType.Long}, {ValueTokenType.Double}.")
             };
@@ -329,6 +304,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return (valueType, fieldValue);
         }
 
+        private static UnaryMatchOperation UnaryMatchOperationTranslator(OperatorType current) => current switch
+        {
+            OperatorType.Equal => UnaryMatchOperation.Equals,
+            OperatorType.NotEqual => UnaryMatchOperation.NotEquals,
+            OperatorType.LessThan => UnaryMatchOperation.LessThan,
+            OperatorType.GreaterThan => UnaryMatchOperation.GreaterThan,
+            OperatorType.LessThanEqual => UnaryMatchOperation.LessThanOrEqual,
+            OperatorType.GreaterThanEqual => UnaryMatchOperation.GreaterThanOrEqual,
+            _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
+        };
+        
         private static OperatorType GetNegated(OperatorType current) =>
             current switch
             {
@@ -383,12 +369,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             FieldExpression fieldExpression => _query.Metadata.GetIndexFieldName(fieldExpression, _query.QueryParameters).Value,
             ValueExpression valueExpression => valueExpression.Token.Value,
             MethodExpression methodExpression => methodExpression.Name.Value switch
-            { 
+            {
                 Client.Constants.Documents.Indexing.Fields.DocumentIdMethodName => Raven.Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName,
                 _ => methodExpression.Name.Value
             },
             _ => throw new InvalidDataException("Unknown type for now.")
-            
         };
 
         private enum ComparerType
@@ -440,7 +425,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var secondExpression = secondOrder.Expression as FieldExpression;
                     var firstMethod = firstOrder.Expression as MethodExpression;
                     var secondMethod = secondOrder.Expression as MethodExpression;
-                    
+
                     if (firstExpression is null && firstMethod is null || secondExpression is null && secondMethod is null)
                     {
                         throw new InvalidQueryException($"The expression used in the ORDER BY clause is wrong.");
@@ -504,7 +489,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var thirdMethod = thirdOrder.Expression as MethodExpression;
 
 
-                    if (firstExpression is null && firstMethod is null || secondExpression is null && secondMethod is null || thirdExpression is null && thirdMethod is null)
+                    if (firstExpression is null && firstMethod is null || secondExpression is null && secondMethod is null ||
+                        thirdExpression is null && thirdMethod is null)
                     {
                         throw new InvalidQueryException("The expression used in the ORDER BY clause is wrong.");
                     }

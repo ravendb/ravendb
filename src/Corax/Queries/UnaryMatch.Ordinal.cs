@@ -37,7 +37,7 @@ namespace Corax.Queries
             where TComparer : struct, IUnaryMatchComparer
         {
             var searcher = match._searcher;
-            var currentType = searcher.EncodeTerm(((Slice)(object)match._value), match._fieldId);
+            var currentType = ((Slice)(object)match._value).AsReadOnlySpan();
 
             var comparer = default(TComparer);
             var currentMatches = matches;

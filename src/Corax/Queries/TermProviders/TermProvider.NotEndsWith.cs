@@ -18,14 +18,13 @@ namespace Corax.Queries
         private readonly string _field;
         private readonly Slice _endsWith;
 
-        public NotEndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, string endsWith)
+        public NotEndsWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice endsWith)
         {
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate();
             _iterator.Reset();
-
-            Slice.From(context, _searcher.EncodeTerm(endsWith, fieldId), out _endsWith);
+            _endsWith = endsWith;
         }
 
         public void Reset()
@@ -42,7 +41,7 @@ namespace Corax.Queries
                 if (termSlice.EndsWith(_endsWith))
                     continue;
 
-                term = _searcher.TermQuery(_field, termSlice.ToString());
+                term = _searcher.TermQuery(_field, termSlice);
                 return true;
             }
 

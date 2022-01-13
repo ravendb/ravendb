@@ -15,16 +15,14 @@ namespace Corax.Queries
 
         private CompactTree.Iterator _iterator;
 
-        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, string term, int fieldId)
+        public NotContainsTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice term)
         {
             _tree = tree;
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate();
             _iterator.Reset();
-
-            Slice.From(context, _searcher.EncodeTerm(term, fieldId), out _term);
-           
+            _term = term;
         }
 
         public void Reset()
@@ -41,7 +39,7 @@ namespace Corax.Queries
                 if (termSlice.Contains(contains))
                     continue;
 
-                term = _searcher.TermQuery(_field, termSlice.ToString());
+                term = _searcher.TermQuery(_field, termSlice);
                 return true;
             }
 

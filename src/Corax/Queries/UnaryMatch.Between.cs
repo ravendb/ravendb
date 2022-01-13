@@ -115,8 +115,8 @@ namespace Corax.Queries
         {
             if (typeof(TValueType) == typeof(Slice))
             {
-                var vs1 = searcher.EncodeTerm((Slice)(object)value1, fieldId);
-                var vs2 = searcher.EncodeTerm((Slice)(object)value2, fieldId);
+                var vs1 = ((Slice)(object)value1).AsReadOnlySpan();
+                var vs2 = ((Slice)(object)value2).AsReadOnlySpan();
                 if (vs1.SequenceCompareTo(vs2) > 0)
                 {
                     var aux = value1;
@@ -271,8 +271,8 @@ namespace Corax.Queries
         {
             if (typeof(TValueType) == typeof(Slice))
             {
-                var vs1 = searcher.EncodeTerm((Slice)(object)value1, fieldId);
-                var vs2 = searcher.EncodeTerm((Slice)(object)value2, fieldId);
+                var vs1 = ((Slice)(object)value1).AsReadOnlySpan();
+                var vs2 = ((Slice)(object)value2).AsReadOnlySpan();
                 if (vs1.SequenceCompareTo(vs2) > 0)
                 {
                     var aux = value1;

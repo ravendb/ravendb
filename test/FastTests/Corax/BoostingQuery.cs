@@ -126,7 +126,7 @@ namespace FastTests.Corax
             IndexEntries();
             using var searcher = new IndexSearcher(Env);
             {
-                var match = searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), 1, 10L), 100);
+                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), 1, 10L, UnaryMatchOperation.GreaterThan), 100);
                 Span<long> ids = stackalloc long[amount];
                 var read = match.Fill(ids);
                 // Assert.Equal(longList.Count, read);
