@@ -33,7 +33,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             Slice.From(ctx, "3", out var three);
             var match0 = searcher.AllEntries();
-            var match1 = searcher.GreaterThan(match0, LongValue, three);
+            var match1 = searcher.UnaryQuery(match0, LongValue, three, UnaryMatchOperation.GreaterThan);
             var expectedList = GetExpectedResult("3");
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -52,7 +52,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
             Slice.From(ctx, "entries/0", out var id);
             var match0 = searcher.AllEntries();
-            var match1 = searcher.LessThan(match0, IndexId, id);
+            var match1 = searcher.UnaryQuery(match0, IndexId, id, UnaryMatchOperation.LessThan);
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -67,7 +67,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env);
       
             var match0 = searcher.AllEntries();
-            var match1 = searcher.GreaterThan(match0, LongValue, 3);
+            var match1 = searcher.UnaryQuery<AllEntriesMatch, long>(match0, LongValue, 3, UnaryMatchOperation.GreaterThan);
             var expectedList = _entries.Where(x => x.LongValue > 3).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);

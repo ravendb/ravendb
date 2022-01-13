@@ -837,7 +837,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.AllEntries();
-                var match2 = searcher.LessThan(match1, ContentIndex, 25D);
+                var match2 = searcher.UnaryQuery(match1, ContentIndex, 25D, UnaryMatchOperation.LessThan);
 
                 int read = 0;
                 while ((read = match2.Fill(ids)) != 0)
@@ -875,7 +875,7 @@ namespace FastTests.Corax
 
             qids.Clear();
             {
-                var matchBetween = searcher.NotBetween(searcher.AllEntries(), ContentIndex, 100L, 200L);
+                var matchBetween = searcher.Between(searcher.AllEntries(), ContentIndex, 100L, 200L, isNegated: true);
                 var read = matchBetween.Fill(ids);
                 while (--read >= 0)
                 {
@@ -911,7 +911,7 @@ namespace FastTests.Corax
             {
                 //   var match1 = searcher.StartWithQuery("Id", "e");
                 var match1 = searcher.AllEntries();
-                var match = searcher.GreaterThan(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.GreaterThan);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -920,7 +920,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.GreaterThanOrEqual(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.GreaterThanOrEqual);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -929,7 +929,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.LessThan(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.LessThan);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -937,7 +937,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.LessThanOrEqual(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.LessThanOrEqual);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -963,7 +963,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.Equals(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.Equals);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -972,7 +972,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotEquals(match1, ContentIndex, one);
+                var match = searcher.UnaryQuery(match1, ContentIndex, one, UnaryMatchOperation.NotEquals);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -981,7 +981,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.Equals(match1, ContentIndex, four);
+                var match = searcher.UnaryQuery(match1, ContentIndex, four, UnaryMatchOperation.Equals);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -989,7 +989,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotEquals(match1, ContentIndex, four);
+                var match = searcher.UnaryQuery(match1, ContentIndex, four, UnaryMatchOperation.NotEquals);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1163,7 +1163,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotBetween(match1, ContentIndex, two, three);
+                var match = searcher.Between(match1, ContentIndex, two, three, true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(2, match.Fill(ids));
@@ -1172,7 +1172,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotBetween(match1, ContentIndex, two, two);
+                var match = searcher.Between(match1, ContentIndex, two, two, true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1181,7 +1181,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotBetween(match1, ContentIndex, one, four);
+                var match = searcher.Between(match1, ContentIndex, one, four, true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(0, match.Fill(ids));
@@ -1189,7 +1189,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.NotBetween(match1, ContentIndex, zero, three);
+                var match = searcher.Between(match1, ContentIndex, zero, three, true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(1, match.Fill(ids));
@@ -1462,9 +1462,9 @@ namespace FastTests.Corax
 
 
             {
-                var match0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, eight);
-                var match1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, nine);
-                var match2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, ten);
+                var match0 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, eight, UnaryMatchOperation.NotEquals);
+                var match1 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, nine, UnaryMatchOperation.NotEquals);
+                var match2 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, ten, UnaryMatchOperation.NotEquals);
                 var firstOr = searcher.Or(match0, match1);
                 var finalOr = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(firstOr, match2));
 
@@ -1474,11 +1474,11 @@ namespace FastTests.Corax
             }
 
             {
-                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
-                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
-                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
-                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
-                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
+                var m0 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
+                var m1 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
+                var m2 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, three, UnaryMatchOperation.NotEquals);
+                var m3 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, five, UnaryMatchOperation.NotEquals);
+                var m4 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, seven, UnaryMatchOperation.NotEquals);
 
                 Span<long> ids = stackalloc long[256];
                 var orResult = searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0))));
@@ -1495,11 +1495,11 @@ namespace FastTests.Corax
             }
 
             {
-                var m0 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
-                var m1 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
-                var m2 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, three);
-                var m3 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, five);
-                var m4 = searcher.NotEquals(searcher.AllEntries(), ContentIndex, seven);
+                var m0 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
+                var m1 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
+                var m2 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, three, UnaryMatchOperation.NotEquals);
+                var m3 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, five, UnaryMatchOperation.NotEquals);
+                var m4 = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, seven, UnaryMatchOperation.NotEquals);
                 
                 var result = searcher.And(searcher.StartWithQuery("Id", "e"), searcher.Or(m4, searcher.Or(m3, searcher.Or(m2, searcher.Or(m1, m0)))));
                 
@@ -1621,8 +1621,8 @@ namespace FastTests.Corax
             
             using var searcher = new IndexSearcher(Env);
             {
-                var notOne = searcher.NotEquals(searcher.AllEntries(), ContentIndex, one);
-                var notTwo = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                var notOne = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, one, UnaryMatchOperation.NotEquals);
+                var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
                 var result = notOne.Fill(ids);
@@ -1634,7 +1634,7 @@ namespace FastTests.Corax
                 Assert.Equal(3, result);
             }
             {
-                var notTwo = searcher.NotEquals(searcher.AllEntries(), ContentIndex, two);
+                var notTwo = searcher.UnaryQuery(searcher.AllEntries(), ContentIndex, two, UnaryMatchOperation.NotEquals);
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("2") == false);
                 var result = notTwo.Fill(ids);

@@ -32,7 +32,7 @@ namespace Corax.Queries
         {
             while (_iterator.MoveNext(out Slice termSlice, out var _))
             {
-                term = _searcher.TermQuery(_field, termSlice.ToString());
+                term = _searcher.TermQuery(_field, termSlice);
                 return true;
             }
 

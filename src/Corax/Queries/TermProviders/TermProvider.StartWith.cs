@@ -18,13 +18,13 @@ namespace Corax.Queries
         private readonly string _field;
         private readonly Slice _startWith;
 
-        public StartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, string startWith)
+        public StartWithTermProvider(IndexSearcher searcher, ByteStringContext context, CompactTree tree, string field, int fieldId, Slice startWith)
         {
             _searcher = searcher;
             _field = field;
             _iterator = tree.Iterate();
+            _startWith = startWith;
             
-            Slice.From(context, _searcher.EncodeTerm(startWith, fieldId), out _startWith);
             _iterator.Seek(_startWith);
         }
 
@@ -39,7 +39,7 @@ namespace Corax.Queries
                 return false;
             }
 
-            term = _searcher.TermQuery(_field, termSlice.ToString());
+            term = _searcher.TermQuery(_field, termSlice);
             return true;
         }
 

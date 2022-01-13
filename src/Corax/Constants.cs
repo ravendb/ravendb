@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Corax
 {
@@ -13,6 +9,17 @@ namespace Corax
             public static float ScoreEpsilon = 1e-8F;
         }
 
+        public static class IndexSearcher
+        {
+            public const int TakeAll = -1;
+            public const int NonAnalyzer = -1;
+        }
+
+        public static class StorageMask
+        {
+            public const long ContainerType = ~0b11;
+        }
+        
         public static class Search
         {
             public const byte Wildcard = (byte)'*';

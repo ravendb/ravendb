@@ -112,7 +112,7 @@ namespace FastTests.Corax
             {
                 //var match = searcher.Or(searcher.Boost(searcher.GreaterThan(searcher.AllEntries(), Content1, 2137), 1000),
                 //    searcher.LessThan(searcher.AllEntries(), Content1, 99L));
-                var match = searcher.Boost(searcher.GreaterThanOrEqual(searcher.AllEntries(), Content1, 2137), 1000);
+                var match = searcher.Boost(searcher.UnaryQuery(searcher.AllEntries(), Content1, 2137, UnaryMatchOperation.GreaterThanOrEqual), 1000);
                 var sorted = SortingMultiMatch.Create(searcher, match, default(BoostingComparer),
                     new AscendingMatchComparer(searcher, IndexId, MatchCompareFieldType.Sequence));
                 var read = sorted.Fill(_buffer);
