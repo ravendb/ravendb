@@ -408,9 +408,7 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
-
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.UtcNow.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
@@ -435,7 +433,7 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.UtcNow.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
@@ -560,9 +558,7 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
-
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.UtcNow.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
@@ -586,7 +582,7 @@ namespace SlowTests.Issues
 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
 
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", RavenTestHelper.UtcToday.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.UtcNow.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 using (var attachment = await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"))
