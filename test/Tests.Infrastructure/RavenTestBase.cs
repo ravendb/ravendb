@@ -193,6 +193,17 @@ namespace FastTests
             return sb.ToString();
         }
 
+        protected async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(long index, TimeSpan? timeout = null)
+        {
+            var notDisposed = Servers.Count(s => s.ServerStore.Disposed == false);
+            var notPassive = Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
+
+            Assert.True(Servers.Count == notDisposed,$"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
+            Assert.True(Servers.Count == notPassive,$"Unequal not passive nodes {Servers.Count} != {notPassive}");
+
+            await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
@@ -249,7 +260,9 @@ namespace FastTests
                 {
                     message +=
                         $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
-                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        $"{Environment.NewLine}Last notified Index '{nodes[i].ServerStore.Cluster.LastNotifiedIndex}':" +
+                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}" +
+                        $"{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
                 }
             }
 
@@ -382,7 +395,7 @@ namespace FastTests
                         if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(raftCommand, timeout));
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
