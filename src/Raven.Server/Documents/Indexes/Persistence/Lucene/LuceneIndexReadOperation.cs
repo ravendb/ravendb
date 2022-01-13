@@ -735,7 +735,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 using (closeServerTransaction)
-                    moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(serverContext, context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
+                    moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(serverContext, context, query.Metadata, _index, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
             finally
             {
