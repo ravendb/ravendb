@@ -27,16 +27,25 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
-
-                Assert.Equal(7, indexingPerformanceStatistics.Length);
-
-                foreach (var stats in indexingPerformanceStatistics)
+                Assert.True(WaitForValue(() =>
                 {
-                    Assert.NotNull(stats.Name);
-                    Assert.NotNull(stats.Performance);
-                    Assert.True(stats.Performance.Length > 0);
-                }
+                    var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
+
+                    if (indexingPerformanceStatistics.Length != 7)
+                        return false;
+
+                    foreach (var stats in indexingPerformanceStatistics)
+                    {
+                        if (stats.Name == null || stats.Performance == null)
+                            return false;
+
+                        if (stats.Performance.Length == 0)
+                            return false;
+                    }
+
+                    return true;
+                    
+                }, true, 5000));
             }
         }
     }
