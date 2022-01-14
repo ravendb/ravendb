@@ -38,9 +38,7 @@ order by count() desc
 select r.ClaimPayment.ServiceLinePayments[].ClaimAdjustments[].ReasonCode, r.ClaimPayment.ClaimStatusCode, count()")
                         .WaitForNonStaleResults().ToList();
 
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation());
-
-                    Assert.Empty(indexErrors[0].Errors);
+                    Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
                 }
             }
         }

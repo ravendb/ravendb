@@ -207,8 +207,7 @@ namespace FastTests.Client.Indexing
                 batchStats.Errors[1].Timestamp = nowNext;
 
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, batchStats);
-
-                var errors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { index.Name }));
+                var errors = WaitForIndexingErrors(store, new[] { index.Name });
                 var error = errors[0];
                 Assert.Equal(index.Name, error.Name);
                 Assert.Equal(2, error.Errors.Length);
@@ -222,10 +221,10 @@ namespace FastTests.Client.Indexing
                 Assert.True(error.Errors[1].Error.Contains("Could not create analyzer:"));
                 Assert.Equal(nowNext, error.Errors[1].Timestamp);
 
-                errors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation());
+                errors = WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
 
-                errors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { index.Name }));
+                errors = WaitForIndexingErrors(store, new[] { index.Name });
                 Assert.Equal(1, errors.Length);
 
                 var stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
