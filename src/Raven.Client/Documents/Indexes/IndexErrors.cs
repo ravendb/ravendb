@@ -1,10 +1,12 @@
-﻿namespace Raven.Client.Documents.Indexes
+﻿using System;
+
+namespace Raven.Client.Documents.Indexes
 {
     public class IndexErrors
     {
         public IndexErrors()
         {
-            Errors = new IndexingError[0];
+            Errors = Array.Empty<IndexingError>();
         }
 
         public string Name { get; set; }

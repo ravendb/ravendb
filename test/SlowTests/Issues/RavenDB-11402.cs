@@ -48,9 +48,8 @@ namespace SlowTests.Issues
                         .ProjectInto<TestIndex.Result>()
                         .ToList();
 
-                    var errors = documentStore.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-
-                    Assert.Equal(0, errors[0].Errors.Length);
+                    var errors = WaitForIndexingErrors(documentStore, errorsShouldExists: false);
+                    Assert.Null(errors);
                     Assert.Equal(1, results.Count);
                 }
             }

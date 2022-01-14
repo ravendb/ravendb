@@ -621,11 +621,18 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null)
+        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
         {
-            timeout ??= (Debugger.IsAttached
-                          ? TimeSpan.FromMinutes(15)
-                          : TimeSpan.FromMinutes(1));
+            if (errorsShouldExists is null)
+            {
+                timeout ??= Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
+            }
+            else
+            {
+                timeout ??= errorsShouldExists is true 
+                    ? TimeSpan.FromSeconds(5)
+                    : TimeSpan.FromSeconds(1);
+            }
 
             var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
 
@@ -658,7 +665,10 @@ namespace FastTests
             if (toWait.Count != 0)
                 msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
 
-            throw new TimeoutException(msg);
+            if (errorsShouldExists is null)
+                throw new TimeoutException(msg);
+            
+            return null;
         }
 
         public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)

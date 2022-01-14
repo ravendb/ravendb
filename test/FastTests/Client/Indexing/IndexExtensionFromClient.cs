@@ -94,23 +94,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Friends = new List<string>
-                        {
-                            "jerry", "bob", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", Friends = new List<string> { "jerry", "bob", "ayende" } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Friends = new List<string>
-                        {
-                            "david", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", Friends = new List<string> { "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -136,35 +122,10 @@ namespace My.Crazy.Namespace
                 {
                     session.Store(new Person
                     {
-                        Name = "aviv",
-                        Contacts = new Dictionary<string, long>
-                        {
-                            {
-                                "jerry", 5554866812
-                            },
-                            {
-                                "bob", 5554866813
-                            },
-                            {
-                                "ayende", 5554866814
-                            }
-                        }
-
+                        Name = "aviv", Contacts = new Dictionary<string, long> { { "jerry", 5554866812 }, { "bob", 5554866813 }, { "ayende", 5554866814 } }
                     });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Contacts = new Dictionary<string, long>
-                        {
-                            {
-                                "david", 5554866815
-                            },
-                            {
-                                "ayende", 5554866814
-                            }
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", Contacts = new Dictionary<string, long> { { "david", 5554866815 }, { "ayende", 5554866814 } } });
 
                     session.SaveChanges();
                 }
@@ -188,27 +149,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        FriendsCollection = new List<string>
-                        {
-                            "jerry",
-                            "bob"
-                        }
+                    session.Store(new Person { Name = "aviv", FriendsCollection = new List<string> { "jerry", "bob" } });
 
-                    });
-
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        FriendsCollection = new List<string>
-                        {
-                            "jerry",
-                            "david",
-                            "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", FriendsCollection = new List<string> { "jerry", "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -232,27 +175,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        FriendsHashset = new HashSet<string>
-                        {
-                            "jerry",
-                            "bob"
-                        }
+                    session.Store(new Person { Name = "aviv", FriendsHashset = new HashSet<string> { "jerry", "bob" } });
 
-                    });
-
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        FriendsHashset = new HashSet<string>
-                        {
-                            "jerry",
-                            "david",
-                            "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", FriendsHashset = new HashSet<string> { "jerry", "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -276,38 +201,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        UserFriends = new List<User>
-                        {
-                            new User
-                            {
-                                Name = "jerry"
-                            },
-                            new User
-                            {
-                                Name = "bob"
-                            }
-                        }
+                    session.Store(new Person { Name = "aviv", UserFriends = new List<User> { new User { Name = "jerry" }, new User { Name = "bob" } } });
 
-                    });
-
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        UserFriends = new List<User>
-                        {
-                            new User
-                            {
-                                Name = "david"
-                            },
-                            new User
-                            {
-                                Name = "ayende"
-                            }
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", UserFriends = new List<User> { new User { Name = "david" }, new User { Name = "ayende" } } });
 
                     session.SaveChanges();
                 }
@@ -331,38 +227,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        FriendsArray = new[]
-                        {
-                            new User
-                            {
-                                Name = "jerry"
-                            },
-                            new User
-                            {
-                                Name = "bob"
-                            }
-                        }
+                    session.Store(new Person { Name = "aviv", FriendsArray = new[] { new User { Name = "jerry" }, new User { Name = "bob" } } });
 
-                    });
-
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        FriendsArray = new[]
-                        {
-                            new User
-                            {
-                                Name = "david"
-                            },
-                            new User
-                            {
-                                Name = "ayende"
-                            }
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", FriendsArray = new[] { new User { Name = "david" }, new User { Name = "ayende" } } });
 
                     session.SaveChanges();
                 }
@@ -386,23 +253,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        MyList = new MyList<string>
-                        {
-                            "julian", "ricky", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", MyList = new MyList<string> { "julian", "ricky", "ayende" } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        MyList = new MyList<string>
-                        {
-                            "david", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", MyList = new MyList<string> { "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -426,23 +279,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        MyEnumerable = new MyEnumerable<string>(new List<string>
-                        {
-                            "julian", "ricky", "ayende"
-                        })
-                    });
+                    session.Store(new Person { Name = "aviv", MyEnumerable = new MyEnumerable<string>(new List<string> { "julian", "ricky", "ayende" }) });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        MyEnumerable = new MyEnumerable<string>(new List<string>
-                        {
-                            "david", "ayende"
-                        })
-                    });
+                    session.Store(new Person { Name = "reeb", MyEnumerable = new MyEnumerable<string>(new List<string> { "david", "ayende" }) });
 
                     session.SaveChanges();
                 }
@@ -466,25 +305,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Event = new Event
-                        {
-                            StartTime = new DateTime(2018, 1, 1),
-                            EndTime = new DateTime(2020, 1, 1)
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", Event = new Event { StartTime = new DateTime(2018, 1, 1), EndTime = new DateTime(2020, 1, 1) } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Event = new Event
-                        {
-                            StartTime = new DateTime(2018, 1, 1),
-                            EndTime = new DateTime(2018, 2, 1)
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", Event = new Event { StartTime = new DateTime(2018, 1, 1), EndTime = new DateTime(2018, 2, 1) } });
 
                     session.SaveChanges();
                 }
@@ -510,37 +333,12 @@ namespace My.Crazy.Namespace
                 {
                     session.Store(new Person
                     {
-                        Name = "aviv",
-                        Contacts = new Dictionary<string, long>
-                        {
-                            {
-                                "jerry", 5554866812
-                            },
-                            {
-                                "bob", 5554866813
-                            },
-                            {
-                                "ayende", 5554866814
-                            }
-                        }
-
+                        Name = "aviv", Contacts = new Dictionary<string, long> { { "jerry", 5554866812 }, { "bob", 5554866813 }, { "ayende", 5554866814 } }
                     });
 
                     session.Store(new Person
                     {
-                        Name = "reeb",
-                        Contacts = new Dictionary<string, long>
-                        {
-                            {
-                                "david", 5554866815
-                            },
-                            {
-                                "ayende", 5554866814
-                            },
-                            {
-                                "home", 1024
-                            }
-                        }
+                        Name = "reeb", Contacts = new Dictionary<string, long> { { "david", 5554866815 }, { "ayende", 5554866814 }, { "home", 1024 } }
                     });
 
                     session.SaveChanges();
@@ -566,26 +364,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Friends = new List<string>
-                        {
-                            "jerry", "bob"
-                        }
-                        
+                    session.Store(new Person { Name = "aviv", Friends = new List<string> { "jerry", "bob" } });
 
-                    });
-
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Friends = new List<string>
-                        {
-                            "david", "ayende"
-                        }
-
-                    });
+                    session.Store(new Person { Name = "reeb", Friends = new List<string> { "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -594,8 +375,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex11>()
                         .Single(p => p.Friends.Contains("ayende"));
@@ -615,16 +396,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Friends = new List<string>
-                        {
-                            "jerry", "bob"
-                        }
-
-
-                    });
+                    session.Store(new Person { Name = "aviv", Friends = new List<string> { "jerry", "bob" } });
 
                     session.SaveChanges();
                 }
@@ -633,8 +405,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var combined = session.Query<PeopleIndex12.Result, PeopleIndex12>()
                         .Select(p => p.Combined)
@@ -643,7 +415,6 @@ namespace My.Crazy.Namespace
                     Assert.Equal(2, combined.Count);
                     Assert.Equal("jerry|aviv", combined[0]);
                     Assert.Equal("bob|aviv", combined[1]);
-
                 }
             }
         }
@@ -658,17 +429,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Age = 33
-                    });
+                    session.Store(new Person { Name = "aviv", Age = 33 });
 
-                    session.Store(new Person
-                    {
-                        Name = "egor",
-                        Age = 29
-                    });
+                    session.Store(new Person { Name = "egor", Age = 29 });
 
                     session.SaveChanges();
                 }
@@ -677,12 +440,11 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex13>().Single();
                     Assert.Equal("aviv", person.Name);
-
                 }
             }
         }
@@ -697,24 +459,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Friends = new List<string>
-                        {
-                            "jerry", "bob"
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", Friends = new List<string> { "jerry", "bob" } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Friends = new List<string>
-                        {
-                            "ayende"
-                        }
-
-                    });
+                    session.Store(new Person { Name = "reeb", Friends = new List<string> { "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -723,8 +470,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex14>().Single();
 
@@ -743,24 +490,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        FriendsHashset = new HashSet<string>
-                        {
-                            "jerry", "bob"
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", FriendsHashset = new HashSet<string> { "jerry", "bob" } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        FriendsHashset = new HashSet<string>
-                        {
-                            "ayende"
-                        }
-
-                    });
+                    session.Store(new Person { Name = "reeb", FriendsHashset = new HashSet<string> { "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -769,8 +501,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex15>().Single();
 
@@ -789,25 +521,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        Numbers = new []
-                        {
-                            6, 6, 6
-                        }
-                        
-                    });
+                    session.Store(new Person { Name = "aviv", Numbers = new[] { 6, 6, 6 } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        Numbers = new[]
-                        {
-                            10
-                        }
-
-                    });
+                    session.Store(new Person { Name = "reeb", Numbers = new[] { 10 } });
 
                     session.SaveChanges();
                 }
@@ -816,8 +532,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex16>().Single();
 
@@ -836,23 +552,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        MyList = new MyList<string>
-                        {
-                            "julian", "ricky", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "aviv", MyList = new MyList<string> { "julian", "ricky", "ayende" } });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        MyList = new MyList<string>
-                        {
-                            "david", "ayende"
-                        }
-                    });
+                    session.Store(new Person { Name = "reeb", MyList = new MyList<string> { "david", "ayende" } });
 
                     session.SaveChanges();
                 }
@@ -861,8 +563,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex17>().Single();
 
@@ -881,23 +583,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv",
-                        MyEnumerable = new MyEnumerable<string>(new []
-                        {
-                            "julian", "ricky", "ayende"
-                        })
-                    });
+                    session.Store(new Person { Name = "aviv", MyEnumerable = new MyEnumerable<string>(new[] { "julian", "ricky", "ayende" }) });
 
-                    session.Store(new Person
-                    {
-                        Name = "reeb",
-                        MyEnumerable = new MyEnumerable<string>(new[]
-                        {
-                            "david", "ayende"
-                        })
-                    });
+                    session.Store(new Person { Name = "reeb", MyEnumerable = new MyEnumerable<string>(new[] { "david", "ayende" }) });
 
                     session.SaveChanges();
                 }
@@ -906,8 +594,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex18>().Single();
 
@@ -926,21 +614,9 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Friends = new List<string>
-                        {
-                            "jerry", "bob"
-                        }
-                    });
+                    session.Store(new Person { Friends = new List<string> { "jerry", "bob" } });
 
-                    session.Store(new Person
-                    {
-                        Friends = new List<string>
-                        {
-                            "david"
-                        }
-                    });
+                    session.Store(new Person { Friends = new List<string> { "david" } });
 
                     session.SaveChanges();
                 }
@@ -949,8 +625,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var newFriends = session.Query<PeopleIndex19.Result, PeopleIndex19>()
                         .Where(p => p.FriendsCount > 3)
@@ -962,7 +638,6 @@ namespace My.Crazy.Namespace
                     Assert.Equal("bob", newFriends[1]);
                     Assert.Equal("ayende", newFriends[2]);
                     Assert.Equal("ppekrol", newFriends[3]);
-
                 }
             }
         }
@@ -977,10 +652,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv"
-                    });
+                    session.Store(new Person { Name = "aviv" });
 
                     session.SaveChanges();
                 }
@@ -989,8 +661,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var numbers = session.Query<PeopleIndex20.Result, PeopleIndex20>()
                         .Select(p => p.Numbers)
@@ -1000,7 +672,6 @@ namespace My.Crazy.Namespace
                     Assert.Equal(1, numbers[0]);
                     Assert.Equal(2, numbers[1]);
                     Assert.Equal(3, numbers[2]);
-
                 }
             }
         }
@@ -1016,10 +687,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv"
-                    });
+                    session.Store(new Person { Name = "aviv" });
 
                     session.SaveChanges();
                 }
@@ -1028,14 +696,13 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex21>()
                         .Single();
 
                     Assert.Equal("aviv", person.Name);
-
                 }
             }
         }
@@ -1050,10 +717,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person
-                    {
-                        Name = "aviv"
-                    });
+                    session.Store(new Person { Name = "aviv" });
 
                     session.SaveChanges();
                 }
@@ -1062,8 +726,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex22>()
                         .Single();
@@ -1078,18 +742,9 @@ namespace My.Crazy.Namespace
             public RealCountry(string getRealCountry)
             {
                 Map = orders => from order in orders
-                    select new
-                    {
-                        Country = Helper.GetRealCountry(order.ShipTo.Country)
-                    };
+                    select new { Country = Helper.GetRealCountry(order.ShipTo.Country) };
 
-                AdditionalSources = new Dictionary<string, string>
-                {
-                    {
-                        "Helper",
-                        getRealCountry
-                    }
-                };
+                AdditionalSources = new Dictionary<string, string> { { "Helper", getRealCountry } };
             }
 
             private static class Helper
@@ -1136,15 +791,13 @@ namespace My.Crazy.Namespace
 
             public Event Event { get; set; }
 
-            public int[] Numbers { get; set; } 
-
+            public int[] Numbers { get; set; }
         }
 
         public class Event
         {
             public DateTime StartTime { get; set; }
             public DateTime? EndTime { get; set; }
-
         }
 
         private class PeopleByEmail : AbstractIndexCreationTask<Person>
@@ -1157,15 +810,11 @@ namespace My.Crazy.Namespace
             public PeopleByEmail()
             {
                 Map = people => from person in people
-                    select new
-                    {
-                        _ = CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true),
-                    };
+                    select new { _ = CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true), };
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System;
 using NodaTime;
 using static My.Crazy.Namespace.PeopleUtil;
@@ -1191,18 +840,14 @@ namespace My.Crazy.Namespace
             public PeopleIndex1()
             {
                 Map = people => from person in people
-                                where Foo1(person.Friends)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo1(person.Friends)
+                    select new { person.Name };
 
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1226,17 +871,13 @@ namespace ETIS
             public PeopleIndex2()
             {
                 Map = people => from person in people
-                                where Foo2(person.Contacts)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo2(person.Contacts)
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1260,17 +901,13 @@ namespace ETIS
             public PeopleIndex3()
             {
                 Map = people => from person in people
-                                where Foo3(person.FriendsCollection)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo3(person.FriendsCollection)
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1294,17 +931,13 @@ namespace ETIS
             public PeopleIndex4()
             {
                 Map = people => from person in people
-                                where Foo4(person.FriendsHashset)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo4(person.FriendsHashset)
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1328,17 +961,13 @@ namespace ETIS
             public PeopleIndex5()
             {
                 Map = people => from person in people
-                                where Foo5(person.UserFriends)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo5(person.UserFriends)
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1367,17 +996,13 @@ namespace ETIS
             public PeopleIndex6()
             {
                 Map = people => from person in people
-                                where Foo6(person.FriendsArray)
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo6(person.FriendsArray)
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1407,16 +1032,12 @@ namespace ETIS
             {
                 Map = people => from person in people
                     where Foo7(person.MyList)
-                    select new
-                    {
-                        person.Name
-                    };
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1445,16 +1066,12 @@ namespace ETIS
             {
                 Map = people => from person in people
                     where Foo8(person.MyEnumerable)
-                    select new
-                    {
-                        person.Name
-                    };
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -1502,16 +1119,12 @@ namespace ETIS
             {
                 Map = people => from person in people
                     where Foo9(person.Event.StartTime, person.Event.EndTime).TotalDays < 100
-                    select new
-                    {
-                        person.Name
-                    };
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System;
 namespace ETIS
 {
@@ -1536,17 +1149,13 @@ namespace ETIS
             public PeopleIndex10()
             {
                 Map = people => from person in people
-                    where Foo10(person.Contacts) > 100 
-                    select new
-                    {
-                        person.Name
-                    };
+                    where Foo10(person.Contacts) > 100
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1574,17 +1183,12 @@ namespace ETIS
             public PeopleIndex11()
             {
                 Map = people => from person in people
-                                select new
-                                {
-                                    person.Name,
-                                    Friends = Foo11(person)
-                                };
+                    select new { person.Name, Friends = Foo11(person) };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1619,17 +1223,12 @@ namespace ETIS
             public PeopleIndex12()
             {
                 Map = people => from person in people
-                    select new Result
-                    {
-                        Name = person.Name,
-                        Combined = Foo12(person.Friends, person.Name).ToList()
-                    };
+                    select new Result { Name = person.Name, Combined = Foo12(person.Friends, person.Name).ToList() };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1661,17 +1260,13 @@ namespace ETIS
                 // Exception: Microsoft.CSharp.RuntimeBinder.RuntimeBinderException: Cannot implicitly convert type 'long' to 'uint'
 
                 Map = people => from person in people
-                                where Foo13(person) > 30
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo13(person) > 30
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1700,17 +1295,13 @@ namespace ETIS
             public PeopleIndex14()
             {
                 Map = people => from person in people
-                                where Foo14(person).Count > 1
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo14(person).Count > 1
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1740,16 +1331,12 @@ namespace ETIS
             {
                 Map = people => from person in people
                     where Foo15(person).Count > 1
-                    select new
-                    {
-                        person.Name
-                    };
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1779,16 +1366,12 @@ namespace ETIS
             {
                 Map = people => from person in people
                     where Foo16(person).Length > 1
-                    select new
-                    {
-                        person.Name
-                    };
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1817,17 +1400,13 @@ namespace ETIS
             public PeopleIndex17()
             {
                 Map = people => from person in people
-                                where Foo17(person).Count > 2
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo17(person).Count > 2
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1861,17 +1440,13 @@ namespace ETIS
             public PeopleIndex18()
             {
                 Map = people => from person in people
-                                where Foo18(person).Count() > 2
-                                select new
-                                {
-                                    person.Name
-                                };
+                    where Foo18(person).Count() > 2
+                    select new { person.Name };
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -1927,27 +1502,19 @@ namespace ETIS
                 public List<string> NewFriends { get; set; }
 
                 public int FriendsCount { get; set; }
-
             }
 
             public PeopleIndex19()
             {
                 Map = people => from person in people
-                                let newFriends = Foo19(person.Friends)
-                                select new Result
-                                {
-                                    Name = person.Name,
-                                    NewFriends = newFriends,
-                                    FriendsCount = newFriends.Count
-                                };
+                    let newFriends = Foo19(person.Friends)
+                    select new Result { Name = person.Name, NewFriends = newFriends, FriendsCount = newFriends.Count };
 
-                
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -1978,25 +1545,18 @@ namespace ETIS
                 public string Name { get; set; }
 
                 public List<int> Numbers { get; set; }
-
             }
 
             public PeopleIndex20()
             {
                 Map = people => from person in people
-                                select new Result
-                                {
-                                    Name = person.Name,
-                                    Numbers = Foo20()
-                                };
-
+                    select new Result { Name = person.Name, Numbers = Foo20() };
 
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 using System.Collections.Generic;
 using System.Linq;
 namespace ETIS
@@ -2023,22 +1583,16 @@ namespace ETIS
 
         private class PeopleIndex21 : AbstractIndexCreationTask<Person>
         {
-
             public PeopleIndex21()
             {
                 Map = people => from person in people
-                                select new 
-                                {
-                                    person.Name
-                                };
-
+                    select new { person.Name };
 
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 namespace MyNamespace
 {
     public static class Program
@@ -2060,17 +1614,13 @@ namespace MyNamespace
             public PeopleIndex22()
             {
                 Map = people => from person in people
-                                select new
-                                {
-                                    person.Name,
-                                };
+                    select new { person.Name, };
 
 
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
-                        "PeopleUtil",
-                        @"
+                        "PeopleUtil", @"
 namespace ETIS
 {
     public static class PeopleUtil
@@ -2088,26 +1638,25 @@ namespace ETIS
                 };
             }
         }
-
     }
 
     public class MyList<T> : List<T>
     {
-
     }
 
     public class MyEnumerable<T> : IEnumerable<T>
     {
         private IEnumerable<T> _list;
+
         public MyEnumerable()
         {
-            
         }
 
         public MyEnumerable(IEnumerable<T> list)
         {
             _list = list;
         }
+
         public IEnumerator<T> GetEnumerator()
         {
             return _list.GetEnumerator();
@@ -2232,15 +1781,12 @@ namespace ETIS
             if (friends == null || !friends.Any())
                 return new List<string>();
 
-            return friends.Concat(new []{ "ayende", "ppekrol" }).ToList();
+            return friends.Concat(new[] { "ayende", "ppekrol" }).ToList();
         }
 
         public static List<int> Foo20()
         {
-            var x = new List<int>
-            {   
-                1, 2, 3
-            };
+            var x = new List<int> { 1, 2, 3 };
             return x;
         }
 
@@ -2250,6 +1796,5 @@ namespace ETIS
         public static void Foo21()
         {
         }
-
     }
 }

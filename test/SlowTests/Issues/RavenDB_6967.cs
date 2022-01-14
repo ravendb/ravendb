@@ -53,9 +53,9 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                var indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                var indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                var indexErrors1 = WaitForIndexingErrors(store, new[] { "Index1" });
+                var indexErrors2 = WaitForIndexingErrors(store, new[] { "Index2" });
+                var indexErrors3 = WaitForIndexingErrors(store, new[] { "Index3" });
 
                 Assert.NotEmpty(indexErrors1.SelectMany(x => x.Errors));
                 Assert.NotEmpty(indexErrors2.SelectMany(x => x.Errors));
@@ -63,23 +63,24 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new DeleteIndexErrorsOperation(new[] { "Index2" }));
 
-                indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                indexErrors1 = WaitForIndexingErrors(store, new[] { "Index1" });
+                indexErrors2 = WaitForIndexingErrors(store, new[] { "Index2" }, errorsShouldExists: false);
+                indexErrors3 = WaitForIndexingErrors(store, new[] { "Index3" });
 
                 Assert.NotEmpty(indexErrors1.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors2.SelectMany(x => x.Errors));
+                Assert.Null(indexErrors2);
                 Assert.NotEmpty(indexErrors3.SelectMany(x => x.Errors));
 
                 store.Maintenance.Send(new DeleteIndexErrorsOperation());
 
-                indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
-                indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
-                indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
+                indexErrors1 = WaitForIndexingErrors(store, new[] { "Index1" }, errorsShouldExists: false);
+                indexErrors2 = WaitForIndexingErrors(store, new[] { "Index2" }, errorsShouldExists: false);
+                indexErrors3 = WaitForIndexingErrors(store, new[] { "Index3" }, errorsShouldExists: false);
 
-                Assert.Empty(indexErrors1.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors2.SelectMany(x => x.Errors));
-                Assert.Empty(indexErrors3.SelectMany(x => x.Errors));
+                Assert.Null(indexErrors1);
+                Assert.Null(indexErrors2);
+                Assert.Null(indexErrors3);
+
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }
