@@ -94,6 +94,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         protected void CleanupIndexes(ElasticClient client)
         {
             var response = client.Indices.Delete(Indices.All);
+
+            if (response.IsValid == false)
+                throw new InvalidOperationException($"Failed to cleanup indexes: {response.ServerError}", response.OriginalException);
         }
 
         protected void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)
