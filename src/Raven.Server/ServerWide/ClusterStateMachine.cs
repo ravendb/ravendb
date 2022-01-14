@@ -270,6 +270,8 @@ namespace Raven.Server.ServerWide
             });
         }
 
+        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
+
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
         public override void Dispose()

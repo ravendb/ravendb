@@ -205,7 +205,7 @@ namespace StressTests.Issues
                 {
                 }
 
-                var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
+                var errors = WaitForIndexingErrors(store, errorsShouldExists: false);
                 if (errors != null)
                 {
                     foreach (var error in errors)

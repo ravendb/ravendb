@@ -73,10 +73,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
-
-                var anyError = errors.Any(x => x.Errors.Any());
-                Assert.False(anyError);
+                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
 
                 using (var session = store.OpenSession())
                 {
