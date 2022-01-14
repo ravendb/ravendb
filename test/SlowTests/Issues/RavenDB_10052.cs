@@ -224,7 +224,7 @@ namespace SlowTests.Issues
 
         private static void AssertIndexHasNoErrors(IDocumentStore store, string indexName)
         {
-            Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName }))[0].Errors.Length);
+            Assert.Null(WaitForIndexingErrors(store, new []{ indexName }, errorsShouldExists: false));
         }
 
         private class User
