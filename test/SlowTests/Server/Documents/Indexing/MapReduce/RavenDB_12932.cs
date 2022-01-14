@@ -347,7 +347,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 WaitForIndexing(store);
 
-                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] {index.IndexName}));
+                var errors = WaitForIndexingErrors(store, new[] {index.IndexName});
 
                 Assert.Equal(1, errors.Length);
 

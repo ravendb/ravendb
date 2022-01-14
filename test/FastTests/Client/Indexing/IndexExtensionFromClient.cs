@@ -592,8 +592,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex11>()
                         .Single(p => p.Friends.Contains("ayende"));
@@ -631,8 +631,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var combined = session.Query<PeopleIndex12.Result, PeopleIndex12>()
                         .Select(p => p.Combined)
@@ -675,12 +675,11 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex13>().Single();
                     Assert.Equal("aviv", person.Name);
-
                 }
             }
         }
@@ -721,8 +720,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex14>().Single();
 
@@ -767,8 +766,8 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-                    Assert.Equal(0, indexErrors[0].Errors.Length);
+                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex15>().Single();
 

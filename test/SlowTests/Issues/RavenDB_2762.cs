@@ -40,37 +40,23 @@ namespace SlowTests.Issues
                     Maps = { "from doc in docs from name in doc.Names select new { Name = name.Length / (name.Length - 1) }" }
                 }));
 
-                IndexingError[] errors = null;
-                var result = SpinWait.SpinUntil(() =>
-                {
-                    errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
-                    return errors?.Length > 0;
-                }, TimeSpan.FromSeconds(20));
-
-                Assert.True(result, "Waited for 20 seconds for errors to be persisted but it did not happen.");
+                var errors = WaitForIndexingErrors(store, new[]{"test"});
                 Assert.NotEmpty(errors);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-                IndexingError[] recoveredErrors = null;
-                result = SpinWait.SpinUntil(() =>
-                {
-                    recoveredErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
-                    return recoveredErrors?.Length > 0;
-                }, TimeSpan.FromSeconds(20));
+                var recoveredErrors = WaitForIndexingErrors(store, new []{"test"}, TimeSpan.FromSeconds(20));
+                Assert.True(recoveredErrors[0].Errors.Length > 0, "Waited for 20s for the index errors to be reloaded after start");
+                Assert.NotEmpty(recoveredErrors[0].Errors);
 
-
-                Assert.True(result, "Waited for 20 seconds for the index errors to be reloaded after start");
-                Assert.NotEmpty(recoveredErrors);
-
-                Assert.Equal(errors.Length, recoveredErrors.Length);
+                Assert.Equal(errors[0].Errors.Length, recoveredErrors[0].Errors.Length);
 
                 for (var i = 0; i < errors.Length; i++)
                 {
-                    Assert.Equal(errors[i].Error, recoveredErrors[i].Error);
-                    Assert.Equal(errors[i].Action, recoveredErrors[i].Action);
-                    Assert.Equal(errors[i].Document, recoveredErrors[i].Document);
-                    Assert.Equal(errors[i].Timestamp, recoveredErrors[i].Timestamp);
+                    Assert.Equal(errors[i].Errors[i].Error, recoveredErrors[i].Errors[i].Error);
+                    Assert.Equal(errors[i].Errors[i].Action, recoveredErrors[i].Errors[i].Action);
+                    Assert.Equal(errors[i].Errors[i].Document, recoveredErrors[i].Errors[i].Document);
+                    Assert.Equal(errors[i].Errors[i].Timestamp, recoveredErrors[i].Errors[i].Timestamp);
                 }
             }
         }
