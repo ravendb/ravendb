@@ -29,9 +29,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
 
-                var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation());
-                var errors = indexErrors.SelectMany(e => e.Errors).Select(e => e.Error);
-                Assert.Empty(errors);
+                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
     }

@@ -41,8 +41,7 @@ namespace SlowTests.Issues
                 new JavascriptIndex().Execute(store);
                 WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
 
-                var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation());
-                Assert.Empty(indexErrors.First().Errors);
+                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 
