@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,29 +25,33 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents |
+                                                                     Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 WaitForIndexing(store);
 
+                var str = string.Empty;
                 Assert.True(WaitForValue(() =>
                 {
                     var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
 
                     if (indexingPerformanceStatistics.Length != 7)
-                        return false;
+                        str = $"Expected {indexingPerformanceStatistics.Length} length to be 7";
 
                     foreach (var stats in indexingPerformanceStatistics)
                     {
-                        if (stats.Name == null || stats.Performance == null)
-                            return false;
+                        if (stats.Name == null)
+                            str = $"{nameof(indexingPerformanceStatistics.Length)} is null";
 
-                        if (stats.Performance.Length == 0)
-                            return false;
+                        if (stats.Performance == null)
+                            str = $"{nameof(stats.Performance)} is null";
+
+                        if (stats.Performance?.Length == 0)
+                            str = $"{nameof(stats.Performance.Length)} is 0";
                     }
 
                     return true;
-                    
-                }, true, 5000));
+                }, true, 5000), str);
             }
         }
     }
