@@ -532,9 +532,13 @@ namespace SlowTests.Rolling
 
                 await store.ExecuteIndexAsync(new MyRollingIndex());
 
-                var node = cluster.Nodes.First(x => x != cluster.Leader);
+                RavenServer node = default;
+                await ActionWithLeader(leader =>
+                {
+                    node = cluster.Nodes.First(x => x != leader);
+                    return leader.ServerStore.RemoveFromClusterAsync(node.ServerStore.NodeTag);
+                });
 
-                await store.Operations.SendAsync(new RemoveClusterNodeOperation(node.ServerStore.NodeTag));
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
                 {
                     await node.ServerStore.WaitForState(RachisState.Passive, cts.Token);
