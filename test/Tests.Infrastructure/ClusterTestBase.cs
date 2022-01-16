@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -182,9 +181,38 @@ namespace Tests.Infrastructure
                 fromNode: toDeleteTag, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
             await Task.WhenAll(nonDeleted.Select(n =>
                 n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
+
+            await WaitForDatabaseToBeDeleted(store, database, TimeSpan.FromSeconds(15));
+
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
             Assert.Equal(1, record.UnusedDatabaseIds.Count);
         }
+
+        public static async Task<bool> WaitForDatabaseToBeDeleted(IDocumentStore store, string databaseName, TimeSpan timeout)
+        {
+            var pollingInterval = timeout.TotalSeconds < 1 ? timeout : TimeSpan.FromSeconds(1);
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                var delayTask = Task.Delay(pollingInterval);
+                var dbTask = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                var doneTask = await Task.WhenAny(dbTask, delayTask);
+                if (doneTask == delayTask)
+                {
+                    if (sw.Elapsed > timeout)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+                var dbRecord = dbTask.Result;
+                if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
+                {
+                    return true;
+                }
+            }
+        }
+
 
         public async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
