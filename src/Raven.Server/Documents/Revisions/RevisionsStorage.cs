@@ -523,29 +523,40 @@ namespace Raven.Server.Documents.Revisions
             return document;
         }
 
+        private static bool RevertCountersSnapshotFlag(BlittableJsonReaderObject metadata, BlittableJsonReaderObject document)
+        {
+            if (metadata.TryGet(Constants.Documents.Metadata.RevisionCounters, out BlittableJsonReaderObject bjro) == false)
+                return false;
+
+            var names = bjro.GetPropertyNames();
+
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.RevisionCounters);
+            var arr = new DynamicJsonArray();
+            foreach (var name in names)
+            {
+                arr.Add(name);
+            }
+
+            metadata.Modifications[Constants.Documents.Metadata.Counters] = arr;
+
+            return true;
+        }
+
         private static BlittableJsonReaderObject RevertSnapshotFlags(DocumentsOperationContext context, BlittableJsonReaderObject document, string documentId)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 return document;
 
-            if (metadata.TryGet(Constants.Documents.Metadata.RevisionCounters, out BlittableJsonReaderObject bjro))
+            if (RevertCountersSnapshotFlag(metadata, document))
             {
-                var names = bjro.GetPropertyNames();
-
-                metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.RevisionCounters);
-                var arr = new DynamicJsonArray();
-                foreach (var name in names)
+                if (metadata.Modifications != null)
                 {
-                    arr.Add(name);
+                    document.Modifications = new DynamicJsonValue(document) { [Constants.Documents.Metadata.Key] = metadata };
+
+                    using (var old = document)
+                        document = context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
-
-                metadata.Modifications[Constants.Documents.Metadata.Counters] = arr;
-                document.Modifications ??= new DynamicJsonValue();
-                document.Modifications[Constants.Documents.Metadata.Key] = metadata;
-
-                using (var old = document)
-                    document = context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             return document;
