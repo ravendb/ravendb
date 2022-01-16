@@ -809,6 +809,7 @@ namespace RachisTests
 
                     var addDatabaseNode = new AddDatabaseNodeOperation(store.Database);
                     await store.Maintenance.Server.SendAsync(addDatabaseNode);
+                    await WaitAndAssertForValueAsync(() => GetMembersCount(store), 2);
                 }
 
                 database = await server2.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
