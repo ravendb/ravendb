@@ -816,6 +816,10 @@ select out()
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+                var nowSeconds = now.Second;
+                now = now.AddSeconds(-nowSeconds);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(-nowSeconds);
+
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
