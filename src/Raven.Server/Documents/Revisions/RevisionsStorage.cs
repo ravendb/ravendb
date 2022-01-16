@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision);
+                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision) | DocumentFlags.HasRevisions;
 
                 if (document == null)
                 {
@@ -530,7 +530,7 @@ namespace Raven.Server.Documents.Revisions
 
             var names = bjro.GetPropertyNames();
 
-            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
             metadata.Modifications.Remove(Constants.Documents.Metadata.RevisionCounters);
             var arr = new DynamicJsonArray();
             foreach (var name in names)
