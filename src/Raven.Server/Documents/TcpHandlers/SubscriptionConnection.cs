@@ -655,8 +655,6 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
 
-                string subscriptionChangeVectorBeforeCurrentBatch = SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-
                 _processor.AddScript(SetupFilterAndProjectionScript());
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
@@ -694,6 +692,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                             Options.SubscriptionName,
                                             LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                             SubscriptionConnectionsState.LastChangeVectorSent); // the last cv we acked
+
+                                        _subscriptionConnectionsState.LastChangeVectorSent =
+                                            ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
                                     }
 
                                     UpdateBatchPerformanceStats(0, false);
@@ -719,8 +720,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
                             {
-                                (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch) =
-                                    await WaitForClientAck(replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
+                                replyFromClientTask = await WaitForClientAck(replyFromClientTask);
                             }
 
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
@@ -766,8 +766,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)>
-            WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask, string subscriptionChangeVectorBeforeCurrentBatch)
+        private async Task<Task<SubscriptionConnectionClientMessage>> WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask)
         {
             SubscriptionConnectionClientMessage clientReply;
             while (true)
@@ -834,7 +833,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                                 clientReply.Type);
             }
 
-            return (replyFromClientTask, subscriptionChangeVectorBeforeCurrentBatch);
+            return replyFromClientTask;
         }
 
         /// <summary>
