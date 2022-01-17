@@ -197,7 +197,10 @@ namespace SlowTests.Issues
                         .GetFor<Company>("companies/1", pageSize: 4);
                 }
                 var database = await GetDatabase(store.Database);
-                database.NotificationCenter.Paging.UpdatePaging(null);
+                
+                string reason;
+                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out reason);
+                Assert.True(outcome, reason);
 
                 using (database.NotificationCenter.GetStored(out var actions))
                 {
