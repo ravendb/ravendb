@@ -27,8 +27,10 @@ namespace SlowTests.Authentication
         [LinuxFact]
         public async Task WriteMeminfoAsTextFileInDebugPackage_RavenDB_17427()
         {
+            DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
+                Server.ForTestingPurposesOnly().DebugPackage.RoutesToSkip = _routesToSkip;
                 var requestExecutor = store.GetRequestExecutor(store.Database);
                 await using var response = await requestExecutor.HttpClient.GetStreamAsync($"{store.Urls.First()}/admin/debug/info-package");
                 using var archive = new ZipArchive(response);
