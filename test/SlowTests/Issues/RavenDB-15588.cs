@@ -217,7 +217,7 @@ namespace SlowTests.Issues
             return res.Topology.Rehabs.Count;
         }
 
-        private static async Task<(int MembersCount, int RehabsCount)> GetMembersAndRehabsCount(IDocumentStore store)
+        internal static async Task<(int MembersCount, int RehabsCount)> GetMembersAndRehabsCount(IDocumentStore store)
         {
             var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             var topology = dbRecord.Topology;
