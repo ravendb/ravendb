@@ -876,7 +876,7 @@ namespace Raven.Server.Documents
 
             if (data.TryGet(Values, out BlittableJsonReaderObject values) == false)
                 return;
-            
+
             _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
 
         }
@@ -1042,8 +1042,8 @@ namespace Raven.Server.Documents
                 if (capOnOverflow == false)
                     CounterOverflowException.ThrowFor(docId, counterName, e);
 
-                return value + localValue > 0 ? 
-                    long.MinValue : 
+                return value + localValue > 0 ?
+                    long.MinValue :
                     long.MaxValue;
             }
 
@@ -1388,7 +1388,7 @@ namespace Raven.Server.Documents
 
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
-                
+
                 using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
                 using (Slice.From(context.Allocator, newChangeVector, out var cv))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
@@ -1484,6 +1484,9 @@ namespace Raven.Server.Documents
         [Conditional("DEBUG")]
         public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
         {
+            if (document == null)
+                return;
+
             if ((flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
