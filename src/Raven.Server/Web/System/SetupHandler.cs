@@ -18,6 +18,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
@@ -471,7 +472,7 @@ namespace Raven.Server.Web.System
                     writer.WriteStartArray();
 
                     var first = true;
-                    foreach (var value in LetsEncryptUtils.GetCertificateAlternativeNames(certificate))
+                    foreach (var value in LetsEncryptCertificateUtil.GetCertificateAlternativeNames(certificate))
                     {
                         if (first == false)
                             writer.WriteComma();

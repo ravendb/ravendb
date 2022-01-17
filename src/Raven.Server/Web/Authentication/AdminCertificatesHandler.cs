@@ -16,6 +16,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -131,7 +132,7 @@ namespace Raven.Server.Web.Authentication
                 await using (var s = entry.Open())
                     await s.WriteAsync(certBytes, 0, certBytes.Length);
 
-                await LetsEncryptUtils.WriteCertificateAsPemAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
+                await LetsEncryptCertificateUtil.WriteCertificateAsPemAsync(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
