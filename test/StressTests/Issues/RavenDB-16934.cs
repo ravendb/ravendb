@@ -30,13 +30,13 @@ namespace StressTests.Issues
                 var now = DateTime.UtcNow;
                 var toSave = now.AddHours(-2);
 
-                new SearchIndex().Execute(store);
+                await new SearchIndex().ExecuteAsync(store);
 
-                using (var bulk = store.BulkInsert())
+                await using (var bulk = store.BulkInsert())
                 {
                     for (var i = 0; i < 1_000_000; i++)
                     {
-                        bulk.Store(new Unit
+                        await bulk.StoreAsync(new Unit
                         {
                             DateTime = toSave
                         });
