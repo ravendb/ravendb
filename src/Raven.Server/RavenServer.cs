@@ -35,6 +35,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -1304,7 +1305,7 @@ namespace Raven.Server
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}. " +
                                                     "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
-            var hosts = LetsEncryptUtils.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+            var hosts = LetsEncryptCertificateUtil.GetCertificateAlternativeNames(existing.Certificate).ToArray();
 
             // cloud: *.free.iftah.ravendb.cloud => we extract the domain free.iftah
             // normal: *.iftah.development.run => we extract the domain iftah

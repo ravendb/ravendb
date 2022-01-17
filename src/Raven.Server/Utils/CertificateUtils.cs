@@ -101,6 +101,12 @@ namespace Raven.Server.Utils
             return true;
         }
 
+        public class CertificateHolder
+        {
+            public string CertificateForClients;
+            public X509Certificate2 Certificate;
+            public AsymmetricKeyEntry PrivateKey;
+        }
         public static byte[] CreateSelfSignedTestCertificate(string commonNameValue, string issuerName, StringBuilder log = null)
         {
             // Note this is for tests only!
