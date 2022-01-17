@@ -46,7 +46,6 @@ using Raven.Server.Indexing;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
@@ -3809,7 +3808,11 @@ namespace Raven.Server.Documents.Indexes
                 return null;
             }
 
-            return new DisposableAction(() => _executingIndexing.Release());
+            return new DisposableAction(() =>
+            {
+                DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeIndexThreadExit?.Invoke(this);
+                _executingIndexing.Release();
+            });
         }
 
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client

@@ -109,10 +109,16 @@ namespace SlowTests.Server.Replication
             Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
 
             var hubDatabaseInstance = await GetDocumentDatabaseInstanceFor(hubStore);
-            var error = "";
+            bool expectedError = false;
+            string lastError = null;
             hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0].Failed += (handler, exception) =>
             {
-                error = exception.Message;
+                if (exception.Message.Contains("This hub does not allow for tombstone replication via pull replication"))
+                {
+                    expectedError = true;
+                }
+
+                lastError = exception.Message;
             };
 
             //delete doc from sink
@@ -134,7 +140,8 @@ namespace SlowTests.Server.Replication
             }
 
             //make sure hub threw error
-            await AssertWaitForTrueAsync(() => Task.FromResult(error.Contains("This hub does not allow for tombstone replication via pull replication")));
+            var result = await WaitForValueAsync(() => Task.FromResult(expectedError), true);
+            Assert.True(result, lastError);
         }
 
         [Fact]

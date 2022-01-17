@@ -48,9 +48,7 @@ namespace SlowTests.Issues
                     var count = session.Query<SearchIndex.Result, SearchIndex>().Count();
                 }
 
-                var stats = store.Maintenance.Send(new GetIndexErrorsOperation());
-
-                Assert.Empty(stats.First().Errors);
+                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 

@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Revisions
 
                 document = AddCounterAndTimeSeriesSnapshotsIfNeeded(context, id, document);
 
-                PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
+                document = PutFromRevisionIfChangeVectorIsGreater(context, document, id, changeVector, lastModifiedTicks, flags, nonPersistentFlags);
 
                 if (table.VerifyKeyExists(changeVectorSlice)) // we might create
                     return true;
@@ -523,7 +523,7 @@ namespace Raven.Server.Documents.Revisions
             return document;
         }
 
-        private void PutFromRevisionIfChangeVectorIsGreater(
+        private BlittableJsonReaderObject PutFromRevisionIfChangeVectorIsGreater(
             DocumentsOperationContext context,
             BlittableJsonReaderObject document,
             string id,
@@ -534,19 +534,19 @@ namespace Raven.Server.Documents.Revisions
             CollectionName collectionName = null)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
-                return;
+                return document;
 
             if ((flags.Contain(DocumentFlags.Revision) || flags.Contain(DocumentFlags.DeleteRevision)) == false)
-                return; // only revision can overwrite the document
+                return document; // only revision can overwrite the document
 
             if (flags.Contain(DocumentFlags.Conflicted))
-                return; // but, conflicted revision can't
+                return document; // but, conflicted revision can't
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
             {
                 var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, out _);
                 if (conflictStatus != ConflictStatus.Update)
-                    return; // Do not modify the document.
+                    return document; // Do not modify the document.
 
                 if (flags.Contain(DocumentFlags.Resolved))
                 {
@@ -554,17 +554,61 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 nonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries) | DocumentFlags.HasRevisions;
+                flags = flags.Strip(DocumentFlags.Revision | DocumentFlags.DeleteRevision) | DocumentFlags.HasRevisions;
 
                 if (document == null)
                 {
                     _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
                         nonPersistentFlags, flags);
-                    return;
+                    return null;
                 }
+
+                document = RevertSnapshotFlags(context, document, id);
+
                 _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
                     null, flags, nonPersistentFlags);
             }
+
+            return document;
+        }
+
+        private static bool RevertSnapshotFlag(BlittableJsonReaderObject metadata, string snapshotFlag, string flag)
+        {
+            if (metadata.TryGet(snapshotFlag, out BlittableJsonReaderObject bjro) == false)
+                return false;
+
+            var names = bjro.GetPropertyNames();
+
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(snapshotFlag);
+            var arr = new DynamicJsonArray();
+            foreach (var name in names)
+            {
+                arr.Add(name);
+            }
+
+            metadata.Modifications[flag] = arr;
+
+            return true;
+        }
+
+        private static BlittableJsonReaderObject RevertSnapshotFlags(DocumentsOperationContext context, BlittableJsonReaderObject document, string documentId)
+        {
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                return document;
+
+            var metadataModified = RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionCounters, Constants.Documents.Metadata.Counters);
+            metadataModified |= RevertSnapshotFlag(metadata, Constants.Documents.Metadata.RevisionTimeSeries, Constants.Documents.Metadata.TimeSeries);
+
+            if (metadataModified)
+            {
+                document.Modifications = new DynamicJsonValue(document) { [Constants.Documents.Metadata.Key] = metadata };
+
+                using (var old = document)
+                    document = context.ReadObject(document, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
+
+            return document;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1568,32 +1612,7 @@ namespace Raven.Server.Documents.Revisions
                 documentsStorage.AttachmentsStorage.PutAttachmentRevert(context, document, out bool has);
                 RevertCounters(context, documentsStorage, document, collectionName);
 
-                ChangeSnapshotFlag(context, document, Constants.Documents.Metadata.RevisionCounters, Constants.Documents.Metadata.Counters);
-                ChangeSnapshotFlag(context, document, Constants.Documents.Metadata.RevisionTimeSeries, Constants.Documents.Metadata.TimeSeries);
-            }
-
-            private static void ChangeSnapshotFlag(DocumentsOperationContext context, Document document, string snapshotFlag, string flag)
-            {
-                if (document.TryGetMetadata(out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(snapshotFlag, out BlittableJsonReaderObject bjro))
-                {
-                    var names = bjro.GetPropertyNames();
-
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(snapshotFlag);
-                    var arr = new DynamicJsonArray();
-                    foreach (var name in names)
-                    {
-                        arr.Add(name);
-                    }
-
-                    metadata.Modifications[flag] = arr;
-                    document.Data.Modifications ??= new DynamicJsonValue();
-                    document.Data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-
-                    using (var old = document.Data)
-                        document.Data = context.ReadObject(document.Data, document.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
+                document.Data = RevertSnapshotFlags(context, document.Data, document.Id);
             }
 
             private static void RevertCounters(DocumentsOperationContext context, DocumentsStorage documentsStorage, Document document, CollectionName collectionName)

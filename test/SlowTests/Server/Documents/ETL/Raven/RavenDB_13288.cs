@@ -97,6 +97,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                         session.CountersFor("users/1").Increment("likes");
 
+                        session.Advanced.WaitForReplicationAfterSaveChanges();
+
                         session.SaveChanges();
                     }
                 }

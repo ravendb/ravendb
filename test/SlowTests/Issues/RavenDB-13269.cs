@@ -99,9 +99,8 @@ namespace SlowTests.Issues
                 }}));
 
                 WaitForIndexing(store);
-
-                var stats = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test1", "test2", "test3", "test4" }));
-                Assert.Empty(stats.SelectMany(x => x.Errors));
+                var stats = WaitForIndexingErrors(store, new[] { "test1", "test2", "test3", "test4" }, errorsShouldExists: false);
+                Assert.Null(stats);
 
                 using (var session = store.OpenSession())
                 {

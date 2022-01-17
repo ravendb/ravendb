@@ -2,32 +2,54 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Numerics;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
-    public struct FastBitArray : IDisposable
+    public struct FastBitArray 
     {
-        private ulong[] _bits;
-        public bool Disposed => _bits == null;
+        public ulong[] Bits;
+        public bool Disposed => Bits == null;
+        public Size Size => new Size(Bits.Length * sizeof(long), SizeUnit.Bytes);
+
         public FastBitArray(int countOfBits)
         {
-            _bits = ArrayPool<ulong>.Shared.Rent(countOfBits / 64 + (countOfBits % 64 == 0 ? 0 : 1));
-            new Span<ulong>(_bits).Clear();
+            Bits = ArrayPool<ulong>.Shared.Rent(countOfBits / 64 + (countOfBits % 64 == 0 ? 0 : 1));
+            new Span<ulong>(Bits).Clear();
         }
 
+        public FastBitArray(ulong[] bits)
+        {
+            Bits = bits;
+        }
+        
         public void Set(int index)
         {
-            _bits[index / 64] |= 1UL << index % 64;
+            Bits[index / 64] |= 1UL << index % 64;
+        }
+
+        public int IndexOfFirstSetBit()
+        {
+            for (int i = 0; i < Bits.Length; i++)
+            {
+                if (Bits[i] == 0) 
+                    continue;
+                
+                int count = BitOperations.TrailingZeroCount(Bits[i]);
+                return i * 64 + count;
+            }
+
+            return -1;
         }
 
         public IEnumerable<int> Iterate(int from)
         {
             // https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/
             int i = from / 64;
-            if (i >= _bits.Length)
+            if (i >= Bits.Length)
                 yield break;
 
-            ulong bitmap = _bits[i];
+            ulong bitmap = Bits[i];
             bitmap &= ulong.MaxValue << (from % 64);
             while (true)
             {
@@ -40,18 +62,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     bitmap ^= t;
                 }
                 i++;
-                if (i >= _bits.Length)
+                if (i >= Bits.Length)
                     break;
-                bitmap = _bits[i];
+                bitmap = Bits[i];
             }
-        }
-
-        public void Dispose()
-        {
-            if (_bits == null)
-                return;
-            ArrayPool<ulong>.Shared.Return(_bits);
-            _bits = null;
         }
     }
 }

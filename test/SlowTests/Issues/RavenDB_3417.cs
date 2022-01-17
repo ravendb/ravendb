@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,20 +25,33 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents |
+                                                                     Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 WaitForIndexing(store);
 
-                var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
-
-                Assert.Equal(7, indexingPerformanceStatistics.Length);
-
-                foreach (var stats in indexingPerformanceStatistics)
+                var str = string.Empty;
+                Assert.True(WaitForValue(() =>
                 {
-                    Assert.NotNull(stats.Name);
-                    Assert.NotNull(stats.Performance);
-                    Assert.True(stats.Performance.Length > 0);
-                }
+                    var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
+
+                    if (indexingPerformanceStatistics.Length != 7)
+                        str = $"Expected {indexingPerformanceStatistics.Length} length to be 7";
+
+                    foreach (var stats in indexingPerformanceStatistics)
+                    {
+                        if (stats.Name == null)
+                            str = $"{nameof(indexingPerformanceStatistics.Length)} is null";
+
+                        if (stats.Performance == null)
+                            str = $"{nameof(stats.Performance)} is null";
+
+                        if (stats.Performance?.Length == 0)
+                            str = $"{nameof(stats.Performance.Length)} is 0";
+                    }
+
+                    return true;
+                }, true, 5000), str);
             }
         }
     }
