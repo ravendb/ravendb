@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -100,31 +99,6 @@ namespace RachisTests
                 using (context.OpenReadTransaction())
                 {
                     Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
-                }
-            }
-        }
-
-        private async Task<bool> WaitForDatabaseToBeDeleted(IDocumentStore store, string databaseName,TimeSpan timeout)
-        {
-            var pollingInterval = timeout.TotalSeconds<1? timeout:TimeSpan.FromSeconds(1);
-            var sw = Stopwatch.StartNew();
-            while (true)
-            {
-                var delayTask = Task.Delay(pollingInterval);
-                var dbTask = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-                var doneTask = await Task.WhenAny(dbTask, delayTask);
-                if (doneTask == delayTask)
-                {
-                    if (sw.Elapsed > timeout)
-                    {
-                        return false;
-                    }
-                    continue;
-                }
-                var dbRecord = dbTask.Result;
-                if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
-                {
-                    return true;
                 }
             }
         }
