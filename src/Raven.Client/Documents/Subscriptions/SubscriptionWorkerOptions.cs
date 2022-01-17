@@ -61,6 +61,7 @@ namespace Raven.Client.Documents.Subscriptions
             public string CurrentTag;
             public string RedirectedTag;
             public Dictionary<string, string> Reasons;
+            public long? RegisterConnectionDurationInTicks;
         }
 
         public MessageType Type { get; set; }

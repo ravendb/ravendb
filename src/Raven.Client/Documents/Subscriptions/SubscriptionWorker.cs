@@ -355,6 +355,22 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new SubscriptionDoesNotExistException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
+                    if (_options.Strategy == SubscriptionOpeningStrategy.WaitForFree)
+                    {
+                        if (connectionStatus.Data != null && connectionStatus.Data.TryGetMember(
+                                nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks), out object registerConnectionDurationInTicksObject))
+                        {
+                            if (registerConnectionDurationInTicksObject is long registerConnectionDurationInTicks)
+                            {
+                                if (TimeSpan.FromTicks(registerConnectionDurationInTicks) >= _options.MaxErroneousPeriod)
+                                {
+                                    // this worker connection Waited For Free for more than MaxErroneousPeriod
+                                    _lastConnectionFailure = null;
+                                }
+                            }
+                        }
+                    }
+
                     var appropriateNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]?.ToString();
                     var currentNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)]?.ToString();
                     var rawReasons = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)];

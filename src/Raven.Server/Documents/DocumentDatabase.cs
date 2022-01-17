@@ -65,7 +65,7 @@ namespace Raven.Server.Documents
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
-        private TestingStuff _forTestingPurposes;
+        internal TestingStuff _forTestingPurposes;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
@@ -1784,6 +1784,22 @@ namespace Raven.Server.Documents
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
+            }
+
+            internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
+            internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
+
+            internal IDisposable CallDuringWaitForChangedDocuments(Action action)
+            {
+                Subscription_ActionToCallDuringWaitForChangedDocuments = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallDuringWaitForChangedDocuments = null);
+            }
+            internal IDisposable CallAfterRegisterSubscriptionConnection(Action<long> action)
+            {
+                Subscription_ActionToCallAfterRegisterSubscriptionConnection = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallAfterRegisterSubscriptionConnection = null);
             }
         }
     }
