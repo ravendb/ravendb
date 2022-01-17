@@ -64,13 +64,22 @@ namespace Raven.Server.NotificationCenter
 
         internal void UpdatePaging(object state)
         {
+            UpdatePagingInternal(state, out _);
+        }
+
+        internal bool UpdatePagingInternal(object state, out string reason)
+        {
+            var outcome = false;
+            reason = "";
             try
             {
                 if (_pagingQueue.IsEmpty)
-                    return;
+                {
+                    reason += "Queue is empty";
+                    return false;
+                }
 
                 PerformanceHint documents = null, queries = null, revisions = null, compareExchange = null;
-
                 while (_pagingQueue.TryDequeue(
                     out PagingInformation pagingInfo))
                 {
@@ -97,27 +106,47 @@ namespace Raven.Server.NotificationCenter
                             break;
 
                         default:
+                            reason += "Unknown paging info Type";
                             throw new ArgumentOutOfRangeException();
                     }
                 }
 
                 if (documents != null)
+                {
                     _notificationCenter.Add(documents);
+                    outcome = true;
+                }
 
                 if (queries != null)
+                {
                     _notificationCenter.Add(queries);
+                    outcome = true;
+                }
 
                 if (revisions != null)
+                {
                     _notificationCenter.Add(revisions);
+                    outcome = true;
+                }
 
                 if (compareExchange != null)
+                {
                     _notificationCenter.Add(compareExchange);
+                    outcome = true;
+                }
+
+                if (_notificationCenter.GetPerformanceHintCount() == 0)
+                    outcome = false;
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error in a notification center paging timer", e);
+                outcome = false;
+                reason += "Notification center paging timer error.";
             }
+                
+            return outcome;
         }
 
         private PerformanceHint GetPagingPerformanceHint(string id, PagingOperationType type)
