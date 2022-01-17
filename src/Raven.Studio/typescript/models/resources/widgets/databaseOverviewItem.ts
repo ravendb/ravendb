@@ -5,7 +5,8 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
     database: string;
     nodeTag: string;
     relevant: boolean;
-
+    disabled: boolean;
+    online: boolean;
     documents: number;
     alerts: number;
     performanceHints: number;
@@ -28,6 +29,8 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
             this.noData = false;
             this.database = data.Database;
             this.relevant = !data.Irrelevant;
+            this.disabled = data.Disabled;
+            this.online = data.Online
             this.documents = data.DocumentsCount;
             this.alerts = data.AlertsCount;
             this.performanceHints = data.PerformanceHintsCount;
@@ -56,6 +59,7 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
         commonItem.indexes = item.indexes;
         commonItem.ongoingTasks = item.ongoingTasks;
         commonItem.backupInfo = item.backupInfo;
+        commonItem.disabled = item.disabled;
         
         return commonItem;
     }
@@ -145,6 +149,37 @@ class databaseOverviewItem implements databaseAndNodeAwareStats {
             iconClass: "icon-check",
             textClass: "text-success"
         }];
+    }
+
+    stateDataForHtml(nodeTag: string): iconPlusText[] {
+        if (this.disabled) {
+            if (!nodeTag) {
+                return [{
+                    title: "",
+                    text: "Disabled",
+                    iconClass: "icon-database-cutout icon-addon-cancel",
+                    textClass: "text-danger"
+                }];
+            }
+        } else if (nodeTag) {
+            if (!this.online) {
+                return [{
+                    title: "",
+                    text: "Offline",
+                    iconClass: "icon-database-cutout icon-addon-clock",
+                    textClass: "text-warning"
+                }];
+           } else {
+                return [{
+                    title: "",
+                    text: "Online",
+                    iconClass: "icon-database-cutout icon-addon-check",
+                    textClass: "text-success"
+                }];
+            }
+        }
+
+        return [];
     }
 }
 
