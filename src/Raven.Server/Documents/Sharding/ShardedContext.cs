@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Sharding
                 if (ptr[i] != expected)
                     continue;
                 ptr += i + 1;
-                len -= i - 1;
+                len -= i + 1;
                 break;
             }
         }

@@ -14,6 +14,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using DocumentsChanges = Raven.Client.Documents.Session.DocumentsChanges;
@@ -24,6 +25,39 @@ namespace FastTests.Sharding
     {
         public BasicShardedSessionTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [Fact]
+        public void Should_Put_Documents_To_The_Same_Shard()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                const string companyId = "Companies/1";
+                const string orderId = $"orders/1${companyId}";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "Acme Inc."
+                    }, companyId);
+
+                    session.Store(new Order
+                    {
+                        Id = orderId,
+                        Company = companyId
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var order = session.Include<Order, Company>(x => x.Company).Load<Order>(orderId);
+                    Assert.NotNull(order);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.True(session.Advanced.IsLoaded(companyId));
+                }
+            }
         }
 
         [Fact]
