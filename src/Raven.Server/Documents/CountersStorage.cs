@@ -1482,7 +1482,7 @@ namespace Raven.Server.Documents
         }
 
         [Conditional("DEBUG")]
-        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags)
+        public static void AssertCounters(BlittableJsonReaderObject document, DocumentFlags flags, string databaseName)
         {
             if (document == null)
                 return;
@@ -1492,7 +1492,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                     metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _) == false)
                 {
-                    Debug.Assert(false, $"Found {DocumentFlags.HasCounters} flag but {Constants.Documents.Metadata.Counters} is missing from metadata.");
+                    Debug.Assert(false, $"Found {DocumentFlags.HasCounters} flag but {Constants.Documents.Metadata.Counters} is missing from metadata (database: {databaseName}).");
                 }
             }
             else
@@ -1500,7 +1500,7 @@ namespace Raven.Server.Documents
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
                 {
-                    Debug.Assert(false, $"Found {Constants.Documents.Metadata.Counters}({counters.Length}) in metadata but {DocumentFlags.HasCounters} flag is missing.");
+                    Debug.Assert(false, $"Found {Constants.Documents.Metadata.Counters}({counters.Length}) in metadata but {DocumentFlags.HasCounters} flag is missing (database: {databaseName}).");
                 }
             }
         }
