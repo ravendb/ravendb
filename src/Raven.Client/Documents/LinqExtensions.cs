@@ -60,6 +60,24 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// Limits the number of documents processed by Filter.
+        /// </summary>
+        /// <param name="source">The source for querying</param>
+        /// <param name="limit">scanning limit</param>
+        /// <typeparam name="TResult">The type of the object that holds limit for filter.</typeparam>
+        /// <returns></returns>
+        public static IRavenQueryable<TResult> ScanLimit<TResult>(this IQueryable<TResult> source, int limit)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(limit)));
+            return (IRavenQueryable<TResult>)queryable;
+        }
+        
+        /// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
         /// </summary>
         /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
@@ -76,7 +94,26 @@ namespace Raven.Client.Documents
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path)));
             return (IRavenQueryable<TResult>)queryable;
         }
+        
+        /// <summary>
+        ///  Filter allows to query on raw document or index without building an index.
+        ///  This performs a full-table scan which can be very slow so please use it wisely.
+        /// </summary>
+        /// <typeparam name="T">The type of the object that holds querying type.</typeparam>
+        /// <param name="source">The source for querying</param>
+        /// <param name="predicate"></param>
+        /// <returns></returns>
+        public static IRavenQueryable<T> Filter<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> predicate)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate));
+            return (IRavenQueryable<T>)queryable;
+        }
+        
         /// <summary>
         /// Includes the specified documents and/or counters in the query
         /// </summary>

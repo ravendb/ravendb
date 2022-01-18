@@ -177,6 +177,29 @@ namespace Raven.Client.Documents.Session
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
+        
+        /// <summary>
+        ///  Filter allows to query on raw document or index without building an index.
+        ///  This performs a full-table scan which can be very slow so please use it wisely.
+        /// </summary>
+        /// <param name="builder">Builder of a Filter query</param>
+        /// <returns></returns>
+        IDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder);
+
+        /// <summary>
+        /// Filter allows querying on raw documents or indexes without building an index.
+        /// This performs a full-table scan which can be very slow so please use it wisely.
+        /// </summary>
+        /// <param name="rawQuery">RQL statement for Filter clause</param>
+        /// <returns></returns>
+        IDocumentQuery<T> Filter(string rawQuery);
+        
+        /// <summary>
+        /// Limits the number of documents processed by Filter.
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        IDocumentQuery<T> ScanLimit(int limit);
 
         IAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder);
 

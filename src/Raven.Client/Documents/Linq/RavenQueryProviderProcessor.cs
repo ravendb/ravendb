@@ -54,6 +54,8 @@ namespace Raven.Client.Documents.Linq
         private readonly LinqQueryHighlightings _highlightings;
         private bool _chainedWhere;
         private int _insideWhere;
+        private bool _filterIsOn = false;
+        private int _insideFilter;
         private bool _insideNegate;
         private bool _insideExact;
         private SpecialQueryType _queryType = SpecialQueryType.None;
@@ -362,7 +364,7 @@ namespace Raven.Client.Documents.Linq
                 (andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
                 (andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThanOrEqual);
 
-            if (isPossibleBetween == false)
+            if (isPossibleBetween == false || _filterIsOn == true)
                 return false;
 
             var leftMember = GetMemberForBetween((BinaryExpression)andAlso.Left);
@@ -1234,6 +1236,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitLinqExtensionsMethodCall(expression);
                 return;
             }
+
             if (declaringType == typeof(Queryable))
             {
                 VisitQueryableMethodCall(expression);
@@ -1348,6 +1351,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.Where):
                     VisitQueryableMethodCall(expression);
+                    break;
+                case nameof(LinqExtensions.Filter):
+                    VisitQueryableMethodCall(expression);
+                    break;
+                case nameof(LinqExtensions.ScanLimit):
+                    VisitExpression(expression.Arguments[0]);
+                    DocumentQuery.AddScanLimit((int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
                     break;
                 case nameof(LinqExtensions.Spatial):
                     VisitExpression(expression.Arguments[0]);
@@ -1761,10 +1771,38 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     VisitExpression(expression.Arguments[0]);
                     break;
+                case "Filter":
+                {
+                    DocumentQuery.TurnOnFilter();
+                    _filterIsOn = true;
+                    _insideFilter++;
+                    VisitExpression(expression.Arguments[0]);
+                    DocumentQuery.TurnOnFilter();
+                    if (_chainedWhere)
+                    {
+                        DocumentQuery.AndAlso();
+                        DocumentQuery.OpenSubclause();
+                    }
+                    if (_chainedWhere == false && _insideFilter > 1)
+                        DocumentQuery.OpenSubclause();
+                    
+                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                    DocumentQuery.TurnOnFilter();
+
+                    if (_chainedWhere == false && _insideWhere > 1)
+                        DocumentQuery.CloseSubclause();
+                    if (_chainedWhere)
+                        DocumentQuery.CloseSubclause();
+                    _insideWhere--;
+                    break;
+                }
                 case "Where":
                     {
+                        DocumentQuery.TurnOffFilter();
+                        _filterIsOn = false;
                         _insideWhere++;
                         VisitExpression(expression.Arguments[0]);
+                        DocumentQuery.TurnOffFilter();
                         if (_chainedWhere)
                         {
                             DocumentQuery.AndAlso();
@@ -1777,7 +1815,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
 
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-
+                        DocumentQuery.TurnOffFilter();
                         _insideExact = false;
 
                         if (_chainedWhere == false && _insideWhere > 1)
@@ -2036,7 +2074,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                    (mce.Method.DeclaringType == typeof(RavenQuery) ||
                     mce.Object?.Type == typeof(IDocumentSession));
         }
-
+        
         private bool CheckForNestedLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce, out string selectPath)
         {
             if (lambdaExpression.Body is MemberExpression memberExpression)
@@ -2058,7 +2096,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return false;
 
         }
-
+        
         private bool HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
         {
             if (CheckForNestedLoad(lambdaExpression, out var mce, out var member) == false)

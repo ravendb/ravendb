@@ -171,6 +171,21 @@ namespace Raven.Client.Documents.Session
 
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
+        /// <summary>
+        ///  Filter allows to query on raw document or index without building an index.
+        ///  This performs a full-table scan which can be very slow so please use it wisely.
+        /// </summary>
+        /// <param name="builder">Builder of a Filter query</param>
+        /// <returns></returns>
+        IAsyncDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder);
+        
+        /// <summary>
+        /// Limits the number of documents processed by Filter.
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        IAsyncDocumentQuery<T> ScanLimit(int limit);
+        
         IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder);
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
