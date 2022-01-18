@@ -214,6 +214,17 @@ namespace FastTests
             return sb.ToString();
         }
 
+        protected async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(long index, TimeSpan? timeout = null)
+        {
+            var notDisposed = Servers.Count(s => s.ServerStore.Disposed == false);
+            var notPassive = Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
+
+            Assert.True(Servers.Count == notDisposed,$"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
+            Assert.True(Servers.Count == notPassive,$"Unequal not passive nodes {Servers.Count} != {notPassive}");
+
+            await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
+        }
+
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
         {
             await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
@@ -266,11 +277,15 @@ namespace FastTests
             {
                 message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
                 using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
                 using (context.OpenReadTransaction())
+                using (clusterContext.OpenReadTransaction())
                 {
                     message +=
                         $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
-                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}";
+                        $"{Environment.NewLine}Last notified Index '{nodes[i].ServerStore.Cluster.LastNotifiedIndex}':" +
+                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}" +
+                        $"{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(clusterContext)}";
                 }
             }
 
@@ -330,9 +345,6 @@ namespace FastTests
                             [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString(),
-                            // TODO: remove this after testing
-                            [RavenConfiguration.GetKey(x => x.Indexing.AutoIndexDeploymentMode)] = IndexDeploymentMode.Rolling.ToString(),
-                            [RavenConfiguration.GetKey(x => x.Indexing.StaticIndexDeploymentMode)] = IndexDeploymentMode.Rolling.ToString(),
                         }
                     };
 
@@ -410,7 +422,7 @@ namespace FastTests
                         if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(raftCommand, timeout));
+                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
@@ -625,11 +637,18 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null)
+        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
         {
-            timeout ??= (Debugger.IsAttached
-                          ? TimeSpan.FromMinutes(15)
-                          : TimeSpan.FromMinutes(1));
+            if (errorsShouldExists is null)
+            {
+                timeout ??= Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
+            }
+            else
+            {
+                timeout ??= errorsShouldExists is true 
+                    ? TimeSpan.FromSeconds(5)
+                    : TimeSpan.FromSeconds(1);
+            }
 
             var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
 
@@ -662,7 +681,10 @@ namespace FastTests
             if (toWait.Count != 0)
                 msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
 
-            throw new TimeoutException(msg);
+            if (errorsShouldExists is null)
+                throw new TimeoutException(msg);
+            
+            return null;
         }
 
         public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)

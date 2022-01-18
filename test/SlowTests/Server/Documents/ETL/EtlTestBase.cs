@@ -7,11 +7,20 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.ElasticSearch;
+using Raven.Server.Documents.ETL.Providers.OLAP;
+using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Tests.Infrastructure.Utils;
@@ -173,6 +182,66 @@ namespace SlowTests.Server.Documents.ETL
 
                 store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, false));
             });
+        }
+
+        protected bool TryGetLoadError<T>(string databaseName, EtlConfiguration<T> config, out EtlErrorInfo error) where T : ConnectionString
+        {
+            var database = GetDatabase(databaseName).Result;
+
+            string tag;
+
+            if (typeof(T) == typeof(ElasticSearchConnectionString))
+                tag = ElasticSearchEtl.ElasticSearchEtlTag;
+            else if (typeof(T) == typeof(SqlConnectionString))
+                tag = SqlEtl.SqlEtlTag;
+            else if (typeof(T) == typeof(RavenConnectionString))
+                tag = RavenEtl.RavenEtlTag;
+            else if (typeof(T) == typeof(OlapConnectionString))
+                tag = OlapEtl.OlaptEtlTag;
+            else
+                throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
+
+            var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
+
+            if (loadAlert.Errors.Count != 0)
+            {
+                error = loadAlert.Errors.First();
+
+                return true;
+            }
+
+            error = null;
+            return false;
+        }
+
+        protected bool TryGetTransformationError<T>(string databaseName, EtlConfiguration<T> config, out EtlErrorInfo error) where T : ConnectionString
+        {
+            var database = GetDatabase(databaseName).Result;
+
+            string tag;
+
+            if (typeof(T) == typeof(ElasticSearchConnectionString))
+                tag = ElasticSearchEtl.ElasticSearchEtlTag;
+            else if (typeof(T) == typeof(SqlConnectionString))
+                tag = SqlEtl.SqlEtlTag;
+            else if (typeof(T) == typeof(RavenConnectionString))
+                tag = RavenEtl.RavenEtlTag;
+            else if (typeof(T) == typeof(OlapConnectionString))
+                tag = OlapEtl.OlaptEtlTag;
+            else
+                throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
+
+            var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_TransformationError);
+
+            if (loadAlert.Errors.Count != 0)
+            {
+                error = loadAlert.Errors.First();
+
+                return true;
+            }
+
+            error = null;
+            return false;
         }
 
         public override void Dispose()

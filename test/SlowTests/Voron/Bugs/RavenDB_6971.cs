@@ -39,9 +39,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                var errors = store.Maintenance.ForDatabase(store.Database).Send(new GetIndexErrorsOperation());
-
-                Assert.Empty(errors.SelectMany(x => x.Errors));
+                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 

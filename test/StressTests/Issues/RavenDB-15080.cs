@@ -11,12 +11,13 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace StressTests.Issues
 {
     public class RavenDB_15080 : ReplicationTestBase
     {
@@ -160,7 +161,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                EnsureReplicating(storeA, storeB);
+                await EnsureReplicatingAsync(storeA, storeB);
                 var t1 = Task.Run(async () =>
                 {
                     var rand = new Random(42);
@@ -189,8 +190,8 @@ namespace SlowTests.Issues
                 });
                 await Task.WhenAll(t1, t2);
 
-                Assert.True(EnsureReplicating(storeA, storeB, out var errMsg), errMsg);
-                Assert.True(EnsureReplicating(storeB, storeA, out errMsg), errMsg);
+                Assert.True(EnsureReplicating(storeA, storeB, TimeSpan.FromSeconds(60), out var errMsg), errMsg);
+                Assert.True(EnsureReplicating(storeB, storeA, TimeSpan.FromSeconds(60), out errMsg), errMsg);
 
                 await EnsureNoReplicationLoop(Server, storeA.Database);
                 await EnsureNoReplicationLoop(Server, storeB.Database);
@@ -636,25 +637,31 @@ namespace SlowTests.Issues
             return builder.ToString();
         }
 
-        private bool EnsureReplicating(IDocumentStore src, IDocumentStore dst, out string errorMsg)
+        private bool EnsureReplicating(IDocumentStore src, IDocumentStore dst, TimeSpan timeout, out string errorMsg)
         {
             errorMsg = string.Empty;
-
             var id = "marker/" + Guid.NewGuid();
+            string cv;
             using (var s = src.OpenSession())
             {
-                s.Store(new { }, id);
+                var entity = new { };
+                s.Store(entity, id);
                 s.SaveChanges();
+
+                cv = s.Advanced.GetChangeVectorFor(entity);
             }
 
-            if (WaitForDocumentToReplicate<object>(dst, id, 15 * 1000) != null)
+            if (WaitForDocumentToReplicate<object>(dst, id, (int)timeout.TotalMilliseconds) != null)
                 return true;
 
             var sb = new StringBuilder()
                 .AppendLine($"Failed to replicate from '{src.Database}' to '{dst.Database}'");
 
-            var replicationLoader = GetDocumentDatabaseInstanceFor(src).Result.ReplicationLoader;
-            var outgoingFailureInfo = replicationLoader.OutgoingFailureInfo.ToList();
+            var database = GetDocumentDatabaseInstanceFor(src).Result;
+            var etag = ChangeVectorUtils.GetEtagById(cv, database.DbBase64Id);
+            Console.WriteLine($"document etag : {etag}");
+
+            var outgoingFailureInfo = database.ReplicationLoader.OutgoingFailureInfo.ToList();
             if (outgoingFailureInfo.Count > 0)
             {
                 sb.AppendLine($"{src.Database} Outgoing Failure Info : ");
@@ -662,9 +669,11 @@ namespace SlowTests.Issues
                 {
                     sb.AppendLine(string.Join(", ", e.Value.Errors.Select(x => x.Message)));
                 }
+
+                sb.AppendLine();
             }
 
-            foreach (var store in new []{src, dst})
+            foreach (var store in new[] { src, dst })
             {
                 var stats = store.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
                 var incoming = stats.Incoming.FirstOrDefault();
@@ -675,6 +684,8 @@ namespace SlowTests.Issues
                     {
                         sb.AppendLine(ToString(s));
                     }
+
+                    sb.AppendLine();
                 }
 
                 var outgoing = stats.Outgoing.FirstOrDefault();
@@ -685,6 +696,8 @@ namespace SlowTests.Issues
                     {
                         sb.AppendLine(ToString(s));
                     }
+
+                    sb.AppendLine();
                 }
             }
 

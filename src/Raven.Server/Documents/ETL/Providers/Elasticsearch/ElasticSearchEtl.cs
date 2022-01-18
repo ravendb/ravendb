@@ -14,8 +14,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Exceptions.ETL.ElasticSearch;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -206,27 +204,28 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
 
         private void EnsureIndexExistsAndValidateIfNeeded(string indexName, ElasticSearchIndexWithRecords index)
         {
-            if (_existingIndexes.Contains(indexName) == false && _client.Indices.Exists(new IndexExistsRequest(Indices.Index(indexName))).Exists == false)
-            {
-                CreateDefaultIndex(indexName, index);
-
-                _existingIndexes.Add(indexName);
-            }
-            else
+            if (_existingIndexes.Contains(indexName) == false)
             {
                 var indexResponse = _client.Indices.Get(new GetIndexDescriptor(Indices.Index(indexName)));
 
-                var mappingsProperties = indexResponse.Indices[indexName].Mappings.Properties;
+                if (indexResponse.Indices.TryGetValue(indexName, out var state))
+                {
+                    var mappingsProperties = state.Mappings.Properties;
 
-                if (mappingsProperties.TryGetValue(new PropertyName(index.DocumentIdProperty), out var propertyDefinition) == false)
-                    throw new ElasticSearchLoadException(
-                        $"The index '{indexName}' doesn't contain the mapping for '{index.DocumentIdProperty}' property. " +
-                        "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
+                    if (mappingsProperties.TryGetValue(new PropertyName(index.DocumentIdProperty), out var propertyDefinition) == false)
+                        throw new ElasticSearchLoadException(
+                            $"The index '{indexName}' doesn't contain the mapping for '{index.DocumentIdProperty}' property. " +
+                            "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
 
-                if (propertyDefinition.Type == null || propertyDefinition.Type.Equals("keyword", StringComparison.OrdinalIgnoreCase) == false)
-                    throw new ElasticSearchLoadException(
-                        $"The index '{indexName}' has invalid mapping for '{index.DocumentIdProperty}' property. " +
-                        "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
+                    if (propertyDefinition.Type == null || propertyDefinition.Type.Equals("keyword", StringComparison.OrdinalIgnoreCase) == false)
+                        throw new ElasticSearchLoadException(
+                            $"The index '{indexName}' has invalid mapping for '{index.DocumentIdProperty}' property. " +
+                            "This property is meant to store RavenDB document ID so it needs to be defined as a non-analyzed field, with type 'keyword' to avoid having full-text-search on it.");
+                }
+                else
+                {
+                    CreateDefaultIndex(indexName, index);
+                }
 
                 _existingIndexes.Add(indexName);
             }

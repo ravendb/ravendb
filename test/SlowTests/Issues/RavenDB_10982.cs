@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -54,18 +57,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(0, results.Count);
 
-                    IndexErrors[] errors = null;
-
-                    for (int i = 0; i < 100; i++)
-                    {
-                        errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName }));
-
-                        if (errors.Length > 0 && errors[0].Errors.Length > 0)
-                            break;
-
-                        Thread.Sleep(50);
-                    }
-                    
+                    IndexErrors[] errors = WaitForIndexingErrors(store, new[] { index.IndexName });
                     Assert.Equal(1, errors[0].Errors.Length);
                 }
             }
