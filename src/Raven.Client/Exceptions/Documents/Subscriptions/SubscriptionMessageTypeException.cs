@@ -1,14 +1,15 @@
 ﻿using System;
 
-namespace Raven.Client.Exceptions.Documents.Subscriptions;
-
-public class SubscriptionMessageTypeException : SubscriptionException
+namespace Raven.Client.Exceptions.Documents.Subscriptions
 {
-    public SubscriptionMessageTypeException(string message) : base(message)
+    public class SubscriptionMessageTypeException : SubscriptionException
     {
-    }
+        public SubscriptionMessageTypeException(string message) : base(message)
+        {
+        }
 
-    public SubscriptionMessageTypeException(string message, Exception inner) : base(message, inner)
-    {
+        public SubscriptionMessageTypeException(string message, Exception inner) : base(message, inner)
+        {
+        }
     }
 }
