@@ -28,41 +28,44 @@ namespace FastTests.Sharding
                     session.Store(new Company
                     {
                         Name = "Acme Inc."
-                    }, "Companies/1");
+                    }, "companies/1");
 
                     session.Store(new Company
                     {
                         Name = "Evil Corp"
-                    }, "Companies/2");
+                    }, "companies/2");
 
                     session.Store(new Order
                     {
-                        Id = "orders/1$Companies/1",
+                        Id = "orders/1$companies/1",
                         Company = "companies/1",
                         Lines = new List<OrderLine>
                         {
-                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
-                            new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
+                            new() { PricePerUnit = (decimal)1.0, Quantity = 3 },
+                            new() { PricePerUnit = (decimal)1.5, Quantity = 3 }
                         }
                     });
                     session.Store(new Order
                     {
-                        Id = "orders/2$Companies/1",
+                        Id = "orders/2$companies/1",
                         Company = "companies/1",
                         Lines = new List<OrderLine>
                         {
-                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
+                            new() {
+                                PricePerUnit = (decimal)1.0,
+                                Quantity = 5
+                            }
                         }
                     });
                     session.Store(new Order
                     {
-                        Id = "orders/3$Companies/2",
+                        Id = "orders/3$companies/2",
                         Company = "companies/2",
                         Lines = new List<OrderLine>
                         {
-                            new OrderLine{ PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
-                            new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
-                            new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
+                            new() { PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
+                            new() { PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
+                            new() { PricePerUnit = (decimal)1.8, Quantity = 2 }
                         }
                     });
                     session.SaveChanges();
@@ -82,7 +85,7 @@ namespace FastTests.Sharding
                               totalSumInLines = l.PricePerUnit * l.Quantity - l.Discount;
                           }
                         
-                          var company = load(o.Company);   
+                          var company = load(o.Company);
   
                           return { OrderedAt: o.OrderedAt, CompanyName: company.Name, TotalSumSpent: totalSumInLines };
                         }
@@ -338,6 +341,69 @@ select {{
         }
 
         [Fact]
+        public void Simple_Map_Reduce_With_Order_By()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new OrderMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Freight = 20m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.2m
+                            },
+                            new()
+                            {
+                                Discount = 0.4m
+                            }
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Freight = 10m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.3m
+                            },
+                            new()
+                            {
+                                Discount = 0.5m
+                            }
+                        }
+                    });
+                    session.SaveChanges();
+
+                    WaitForIndexing(store, sharded: true);
+
+                    var queryResult = session.Advanced.RawQuery<OrderLine>(
+                            @"
+declare function project(o) {
+    return o.Lines;
+}
+
+from index 'OrderMapIndex' as o
+order by o.Freight
+                    select project(o)")
+                        .ToList();
+
+                    Assert.Equal(4, queryResult.Count);
+                    Assert.Equal(0.3m, queryResult[0].Discount);
+                    Assert.Equal(0.5m, queryResult[1].Discount);
+                    Assert.Equal(0.2m, queryResult[2].Discount);
+                    Assert.Equal(0.4m, queryResult[3].Discount);
+                }
+            }
+        }
+
+        [Fact(Skip = "Not yet supported")]
         public void Simple_Map_Reduce_With_Order_By_And_Projection()
         {
             using (var store = GetShardedDocumentStore())
@@ -369,8 +435,41 @@ select {{
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Not yet supported")]
         public void Simple_Map_Reduce_With_Order_By_And_Projection2()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    session.Store(new User { Name = "Igal", Count = 2 }, "users/2");
+                    session.Store(new User { Name = "Egor", Count = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    WaitForIndexing(store, sharded: true);
+
+                    var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
+                            let sum = user.Sum
+                            orderby user.Sum
+                            select new
+                            {
+                                Sum = sum
+                            })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(1, queryResult[0].Sum);
+                    Assert.Equal(2, queryResult[1].Sum);
+                    Assert.Equal(3, queryResult[2].Sum);
+                }
+            }
+        }
+
+        [Fact(Skip = "Not yet supported")]
+        public void Simple_Map_Reduce_With_Order_By_Projecting_New_Fields()
         {
             using (var store = GetShardedDocumentStore())
             {
@@ -447,6 +546,9 @@ select {{
                                   dog.Age,
                                   dog.IsVaccinated
                               };
+
+                //TODO: remove when we have the fields from the index
+                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -465,6 +567,30 @@ select {{
                     {
                         Name = user.Name
                     };
+
+                //TODO: remove when we have the fields from the index
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        public class OrderMapIndex : AbstractIndexCreationTask<Order>
+        {
+            public class Result
+            {
+                public decimal Freight;
+            }
+
+            public OrderMapIndex()
+            {
+                Map = orders =>
+                    from order in orders
+                    select new Result
+                    {
+                        Freight = order.Freight
+                    };
+
+                //TODO: remove when we have the fields from the index
+                StoreAllFields(FieldStorage.Yes);
             }
         }
 
@@ -495,6 +621,9 @@ select {{
                         Name = g.Key,
                         Sum = g.Sum(x => x.Sum)
                     };
+
+                //TODO: remove when we have the fields from the index
+                StoreAllFields(FieldStorage.Yes);
             }
         }
     }

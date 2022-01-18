@@ -106,6 +106,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             // * For map/reduce - we need to re-run the reduce portion of the index again on the results
                             queryProcessor.ReduceResults();
 
+                            // TODO: send the @orderBy fields
                             // * For order by, we need to merge the results and compute the order again 
                             queryProcessor.OrderResults();
 
@@ -261,7 +262,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                     queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
                 }
 
-                UpdateQueryTemplateForOrderBy(ref queryTemplate);
+                // TODO: send order by from shards to orchestrator
+                AssertQueryParameters();
 
                 // * For collection queries that specify startsWith by id(), we need to send to all shards
                 // * For collection queries without any where clause, we need to send to all shards
@@ -275,112 +277,14 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
             }
 
-            private void UpdateQueryTemplateForOrderBy(ref BlittableJsonReaderObject queryTemplate)
+            private void AssertQueryParameters()
             {
-                if (_query.Metadata.OrderBy == null || _query.Metadata.OrderBy.Length == 0)
-                    return;
-
-                var fieldsToAddToProjection = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var orderByField in _query.Metadata.OrderBy)
+                if (_query.Metadata.Query.Select?.Count > 0 ||
+                    _query.Metadata.Query.SelectFunctionBody.FunctionText != null)
                 {
-                    fieldsToAddToProjection.Add(orderByField.Name);
+                    if (_query.Metadata.IndexName != null && _parent.ShardedContext.IsMapReduceIndex(_query.Metadata.IndexName))
+                        throw new InvalidOperationException($"Cannot apply a projection for a map-reduce index in a sharded environment");
                 }
-
-                if (_query.Metadata.IndexName != null)
-                {
-                    var compiled = _parent.ShardedContext.GetCompiledMapReduceIndex(_query.Metadata.IndexName, _context);
-                    if (compiled != null)
-                    {
-                        foreach (var outputField in compiled.OutputFields)
-                        {
-                            fieldsToAddToProjection.Add(outputField);
-                        }
-                    }
-                }
-
-                if (fieldsToAddToProjection.Count == 0)
-                    return;
-
-                var clone = _query.Metadata.Query.ShallowCopy();
-                if (clone.Select?.Count == 1 &&
-                    clone.Select[0].Expression is MethodExpression me)
-                {
-                    // select output(ALIAS)
-
-                    if (clone.DeclaredFunctions.TryGetValue(me.Name.Value, out var declaredFunction) == false)
-                        throw new InvalidOperationException($"Failed to find the declared function for {me.Name}");
-
-                    var alreadySelected = GetAllIdentifiers(declaredFunction.JavaScript.Body[0].ChildNodes, false, Nodes.Program);
-
-                    var toAdd = string.Empty;
-                    foreach (var fieldName in fieldsToAddToProjection)
-                    {
-                        if (alreadySelected.Contains(fieldName))
-                            continue;
-
-                        toAdd += $",{fieldName}: {clone.From.Alias}.{fieldName}";
-                    }
-
-                    // removing the last 2 `}`
-                    declaredFunction.FunctionText =
-                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.LastIndexOf('}'));
-                    declaredFunction.FunctionText =
-                        declaredFunction.FunctionText.Remove(declaredFunction.FunctionText.LastIndexOf('}'));
-                    declaredFunction.FunctionText += $"{toAdd}}};\r\n}}";
-                }
-                else if (clone.Select?.Count > 0)
-                {
-                    // select Property1, Property2
-                    var alreadySelected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var keyValue in clone.Select)
-                    {
-                        if (keyValue.Expression is FieldExpression fe)
-                        {
-                            alreadySelected.Add(fe.FieldValue);
-                        }
-                    }
-                    var select = new List<(QueryExpression Expression, StringSegment? Alias)>(_query.Metadata.Query.Select);
-                    foreach (var fieldName in fieldsToAddToProjection)
-                    {
-                        if (alreadySelected.Contains(fieldName))
-                            continue;
-
-                        var fieldExpression = new FieldExpression(new List<StringSegment> { new(fieldName) });
-                        select.Add((fieldExpression, null));
-                    }
-
-                    clone.Select = select;
-                }
-                else if (clone.SelectFunctionBody.FunctionText != null)
-                {
-                    // select { Property1: alias.Property1, Property2: alias.Property2 }
-
-                    var toAdd = string.Empty;
-                    foreach (var fieldName in fieldsToAddToProjection)
-                    {
-                        toAdd += $",\r\n    {fieldName}: {clone.From.Alias}.{fieldName}";
-                    }
-
-                    // removing the last `}`
-                    clone.SelectFunctionBody.FunctionText =
-                        clone.SelectFunctionBody.FunctionText.Remove(clone.SelectFunctionBody.FunctionText.LastIndexOf('}'));
-
-                    clone.SelectFunctionBody.FunctionText += $"{toAdd}\r\n}}";
-                    clone.DeclaredFunctions.Clear();
-                }
-                else
-                {
-                    // TODO: what if we have an order by for a field that is only in the index?
-                    // doesn't have a select
-                    return;
-                }
-
-                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
-                {
-                    [nameof(IndexQuery.Query)] = clone.ToString()
-                };
-
-                queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
             }
 
             private static HashSet<string> GetAllIdentifiers(NodeCollection nodeCollection, bool ancestorIsReturnStatement, Nodes currentAncestor)
@@ -523,7 +427,11 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 if (_query.Offset > 0)
                 {
-                    _result.Results = _result.Results.Skip(_query.Offset ?? 0).Take(_query.Limit ?? int.MaxValue).ToList();
+                    _result.Results.RemoveRange(0, _query.Offset ?? 0);
+                    if (_query.Limit != null && _result.Results.Count > _query.Limit )
+                    {
+                        _result.Results.RemoveRange(_query.Limit.Value, _result.Results.Count - _query.Limit.Value);
+                    }
                 }
             }
 
@@ -561,10 +469,25 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 foreach (var order in _query.Metadata.OrderBy)
                 {
-                    var cmp = CompareField(order, x, y);
+                    var cmp = CompareField(order, GetOrderByFields(x), GetOrderByFields(y));
                     if (cmp != 0)
                         return order.Ascending ? cmp : -cmp;
                 }
+
+                BlittableJsonReaderObject GetOrderByFields(BlittableJsonReaderObject original)
+                {
+                    if (_result.IsMapReduce)
+                        return original;
+
+                    if (original.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                        throw new InvalidOperationException($"Missing metadata!");
+
+                    if (metadata.TryGet("@order-by-fields", out BlittableJsonReaderObject orderByFields) == false)
+                        throw new InvalidOperationException($"Missing order by fields");
+
+                    return orderByFields;
+                }
+
                 return 0;
             }
 
@@ -629,8 +552,6 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public void ReduceResults()
             {
-                // TODO: what happens when the projection doesn't include the values?
-
                 if (_query.Metadata.IsDynamic)
                 {
                     if (_query.Metadata.IsGroupBy == false)
@@ -664,7 +585,20 @@ namespace Raven.Server.Documents.ShardedHandlers
                     results.Add(output);
                 }
 
-                var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv => { djv[Constants.Documents.Metadata.Key] = DummyDynamicJsonValue; });
+                if (propertyAccessor == null)
+                {
+                    // TODO: test this
+                    _result.Results.Clear();
+                    return;
+                }
+
+                var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv =>
+                {
+                    // TODO: handle metadata merge
+                    // TODO: score, distance
+
+                    djv[Constants.Documents.Metadata.Key] = DummyDynamicJsonValue;
+                });
 
                 _result.Results = objects.GetOutputsToStore().ToList();
             }
@@ -692,6 +626,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 
                 foreach (var (key, items) in grouping)
                 {
+                    //TODO: handle metadata merge
                     var result = new DynamicJsonValue();
                     for (int i = 0; i < _query.Metadata.GroupBy.Length; i++)
                     {
@@ -715,6 +650,10 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                                 result[fld.Alias ?? fld.Name] = val;
                                 break;
+                            case AggregationOperation.None:
+                                break;
+                            default:
+                                throw new ArgumentException("Not supported " + fld.AggregationOperation);
                         }
                     }
 

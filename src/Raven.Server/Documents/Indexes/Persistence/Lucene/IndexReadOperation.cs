@@ -175,6 +175,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             var qr = CreateQueryResult(r.Document);
                             if (qr.Result == null)
                                 continue;
+
                             yield return qr;
                         }
                         else if (r.List != null)
@@ -185,6 +186,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 var qr = CreateQueryResult(item);
                                 if (qr.Result == null)
                                     continue;
+
                                 yield return qr;
                                 numberOfProjectedResults++;
                             }
@@ -234,6 +236,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                             explanationOptions = query.Metadata.Explanation.GetOptions(documentsContext, query.QueryParameters);
 
                                         explanation = GetQueryExplanations(explanationOptions, luceneQuery, _searcher, scoreDoc, d, document);
+                                    }
+                                }
+
+                                if (query.Metadata.OrderBy?.Length > 0 && _indexType != IndexType.MapReduce && _indexType != IndexType.JavaScriptMapReduce)
+                                {
+                                    // a map-reduce index is going to send the order by fields anyway
+                                    foreach (var field in query.Metadata.OrderBy)
+                                    {
+                                        //TODO: make it work without index storing the fields
+                                        var fieldValue = document.GetField(field.Name.Value).StringValue(_state);
+                                        d.AddOrderByField(field.Name.Value, fieldValue);
                                     }
                                 }
 
