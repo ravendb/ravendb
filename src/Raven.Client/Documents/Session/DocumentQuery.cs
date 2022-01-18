@@ -732,7 +732,7 @@ namespace Raven.Client.Documents.Session
             WhereRegex(fieldName, pattern);
             return this;
         }
-
+        
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
@@ -1177,6 +1177,7 @@ namespace Raven.Client.Documents.Session
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens),
                 GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
+                FilterTokens =  new LinkedList<QueryToken>(FilterTokens),
                 QueryParameters = new Parameters(QueryParameters),
                 Start = Start,
                 Timeout = Timeout,
@@ -1201,7 +1202,8 @@ namespace Raven.Client.Documents.Session
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+                ScanLimit = ScanLimit
             };
 
             return query;

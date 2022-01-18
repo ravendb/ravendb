@@ -342,5 +342,10 @@ namespace Raven.Client.Documents.Session
 
         string ParameterPrefix { get; set; }
 
+        void TurnOnFilter();
+        void TurnOffFilter();
+
+        void AddScanLimit(int limit);
+
     }
 }
