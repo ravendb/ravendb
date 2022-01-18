@@ -152,7 +152,7 @@ namespace Raven.Server.Documents
 
                         document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         ValidateDocument(id, document, ref documentDebugHash);
-                        CountersStorage.AssertCounters(document, flags);
+                        CountersStorage.AssertCounters(document, flags, _documentDatabase.Name);
                     }
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(

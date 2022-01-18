@@ -1343,7 +1343,7 @@ namespace Raven.Server.Documents
                 Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, document.Data);
                 DocumentPutAction.AssertMetadataWasFiltered(document.Data);
                 AttachmentsStorage.AssertAttachments(document.Data, document.Flags);
-                CountersStorage.AssertCounters(document.Data, document.Flags);
+                CountersStorage.AssertCounters(document.Data, document.Flags, DocumentDatabase.Name);
             }
 #endif
             return document;
