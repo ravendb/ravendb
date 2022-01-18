@@ -62,20 +62,21 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal void UpdatePaging(object state)
+        private void UpdatePaging(object state)
         {
             UpdatePagingInternal(state, out _);
         }
 
-        internal bool UpdatePagingInternal(object state, out string reason)
+        internal bool UpdatePagingInternal(object state, out string reasonOfNotUpdating)
         {
             var outcome = false;
-            reason = "";
+            reasonOfNotUpdating = "";
+
             try
             {
                 if (_pagingQueue.IsEmpty)
                 {
-                    reason += "Queue is empty";
+                    reasonOfNotUpdating += "Queue is empty";
                     return false;
                 }
 
@@ -104,9 +105,7 @@ namespace Raven.Server.NotificationCenter
                             compareExchange ??= GetPagingPerformanceHint(PagingCompareExchangeId, pagingInfo.Type);
                             ((PagingPerformanceDetails)compareExchange.Details).Update(pagingInfo);
                             break;
-
                         default:
-                            reason += "Unknown paging info Type";
                             throw new ArgumentOutOfRangeException();
                     }
                 }
@@ -134,16 +133,14 @@ namespace Raven.Server.NotificationCenter
                     _notificationCenter.Add(compareExchange);
                     outcome = true;
                 }
-
-                if (_notificationCenter.GetPerformanceHintCount() == 0)
-                    outcome = false;
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error in a notification center paging timer", e);
+
                 outcome = false;
-                reason += "Notification center paging timer error.";
+                reasonOfNotUpdating += $"Error in a notification center paging timer. {e}";
             }
                 
             return outcome;
