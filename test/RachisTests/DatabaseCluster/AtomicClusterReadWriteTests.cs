@@ -527,7 +527,7 @@ namespace RachisTests.DatabaseCluster
                 await session.StoreAsync(entity, id);
             
                 var expires = SystemTime.UtcNow.AddMinutes(-5);
-                session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);;
+                session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);
                 await session.SaveChangesAsync();    
             }
 
@@ -544,6 +544,34 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
+        [Fact]
+        public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
+        {
+            using var store = GetDocumentStore();
+            await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration {Disabled = false, DeleteFrequencyInSec = 1}));
+
+            const string id = "testObjs/0";
+            for (int i = 0; i < 5; i++)
+            {
+                await AssertWaitForNullAsync(async () =>
+                {
+                    using var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+                    return await session.LoadAsync<TestObj>(id);
+                });
+                
+                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    var entity = new TestObj();
+                    await session.StoreAsync(entity, id);
+
+                    var expires = SystemTime.UtcNow.AddMinutes(-5);
+                    session.Advanced.GetMetadataFor(entity)[Constants.Documents.Metadata.Expires] = expires.GetDefaultRavenFormat(isUtc: true);
+                
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+        
         private static IDisposable LocalGetDocumentStores(List<RavenServer> nodes, string database, out IDocumentStore[] stores)
         {
             var urls = nodes.Select(n => n.WebUrl).ToArray();
@@ -572,7 +600,8 @@ namespace RachisTests.DatabaseCluster
 
             for (int i = 0; i < urls.Length; i++)
             {
-                var store = new DocumentStore {Urls = new[] {urls[i]}, Database = database, Conventions = new DocumentConventions {DisableTopologyUpdates = true}}.Initialize();
+                var store = new DocumentStore {Urls = new[] {urls[i]}, Database = database, Conventions = new DocumentConventions {DisableTopologyUpdates = true}}
+                    .Initialize();
                 stores[i] = store;
             }
 
