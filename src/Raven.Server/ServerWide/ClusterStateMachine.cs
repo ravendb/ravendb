@@ -2792,6 +2792,12 @@ namespace Raven.Server.ServerWide
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
+            return GetCompareExchangeValue(context, key, items);
+        }
+
+        public static (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, Slice key, Table items)
+            where TTransaction : RavenTransaction
+        {
             if (items.ReadByKey(key, out var reader))
             {
                 var index = ReadCompareExchangeOrTombstoneIndex(reader);
@@ -2991,7 +2997,8 @@ namespace Raven.Server.ServerWide
             return new CompareExchangeKey(storageKey, dbPrefix.Length + 1);
         }
 
-        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue<TTransaction>(TransactionOperationContext<TTransaction> context, TableValueReader reader)
+            where TTransaction : RavenTransaction
         {
             BlittableJsonReaderObject compareExchangeValue = new BlittableJsonReaderObject(reader.Read((int)CompareExchangeTable.Value, out var size), size, context);
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, compareExchangeValue);

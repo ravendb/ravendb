@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -144,22 +145,27 @@ namespace Raven.Server.ServerWide.Commands
 
         public const long InvalidIndexValue = -1;
         
-        public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
+        public bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
-            currentIndex = InvalidIndexValue ;
+            currentIndex = InvalidIndexValue;
+            
+            if (index == InvalidIndexValue)
+                return true;
+            
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
-                if (items.ReadByKey(keySlice, out var reader))
+                BlittableJsonReaderObject value;
+                (currentIndex, value) = ClusterStateMachine.GetCompareExchangeValue(context, keySlice, items);
+                if(currentIndex == InvalidIndexValue)
+                    return index == 0;
+                
+                using (value)
                 {
-                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
-
-                    if (index == InvalidIndexValue )
+                    if (CompareExchangeExpirationStorage.TryGetExpires(value, out var ticks) && ticks < SystemTime.UtcNow.Ticks)
                         return true;
-
-                    return Index == currentIndex;
+                    return currentIndex == index;
                 }
             }
-            return index == 0 || index == InvalidIndexValue;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -219,6 +225,19 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
+        }
+
+        protected bool TryGetExpires(BlittableJsonReaderObject value, out long ticks, Slice keySlice, string storageKey = null)
+        {
+            try
+            {
+                return CompareExchangeExpirationStorage.TryGetExpires(value, out ticks);
+            }
+            catch (Exception e)
+            {
+                (var database, var key) = CompareExchangeKey.SplitStorageKey(storageKey ?? keySlice.ToString());
+                throw new RachisApplyException($"Could not apply command {GetType().Name} - failed to get `Expires` for compare exchange key:{key} database:{database}.", e);
+            }
         }
     }
 
@@ -310,7 +329,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
-            if (CompareExchangeExpirationStorage.HasExpiredMetadata(value, out long ticks, Slices.Empty, ActualKey))
+            if (TryGetExpires(value, out long ticks, Slices.Empty, ActualKey))
                 ExpirationTicks = ticks;
 
             Value = value;
