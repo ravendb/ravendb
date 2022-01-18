@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -33,13 +32,15 @@ namespace Raven.Server.Documents.Sharding
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
 
+        private readonly ConcurrentDictionary<string, IndexDefinition> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly RavenConfiguration _ravenConfiguration;
+
         private ShardExecutor _shardExecutor;
         public ShardExecutor ShardExecutor => _shardExecutor;
         public DatabaseRecord DatabaseRecord => _record;
 
         public int[] FullRange;
 
-        public ShardedContext(ServerStore server, RawDatabaseRecord record)
         private ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
 
         private readonly ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
@@ -56,6 +57,13 @@ namespace Raven.Server.Documents.Sharding
             UpdateMapReduceIndexes(record.Indexes
                 .Where(x => x.Value.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce)
                 .ToDictionary(x => x.Key, x => x.Value));
+
+            _ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
+
+            foreach ((string key, string value) in _record.Settings)
+                _ravenConfiguration.SetSetting(key, value);
+
+            _ravenConfiguration.Initialize();
 
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
@@ -180,26 +188,25 @@ namespace Raven.Server.Documents.Sharding
 
         public void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> mapReduceIndexes)
         {
-            var ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
-
-            foreach ((string key, string value) in _record.Settings)
-                ravenConfiguration.SetSetting(key, value);
-
-            ravenConfiguration.Initialize();
-
+            //TODO: remove the deleted map reduce indexes from cache
             foreach ((string indexName, IndexDefinition definition) in mapReduceIndexes)
             {
                 Debug.Assert(definition.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce);
 
-                var compiled = IndexCompilationCache.GetIndexInstance(definition, ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
-                _cachedMapReduceIndexDefinitions[indexName] = compiled;
+                _cachedMapReduceIndexDefinitions[indexName] = definition;
             }
         }
 
         public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
         {
-            _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var compiled);
-            return compiled;
+            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false 
+                ? null 
+                : IndexCompilationCache.GetIndexInstance(indexDefinition, _ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+        }
+
+        public bool IsMapReduceIndex(string indexName)
+        {
+            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out _);
         }
     }
 }

@@ -1998,6 +1998,28 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(Constants.Documents.Metadata.LastModified);
                 writer.WriteDateTime(document.LastModified, isUtc: true);
             }
+
+            if (document.OrderByFields != null)
+            {
+                writer.WriteComma();
+
+                writer.WritePropertyName("@order-by-fields");
+                writer.WriteStartObject();
+
+                var firstOrderByField = true;
+                foreach (var orderByField in document.OrderByFields)
+                {
+                    if (firstOrderByField == false)
+                        writer.WriteComma();
+
+                    firstOrderByField = false;
+                    writer.WritePropertyName(orderByField.Field);
+                    writer.WriteString(orderByField.Value);
+                }
+
+                writer.WriteEndObject();
+            }
+
             writer.WriteEndObject();
         }
 

@@ -37,6 +37,8 @@ namespace Raven.Server.Documents
         private bool _metadataEnsured;
         private bool _disposed;
 
+        public List<(string Field, string Value)> OrderByFields;
+
         public unsafe ulong DataHash
         {
             get
@@ -93,6 +95,12 @@ namespace Raven.Server.Documents
         {
             _metadataEnsured = false;
             Data.Modifications = null;
+        }
+
+        public void AddOrderByField(string fieldName, string value)
+        {
+            OrderByFields ??= new List<(string Field, string Value)>();
+            OrderByFields.Add((fieldName, value));
         }
 
         public Document Clone(JsonOperationContext context)
