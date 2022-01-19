@@ -1,18 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -298,14 +295,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             token.ThrowIfCancellationRequested();
 
-            var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == routeType && (Server._forTestingPurposes == null || Server._forTestingPurposes.DebugPackage.RoutesToSkip.Contains(x.Path) == false));
-            
-            if (Server.Certificate.Certificate != null)
-            {
-                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                Debug.Assert(feature != null);
-                routes = routes.Where(route => Server.Router.CanAccessRoute(route, HttpContext, databaseName, feature, out _));
-            }
+            var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
 
             foreach (var route in routes)
             {

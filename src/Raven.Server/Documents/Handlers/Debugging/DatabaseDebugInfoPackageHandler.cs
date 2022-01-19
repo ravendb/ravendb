@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
@@ -33,13 +31,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             { "database",new Microsoft.Extensions.Primitives.StringValues(Database.Name) }
                         };
 
-                        var routes = DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases);
-                        if (Server.Certificate.Certificate != null)
-                        {
-                            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                            Debug.Assert(feature != null);
-                            routes = routes.Where(route => Server.Router.CanAccessRoute(route, HttpContext, Database.Name, feature, out _));
-                        }
+                        var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, Database.Name)
+                            .Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases);
 
                         foreach (var route in routes)
                         {
