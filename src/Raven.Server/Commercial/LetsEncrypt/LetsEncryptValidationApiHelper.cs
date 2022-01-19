@@ -66,64 +66,6 @@ public class LetsEncryptValidationApiHelper
         }
     }
 
-    internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
-    {
-        var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
-        var localIps = new List<IPEndPoint>();
-
-        foreach (var hostnameOrIp in localNode.Addresses)
-        {
-            if (hostnameOrIp.Equals("0.0.0.0"))
-            {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
-                continue;
-            }
-
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
-            {
-                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
-            }
-        }
-
-        var serverCert = setupInfo.GetX509Certificate();
-
-        var localServerUrl =
-            LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
-
-        try
-        {
-            if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
-            {
-                var currentIps = serverStore.Server.ListenEndpoints.Addresses.ToList();
-
-                if (localIps.Count == 0 && currentIps.Count == 1 &&
-                    (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
-                    return; // listen to any ip in this
-
-                if (localIps.All(ip => currentIps.Contains(ip.Address)))
-                    return; // we already listen to all these IPs, no need to check
-            }
-
-            if (setupMode == SetupMode.LetsEncrypt)
-            {
-                // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
-                var ips = localNode.ExternalIpAddress == null
-                    ? localIps.ToArray()
-                    : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort)};
-
-                await RavenDnsRecordHelper.AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
-            }
-
-            // Here we send the actual ips we will bind to in the local machine.
-            await ServerSimulationHelper.SimulateRunningServer(serverStore, serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port,
-                serverStore.Configuration.ConfigPath, setupMode, token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
-        }
-    }
-
     internal static async Task ValidateServerCanRunOnThisNode(BlittableJsonReaderObject settingsJsonObject, X509Certificate2 cert, ServerStore serverStore,
         string nodeTag, CancellationToken token)
     {
@@ -176,7 +118,7 @@ public class LetsEncryptValidationApiHelper
             }
 
             // Here we send the actual ips we will bind to in the local machine.
-            await ServerSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode,
+            await LetsEncryptSimulationHelper.SimulateRunningServer(serverStore, cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode,
                 token);
         }
         catch (Exception e)
@@ -199,7 +141,7 @@ public class LetsEncryptValidationApiHelper
         {
             case SetupMode.LetsEncrypt when setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false:
                 throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'.");
-            case SetupMode.LetsEncrypt when IsValidEmail(setupInfo.Email) == false:
+            case SetupMode.LetsEncrypt when ZipFileHelper.IsValidEmail(setupInfo.Email) == false:
                 throw new ArgumentException("Invalid email address.");
             case SetupMode.LetsEncrypt when IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false:
                 throw new ArgumentException("Invalid domain name.");
@@ -230,20 +172,6 @@ public class LetsEncryptValidationApiHelper
         await AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
     }
 
-    public static bool IsValidEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-        try
-        {
-            var address = new System.Net.Mail.MailAddress(email);
-            return address.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 
     private static bool IsValidDomain(string domain)
     {

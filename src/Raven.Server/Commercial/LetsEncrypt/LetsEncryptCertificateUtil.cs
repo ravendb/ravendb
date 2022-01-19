@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1;
@@ -11,10 +10,6 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Server.Platform.Posix;
 
@@ -77,7 +72,7 @@ public class LetsEncryptCertificateUtil
             return url;
         }
 
-    private static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
+    public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
     {
         // If we have alternative names, find the appropriate url using the node tag
         var sanNames = cert.Extensions["2.5.29.17"];
@@ -93,7 +88,7 @@ public class LetsEncryptCertificateUtil
         }
     }
     
-    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition) GenerateCertificate(LetsEncryptUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
+    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition) GenerateCertificate(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
         if (certificateHolder == null)
             throw new InvalidOperationException(
@@ -180,22 +175,5 @@ public class LetsEncryptCertificateUtil
             }
         }
     
-    internal static async Task DeleteAllExistingCertificates(ServerStore serverStore)
-    {
-        // If a user repeats the setup process, there might be certificate leftovers in the cluster
 
-        List<string> existingCertificateKeys;
-        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            existingCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context).ToList();
-        }
-
-        if (existingCertificateKeys.Count == 0)
-            return;
-
-        var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand(RaftIdGenerator.NewId()) {Names = existingCertificateKeys});
-
-        await serverStore.Cluster.WaitForIndexNotification(res.Index);
-    }
 }

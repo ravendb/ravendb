@@ -2,17 +2,11 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
+using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Pkcs;
@@ -23,13 +17,11 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.Documents.Indexes.Static.Extensions;
-using Raven.Server.Https;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Threading;
@@ -38,44 +30,8 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class LetsEncryptApiHelper
+public static class ZipFileHelper
 {
-    
-    internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-
-    internal class UniqueResponseResponder : IStartup
-    {
-        private readonly string _response;
-
-        public UniqueResponseResponder(string response)
-        {
-            _response = response;
-        }
-
-        public IServiceProvider ConfigureServices(IServiceCollection services)
-        {
-            return services.BuildServiceProvider();
-        }
-
-        public void Configure(IApplicationBuilder app)
-        {
-            app.Run(async context =>
-            {
-                await context.Response.WriteAsync(_response);
-            });
-        }
-    }
-    
-    public class CompleteAuthorizationAndGetCertificateParameters
-    {
-        public Action OnValidationSuccessful;
-        public SetupInfo SetupInfo;
-        public LetsEncryptClient Client;
-        public (string Challange, LetsEncryptClient.CachedCertificateResult Cache) ChallengeResult;
-        public ServerStore ServerStore;
-        public CancellationToken Token;
-    }
-
     public class CompleteClusterConfigurationParameters
     {
         public SetupProgressAndResult Progress;
@@ -94,86 +50,6 @@ public class LetsEncryptApiHelper
         public bool CertificateValidationKeyUsages;
         public LicenseType LicenseType;
         public CancellationToken Token = CancellationToken.None;
-    }
-
-    public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
-    {
-        if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
-        {
-            return BuildNewPfx(parameters.SetupInfo, parameters.ChallengeResult.Cache.Certificate, parameters.ChallengeResult.Cache.PrivateKey);
-        }
-
-        try
-        {
-            await parameters.Client.CompleteChallenges(parameters.Token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
-        }
-
-        if (parameters.OnValidationSuccessful == null)
-        {
-            Console.WriteLine("Let's encrypt validation successful, acquiring certificate now...");
-        }
-        else
-        {
-            parameters.OnValidationSuccessful();
-        }
-
-        (X509Certificate2 Cert, RSA PrivateKey) result;
-        try
-        {
-            var existingPrivateKey = parameters.ServerStore?.Server.Certificate?.Certificate?.GetRSAPrivateKey();
-            result = await parameters.Client.GetCertificate(existingPrivateKey, parameters.Token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
-        }
-
-        try
-        {
-            return BuildNewPfx(parameters.SetupInfo, result.Cert, result.PrivateKey);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
-        }
-    }
-
-    private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
-    {
-        var certWithKey = certificate.CopyWithPrivateKey(privateKey);
-
-        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-
-        var chain = new X509Chain();
-        chain.ChainPolicy.DisableCertificateDownloads = true;
-
-        chain.Build(certificate);
-
-        foreach (var item in chain.ChainElements)
-        {
-            var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
-
-            if (item.Certificate.Thumbprint == certificate.Thumbprint)
-            {
-                var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.PrivateKey).Private);
-                store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
-                continue;
-            }
-
-            store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
-        }
-
-        var memoryStream = new MemoryStream();
-        store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
-        var certBytes = memoryStream.ToArray();
-
-        setupInfo.Certificate = Convert.ToBase64String(certBytes);
-
-        return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
     }
 
     public static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(CompleteClusterConfigurationParameters parameters)
@@ -199,7 +75,7 @@ public class LetsEncryptApiHelper
                     X509Certificate2 serverCert;
                     string domainFromCert;
                     string publicServerUrl;
-                    LetsEncryptUtils.CertificateHolder serverCertificateHolder;
+                    CertificateUtils.CertificateHolder serverCertificateHolder;
 
                     try
                     {
@@ -229,7 +105,8 @@ public class LetsEncryptApiHelper
                             parameters.OnProgress?.Invoke(parameters.Progress);
 
 
-                            parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key,
+                            parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert,
+                                parameters.SetupInfo, node.Key,
                                 node.Value.Port,
                                 node.Value.TcpPort, out _, out _);
 
@@ -405,7 +282,7 @@ public class LetsEncryptApiHelper
                                 string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
                         }
 
-                        var httpUrl = GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key, node.Value.Port,
+                        var httpUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key, node.Value.Port,
                             node.Value.TcpPort, out var tcpUrl, out var _);
 
                         if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
@@ -550,7 +427,7 @@ public class LetsEncryptApiHelper
             throw new InvalidOperationException("Failed to create setting file(s).", e);
         }
     }
-
+    
     public static string IndentJsonString(string json)
     {
         using (var stringReader = new StringReader(json))
@@ -679,6 +556,107 @@ public class LetsEncryptApiHelper
         }
 
         return str;
+    }
+    
+    public class CompleteAuthorizationAndGetCertificateParameters
+    {
+        public Action OnValidationSuccessful;
+        //public SetupProgressAndResult Progress;
+        public SetupInfo SetupInfo;
+        public LetsEncryptClient Client;
+        public (string Challange, LetsEncryptClient.CachedCertificateResult Cache) ChallengeResult;
+        //public ServerStore ServerStore;
+        public CancellationToken Token;
+        public RSA ExistingPrivateKey;
+    }
+    
+    public static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+        try
+        {
+            var address = new MailAddress(email);
+            return address.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    
+    private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
+    {
+        var certWithKey = certificate.CopyWithPrivateKey(privateKey);
+
+        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+
+        var chain = new X509Chain();
+        chain.ChainPolicy.DisableCertificateDownloads = true;
+
+        chain.Build(certificate);
+
+        foreach (var item in chain.ChainElements)
+        {
+            var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
+
+            if (item.Certificate.Thumbprint == certificate.Thumbprint)
+            {
+                var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.PrivateKey).Private);
+                store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
+                continue;
+            }
+
+            store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
+        }
+
+        var memoryStream = new MemoryStream();
+        store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
+        var certBytes = memoryStream.ToArray();
+
+        setupInfo.Certificate = Convert.ToBase64String(certBytes);
+
+        return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+    }
+
+    public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
+    {
+        if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
+        {
+            return BuildNewPfx(parameters.SetupInfo, parameters.ChallengeResult.Cache.Certificate, parameters.ChallengeResult.Cache.PrivateKey);
+        }
+
+        try
+        {
+            await parameters.Client.CompleteChallenges(parameters.Token);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
+        }
+
+        parameters.OnValidationSuccessful();
+        //parameters.Progress.AddInfo("Let's encrypt validation successful, acquiring certificate now...");
+
+        (X509Certificate2 Cert, RSA PrivateKey) result;
+        try
+        {
+            //var existingPrivateKey = parameters.ServerStore?.Server.Certificate?.Certificate?.GetRSAPrivateKey();
+            result = await parameters.Client.GetCertificate(parameters.ExistingPrivateKey, parameters.Token);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
+        }
+
+        try
+        {
+            return BuildNewPfx(parameters.SetupInfo, result.Cert, result.PrivateKey);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
+        }
     }
     
     public static string IpAddressToUrl(string address, int port)

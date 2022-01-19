@@ -9,13 +9,14 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
+using Sparrow.Logging;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class RavenDnsRecordHelper
 {
         private const string GoogleDnsApi = "https://dns.google.com";
-    
+
         public class UpdateDnsRecordParameters
         {
             public Action<IOperationProgress> OnProgress;
@@ -51,29 +52,14 @@ public class RavenDnsRecordHelper
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
 
-                if (parameters.Progress != null)
-                {
-                    parameters.Progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
-                }
-                else
-                {
-                    Console.WriteLine($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
-                }
+                parameters.Progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
 
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
                 if (registrationInfo.SubDomains.Count == 0 && registrationInfo.Challenge == null)
                 {
                     // no need to update anything, can skip doing DNS update
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Cached DNS values matched, skipping DNS update");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Cached DNS values matched, skipping DNS update.");
-                    }
-
+                    parameters.Progress.AddInfo("Cached DNS values matched, skipping DNS update");
                     return;
                 }
 
@@ -81,24 +67,14 @@ public class RavenDnsRecordHelper
                 HttpResponseMessage response;
                 try
                 {
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
-                        parameters.Progress.AddInfo("Please wait between 30 seconds and a few minutes.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
-                    }
+                    parameters.Progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
+                    parameters.Progress.AddInfo("Please wait between 30 seconds and a few minutes.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
 
                     response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), parameters.Token).ConfigureAwait(false);
 
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Waiting for DNS records to update...");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Waiting for DNS records to update...");
-                    }
+                    parameters.Progress.AddInfo("Waiting for DNS records to update...");
                 }
                 catch (Exception e)
                 {
@@ -121,17 +97,7 @@ public class RavenDnsRecordHelper
                     if (existingSubDomain != null &&
                         new HashSet<string>(existingSubDomain.Ips).SetEquals(parameters.SetupInfo.NodeSetupInfos[parameters.SetupInfo.LocalNodeTag].Addresses))
                     {
-                        if (parameters.Progress != null)
-                        {
-                            parameters.Progress.AddInfo("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag +
-                                                        ") DNS record didn't change, not waiting for full DNS propagation.");
-                        }
-                        else
-                        {
-                            Console.WriteLine("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag +
-                                              ") DNS record didn't change, not waiting for full DNS propagation.");
-                        }
-
+                        parameters.Progress.AddInfo("DNS update started successfully, since current node (" + parameters.SetupInfo.LocalNodeTag + ") DNS record didn't change, not waiting for full DNS propagation.");
                         return;
                     }
                 }
@@ -165,47 +131,24 @@ public class RavenDnsRecordHelper
                         }
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
-                        if (parameters.Progress != null)
-                        {
-                            if (i % 120 == 0)
-                                parameters.Progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
-                            else if (i % 45 == 0)
-                                parameters.Progress.AddInfo("If everything goes all right, we should be nearly there...");
-                            else if (i % 30 == 0)
-                                parameters.Progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
-                            else if (i % 15 == 0)
-                                parameters.Progress.AddInfo("Please be patient, updating DNS records takes time...");
-                            else if (i % 5 == 0)
-                                parameters.Progress.AddInfo("Waiting...");
+                        if (i % 120 == 0)
+                            parameters.Progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
+                        else if (i % 45 == 0)
+                            parameters.Progress.AddInfo("If everything goes all right, we should be nearly there...");
+                        else if (i % 30 == 0)
+                            parameters.Progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
+                        else if (i % 15 == 0)
+                            parameters.Progress.AddInfo("Please be patient, updating DNS records takes time...");
+                        else if (i % 5 == 0)
+                            parameters.Progress.AddInfo("Waiting...");
 
-                            parameters.OnProgress?.Invoke(parameters.Progress);
-                        }
-                        else
-                        {
-                            if (i % 120 == 0)
-                                Console.WriteLine("This is taking too long, you might want to abort and restart if this goes on like this...");
-                            else if (i % 45 == 0)
-                                Console.WriteLine("If everything goes all right, we should be nearly there...");
-                            else if (i % 30 == 0)
-                                Console.WriteLine("The DNS update is still pending, carry on just a little bit longer...");
-                            else if (i % 15 == 0)
-                                Console.WriteLine("Please be patient, updating DNS records takes time...");
-                            else if (i % 5 == 0)
-                                Console.WriteLine("Waiting...");
-                        }
+                        parameters.OnProgress?.Invoke(parameters.Progress);
 
                         i++;
                     } while (registrationResult?.Status == "PENDING");
 
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.AddInfo("Got successful response from api.ravendb.net.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Got successful response from api.ravendb.net.");
-                    }
+                    parameters.Progress.AddInfo("Got successful response from api.ravendb.net.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
                 }
                 catch (Exception e)
                 {
@@ -296,8 +239,8 @@ public class RavenDnsRecordHelper
 
             return expectedIps.SetEquals(actualIps);
         }
-        
-        private static async Task UpdateDnsRecordsForCertificateRefreshTask(string challenge, SetupInfo setupInfo, CancellationToken token)
+
+        public static async Task UpdateDnsRecordsForCertificateRefreshTask(string challenge, SetupInfo setupInfo, Logger logger, CancellationToken token)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
@@ -319,11 +262,11 @@ public class RavenDnsRecordHelper
 
                 var serializeObject = JsonConvert.SerializeObject(registrationInfo);
 
-                if (LetsEncryptApiHelper.Logger.IsOperationsEnabled)
-                    LetsEncryptApiHelper.Logger.Operations($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
-                                                          $"License Name: {registrationInfo.License.Name}, " +
-                                                          $"Domain: {registrationInfo.Domain}, " +
-                                                          $"RootDomain: {registrationInfo.RootDomain}");
+                if (logger.IsOperationsEnabled)
+                    logger.Operations($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
+                                      $"License Name: {registrationInfo.License.Name}, " +
+                                      $"Domain: {registrationInfo.Domain}, " +
+                                      $"RootDomain: {registrationInfo.RootDomain}");
 
                 HttpResponseMessage response;
                 try

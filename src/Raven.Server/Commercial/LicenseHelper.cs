@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -254,8 +255,8 @@ namespace Raven.Server.Commercial
 
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
-                LetsEncryptUtils.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = ZipFileHelper.IndentJsonString(modifiedJsonObj.ToString());
+                ZipFileHelper.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
 
                 return true;
             }

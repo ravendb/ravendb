@@ -143,7 +143,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            Certificate = LoadCertificateAtStartup() ?? new LetsEncryptUtils.CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? new CertificateUtils.CertificateHolder();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -977,11 +977,11 @@ namespace Raven.Server
             return true;
         }
 
-        private async Task DoActualCertificateRefresh(LetsEncryptUtils.CertificateHolder currentCertificate, string raftRequestId, bool forceRenew = false)
+        private async Task DoActualCertificateRefresh(CertificateUtils.CertificateHolder currentCertificate, string raftRequestId, bool forceRenew = false)
         {
             try
             {
-                LetsEncryptUtils.CertificateHolder newCertificate;
+                CertificateUtils.CertificateHolder newCertificate;
                 var msg = "Tried to load certificate as part of refresh check, and got a null back, but got a valid certificate on startup!";
                 try
                 {
@@ -1068,7 +1068,7 @@ namespace Raven.Server
             }
         }
 
-        protected async Task<byte[]> RefreshViaLetsEncrypt(LetsEncryptUtils.CertificateHolder currentCertificate, bool forceRenew)
+        protected async Task<byte[]> RefreshViaLetsEncrypt(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             byte[] newCertBytes;
             if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
@@ -1153,7 +1153,7 @@ namespace Raven.Server
             return newCertBytes;
         }
 
-        public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(LetsEncryptUtils.CertificateHolder currentCertificate, bool forceRenew)
+        public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateUtils.CertificateHolder currentCertificate, bool forceRenew)
         {
             // we want to setup all the renewals for Saturdays, 30 days before expiration. This is done to reduce the amount of cert renewals that are counted against our renewals
             // but if we have less than 20 days or user asked to force-renew, we'll try anyway.
@@ -1256,7 +1256,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task<byte[]> RenewLetsEncryptCertificate(LetsEncryptUtils.CertificateHolder existing)
+        private async Task<byte[]> RenewLetsEncryptCertificate(CertificateUtils.CertificateHolder existing)
         {
             var license = ServerStore.LoadLicense();
 
@@ -1381,7 +1381,7 @@ namespace Raven.Server
             return Configuration.Core.ServerUrls[0];
         }
 
-        private LetsEncryptUtils.CertificateHolder LoadCertificateAtStartup()
+        private CertificateUtils.CertificateHolder LoadCertificateAtStartup()
         {
             try
             {
@@ -1400,7 +1400,7 @@ namespace Raven.Server
             }
         }
 
-        private LetsEncryptUtils.CertificateHolder LoadCertificate()
+        private CertificateUtils.CertificateHolder LoadCertificate()
         {
             try
             {
@@ -1703,7 +1703,7 @@ namespace Raven.Server
 
         public string WebUrl { get; private set; }
 
-        internal LetsEncryptUtils.CertificateHolder Certificate;
+        internal CertificateUtils.CertificateHolder Certificate;
         
         public class TcpListenerStatus
         {
