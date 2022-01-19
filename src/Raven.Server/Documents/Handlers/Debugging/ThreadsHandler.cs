@@ -138,45 +138,43 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (PlatformDetails.RunningOnPosix == false)
                     startup.LoadUserProfile = false;
 
-                var process = new Process
+                using (var process = new Process { StartInfo = startup, EnableRaisingEvents = true })
                 {
-                    StartInfo = startup,
-                    EnableRaisingEvents = true
-                };
+                    sb.Clear();
+                    process.OutputDataReceived += (sender, args) => sw.Write(args.Data);
+                    process.ErrorDataReceived += (sender, args) => sb.Append(args.Data);
 
-                sb.Clear();
-                process.OutputDataReceived += (sender, args) => sw.Write(args.Data);
-                process.ErrorDataReceived += (sender, args) => sb.Append(args.Data);
+                    process.Start();
 
-                process.Start();
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
 
-                process.BeginErrorReadLine();
-                process.BeginOutputReadLine();
-
-                if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
-                {
-                    // enable this process to attach to us
-                    Syscall.prctl(Syscall.PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
-
-                    process.StandardInput.WriteLine("go");// value is meaningless, just need a new line
-                    process.StandardInput.Flush();
-                }
-
-                try
-                {
-                    process.WaitForExit();
-                }
-                finally
-                {
                     if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
                     {
-                        // disable attachments 
-                        Syscall.prctl(Syscall.PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                        // enable this process to attach to us
+                        Syscall.prctl(Syscall.PR_SET_PTRACER, new UIntPtr((uint)process.Id), UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+
+                        process.StandardInput.WriteLine("go"); // value is meaningless, just need a new line
+                        process.StandardInput.Flush();
                     }
+
+                    try
+                    {
+                        process.WaitForExit();
+                    }
+                    finally
+                    {
+                        if (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false)
+                        {
+                            // disable attachments 
+                            Syscall.prctl(Syscall.PR_SET_PTRACER, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero, UIntPtr.Zero);
+                        }
+                    }
+
+                    if (process.ExitCode != 0)
+                        throw new InvalidOperationException("Could not read stack traces, " +
+                                                            $"exit code: {process.ExitCode}, error: {sb}");
                 }
-                if (process.ExitCode != 0)
-                    throw new InvalidOperationException("Could not read stack traces, " +
-                                                        $"exit code: {process.ExitCode}, error: {sb}");
             }
         }
     }
