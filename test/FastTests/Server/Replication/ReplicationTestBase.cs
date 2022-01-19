@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -187,6 +188,31 @@ namespace FastTests.Server.Replication
 
             return null;
         }
+
+        protected T WaitForDocumentWithSpecificAttachmentInfoToReplicate<T>(IDocumentStore store, string id, string attachmentName, Func<AttachmentDetails, bool> checkAttachment, int timeout)
+            where T : class
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenSession(store.Database))
+                {
+                    var doc = session.Load<T>(id);
+                    if (doc != null)
+                    {
+                        var attachment = session.Advanced.Attachments.Get(id, attachmentName);
+                        if (attachment != null && checkAttachment(attachment.Details))
+                        {
+                            return doc;
+                        }
+                    }
+                }
+                Thread.Sleep(100);
+            }
+
+            return null;
+        }
+
         public class SetupResult : IDisposable
         {
             public IReadOnlyList<ServerNode> Nodes;

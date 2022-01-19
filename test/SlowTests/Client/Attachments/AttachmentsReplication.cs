@@ -1570,7 +1570,7 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(new User { Name = "EGR" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    await using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
                     }
@@ -1581,7 +1581,7 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    await using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
@@ -1645,11 +1645,11 @@ namespace SlowTests.Client.Attachments
                 Assert.True(await WaitForValueAsync(() => replicationConnection1.IsConnectionDisposed, true));
                 Assert.True(await WaitForValueAsync(() => replicationConnection2.IsConnectionDisposed, true));
 
-                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                await using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
                 {
                     await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
                 }
-                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 5 }))
+                await using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 5 }))
                 {
                     await store2.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
                 }
@@ -1666,9 +1666,18 @@ namespace SlowTests.Client.Attachments
                 await db1.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
                 await db2.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
 
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithSpecificAttachmentInfoToReplicate<User>(store1, "users/1", "a1", checkAttachment, Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithSpecificAttachmentInfoToReplicate<User>(store2, "users/1", "a1", checkAttachment, Debugger.IsAttached ? 60000 : 15000);
+
+                bool checkAttachment(AttachmentDetails att)
+                {
+                    if (att.Hash == "XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=" && att.ContentType == "a1/jpeg")
+                        return true;
+                    return false;
+                }
+
                 WaitForMarker(store1, store2);
+                
                 using (var session = store1.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
