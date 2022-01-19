@@ -23,6 +23,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -344,7 +345,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var kvp in _legacyDictionary)
                     {
-                        using (var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv))                        
+                        using (var values = ToCounterGroup(context, kvp.Key, kvp.Value, out var cv))
                         using (var cvLsv = context.GetLazyString(cv))
                         using (var keyLsv = context.GetLazyString(kvp.Key))
                         {
@@ -439,8 +440,13 @@ namespace Raven.Server.Documents.Handlers
 
                     try
                     {
-                        doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
-                            throwOnConflict: true);
+                        _database.DocumentsStorage.ValidateDocumentIdAndTransaction(context, counterGroupDetail.DocumentId);
+
+                        using (DocumentIdWorker.GetSliceFromId(context, counterGroupDetail.DocumentId, out Slice lowerId))
+                        {
+                            doc = _database.DocumentsStorage.Get(context, lowerId, throwOnConflict: true, skipValidationInDebug: true);
+                        }
+
                         if (doc == null)
                         {
                             ThrowMissingDocument(counterGroupDetail.DocumentId);
@@ -740,8 +746,8 @@ namespace Raven.Server.Documents.Handlers
                         if (capValueOnOverflow == false)
                             CounterOverflowException.ThrowFor(docId, counterName, e);
 
-                        value = value + val > 0 ? 
-                            long.MinValue : 
+                        value = value + val > 0 ?
+                            long.MinValue :
                             long.MaxValue;
                     }
 
