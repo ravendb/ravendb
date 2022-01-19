@@ -6,7 +6,7 @@ using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException.ConflictType;
+using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException.ViolationOnType;
 
 namespace SlowTests.Issues
 {
@@ -93,12 +93,12 @@ namespace SlowTests.Issues
                     Assert.NotNull(ex.ConcurrencyViolations);
                     Assert.Equal(2, ex.ConcurrencyViolations.Length);
 
-                    Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[0].Type);
+                    Assert.Equal(ClusterTransactionConcurrencyException.ViolationOnType.Document, ex.ConcurrencyViolations[0].Type);
                     Assert.Equal("rvn-atomic/objects/1", ex.ConcurrencyViolations[0].Id);
                     Assert.True(ex.ConcurrencyViolations[0].Expected > 0);
                     Assert.True(ex.ConcurrencyViolations[0].Actual > 0);
 
-                    Assert.Equal(ClusterTransactionConcurrencyException.ConflictType.Document, ex.ConcurrencyViolations[1].Type);
+                    Assert.Equal(ClusterTransactionConcurrencyException.ViolationOnType.Document, ex.ConcurrencyViolations[1].Type);
                     Assert.Equal("rvn-atomic/objects/2", ex.ConcurrencyViolations[1].Id);
                     Assert.True(ex.ConcurrencyViolations[1].Expected > 0);
                     Assert.True(ex.ConcurrencyViolations[1].Actual > 0);
