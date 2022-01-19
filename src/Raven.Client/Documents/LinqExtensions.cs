@@ -113,7 +113,24 @@ namespace Raven.Client.Documents
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate));
             return (IRavenQueryable<T>)queryable;
         }
+
+        /// <summary>
+        /// <inheritdoc cref="Filter{T}"/>
+        /// </summary>
+        public static IRavenQueryable<T> Filter<T>(
+            this IQueryable<T> source,
+            Expression<Func<T, bool>> predicate)
         
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate));
+            return (IRavenQueryable<T>)queryable;
+        }
+
         /// <summary>
         /// Includes the specified documents and/or counters in the query
         /// </summary>

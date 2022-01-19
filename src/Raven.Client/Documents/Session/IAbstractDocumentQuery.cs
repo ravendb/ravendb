@@ -19,6 +19,8 @@ namespace Raven.Client.Documents.Session
     {
         string IndexName { get; }
 
+        bool IsFilterActive { get; }
+        
         string CollectionName { get; }
 
         /// <summary>

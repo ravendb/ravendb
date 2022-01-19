@@ -10,7 +10,11 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> SelectSum(GroupByField field, params GroupByField[] fields);
 
         IDocumentQuery<T> SelectCount(string projectedName = null);
-        
+
+        /// <summary>
+        ///  Filter allows to query on raw document or index without building an index.
+        ///  This performs a full-table scan which can be very slow so please use it wisely.
+        /// </summary>
         IGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder);
     }
 
