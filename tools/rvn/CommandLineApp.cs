@@ -1,9 +1,11 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
 using Raven.Server.Commercial;
+using Raven.Server.Commercial.LetsEncrypt;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace rvn
@@ -18,6 +20,10 @@ namespace rvn
 
         private static CommandLineApplication _app;
 
+        private const string LetsEncryptMode = "lets-encrypt";
+        
+        private const string ImportCertificateMode = "import-certificate";
+        
         public static int Run(string[] args)
         {
             if (args == null)
@@ -57,32 +63,76 @@ namespace rvn
 
         private static void ConfigureSetupPackage()
         {
+          
+            
             _app.Command("create-setup-package", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
+                cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given --mode and --setup-params.json";
                 cmd.HelpOption(HelpOptionString);
-                var setupParameters = ConfigureSetupParameters(cmd);
-                var packageOutputFile = ConfigurePackageOutputFile(cmd);
+                
+                var mode = ConfigureModeOption(cmd).Value();
+                var setupParam = ConfigureSetupParameters(cmd).Value();
+                var packageOutParam = ConfigurePackageOutputFile(cmd).Value();
 
-                cmd.OnExecuteAsync(async token =>
-                {
-                    if (File.Exists(setupParameters?.Value()) == false)
-                        return ExitWithError("Path to setup params has not found", cmd);
-
-                    using (StreamReader file = File.OpenText(setupParameters?.Value() ?? string.Empty))
+             
+                    cmd.OnExecuteAsync(async token =>
                     {
-                        JsonSerializer serializer = new();
-                        var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                        var settingsPath = setupParameters?.Values[0];
-                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
-                        var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
-                        await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
-                    }
-                    return 0;
-                });
+                        
+                        if ( setupParam is null)
+                            ExitWithError("--setup-params options must be set",cmd);
+
+                        switch (mode)
+                        {
+                            case LetsEncryptMode:
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParam, packageOutParam, cmd, LetsEncryptMode,token);
+                            case ImportCertificateMode:
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParam, packageOutParam, cmd, ImportCertificateMode,token);
+                            default:
+                                ExitWithError("--mode and --setup-params options must be set",cmd);
+                                break;
+                        }
+                       
+                        return 0;
+
+                    });
             });
         }
+        
+        private static async Task<int> SetupPackageConfiguratorLetsEncrypt(string setupParam, string packageOutParam, CommandLineApplication cmd,string mode, CancellationToken token)
+        {
+            var zipFile = Array.Empty<byte>();
+            if (File.Exists(setupParam) == false)
+                ExitWithError("Path to setup params has not found", cmd);
 
+            using (StreamReader file = File.OpenText(setupParam ?? string.Empty))
+            {
+                SetupProgressAndResult setupProgressAndResult = new();
+                JsonSerializer serializer = new();
+                
+                var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                
+                if (packageOutParam == null)
+                {
+                    packageOutParam = setupInfo?.Domain + "-package.zip";
+                }
+                else
+                {
+                    packageOutParam += "-package.zip";
+                }
+
+                if (mode is LetsEncryptMode)
+                    zipFile = await LetsEncryptByTools.SetupLetsEncryptByRvn(setupInfo, setupParam, setupProgressAndResult, token);
+                else
+                    zipFile = await LetsEncryptByTools.SetupOwnCertByRvn(setupInfo, setupParam, setupProgressAndResult, token);
+
+                var path = Path.Combine(AppContext.BaseDirectory, packageOutParam);
+                await File.WriteAllBytesAsync(path, zipFile, token);
+                
+                setupProgressAndResult.AddInfo($"ZIP file was successfully added to this location: {path}");
+            }
+
+            return 0;
+        }
         private static void ConfigureLogsCommand()
         {
             _app.Command("logstream", cmd =>
@@ -377,7 +427,12 @@ namespace rvn
             cmd.ShowHelp();
             return 1;
         }
-
+        
+        private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("--mode", "Option to choose setup from either lets encrypt or importing certificate", CommandOptionType.SingleValue);
+        }
+        
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
             return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);

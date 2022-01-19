@@ -27,6 +27,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
+using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -1725,8 +1726,8 @@ namespace Raven.Server.Commercial
 
                     var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                    var indentedJson = LetsEncryptUtils.IndentJsonString(modifiedJsonObj.ToString());
-                    LetsEncryptUtils.WriteSettingsJsonLocally(settingsPath, indentedJson);
+                    var indentedJson = ZipFileHelper.IndentJsonString(modifiedJsonObj.ToString());
+                    ZipFileHelper.WriteSettingsJsonLocally(settingsPath, indentedJson);
                 }
                 _eulaAcceptedButHasPendingRestart = true;
             }

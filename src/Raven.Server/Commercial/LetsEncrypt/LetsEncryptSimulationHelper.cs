@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
@@ -12,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
 using Sparrow.Logging;
@@ -19,10 +19,33 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class ServerSimulationHelper
+public class LetsEncryptSimulationHelper
 {
+        internal static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
 
-    public static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
+    internal class UniqueResponseResponder : IStartup
+    {
+        private readonly string _response;
+
+        public UniqueResponseResponder(string response)
+        {
+            _response = response;
+        }
+
+        public IServiceProvider ConfigureServices(IServiceCollection services)
+        {
+            return services.BuildServiceProvider();
+        }
+
+        public void Configure(IApplicationBuilder app)
+        {
+            app.Run(async context =>
+            {
+                await context.Response.WriteAsync(_response);
+            });
+        }
+    }
+     public static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
         IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
     {
         var configuration = RavenConfiguration.CreateForServer(null, settingsPath);
@@ -34,7 +57,7 @@ public class ServerSimulationHelper
         {
             try
             {
-                var responder = new LetsEncryptApiHelper.UniqueResponseResponder(guid);
+                var responder = new UniqueResponseResponder(guid);
 
                 var webHostBuilder = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
@@ -152,6 +175,4 @@ public class ServerSimulationHelper
                 await webHost.StopAsync(TimeSpan.Zero);
         }
     }
-
-
 }
