@@ -491,8 +491,7 @@ namespace Raven.Client.Documents.Session
         TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
-
-
+        
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

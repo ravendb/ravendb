@@ -76,7 +76,8 @@ namespace Raven.Client.Documents.Session
         protected string FilterRaw;
 
         protected bool FilterActive = false;
-
+        public bool IsFilterActive { get { return FilterActive; } }
+        
         protected Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
@@ -1864,7 +1865,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (FilterActive == false)
                 return;
             
-            throw new InvalidExpressionException(
+            throw new InvalidQueryException(
                 $"{methodName} is currently unsupported for Filter. If you want to use {methodName} in where method you have to put it before \"Filter\".");
         }
 

@@ -588,7 +588,7 @@ namespace Raven.Client.Documents.Linq
 
         private ExpressionInfo GetMemberDirect(Expression expression)
         {
-            var result = LinqPathProvider.GetPath(expression);
+            var result = LinqPathProvider.GetPath(expression, DocumentQuery.IsFilterActive);
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 
@@ -1773,10 +1773,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case "Filter":
                 {
-                    DocumentQuery.TurnOnFilter();
-                    _filterIsOn = true;
                     _insideFilter++;
                     VisitExpression(expression.Arguments[0]);
+                    _filterIsOn = true;
                     DocumentQuery.TurnOnFilter();
                     if (_chainedWhere)
                     {
@@ -1789,11 +1788,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
                     DocumentQuery.TurnOnFilter();
 
-                    if (_chainedWhere == false && _insideWhere > 1)
+                    if (_chainedWhere == false && _insideFilter > 1)
                         DocumentQuery.CloseSubclause();
                     if (_chainedWhere)
                         DocumentQuery.CloseSubclause();
-                    _insideWhere--;
+                    _insideFilter--;
                     break;
                 }
                 case "Where":
@@ -1815,7 +1814,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
 
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        DocumentQuery.TurnOffFilter();
                         _insideExact = false;
 
                         if (_chainedWhere == false && _insideWhere > 1)

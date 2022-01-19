@@ -22,7 +22,7 @@ public interface IFilterFactory<T>
     /// </summary>
     IFilterFactory<T> Equals<TValue>(Expression<Func<T, object>> propertySelector, MethodCall value);
 
-    // <summary>
+    /// <summary>
     ///     Matches value
     /// </summary>
     IFilterFactory<T> Equals(string fieldName, object value);
