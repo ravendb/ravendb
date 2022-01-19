@@ -33,32 +33,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         };
                         var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
                         Debug.Assert(feature != null);
-                        var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(feature, Database.Name)
+
+                        var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, Database.Name)
                             .Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases);
 
-                        foreach (RouteInformation route in routes)
+                        await foreach (var route in routes)
                         {
-                            var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation(route, null);
-                            try
-                            {
-                                var entry = archive.CreateEntry(entryName);
-                                entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-
-                                await using (var entryStream = entry.Open())
-                                await using (var writer = new AsyncBlittableJsonTextWriter(context, entryStream))
-                                {
-                                    using (var endpointOutput = await localEndpointClient.InvokeAndReadObjectAsync(route, context, endpointParameters))
-                                    {
-                                        context.Write(writer, endpointOutput);
-                                        await writer.FlushAsync();
-                                        await entryStream.FlushAsync();
-                                    }
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                await DebugInfoPackageUtils.WriteExceptionAsZipEntryAsync(e, archive, entryName.Replace(".json", string.Empty));
-                            }
+                            await ServerWideDebugInfoPackageHandler.InvokeAndWriteToArchive(archive, context, localEndpointClient, route, null, endpointParameters);
                         }
                     }
 

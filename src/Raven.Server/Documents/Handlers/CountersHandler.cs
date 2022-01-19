@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -435,8 +436,12 @@ namespace Raven.Server.Documents.Handlers
 
                     try
                     {
-                        doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
-                            throwOnConflict: true);
+                        _database.DocumentsStorage.ValidateDocumentIdAndTransaction(context, counterGroupDetail.DocumentId);
+
+                        using (DocumentIdWorker.GetSliceFromId(context, counterGroupDetail.DocumentId, out Slice lowerId))
+                        {
+                            doc = _database.DocumentsStorage.Get(context, lowerId, throwOnConflict: true, skipValidationInDebug: true);
+                        }
 
                         if (doc == null)
                         {

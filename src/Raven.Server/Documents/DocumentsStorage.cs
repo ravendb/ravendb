@@ -1106,12 +1106,17 @@ namespace Raven.Server.Documents
             };
         }
 
-        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        public void ValidateDocumentIdAndTransaction(DocumentsOperationContext context, string id)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Argument is null or whitespace", nameof(id));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+        }
+
+        public Document Get(DocumentsOperationContext context, string id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        {
+            ValidateDocumentIdAndTransaction(context, id);
 
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
@@ -1578,7 +1583,7 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             {
-                return Delete(context, lowerId, id, expectedChangeVector:null, documentFlags: flags);
+                return Delete(context, lowerId, id, expectedChangeVector: null, documentFlags: flags);
             }
         }
 
@@ -1622,7 +1627,7 @@ namespace Raven.Server.Documents
                 }
 
                 DocumentPutAction.DeleteTombstoneIfNeeded(context, collectionName, lowerId);
-               
+
                 DocumentFlags flags;
                 var localFlags = local.Tombstone.Flags.Strip(DocumentFlags.FromClusterTransaction);
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration))

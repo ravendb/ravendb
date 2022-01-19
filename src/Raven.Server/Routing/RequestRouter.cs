@@ -138,6 +138,19 @@ namespace Raven.Server.Routing
                 }
             }
 
+            var canAccessResult = await CanAccessRoute(route, context, database?.Name, feature);
+
+            if (canAccessResult.Authorized == false)
+            {
+                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                return (false, canAccessResult.Status);
+            }
+
+            return (true, canAccessResult.Status);
+        }
+
+        internal async Task<(bool Authorized, RavenServer.AuthenticationStatus Status)> CanAccessRoute(RouteInformation route, HttpContext context, string databaseName, RavenServer.AuthenticateConnection feature)
+        {
             var authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
             switch (route.AuthorizationStatus)
             {
@@ -153,7 +166,7 @@ namespace Raven.Server.Routing
                             case RavenServer.AuthenticationStatus.None:
                             case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                             case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
-                                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
                                 return (false, authenticationStatus);
                         }
                     }
@@ -171,7 +184,7 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
-                            await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                            await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
                             return (false, authenticationStatus);
 
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
@@ -186,10 +199,10 @@ namespace Raven.Server.Routing
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
 
-                            if (database == null)
+                            if (databaseName == null)
                                 return (true, authenticationStatus);
 
-                            if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, route.EndpointType == EndpointType.Write))
+                            if (feature.CanAccess(databaseName, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, route.EndpointType == EndpointType.Write))
                                 return (true, authenticationStatus);
 
                             goto case RavenServer.AuthenticationStatus.None;
