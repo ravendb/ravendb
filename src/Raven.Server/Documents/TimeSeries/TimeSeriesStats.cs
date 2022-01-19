@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (count == 0)
                 return;
 
-            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collection.Name))
             {
                 UpdateCountOfExistingStats(context, slicer, collection, count);
             }
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, string docId, string name)
         {
-            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collection: null))
             {
                 return GetStats(context, slicer);
             }
@@ -303,7 +303,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public string GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, string docId, string name)
         {
-            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collection: null))
             {
                 return GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
             }
