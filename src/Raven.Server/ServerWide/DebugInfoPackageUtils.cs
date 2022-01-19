@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Routing;
 using Sparrow.Server.Platform.Posix;
 
@@ -34,6 +37,20 @@ namespace Raven.Server.ServerWide
                 $"{path}.json";
 
             return path;
+        }
+
+        public static IEnumerable<RouteInformation> GetAuthorizedRoutes(RavenServer server, HttpContext httpContext, string databaseName = null)
+        {
+            var routes = Routes.Where(x => server._forTestingPurposes == null || server._forTestingPurposes.DebugPackage.RoutesToSkip.Contains(x.Path) == false);
+
+            if (server.Certificate.Certificate != null)
+            {
+                var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+                Debug.Assert(feature != null);
+                routes = routes.Where(route => server.Router.CanAccessRoute(route, httpContext, databaseName, feature, out _));
+            }
+
+            return routes;
         }
 
         public static void WriteExceptionAsZipEntry(Exception e, ZipArchive archive, string entryName)
