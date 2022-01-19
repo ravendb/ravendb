@@ -23,6 +23,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Tests.Infrastructure;
@@ -390,8 +391,8 @@ namespace RachisTests
             }
         }
 
-        private List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
-        private List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
+        private ConcurrentSet<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new ConcurrentSet<(SubscriptionWorker<dynamic>, Exception)>();
+        private ConcurrentSet<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new ConcurrentSet<(SubscriptionWorker<dynamic>, Exception)>();
 
         private Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId, CancellationToken token)
         {
