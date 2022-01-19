@@ -1,0 +1,56 @@
+name: conventions
+
+on:
+  pull_request
+
+jobs:
+
+  job1:
+    name: Label
+    runs-on: windows-latest
+    steps:
+      - name: Label
+        env:
+          githubOrganization: ravendb
+          repoName: ${{github.event.repository.name}}
+          label: ${{github.event.pull_request.base.ref}}
+          GITHUB_TOKEN: 455ff7ae-00b8-4596-a40f-4886980c6881
+          COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
+          Raven_Enable_Per_Test_Logging: 'true'
+        run: |
+          .\set_github_label.ps1 -owner ${{env.githubOrganization}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.label}}
+
+  job2:
+    name: CLA Signed
+    runs-on: windows-latest
+    steps:
+      - name: CLA Signed test
+        env:
+          CLA_SIGNED_URL: http://api.web.ravendb.net/api/v1/contributors/cla/signed?pullRequestId=
+          ghprbPullId: ${{ github.event.pull_request.number }}
+        run: | 
+          .\claSigned.ps1
+
+  job3:
+    name: Commit Conventions
+    runs-on: windows-latest
+    env:
+      githubOrganization: ravendb
+      repoName: ${{github.event.repository.name}}
+      label: ${{github.event.pull_request.base.ref}}
+      GITHUB_TOKEN: 455ff7ae-00b8-4596-a40f-4886980c6881
+
+    steps:
+      - name: Get Commits Messages
+        id: commits
+        run: |
+          .\commitMessages.ps1
+
+      - name: Commit Message Conventions
+        run: .\commitMessageConventions.ps1
+
+      - name: Commit Whitespace Conventions
+        run: .\commitWhitespaceConventions.ps1
+
+        
+
