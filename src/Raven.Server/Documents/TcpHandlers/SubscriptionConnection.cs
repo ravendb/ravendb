@@ -806,7 +806,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
                             SubscriptionId,
                             Options.SubscriptionName,
-                            LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
+                            LastSentChangeVectorInThisConnection,
                             SubscriptionConnectionsState.LastChangeVectorSent);
 
                         //since we send the next batch by LastChangeVectorSent, in legacy will represent the last acked cv instead
