@@ -72,14 +72,14 @@ namespace Raven.Server.ServerWide.Commands
         public class ClusterTransactionErrorInfo : IDynamicJsonValueConvertible
         {
             public string Message;
-            public Conflict Conflict;
+            public ConcurrencyViolation Violation;
             
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
                     [nameof(Message)] = Message,
-                    [nameof(Conflict)] = Conflict.ToJson()
+                    [nameof(Violation)] = Violation.ToJson()
                 };
             }
         }
@@ -226,18 +226,18 @@ namespace Raven.Server.ServerWide.Commands
             var msg = $"Concurrency check failed for {(delete ? "deleting" : "putting")} the key '{clusterCommand.Id}'. " +
                       $"Requested index: {clusterCommand.Index}, actual index: {actualIndex}";
 
-            var type = ConflictType.CompareExchange;
+            var type = ViolationOnType.CompareExchange;
 
             if (clusterCommand.Error != null)
             {
                 msg = $"{clusterCommand.Error}{Environment.NewLine}{msg}";
-                type = ConflictType.Document;
+                type = ViolationOnType.Document;
             }
 
             return new ClusterTransactionErrorInfo
             {
                 Message = msg,
-                Conflict = new Conflict
+                Violation = new ConcurrencyViolation
                 {
                     Id = clusterCommand.Id, 
                     Actual = actualIndex, 
@@ -555,23 +555,23 @@ namespace Raven.Server.ServerWide.Commands
 
         private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)
         {
-            var current = new Conflict();
-            var errorInfo = new ClusterTransactionErrorInfo { Conflict = current };
+            var current = new ConcurrencyViolation();
+            var errorInfo = new ClusterTransactionErrorInfo { Violation = current };
             bjro.TryGet(nameof(ClusterTransactionErrorInfo.Message), out errorInfo.Message);
 
-            if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Conflict), out BlittableJsonReaderObject conflict))
+            if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Violation), out BlittableJsonReaderObject violation))
                 return errorInfo;
 
-            if (conflict.TryGet(nameof(Conflict.Id), out string id))
+            if (violation.TryGet(nameof(ConcurrencyViolation.Id), out string id))
                 current.Id = id;
 
-            if (conflict.TryGet(nameof(Conflict.Type), out ConflictType type))
+            if (violation.TryGet(nameof(ConcurrencyViolation.Type), out ViolationOnType type))
                 current.Type = type;
 
-            if (conflict.TryGet(nameof(Conflict.Expected), out long expected))
+            if (violation.TryGet(nameof(ConcurrencyViolation.Expected), out long expected))
                 current.Expected = expected;
 
-            if (conflict.TryGet(nameof(Conflict.Actual), out long actual))
+            if (violation.TryGet(nameof(ConcurrencyViolation.Actual), out long actual))
                 current.Actual = actual;
 
             return errorInfo;

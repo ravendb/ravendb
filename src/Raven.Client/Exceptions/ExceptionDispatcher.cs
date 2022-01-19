@@ -142,25 +142,25 @@ namespace Raven.Client.Exceptions
                 if (json.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations), out BlittableJsonReaderArray violations) == false)
                     throw ctxConcurrencyException;
 
-                ctxConcurrencyException.ConcurrencyViolations = new ClusterTransactionConcurrencyException.Conflict[violations.Length];
+                ctxConcurrencyException.ConcurrencyViolations = new ClusterTransactionConcurrencyException.ConcurrencyViolation[violations.Length];
 
                 for (var i = 0; i < violations.Length; i++)
                 {
-                    if (!(violations[i] is BlittableJsonReaderObject conflict))
+                    if (!(violations[i] is BlittableJsonReaderObject violation))
                         continue;
 
-                    var current = ctxConcurrencyException.ConcurrencyViolations[i] = new ClusterTransactionConcurrencyException.Conflict();
+                    var current = ctxConcurrencyException.ConcurrencyViolations[i] = new ClusterTransactionConcurrencyException.ConcurrencyViolation();
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Id), out string id))
+                    if (violation.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolation.Id), out string id))
                         current.Id = id;
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Type), out ClusterTransactionConcurrencyException.ConflictType type))
+                    if (violation.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolation.Type), out ClusterTransactionConcurrencyException.ViolationOnType type))
                         current.Type = type;
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Expected), out long expected))
+                    if (violation.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolation.Expected), out long expected))
                         current.Expected = expected;
 
-                    if (conflict.TryGet(nameof(ClusterTransactionConcurrencyException.Conflict.Actual), out long actual))
+                    if (violation.TryGet(nameof(ClusterTransactionConcurrencyException.ConcurrencyViolation.Actual), out long actual))
                         current.Actual = actual;
                 }
 

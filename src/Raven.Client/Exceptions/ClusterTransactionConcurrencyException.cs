@@ -41,11 +41,11 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Concurrency violations info.
         /// </summary>
-        public Conflict[] ConcurrencyViolations { get; set; }
+        public ConcurrencyViolation[] ConcurrencyViolations { get; set; }
 
-        public class Conflict
+        public class ConcurrencyViolation
         {
-            public ConflictType Type { get; set; }
+            public ViolationOnType Type { get; set; }
             public string Id { get; set; }
             public long Expected { get; set; }
             public long Actual { get; set; }
@@ -62,7 +62,7 @@ namespace Raven.Client.Exceptions
             }
         }
 
-        public enum ConflictType
+        public enum ViolationOnType
         {
             Document,
             CompareExchange
