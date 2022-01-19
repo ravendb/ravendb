@@ -18,7 +18,7 @@ jobs:
           COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
           Raven_Enable_Per_Test_Logging: 'true'
         run: |
-          .\set_github_label.ps1 -owner ${{env.githubOrganization}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.label}}
+          ./set_github_label.ps1 -owner ${{env.githubOrganization}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.label}}
 
   job2:
     name: CLA Signed
@@ -29,7 +29,7 @@ jobs:
           CLA_SIGNED_URL: http://api.web.ravendb.net/api/v1/contributors/cla/signed?pullRequestId=
           ghprbPullId: ${{ github.event.pull_request.number }}
         run: | 
-          .\claSigned.ps1
+          ./claSigned.ps1
 
   job3:
     name: Commit Conventions
@@ -44,13 +44,13 @@ jobs:
       - name: Get Commits Messages
         id: commits
         run: |
-          .\commitMessages.ps1
+          ./commitMessages.ps1
 
       - name: Commit Message Conventions
-        run: .\commitMessageConventions.ps1
+        run: ./commitMessageConventions.ps1
 
       - name: Commit Whitespace Conventions
-        run: .\commitWhitespaceConventions.ps1
+        run: ./commitWhitespaceConventions.ps1
 
         
 
