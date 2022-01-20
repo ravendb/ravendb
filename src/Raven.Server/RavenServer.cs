@@ -1058,7 +1058,11 @@ namespace Raven.Server
         {
             try
             {
-                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateRenewExec, Configuration.Security.CertificateRenewExecArguments, ServerStore);
+                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(
+                    Configuration.Security.CertificateRenewExec,
+                    Configuration.Security.CertificateRenewExecArguments,
+                    ServerStore.LicenseManager.LicenseStatus.Type,
+                    ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 return certHolder.Certificate.Export(X509ContentType.Pfx); // With the private key
             }
@@ -1410,9 +1414,17 @@ namespace Raven.Server
                 }
 
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
+                    return ServerStore.Secrets.LoadCertificateFromPath(
+                        Configuration.Security.CertificatePath,
+                        Configuration.Security.CertificatePassword,
+                        ServerStore.LicenseManager.LicenseStatus.Type,
+                        ServerStore.Configuration.Security.CertificateValidationKeyUsages);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateLoadExec, Configuration.Security.CertificateLoadExecArguments, ServerStore);
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(
+                        Configuration.Security.CertificateLoadExec,
+                        Configuration.Security.CertificateLoadExecArguments,
+                        ServerStore.LicenseManager.LicenseStatus.Type,
+                        ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 return null;
             }

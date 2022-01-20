@@ -1455,10 +1455,7 @@ namespace Raven.Server.ServerWide
                     {
                         try
                         {
-                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateChangeExec,
-                                Configuration.Security.CertificateChangeExecArguments,
-                                certBase64,
-                                this);
+                            Secrets.NotifyExecutableOfCertificateChange(Configuration.Security.CertificateChangeExec, Configuration.Security.CertificateChangeExecArguments, certBase64);
                         }
                         catch (Exception e)
                         {

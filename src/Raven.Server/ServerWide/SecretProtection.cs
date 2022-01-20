@@ -346,7 +346,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public CertificateUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
+        public CertificateUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, LicenseType licenseType, bool certificateValidationKeyUsages)
         {
             Process process;
 
@@ -425,9 +425,9 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                ValidateExpiration(executable, loadedCertificate, serverStore.LicenseManager.LicenseStatus.Type);
+                ValidateExpiration(executable, loadedCertificate, licenseType);
                 ValidatePrivateKey(executable, null, rawData, out privateKey);
-                ValidateKeyUsages(executable, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
+                ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
             }
             catch (Exception e)
             {
@@ -442,7 +442,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64, ServerStore serverStore)
+        public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64)
         {
             Process process;
 
@@ -670,7 +670,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, ServerStore serverStore)
+        public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
+        
         {
             try
             {
@@ -680,11 +681,11 @@ namespace Raven.Server.ServerWide
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
-                ValidateExpiration(path, loadedCertificate, serverStore.LicenseManager.LicenseStatus.Type);
+                ValidateExpiration(path, loadedCertificate, licenseType);
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
-                ValidateKeyUsages(path, loadedCertificate, serverStore.Configuration.Security.CertificateValidationKeyUsages);
+                ValidateKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
 
                 return new CertificateUtils.CertificateHolder
                 {

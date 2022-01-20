@@ -261,8 +261,8 @@ public class RavenDnsRecordHelper
                 }
 
                 var serializeObject = JsonConvert.SerializeObject(registrationInfo);
-
-                if (logger.IsOperationsEnabled)
+                
+                if (logger is {IsOperationsEnabled: true})
                     logger.Operations($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
                                       $"License Name: {registrationInfo.License.Name}, " +
                                       $"Domain: {registrationInfo.Domain}, " +
