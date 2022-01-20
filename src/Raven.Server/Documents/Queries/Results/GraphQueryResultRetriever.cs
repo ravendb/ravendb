@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
             IncludeDocumentsCommand includeDocumentsCommand,
             IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand,
             IncludeRevisionsCommand includeRevisionsCommand)
-            : base(database, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand)
+            : base(database.Scripts, query, queryTimings, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, database.IdentityPartsSeparator)
         {
             _graphQuery = graphQuery;
             _context = context;

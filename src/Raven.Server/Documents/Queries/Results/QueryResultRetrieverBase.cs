@@ -8,7 +8,6 @@ using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Documents;
 using Lucene.Net.Store;
-using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
@@ -34,12 +33,13 @@ namespace Raven.Server.Documents.Queries.Results
 
         public static readonly Lucene.Net.Search.ScoreDoc OneScore = new Lucene.Net.Search.ScoreDoc(-1, 1f);
 
-        private readonly DocumentDatabase _database;
+        private readonly ScriptRunnerCache _scriptRunnerCache;
         protected readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
+        private readonly char _identitySeparator;
         private readonly BlittableJsonTraverser _blittableTraverser;
 
         private Dictionary<string, Document> _loadedDocuments;
@@ -62,16 +62,18 @@ namespace Raven.Server.Documents.Queries.Results
         private TimeSeriesRetriever _timeSeriesRetriever;
 
         protected QueryResultRetrieverBase(
-            DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
+            ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage,
             JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand,
-            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand)
+            IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand,
+            char identitySeparator)
         {
-            _database = database;
+            _scriptRunnerCache = scriptRunnerCache;
             _query = query;
             _context = context;
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeRevisionsCommand = includeRevisionsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
+            _identitySeparator = identitySeparator;
 
             ValidateFieldsToFetch(fieldsToFetch);
             FieldsToFetch = fieldsToFetch;
@@ -677,7 +679,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (_loadedDocumentsByAliasName.TryGetValue(fieldToFetch.QueryField.LoadFromAlias, out var loadedDoc))
                     {
-                        IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
+                        IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _identitySeparator);
                     }
                 }
                 else if (fieldToFetch.CanExtractFromIndex)
@@ -700,7 +702,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
+                    IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _identitySeparator);
                 }
             }
             else
@@ -883,7 +885,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             var key = new QueryKey(query.DeclaredFunctions);
-            using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
+            using (_scriptRunnerCache.GetScriptRunner(key, readOnly: true, patchRun: out var run))
             using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings, token))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);

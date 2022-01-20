@@ -10,6 +10,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly long _lastClientConfigurationIndex;
 
         private readonly ConcurrentDictionary<string, IndexDefinition> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+        public readonly ScriptRunnerCache ScriptRunnerCache;
         private readonly RavenConfiguration _ravenConfiguration;
 
         private ShardExecutor _shardExecutor;
@@ -64,6 +66,8 @@ namespace Raven.Server.Documents.Sharding
                 _ravenConfiguration.SetSetting(key, value);
 
             _ravenConfiguration.Initialize();
+
+            ScriptRunnerCache = new ScriptRunnerCache(null, _ravenConfiguration);
 
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
