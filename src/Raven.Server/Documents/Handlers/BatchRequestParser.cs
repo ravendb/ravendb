@@ -601,6 +601,28 @@ namespace Raven.Server.Documents.Handlers
                             bufferedCommand.ChangeVectorPosition = checked((int)(commandCopy.Position + parser.BufferOffset - position - 4));
                         }
                         break;
+                    case CommandPropertyName.OriginalChangeVector:
+                        while (parser.Read() == false)
+                        {
+                            parser.CopyParsedChunk(commandCopy, position);
+                            position = 0;
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        }
+                        
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            commandData.OriginalChangeVector = null;
+                        }
+                        else
+                        {
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                            {
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                            }
+
+                            commandData.OriginalChangeVector = GetLazyStringValue(ctx, state);
+                        }
+                        break;
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
                         {

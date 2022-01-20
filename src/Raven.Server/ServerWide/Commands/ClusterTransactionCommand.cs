@@ -484,26 +484,39 @@ namespace Raven.Server.ServerWide.Commands
             long currentCommandCount,
             (long, string)? clusterGuardAddition)
         {
-            var flags = DocumentFlags.None;
-            if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document) &&
-                document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
-                metadata.TryGet(Constants.Documents.Metadata.Flags, out flags);
-
             if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
                 throw new InvalidOperationException($"Got command with no type defined: {command}");
 
-            var currentShardCount = currentCommandCount;
-            var databaseId = rawRecord.Shards[shardIndex].DatabaseTopologyIdBase64;
-            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentShardCount, clusterGuardAddition);
-
-            return new DynamicJsonValue
+            var result = new DynamicJsonValue
             {
                 [nameof(ICommandData.Type)] = type,
-                [Constants.Documents.Metadata.Id] = id,
-                [Constants.Documents.Metadata.ChangeVector] = changeVector,
                 [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
-                [Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction
             };
+            
+            switch (type)
+            {
+                case nameof(CommandType.PUT):
+                    if (command.TryGet(nameof(ClusterTransactionDataCommand.Document), out BlittableJsonReaderObject document)
+                        && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
+                        && metadata.TryGet(Constants.Documents.Metadata.Flags, out DocumentFlags flags))
+                    {
+                        result[Constants.Documents.Metadata.Flags] = flags | DocumentFlags.FromClusterTransaction;
+                    }
+                    result[Constants.Documents.Metadata.Id] = id;
+                    break;
+                case nameof(CommandType.DELETE):
+                    result[Constants.Documents.Metadata.IdProperty] = id;
+                break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Database cluster transaction command type can be {CommandType.PUT} or {CommandType.PUT} but got {type}");
+            }
+
+            var databaseId = rawRecord.Shards[shardIndex].DatabaseTopologyIdBase64;
+            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentCommandCount, clusterGuardAddition);
+
+            result[Constants.Documents.Metadata.ChangeVector] = changeVector;
+            return result;
         }
 
         private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
