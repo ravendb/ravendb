@@ -309,7 +309,9 @@ namespace SlowTests.Server.Replication
 
                 pullDefinition.Disabled = true;
                 pullDefinition.TaskId = saveResult.TaskId;
-                await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+                var updateResult = await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+
+                await Server.ServerStore.Cluster.WaitForIndexNotification(updateResult.RaftCommandIndex);
 
                 using (var main = hub.OpenSession())
                 {
