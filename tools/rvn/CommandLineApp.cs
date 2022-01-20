@@ -4,9 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+using Voron.Global;
 
 namespace rvn
 {
@@ -21,7 +22,6 @@ namespace rvn
         private static CommandLineApplication _app;
 
         private const string LetsEncryptMode = "lets-encrypt";
-        
         private const string ImportCertificateMode = "import-certificate";
         
         public static int Run(string[] args)
@@ -70,23 +70,29 @@ namespace rvn
                 cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given --mode and --setup-params.json";
                 cmd.HelpOption(HelpOptionString);
                 
-                var mode = ConfigureModeOption(cmd).Value();
-                var setupParam = ConfigureSetupParameters(cmd).Value();
-                var packageOutParam = ConfigurePackageOutputFile(cmd).Value();
-
+                var mode = ConfigureModeOption(cmd);
+                var setupParam = ConfigureSetupParameters(cmd);
+                var packageOutParam = ConfigurePackageOutputFile(cmd);
+                var pathToCert = ConfigureCertPath(cmd);
+                var certPass = ConfigureCertPassword(cmd);
              
                     cmd.OnExecuteAsync(async token =>
                     {
+                        var modeVal = mode.Value();
+                        var setupParamVal = setupParam.Value();
+                        var packageOutParamVal = packageOutParam.Value();
+                        var pathToCertVal = pathToCert.Value();
+                        var certPassVal = certPass.Value();
                         
-                        if ( setupParam is null)
-                            ExitWithError("--setup-params options must be set",cmd);
-
-                        switch (mode)
+                        switch (modeVal)
                         {
-                            case LetsEncryptMode:
-                                return await SetupPackageConfiguratorLetsEncrypt(setupParam, packageOutParam, cmd, LetsEncryptMode,token);
+                            case ImportCertificateMode when string.IsNullOrEmpty(pathToCertVal):
+                                ExitWithError("--path option must be set",cmd);
+                                break;
                             case ImportCertificateMode:
-                                return await SetupPackageConfiguratorLetsEncrypt(setupParam, packageOutParam, cmd, ImportCertificateMode,token);
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, cmd, ImportCertificateMode, pathToCertVal ,certPassVal, token);
+                            case LetsEncryptMode when string.IsNullOrEmpty(setupParamVal) == false:
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, cmd, LetsEncryptMode, pathToCertVal, certPassVal, token);
                             default:
                                 ExitWithError("--mode and --setup-params options must be set",cmd);
                                 break;
@@ -97,38 +103,48 @@ namespace rvn
                     });
             });
         }
-        
-        private static async Task<int> SetupPackageConfiguratorLetsEncrypt(string setupParam, string packageOutParam, CommandLineApplication cmd,string mode, CancellationToken token)
+
+        private static async Task<int> SetupPackageConfiguratorLetsEncrypt(string setupParamsPath, string packageOutParam, CommandLineApplication cmd,string mode, string certPath, string certPass , CancellationToken token)
         {
             var zipFile = Array.Empty<byte>();
-            if (File.Exists(setupParam) == false)
-                ExitWithError("Path to setup params has not found", cmd);
-
-            using (StreamReader file = File.OpenText(setupParam ?? string.Empty))
+            
+            using (StreamReader file = File.OpenText(setupParamsPath ?? string.Empty))
             {
-                SetupProgressAndResult setupProgressAndResult = new();
+                var progress = new SetupProgressAndResult(null)
+                {
+                    Processed = 0,
+                    Total = 2
+                };
                 JsonSerializer serializer = new();
                 
                 var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                
-                if (packageOutParam == null)
+                if (setupInfo != null)
                 {
-                    packageOutParam = setupInfo?.Domain + "-package.zip";
-                }
-                else
-                {
-                    packageOutParam += "-package.zip";
-                }
+                    if (packageOutParam == null)
+                        packageOutParam = setupInfo.Domain + "-package.zip";
+                    else
+                        packageOutParam += "-package.zip";
 
-                if (mode is LetsEncryptMode)
-                    zipFile = await LetsEncryptByTools.SetupLetsEncryptByRvn(setupInfo, setupParam, setupProgressAndResult, token);
-                else
-                    zipFile = await LetsEncryptByTools.SetupOwnCertByRvn(setupInfo, setupParam, setupProgressAndResult, token);
+                    if (mode is ImportCertificateMode)
+                    {
+                    
+                        var certBytes = await File.ReadAllBytesAsync(certPath, token);
+                        var certBase64 = Convert.ToBase64String(certBytes);
+                        
+                        setupInfo.Certificate =  certBase64;
+                        setupInfo.Password = certPass;
+                        zipFile = await LetsEncryptByTools.SetupOwnCertByRvn(setupInfo, setupParamsPath, progress, token);
 
+                    }
+                    else
+                    {
+                        zipFile = await LetsEncryptByTools.SetupLetsEncryptByRvn(setupInfo, setupParamsPath, progress, token);
+                    }
+                }
                 var path = Path.Combine(AppContext.BaseDirectory, packageOutParam);
                 await File.WriteAllBytesAsync(path, zipFile, token);
                 
-                setupProgressAndResult.AddInfo($"ZIP file was successfully added to this location: {path}");
+                progress.AddInfo($"ZIP file was successfully added to this location: {path}");
             }
 
             return 0;
@@ -441,8 +457,16 @@ namespace rvn
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
         {
             return cmd.Option("-o|--package-output-file", "default output file", CommandOptionType.SingleValue);
+        } 
+        private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
+        {
+            return cmd.Option("--cert-path", "Certificate path", CommandOptionType.SingleValue);
         }
-
+        
+        private static CommandOption ConfigureCertPassword(CommandLineApplication cmd)
+        {
+            return cmd.Option("-p|--password", "Certificate password", CommandOptionType.SingleValue);
+        }
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
@@ -480,7 +504,7 @@ namespace rvn
 
             if (directory.Name.Equals("System"))
             {
-                if (File.Exists(Path.Combine(directory.FullName, Voron.Global.Constants.DatabaseFilename)) == false)
+                if (File.Exists(Path.Combine(directory.FullName, Constants.DatabaseFilename)) == false)
                     throw new InvalidOperationException("Please provide a valid System directory.");
             }
             else

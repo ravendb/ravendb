@@ -286,10 +286,12 @@ namespace Raven.Server.Commercial
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        //private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        public Logger Logger { get; set; }
 
-        public SetupProgressAndResult()
+        public SetupProgressAndResult(Logger logger)
         {
+            Logger = logger;
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
         }
@@ -331,7 +333,7 @@ namespace Raven.Server.Commercial
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
             Messages.Enqueue(Message);
-            if (Logger.IsInfoEnabled)
+            if (Logger is {IsInfoEnabled: true})
                 Logger.Info(Message, ex);
         }
 
