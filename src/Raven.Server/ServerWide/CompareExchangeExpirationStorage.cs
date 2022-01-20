@@ -89,7 +89,9 @@ namespace Raven.Server.ServerWide
             if (metadataReader.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expirationDate) == false)
                 return false;
 
-            var date = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                throw new FormatException($"{Constants.Documents.Metadata.Expires} should contain date but has {expirationDate}': {value}");
+
             ticks = date.ToUniversalTime().Ticks;
             return true;
         }

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -28,6 +30,8 @@ namespace Raven.Server.ServerWide.Commands
         public string ClusterTransactionId;
 
         public long DatabaseCommandsCount;
+        //We take the current ticks in advance to ensure consist results of the command execution on all nodes
+        public long CommandCreationTicks;
 
         public class ClusterTransactionDataCommand
         {
@@ -134,6 +138,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseRecordId = topology.DatabaseTopologyIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             ClusterTransactionId = topology.ClusterTransactionIdBase64 ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
+            CommandCreationTicks = SystemTime.UtcNow.Ticks;
 
             foreach (var commandData in commandParsedCommands)
             {
@@ -185,6 +190,7 @@ namespace Raven.Server.ServerWide.Commands
                 {
                     case CommandType.CompareExchangePUT:
                         var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
+                        put.CurrentTicks = CommandCreationTicks;
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add(GenerateErrorInfo(clusterCommand, current));
@@ -615,6 +621,7 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(ClusterTransactionId)] = ClusterTransactionId;
             djv[nameof(DatabaseCommandsCount)] = DatabaseCommandsCount;
             djv[nameof(FromBackup)] = FromBackup;
+            djv[nameof(CommandCreationTicks)] = CommandCreationTicks;
 
             return djv;
         }
