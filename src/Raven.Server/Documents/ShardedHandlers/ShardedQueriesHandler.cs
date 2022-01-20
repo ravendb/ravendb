@@ -4,19 +4,26 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Esprima.Ast;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
 using NuGet.Packaging;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Extensions;
@@ -106,9 +113,11 @@ namespace Raven.Server.Documents.ShardedHandlers
                             // * For map/reduce - we need to re-run the reduce portion of the index again on the results
                             queryProcessor.ReduceResults();
 
-                            // TODO: send the @orderBy fields
                             // * For order by, we need to merge the results and compute the order again 
                             queryProcessor.OrderResults();
+
+                            // * For map-reduce indexes we project the results after the reduce part 
+                            queryProcessor.ProjectAfterMapReduce();
 
                             var result = queryProcessor.GetResult();
                             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
@@ -168,7 +177,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         /// A struct that we use to hold state and break the process
         /// of handling a sharded query into distinct steps
         /// </summary>
-        private class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisposable
+        public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisposable
         {
             private readonly TransactionOperationContext _context;
             private readonly ShardedQueriesHandler _parent;
@@ -177,12 +186,13 @@ namespace Raven.Server.Documents.ShardedHandlers
             private readonly HashSet<int> _filteredShardIndexes;
             private readonly ShardedQueryResult _result;
             private static readonly DynamicJsonValue DummyDynamicJsonValue = new();
+            public const string OrderByMetadataField = "@order-by-fields";
 
             // User should also be able to define a query parameter ("Sharding.Context") which is an array
             // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
             // want to run a query and knows what shards it is on. Such as:
             // from Orders where State = $state and User = $user where all the orders are on the same share as the user
-            
+
             // - TODO: Sharding - etag handling!
             public ShardedQueryProcessor(TransactionOperationContext context,ShardedQueriesHandler parent,IndexQueryServerSide query)
             {
@@ -234,36 +244,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                 // * For paging queries, we modify the limits on the query to include all the results from all
                 //   shards if there is an offset. But if there isn't an offset, we can just get the limit from
                 //   each node and then merge them
-                if (_query.Offset > 0)
-                {
-                    var clone = _query.Metadata.Query.ShallowCopy();
-                    clone.Offset = null; // sharded queries has to start from 0 on all nodes
-                    clone.Limit = new ValueExpression("__raven_limit", ValueTokenType.Parameter);
-                    queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
-                    {
-                        [nameof(IndexQuery.Query)] = clone.ToString()
-                    };
-                    DynamicJsonValue modifiedArgs;
-                    if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
-                    {
-                        modifiedArgs = new DynamicJsonValue(args);
-                        args.Modifications = modifiedArgs;
-                    }
-                    else
-                    {
-                        queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
-                    }
+                RewriteQueryForPaging(ref queryTemplate);
 
-                    int limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * _parent.ShardedContext.NumberOfShardNodes;
-                    if (limit < 0) // overflow
-                        limit = int.MaxValue;
-                    modifiedArgs["__raven_limit"] = limit;
-
-                    queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
-                }
-
-                // TODO: send order by from shards to orchestrator
-                AssertQueryParameters();
+                // * If we have a projection in a map-reduce index,
+                //   the shards will send the query result and the orchestrator will re-reduce and apply the projection
+                //   in that case we must send the query without the projection
+                RewriteQueryForProjection(ref queryTemplate);
 
                 // * For collection queries that specify startsWith by id(), we need to send to all shards
                 // * For collection queries without any where clause, we need to send to all shards
@@ -277,14 +263,61 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
             }
 
-            private void AssertQueryParameters()
+            private void RewriteQueryForPaging(ref BlittableJsonReaderObject queryTemplate)
             {
-                if (_query.Metadata.Query.Select?.Count > 0 ||
-                    _query.Metadata.Query.SelectFunctionBody.FunctionText != null)
+                if (_query.Offset is null or <= 0)
+                    return;
+
+                var clone = _query.Metadata.Query.ShallowCopy();
+                clone.Offset = null; // sharded queries has to start from 0 on all nodes
+                clone.Limit = new ValueExpression("__raven_limit", ValueTokenType.Parameter);
+                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate) { [nameof(IndexQuery.Query)] = clone.ToString() };
+                DynamicJsonValue modifiedArgs;
+                if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
                 {
-                    if (_query.Metadata.IndexName != null && _parent.ShardedContext.IsMapReduceIndex(_query.Metadata.IndexName))
-                        throw new InvalidOperationException($"Cannot apply a projection for a map-reduce index in a sharded environment");
+                    modifiedArgs = new DynamicJsonValue(args);
+                    args.Modifications = modifiedArgs;
                 }
+                else
+                {
+                    queryTemplate.Modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
+                }
+
+                int limit = ((_query.Limit ?? 0) + (_query.Offset ?? 0)) * _parent.ShardedContext.NumberOfShardNodes;
+                if (limit < 0) // overflow
+                    limit = int.MaxValue;
+                modifiedArgs["__raven_limit"] = limit;
+
+                queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
+            }
+
+            private void RewriteQueryForProjection(ref BlittableJsonReaderObject queryTemplate)
+            {
+                var query = _query.Metadata.Query;
+                if (query.Select?.Count > 0 == false &&
+                    query.SelectFunctionBody.FunctionText == null)
+                    return;
+
+                if (_query.Metadata.IndexName == null || _parent.ShardedContext.IsMapReduceIndex(_query.Metadata.IndexName) == false)
+                    return;
+
+                if (query.Load is { Count: > 0 })
+                {
+                    // https://issues.hibernatingrhinos.com/issue/RavenDB-17887
+                    throw new NotSupportedException("Loading a document inside a projection from a map-reduce index isn't supported");
+                }
+
+                var clone = query.ShallowCopy();
+                clone.Select = null;
+                clone.SelectFunctionBody = default;
+                clone.DeclaredFunctions = null;
+
+                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
+                {
+                    [nameof(IndexQuery.Query)] = clone.ToString()
+                };
+
+                queryTemplate = _context.ReadObject(queryTemplate, "modified-query");
             }
 
             private static HashSet<string> GetAllIdentifiers(NodeCollection nodeCollection, bool ancestorIsReturnStatement, Nodes currentAncestor)
@@ -480,10 +513,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                         return original;
 
                     if (original.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                        throw new InvalidOperationException($"Missing metadata!");
+                        throw new InvalidOperationException($"Missing metadata in document. Unable to find {Constants.Documents.Metadata.Key} in {original}");
 
-                    if (metadata.TryGet("@order-by-fields", out BlittableJsonReaderObject orderByFields) == false)
-                        throw new InvalidOperationException($"Missing order by fields");
+                    if (metadata.TryGet(OrderByMetadataField, out BlittableJsonReaderObject orderByFields) == false)
+                        throw new InvalidOperationException($"Unable to find {OrderByMetadataField} in metadata: {metadata}");
 
                     return orderByFields;
                 }
@@ -661,6 +694,36 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
             }
 
+
+            public void ProjectAfterMapReduce()
+            {
+                if (_result.IsMapReduce == false
+                    || (_query.Metadata.Query.Select == null || _query.Metadata.Query.Select.Count == 0)
+                    && _query.Metadata.Query.SelectFunctionBody.FunctionText == null)
+                    return;
+
+                var fieldsToFetch = new FieldsToFetch(_query, null);
+                var retriever = new ShardedMapReduceResultRetriever(_parent.ShardedContext.ScriptRunnerCache, _query, null, fieldsToFetch, null, _context, false, null, null, null,
+                    _parent.ShardedContext.IdentitySeparator);
+
+                var currentResults = _result.Results;
+                _result.Results = new List<BlittableJsonReaderObject>();
+
+                foreach (var data in currentResults)
+                {
+                    (Document document, _) = retriever.GetProjectionFromDocument(new Document
+                    {
+                        Data = data
+                    }, null, null, fieldsToFetch, _context, null, CancellationToken.None);
+
+                    if (document == null)
+                        continue;
+
+                    var result = _context.ReadObject(document.Data, "modified-map-reduce-result");
+                    _result.Results.Add(result);
+                }
+            }
+
             private class GroupKey
             {
                 private readonly List<object> _items;
@@ -714,6 +777,43 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     cmd.Dispose();
                 }
+            }
+        }
+
+        public class ShardedMapReduceResultRetriever : QueryResultRetrieverBase
+        {
+            public ShardedMapReduceResultRetriever(ScriptRunnerCache scriptRunnerCache, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, IncludeRevisionsCommand includeRevisionsCommand, char identitySeparator) : base(scriptRunnerCache, query, queryTimings, fieldsToFetch, documentsStorage, context, reduceResults, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand, identitySeparator)
+            {
+            }
+
+            public override (Document Document, List<Document> List) Get(Lucene.Net.Documents.Document input, ScoreDoc scoreDoc, IState state, CancellationToken token)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override Document LoadDocument(string id)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override long? GetCounter(string docId, string name)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override DynamicJsonValue GetCounterRaw(string docId, string name)
+            {
+                throw new NotImplementedException();
             }
         }
     }

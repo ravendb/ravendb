@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
@@ -19,95 +21,7 @@ namespace FastTests.Sharding
         }
 
         [Fact]
-        public void RawQuery_with_transformation_function_should_work()
-        {
-            using (var store = GetShardedDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Company
-                    {
-                        Name = "Acme Inc."
-                    }, "companies/1");
-
-                    session.Store(new Company
-                    {
-                        Name = "Evil Corp"
-                    }, "companies/2");
-
-                    session.Store(new Order
-                    {
-                        Id = "orders/1$companies/1",
-                        Company = "companies/1",
-                        Lines = new List<OrderLine>
-                        {
-                            new() { PricePerUnit = (decimal)1.0, Quantity = 3 },
-                            new() { PricePerUnit = (decimal)1.5, Quantity = 3 }
-                        }
-                    });
-                    session.Store(new Order
-                    {
-                        Id = "orders/2$companies/1",
-                        Company = "companies/1",
-                        Lines = new List<OrderLine>
-                        {
-                            new() {
-                                PricePerUnit = (decimal)1.0,
-                                Quantity = 5
-                            }
-                        }
-                    });
-                    session.Store(new Order
-                    {
-                        Id = "orders/3$companies/2",
-                        Company = "companies/2",
-                        Lines = new List<OrderLine>
-                        {
-                            new() { PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
-                            new() { PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
-                            new() { PricePerUnit = (decimal)1.8, Quantity = 2 }
-                        }
-                    });
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store, sharded: true);
-
-                using (var session = store.OpenSession())
-                {
-                    var rawQuery = session.Advanced.RawQuery<dynamic>(@"
-                        DECLARE function companyNameAndTotalSumSpent(o)
-                        {
-                          var totalSumInLines = 0;
-                          for(var i = 0; i < o.Lines.length; i++)
-                          {
-                              var l = o.Lines[i];
-                              totalSumInLines = l.PricePerUnit * l.Quantity - l.Discount;
-                          }
-                        
-                          var company = load(o.Company);
-  
-                          return { OrderedAt: o.OrderedAt, CompanyName: company.Name, TotalSumSpent: totalSumInLines };
-                        }
-                        
-                        FROM Orders as o 
-                        SELECT companyNameAndTotalSumSpent(o)                           
-                    ").ToList();
-
-                    Assert.NotEmpty(rawQuery);
-                    Assert.Equal(3, rawQuery.Count);
-                    Assert.DoesNotContain(rawQuery, item => item == null);
-
-                    foreach (var item in rawQuery)
-                    {
-                        Assert.True((string)item.CompanyName == "Acme Inc." || (string)item.CompanyName == "Evil Corp");
-                    }
-                }
-            }
-        }
-
-        [Fact]
-        public void LinqQuery_with_transformation_function_should_work()
+        public void Queries_With_LoadDocument_Should_Work()
         {
             using (var store = GetShardedDocumentStore())
             {
@@ -403,7 +317,7 @@ order by o.Freight
             }
         }
 
-        [Fact(Skip = "Not yet supported")]
+        [Fact]
         public void Simple_Map_Reduce_With_Order_By_And_Projection()
         {
             using (var store = GetShardedDocumentStore())
@@ -420,7 +334,7 @@ order by o.Freight
                     WaitForIndexing(store, sharded: true);
 
                     var queryResult = session.Query<UserMapReduce.Result, UserMapReduce>()
-                        .OrderBy(x => x.Sum)
+                        .OrderBy(x => x.Name)
                         .Select(x => new
                         {
                             x.Sum
@@ -428,14 +342,14 @@ order by o.Freight
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
-                    Assert.Equal(1, queryResult[0].Sum);
-                    Assert.Equal(2, queryResult[1].Sum);
-                    Assert.Equal(3, queryResult[2].Sum);
+                    Assert.Equal(3, queryResult[0].Sum);
+                    Assert.Equal(1, queryResult[1].Sum);
+                    Assert.Equal(2, queryResult[2].Sum);
                 }
             }
         }
 
-        [Fact(Skip = "Not yet supported")]
+        [Fact]
         public void Simple_Map_Reduce_With_Order_By_And_Projection2()
         {
             using (var store = GetShardedDocumentStore())
@@ -452,23 +366,28 @@ order by o.Freight
                     WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
-                            let sum = user.Sum
+                            let sum = user.Sum + 1
+                            let name = user.Name + "_" + user.Name
                             orderby user.Sum
                             select new
                             {
-                                Sum = sum
+                                Sum = sum,
+                                Name = name
                             })
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
-                    Assert.Equal(1, queryResult[0].Sum);
-                    Assert.Equal(2, queryResult[1].Sum);
-                    Assert.Equal(3, queryResult[2].Sum);
+                    Assert.Equal(2, queryResult[0].Sum);
+                    Assert.Equal("Grisha_Grisha", queryResult[0].Name);
+                    Assert.Equal(3, queryResult[1].Sum);
+                    Assert.Equal("Igal_Igal", queryResult[1].Name);
+                    Assert.Equal(4, queryResult[2].Sum);
+                    Assert.Equal("Egor_Egor", queryResult[2].Name);
                 }
             }
         }
 
-        [Fact(Skip = "Not yet supported")]
+        [Fact]
         public void Simple_Map_Reduce_With_Order_By_Projecting_New_Fields()
         {
             using (var store = GetShardedDocumentStore())
@@ -509,6 +428,33 @@ order by o.Freight
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<IndexDoesNotExistException>(() => session.Query<UserMapReduce.Result, UserMapReduce>().ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Map_Reduce_Projection_With_Load_Not_Supported()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapReduce());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Grisha", Count = 1 }, "users/1");
+                    session.SaveChanges();
+
+                    WaitForIndexing(store, sharded: true);
+
+                    var exception = Assert.Throws<RavenException>(() => (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
+                            let anotherUser = RavenQuery.Load<User>(user.Name)
+                            select new
+                            {
+                                Name = anotherUser.Name
+                            })
+                        .ToList());
+
+                    Assert.Contains(nameof(NotSupportedException), exception.Message);
                 }
             }
         }

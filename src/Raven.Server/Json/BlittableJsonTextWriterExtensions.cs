@@ -26,6 +26,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
+using Raven.Server.Documents.ShardedHandlers;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Utils;
@@ -2003,7 +2004,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
 
-                writer.WritePropertyName("@order-by-fields");
+                writer.WritePropertyName(ShardedQueriesHandler.ShardedQueryProcessor.OrderByMetadataField);
                 writer.WriteStartObject();
 
                 var firstOrderByField = true;
