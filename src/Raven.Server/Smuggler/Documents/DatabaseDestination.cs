@@ -331,7 +331,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void FixDocumentMetadataIfNecessary()
             {
-                if (_documentIdsOfMissingAttachments == null || 
+                if (_documentIdsOfMissingAttachments == null ||
                     _documentIdsOfMissingAttachments.Count == 0)
                     return;
 
@@ -494,7 +494,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                _command = new MergedBatchPutCommand(_database, _buildType, _log, 
+                _command = new MergedBatchPutCommand(_database, _buildType, _log,
                     _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
                     IsRevision = _isRevision,
@@ -654,7 +654,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (databaseRecord == null)
                     return;
-                
+
                 if (databaseRecord.ConflictSolverConfig != null)
                 {
                     if (currentDatabaseRecord?.ConflictSolverConfig != null)
@@ -737,9 +737,9 @@ namespace Raven.Server.Smuggler.Documents
                         pullReplication.TaskId = 0;
                         pullReplication.Disabled = true;
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new UpdatePullReplicationAsHubCommand(_database.Name, RaftIdGenerator.DontCareId)
-                            {
-                                Definition = pullReplication
-                            }
+                        {
+                            Definition = pullReplication
+                        }
                         ));
                     }
                     progress.HubPullReplicationsUpdated = true;
@@ -892,7 +892,7 @@ namespace Raven.Server.Smuggler.Documents
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _database.Name, RaftIdGenerator.DontCareId)));
                     progress.ClientConfigurationUpdated = true;
                 }
-                
+
                 if (databaseRecord.UnusedDatabaseIds != null && databaseRecord.UnusedDatabaseIds.Count > 0)
                 {
                     if (_log.IsInfoEnabled)
@@ -946,7 +946,7 @@ namespace Raven.Server.Smuggler.Documents
             private long _attachmentsStreamSizeOverhead;
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType,
-                Logger log, 
+                Logger log,
                 ConcurrentDictionary<string, CollectionName> missingDocumentsForRevisions = null,
                 HashSet<string> documentIdsOfMissingAttachments = null)
             {
@@ -990,7 +990,7 @@ namespace Raven.Server.Smuggler.Documents
                         using (Slice.External(context.Allocator, tombstone.LowerId, out Slice key))
                         {
                             newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                                tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                            tombstone.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
 
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, tombstone.ChangeVector);
                             switch (tombstone.Type)
@@ -1052,10 +1052,15 @@ namespace Raven.Server.Smuggler.Documents
                         if ((document.NonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler)) &&
                             (_missingDocumentsForRevisions != null))
                         {
-                            if (_database.DocumentsStorage.Get(context, document.Id) == null)
+                            _database.DocumentsStorage.ValidateDocumentIdAndTransaction(context, id);
+
+                            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
                             {
-                                var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
-                                _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);
+                                if (_database.DocumentsStorage.Get(context, lowerId, skipValidationInDebug: true) == null)
+                                {
+                                    var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
+                                    _missingDocumentsForRevisions.TryAdd(document.Id.ToString(), collection);
+                                }
                             }
                         }
 
