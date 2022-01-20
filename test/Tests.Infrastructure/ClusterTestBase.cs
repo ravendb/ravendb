@@ -579,6 +579,15 @@ namespace Tests.Infrastructure
         {
             return await ClusterWaitFor(nodes, database, s => AssertWaitForNotNullAsync(() => act(s), timeout, interval));
         }
+        public async Task<T[]> ClusterWaitForNotNull<T>(
+            List<RavenServer> nodes,
+            string database,
+            Func<IDocumentStore, Task<T>> act,
+            int timeout = 15000,
+            int interval = 100) where T : class
+        {
+            return await ClusterWaitFor(nodes, database, s => WaitForNotNullAsync(() => act(s), timeout, interval));
+        }
 
         public async Task<T[]> AssertClusterWaitForValue<T>(
             List<RavenServer> nodes,

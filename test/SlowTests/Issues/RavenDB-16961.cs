@@ -1,10 +1,13 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Graph;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -111,9 +114,11 @@ namespace SlowTests.Issues
                 Assert.Equal(1, val2);
                 await RevisionsHelper.SetupRevisions(store1, Server.ServerStore, new RevisionsConfiguration());
 
-                 db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                    enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+                
                 var val = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -124,7 +129,7 @@ namespace SlowTests.Issues
                         }
                     }, false
                 );
-                Assert.False(val);
+                Assert.False(val, AddErrorInfo(enforceResult));
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -229,6 +234,24 @@ namespace SlowTests.Issues
                     Assert.Equal(3, revision.Count);
                 }
             }
+        }
+
+        private static string AddErrorInfo(IOperationResult operationResult)
+        {
+            var msg = new StringBuilder()
+                .AppendLine("tombstone still has `HasRevisions` flag");
+            
+            if (operationResult is not EnforceConfigurationResult enforceResult)
+                return msg.ToString();
+
+            msg.AppendLine("EnforceConfiguration result :")
+                .AppendLine($"\tRemovedRevisions : {enforceResult.RemovedRevisions}")
+                .AppendLine($"\tScannedDocuments : {enforceResult.ScannedDocuments}")
+                .AppendLine($"\tScannedRevisions : {enforceResult.ScannedRevisions}")
+                .AppendLine($"\tMessage : {enforceResult.Message}")
+                .AppendLine($"\tWarnings : [{string.Join(',', enforceResult.Warnings.Select(kvp => $"{kvp.Key} : {kvp.Value}"))}]");
+
+            return msg.ToString();
         }
     }
 }

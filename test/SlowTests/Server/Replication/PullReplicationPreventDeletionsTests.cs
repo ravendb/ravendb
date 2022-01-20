@@ -8,12 +8,14 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
+using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -364,6 +366,115 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task EnsureArtificialDocsAreSkippedOnReplication_17795()
+        {
+            var certificates = SetupServerAuthentication();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var hubDatabase = GetDatabaseName("HUB");
+            var sinkDatabase = GetDatabaseName("SINK");
+
+            using var hubStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
+            });
+
+            using var sinkStore = GetDocumentStore(new RavenTestBase.Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
+            });
+
+            //create artificial doc in sink
+            var artificialId = "";
+            
+            await new Users_ByName_Count().ExecuteAsync(sinkStore);
+            
+            using (var s = sinkStore.OpenAsyncSession())
+            {
+                User user1 = new() { Name = "stav", Source = "Sink" };
+                await s.StoreAsync(user1, "users/insink/1");
+                
+                User user2 = new() { Name = "stav", Source = "Sink" };
+                await s.StoreAsync(user2, "users/insink/2");
+                
+                await s.SaveChangesAsync();
+            }
+
+            WaitForIndexing(sinkStore);
+
+            using (var s = sinkStore.OpenAsyncSession())
+            {
+                var artificialDoc = await s.Advanced.AsyncRawQuery<dynamic>("from UserNames").FirstAsync();
+                artificialId = s.Advanced.GetMetadataFor(artificialDoc)[Constants.Documents.Metadata.Id];
+            }
+
+            //setup pull replication
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pullRepHub",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                PreventDeletionsMode = PreventDeletionsMode.PreventSinkToHubDeletions
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pullRepHub",
+                new ReplicationHubAccess { Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)) }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = hubStore.Database + "ConStr",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = "pullRepHub"
+            }));
+
+            //make sure hub got both docs
+            Assert.True(WaitForDocument(hubStore, "users/insink/1"));
+            Assert.True(WaitForDocument(hubStore, "users/insink/2"));
+
+            EnsureReplicating(hubStore, sinkStore);
+
+            //make sure artificial wasn't replicated to hub
+            using (var h = hubStore.OpenAsyncSession())
+            {
+                var artificial = await h.LoadAsync<dynamic>(artificialId);
+                Assert.Null(artificial);
+            }
+        }
+
+        private class Users_ByName_Count : AbstractIndexCreationTask<User, Users_ByName_Count.Result>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public int Count { get; set; }
+            }
+
+            public Users_ByName_Count()
+            {
+                Map = users => from u in users select new { u.Name, Count = 1 };
+                Reduce = results => from result in results group result by result.Name into g select new { Name = g.Key, Count = g.Sum(x => x.Count) };
+                OutputReduceToCollection = "UserNames";
+                PatternForOutputReduceToCollectionReferences = x => $"UserNames/{x.Name}";
+            }
+        }
+
+        [Fact]
         public async Task MakeSureDeletionsRevisionsDontReplicate()
         {
             var certificates = SetupServerAuthentication();
@@ -500,6 +611,7 @@ namespace SlowTests.Server.Replication
         public class User
         {
             public string Id;
+            public string Name;
             public string Source;
         }
     }

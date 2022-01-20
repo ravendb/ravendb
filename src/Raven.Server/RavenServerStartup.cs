@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -319,6 +320,16 @@ namespace Raven.Server
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
                 djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
             }
+
+            if (exception is ConcurrencyException concurrencyException)
+            {
+                djv[nameof(ConcurrencyException.Id)] = concurrencyException.Id;
+                djv[nameof(ConcurrencyException.ExpectedChangeVector)] = concurrencyException.ExpectedChangeVector;
+                djv[nameof(ConcurrencyException.ActualChangeVector)] = concurrencyException.ActualChangeVector;
+            }
+
+            if (exception is ClusterTransactionConcurrencyException { ConcurrencyViolations: { } } ctxConcurrencyException)
+                djv[nameof(ClusterTransactionConcurrencyException.ConcurrencyViolations)] = new DynamicJsonArray(ctxConcurrencyException.ConcurrencyViolations.Select(c => c.ToJson()));
         }
 
         private static void MaybeSetExceptionStatusCode(HttpContext httpContext, ServerStore serverStore, Exception exception)

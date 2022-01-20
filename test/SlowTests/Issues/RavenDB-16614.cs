@@ -177,7 +177,7 @@ namespace SlowTests.Issues
                 }
 
                 arava.Name += "-modified";
-                var err = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                var err = await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() => session.SaveChangesAsync());
                 Assert.Contains("Failed to execute cluster transaction due to the following issues: " +
                     "Guard compare exchange value 'rvn-atomic/users/arava' index does not match ", err.Message);
             }
@@ -291,7 +291,7 @@ namespace SlowTests.Issues
                     await conflictedSession.SaveChangesAsync();
                 }
 
-                await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() => session.SaveChangesAsync());
             }
         }
 
@@ -323,7 +323,7 @@ namespace SlowTests.Issues
                     await conflictedSession.SaveChangesAsync();
                 }
 
-                await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() => session.SaveChangesAsync());
             }
         }
     }
