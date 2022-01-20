@@ -373,7 +373,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryAcquireWriteLock()
+        private void TryAcquireWriteLock(int numberOfRetries = 3)
         {
             if (Configuration.Core.RunInMemory)
                 return; // no lock required;
@@ -399,6 +399,20 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
+                if (e is IOException && numberOfRetries > 0 && _writeLockFile == null)
+                {
+                    try
+                    {
+                        Thread.Sleep(100);
+                        TryAcquireWriteLock(numberOfRetries - 1);
+                        return;
+                    }
+                    catch
+                    {
+                        // ignore and throw below exception
+                    }
+                }
+
                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e);
             }
         }
