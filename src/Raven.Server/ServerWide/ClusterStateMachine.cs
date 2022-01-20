@@ -3005,7 +3005,7 @@ namespace Raven.Server.ServerWide
             return compareExchangeValue;
         }
 
-        private static unsafe long ReadCompareExchangeOrTombstoneIndex(TableValueReader reader)
+        public static unsafe long ReadCompareExchangeOrTombstoneIndex(TableValueReader reader)
         {
             var index = *(long*)reader.Read((int)CompareExchangeTable.Index, out var size);
             Debug.Assert(size == sizeof(long));
