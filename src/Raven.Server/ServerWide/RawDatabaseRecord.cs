@@ -867,6 +867,45 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private Dictionary<string, AutoIndexDefinition> _autoMapReduceIndexes;
+
+        public Dictionary<string, AutoIndexDefinition> AutoMapReduceIndexes
+        {
+            get
+            {
+                if (_autoMapReduceIndexes != null)
+                    return _autoMapReduceIndexes;
+
+                if (_autoMapReduceIndexes == null)
+                {
+                    _autoMapReduceIndexes = new Dictionary<string, AutoIndexDefinition>(StringComparer.OrdinalIgnoreCase);
+
+                    if (_record.TryGet(nameof(DatabaseRecord.AutoIndexes), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro == false)
+                                continue;
+
+                            if (bjro.TryGet(nameof(IndexDefinition.Type), out IndexType indexType) == false ||
+                                indexType != IndexType.AutoMapReduce)
+                                continue;
+
+                            _autoMapReduceIndexes[propertyDetails.Name] = JsonDeserializationCluster.AutoIndexDefinition(bjro);
+                        }
+                    }
+                }
+
+                return _autoMapReduceIndexes;
+            }
+        }
+
         private Dictionary<string, AutoIndexDefinition> _autoIndexes;
 
         public Dictionary<string, AutoIndexDefinition> AutoIndexes

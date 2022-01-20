@@ -254,8 +254,137 @@ select {{
             }
         }
 
+        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-17888")]
+        public void Auto_Map_With_Order_By_Multiple_Results()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Freight = 20m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.2m
+                            },
+                            new()
+                            {
+                                Discount = 0.4m
+                            }
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Freight = 10m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.3m
+                            },
+                            new()
+                            {
+                                Discount = 0.5m
+                            }
+                        }
+                    });
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<OrderLine>(
+                            @"
+declare function project(o) {
+    return o.Lines;
+}
+
+from Orders as o
+order by Freight as double
+select project(o)")
+                        .ToList();
+
+                    Assert.Equal(4, queryResult.Count);
+                    Assert.Equal(0.3m, queryResult[0].Discount);
+                    Assert.Equal(0.5m, queryResult[1].Discount);
+                    Assert.Equal(0.2m, queryResult[2].Discount);
+                    Assert.Equal(0.4m, queryResult[3].Discount);
+                }
+            }
+        }
+
         [Fact]
-        public void Simple_Map_Reduce_With_Order_By()
+        public void Auto_Map_Reduce_With_Order_By()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Company = "Companies/1-A",
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "Companies/2-A",
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "Companies/2-A",
+                    });
+                    session.SaveChanges();
+
+                    var queryResult = session.Advanced.RawQuery<AutoMapReduceResult>(
+                            @"
+from Orders
+group by Company
+order by count() desc
+select count() as Count, key() as Company")
+                        .Statistics(out var stats)
+                        .ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    Assert.Equal("Companies/2-A", queryResult[0].Company);
+                    Assert.Equal(2, queryResult[0].Count);
+                    Assert.Equal("Companies/1-A", queryResult[1].Company);
+                    Assert.Equal(1, queryResult[1].Count);
+
+                    var queryResult2 = session.Advanced.RawQuery<AutoMapReduceResult2>(
+                            $@"
+from index '{stats.IndexName}' as o
+order by o.Count
+select {{
+    NewCompanyName: o.Company + '_' + o.Company,
+    NewCount: o.Count * 2
+}}
+")
+                        .ToList();
+
+                    Assert.Equal(2, queryResult2.Count);
+                    Assert.Equal("Companies/1-A_Companies/1-A", queryResult2[0].NewCompanyName);
+                    Assert.Equal(2, queryResult2[0].NewCount);
+                    Assert.Equal("Companies/2-A_Companies/2-A", queryResult2[1].NewCompanyName);
+                    Assert.Equal(4, queryResult2[1].NewCount);
+                }
+            }
+        }
+
+        private class AutoMapReduceResult
+        {
+            public string Company { get; set; }
+
+            public int Count { get; set; }
+        }
+
+        private class AutoMapReduceResult2
+        {
+            public string NewCompanyName { get; set; }
+
+            public int NewCount { get; set; }
+        }
+
+        [Fact]
+        public void Map_Index_With_Order_By_Multiple_Results()
         {
             using (var store = GetShardedDocumentStore())
             {
@@ -304,8 +433,71 @@ declare function project(o) {
 }
 
 from index 'OrderMapIndex' as o
-order by o.Freight
+order by o.Freight as double
                     select project(o)")
+                        .ToList();
+
+                    Assert.Equal(4, queryResult.Count);
+                    Assert.Equal(0.3m, queryResult[0].Discount);
+                    Assert.Equal(0.5m, queryResult[1].Discount);
+                    Assert.Equal(0.2m, queryResult[2].Discount);
+                    Assert.Equal(0.4m, queryResult[3].Discount);
+                }
+            }
+        }
+
+        [Fact]
+        public void Map_Reduce_Index_With_Order_By_Multiple_Results()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new OrderMapReduceIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Freight = 20m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.2m
+                            },
+                            new()
+                            {
+                                Discount = 0.4m
+                            }
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Freight = 10m,
+                        Lines = new List<OrderLine>
+                        {
+                            new()
+                            {
+                                Discount = 0.3m
+                            },
+                            new()
+                            {
+                                Discount = 0.5m
+                            }
+                        }
+                    });
+                    session.SaveChanges();
+
+                    WaitForIndexing(store, sharded: true);
+
+                    var queryResult = session.Advanced.RawQuery<OrderLine>(
+                            @"
+declare function project(o) {
+    return o.Lines;
+}
+
+from index 'OrderMapReduceIndex' as o
+order by Freight as double
+select project(o)")
                         .ToList();
 
                     Assert.Equal(4, queryResult.Count);
@@ -464,7 +656,7 @@ order by o.Freight
             public int Age { get; set; }
         }
 
-        public class Dog
+        private class Dog
         {
             public string Id { get; set; }
             public string Name { get; set; }
@@ -474,7 +666,7 @@ order by o.Freight
             public bool IsVaccinated { get; set; }
         }
 
-        public class DogsIndex : AbstractIndexCreationTask<Dog>
+        private class DogsIndex : AbstractIndexCreationTask<Dog>
         {
             public class Result
             {
@@ -498,7 +690,7 @@ order by o.Freight
             }
         }
 
-        public class UserMapIndex : AbstractIndexCreationTask<User>
+        private class UserMapIndex : AbstractIndexCreationTask<User>
         {
             public class Result
             {
@@ -519,7 +711,7 @@ order by o.Freight
             }
         }
 
-        public class OrderMapIndex : AbstractIndexCreationTask<Order>
+        private class OrderMapIndex : AbstractIndexCreationTask<Order>
         {
             public class Result
             {
@@ -540,7 +732,39 @@ order by o.Freight
             }
         }
 
-        public class UserMapReduce : AbstractIndexCreationTask<User, UserMapReduce.Result>
+        private class OrderMapReduceIndex : AbstractIndexCreationTask<Order>
+        {
+            public class Result
+            {
+                public decimal Freight;
+                public List<OrderLine> Lines;
+            }
+
+            public OrderMapReduceIndex()
+            {
+                Map = orders =>
+                    from order in orders
+                    select new Result
+                    {
+                        Freight = order.Freight,
+                        Lines = order.Lines
+                    };
+
+                Reduce = results =>
+                    from result in results
+                    group result by result.Freight into g
+                    select new Result
+                    {
+                        Freight = g.Key,
+                        Lines = g.SelectMany(x => x.Lines).ToList()
+                    };
+
+                //TODO: remove when we have the fields from the index
+                StoreAllFields(FieldStorage.Yes);
+            }
+        }
+
+        private class UserMapReduce : AbstractIndexCreationTask<User, UserMapReduce.Result>
         {
             public class Result
             {

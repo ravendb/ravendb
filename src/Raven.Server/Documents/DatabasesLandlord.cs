@@ -122,6 +122,7 @@ namespace Raven.Server.Documents
                             {
                                 var shardedContext = db.Value.Result;
                                 shardedContext?.UpdateMapReduceIndexes(rawRecord.MapReduceIndexes);
+                                shardedContext?.UpdateAutoMapReduceIndexes(rawRecord.AutoMapReduceIndexes);
                             }
 
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())

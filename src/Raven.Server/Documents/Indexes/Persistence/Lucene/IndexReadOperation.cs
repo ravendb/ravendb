@@ -239,12 +239,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     }
                                 }
 
-                                if (query.Metadata.OrderBy?.Length > 0 && _indexType != IndexType.MapReduce && _indexType != IndexType.JavaScriptMapReduce)
+                                if (query.Metadata.OrderBy?.Length > 0 && _indexType.IsMapReduce() == false)
                                 {
                                     // a map-reduce index is going to send the order by fields anyway
                                     foreach (var field in query.Metadata.OrderBy)
                                     {
-                                        //TODO: make it work without index storing the fields
+                                        // TODO: make it work without storing the fields in the index
+                                        // https://issues.hibernatingrhinos.com/issue/RavenDB-17888
                                         var fieldValue = document.GetField(field.Name.Value).StringValue(_state);
                                         d.AddOrderByField(field.Name.Value, fieldValue);
                                     }

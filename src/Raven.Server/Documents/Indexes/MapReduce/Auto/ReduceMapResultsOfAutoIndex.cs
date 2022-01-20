@@ -21,6 +21,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         protected override AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
         {
+            return AggregateOn(aggregationBatch, _indexDefinition, indexContext, stats, token);
+        }
+
+        public static AggregationResult AggregateOn(List<BlittableJsonReaderObject> aggregationBatch, AutoMapReduceIndexDefinition indexDefinition, TransactionOperationContext indexContext, IndexingStatsScope stats, CancellationToken token)
+        {
             var aggregatedResultsByReduceKey = new Dictionary<BlittableJsonReaderObject, Dictionary<string, PropertyResult>>(ReduceKeyComparer.Instance);
 
             foreach (var obj in aggregationBatch)
@@ -31,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 foreach (var propertyName in obj.GetPropertyNames())
                 {
-                    if (_indexDefinition.TryGetField(propertyName, out var indexField))
+                    if (indexDefinition.TryGetField(propertyName, out var indexField))
                     {
                         switch (indexField.Aggregation)
                         {
@@ -79,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         }
                     }
 
-                    if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
+                    if (indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
                     {
                         // we want to reuse existing entry to get a reduce key
 
