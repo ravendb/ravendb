@@ -277,13 +277,12 @@ namespace RachisTests.DatabaseCluster
         }
         
         [Fact64Bit]
-        public async Task ReshuffleAfterPromotion64X()
+        public async Task ReshuffleAfterPromotionX64()
         {
             await ReshuffleAfterPromotion(25);
         }
         
-        [Fact]
-        public async Task ReshuffleAfterPromotion(int numberOfDatabases)
+        private async Task ReshuffleAfterPromotion(int numberOfDatabases)
         {
             var clusterSize = 3;
             var settings = new Dictionary<string, string>()
