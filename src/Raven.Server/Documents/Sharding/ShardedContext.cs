@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly long _lastClientConfigurationIndex;
 
         private readonly ConcurrentDictionary<string, IndexDefinition> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, AutoIndexDefinition> _cachedAutoMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         public readonly ScriptRunnerCache ScriptRunnerCache;
         private readonly RavenConfiguration _ravenConfiguration;
 
@@ -56,8 +58,13 @@ namespace Raven.Server.Documents.Sharding
 
             _serverStore = serverStore;
             _record = record;
+
             UpdateMapReduceIndexes(record.Indexes
                 .Where(x => x.Value.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce)
+                .ToDictionary(x => x.Key, x => x.Value));
+
+            UpdateAutoMapReduceIndexes(record.AutoIndexes
+                .Where(x => x.Value.Type is IndexType.AutoMapReduce)
                 .ToDictionary(x => x.Key, x => x.Value));
 
             _ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
@@ -201,16 +208,34 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
+        public void UpdateAutoMapReduceIndexes(Dictionary<string, AutoIndexDefinition> autoMapReduceIndexes)
+        {
+            //TODO: remove the deleted map reduce indexes from cache
+            foreach ((string indexName, AutoIndexDefinition definition) in autoMapReduceIndexes)
+            {
+                Debug.Assert(definition.Type is IndexType.AutoMapReduce);
+
+                _cachedAutoMapReduceIndexDefinitions[indexName] = definition;
+            }
+        }
+
         public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
         {
+            //TODO: cache the compiled JavaScript indexes
             return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false 
                 ? null 
                 : IndexCompilationCache.GetIndexInstance(indexDefinition, _ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
         }
 
+        public bool TryGetAutoIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)
+        {
+            return _cachedAutoMapReduceIndexDefinitions.TryGetValue(indexName, out autoIndexDefinition);
+        }
+
         public bool IsMapReduceIndex(string indexName)
         {
-            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out _);
+            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out _)
+                || _cachedAutoMapReduceIndexDefinitions.TryGetValue(indexName, out _);
         }
     }
 }

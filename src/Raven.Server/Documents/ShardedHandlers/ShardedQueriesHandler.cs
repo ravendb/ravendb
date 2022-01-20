@@ -16,6 +16,8 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
@@ -592,6 +594,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         return;
                     }
 
+                    //TODO: check if this can be replaced by handling it in ReduceMapReduceIndexResults
                     ReduceDynamicResults();
                 }
                 else if (_result.IsMapReduce)
@@ -602,6 +605,14 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void ReduceMapReduceIndexResults()
             {
+                if (_parent.ShardedContext.TryGetAutoIndexDefinition(_result.IndexName, out var autoIndexDefinition))
+                {
+                    var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)IndexStore.CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel);
+                    var aggegation = ReduceMapResultsOfAutoIndex.AggregateOn(_result.Results, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
+                    _result.Results = aggegation.GetOutputsToStore().ToList();
+                    return;
+                }
+
                 var compiled = _parent.ShardedContext.GetCompiledMapReduceIndex(_result.IndexName, _context);
                 if (compiled == null)
                     throw new IndexDoesNotExistException($"Index {_result.IndexName} doesn't exist");
@@ -711,16 +722,28 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 foreach (var data in currentResults)
                 {
-                    (Document document, _) = retriever.GetProjectionFromDocument(new Document
+                    (Document document, List<Document> documents) = retriever.GetProjectionFromDocument(new Document
                     {
                         Data = data
                     }, null, null, fieldsToFetch, _context, null, CancellationToken.None);
 
-                    if (document == null)
-                        continue;
+                    if (document != null)
+                    {
+                        AddDocument(document.Data);
+                    }
+                    else if (documents != null)
+                    {
+                        foreach (var doc in documents)
+                        {
+                            AddDocument(doc.Data);
+                        }
+                    }
 
-                    var result = _context.ReadObject(document.Data, "modified-map-reduce-result");
-                    _result.Results.Add(result);
+                    void AddDocument(BlittableJsonReaderObject documentData)
+                    {
+                        var result = _context.ReadObject(documentData, "modified-map-reduce-result");
+                        _result.Results.Add(result);
+                    }
                 }
             }
 
