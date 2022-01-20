@@ -43,13 +43,13 @@ namespace RachisTests.DatabaseCluster
             await base.ClusterWideTransaction_WhenDisableAndStore_ShouldNotCreateCompareExchange();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst()
         {
             await base.ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task ClusterWideTransaction_WhenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
         {
             await base.ClusterWideTransaction_WhenLoadAndDeleteWhileUpdated_ShouldFailDeletion();
@@ -84,12 +84,13 @@ namespace RachisTests.DatabaseCluster
             await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(count);
         }
 
+        [Theory(Skip = "Should complete shard implementation")]
         public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail()
         {
             await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {
             await base.ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate();

@@ -155,13 +155,13 @@ namespace SlowTests.Cluster
             await base.TestCleanUpClusterState();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task TestConcurrentClusterSessions()
         {
             await base.TestConcurrentClusterSessions();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task TestSessionMixture()
         {
             await base.TestSessionMixture();
@@ -291,7 +291,7 @@ namespace SlowTests.Cluster
             await base.ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(id);
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [Fact]
         public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
         {
             await base.ClusterTransactionShouldBeRedirectedFromPromotableNode();

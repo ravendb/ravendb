@@ -447,30 +447,18 @@ namespace RachisTests.DatabaseCluster
                 WaitForDocument<object>(store, entityId, o => o != null);
             }
             
-            var amre = new AsyncManualResetEvent();
-            var amre2 = new AsyncManualResetEvent();
-            var task = Task.Run(async () =>
+            using var session = stores[0].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
+            var loaded = await session.LoadAsync<TestObj>(entityId);
+
+            using (var deleteSession = stores[1].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
             {
-                using var session = stores[0].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide});
-                var loaded = await session.LoadAsync<TestObj>(entityId);
-                amre.Set();
-
-                loaded.Prop = "Changed";
-
-                await amre2.WaitAsync();
-                await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
-            });
-            await amre.WaitAsync();
-            using (var session = stores[1].OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
-            {
-                var loaded = await session.LoadAsync<TestObj>(entityId);
-                session.Delete(loaded);
-                await session.SaveChangesAsync();
-
-                amre2.Set();
+                var toDelete = await deleteSession.LoadAsync<TestObj>(entityId);
+                deleteSession.Delete(toDelete);
+                await deleteSession.SaveChangesAsync();
             }
-
-            await task;
+            
+            loaded.Prop = "Changed";
+            await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
         }
 
         [Fact]
