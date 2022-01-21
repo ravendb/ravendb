@@ -15,7 +15,6 @@ using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Replication;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -88,7 +87,10 @@ namespace Raven.Server.Documents
                     {
                         throw new ConcurrencyException(
                             $"Cannot PUT document '{id}' because its change vector's cluster transaction index is set to {indexFromChangeVector} " +
-                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}");
+                            $"but the compare exchange guard ('{ClusterTransactionCommand.GetAtomicGuardKey(id)}') is set to {indexFromCluster}")
+                        {
+                            Id = id
+                        };
                     }
                 }
             }
@@ -723,6 +725,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Document {id} does not exist, but Put was called with change vector: {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
+                Id = id,
                 ExpectedChangeVector = expectedChangeVector
             };
         }
@@ -737,6 +740,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Document {id} has change vector {oldChangeVector}, but Put was called with {(expectedChangeVector.Length == 0 ? "expecting new document" : "change vector " + expectedChangeVector)}. Optimistic concurrency violation, transaction will be aborted.")
             {
+                Id = id,
                 ActualChangeVector = oldChangeVector,
                 ExpectedChangeVector = expectedChangeVector
             };

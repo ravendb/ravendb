@@ -652,9 +652,9 @@ namespace Raven.Server.Documents.Replication
             if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
 
-            if (_shouldSkipSendingTombstones)
+            if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
             {
-                return ReplicationLoader.IsOfTypePreventDeletions(item);
+                return true;
             }
 
             switch (item)
