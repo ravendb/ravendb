@@ -208,10 +208,15 @@
                             <span data-bind="if: patternForReferencesToReduceOutputCollection"><i class="icon-reference-pattern"></i></span>
                     </div>
                     <div class="index-type">
-                        <span data-bind="text: typeForUI"></span>
+                        <span>Type:&nbsp;</span><strong data-bind="text: typeForUI"></strong>
                         <!--<span data-bind="visible: isTestIndex">&nbsp; <span class="label label-warning">TEST INDEX</span></span>-->
                         <span data-bind="visible: replacement" class="margin-left margin-left-sm"><span class="label label-warning">OLD</span></span>
                         <span data-bind="visible: parent" class="margin-left margin-left-sm"><span class="label label-warning">NEW</span></span>
+                    </div>
+                </div>
+                <div class="flex-horizontal clear-left index-info nospacing">
+                    <div class="index-type margin-left margin-left-lg">
+                        <span>Search Engine:&nbsp;</span><strong data-bind="text: searchEngineType"></strong>
                     </div>
                 </div>
             </div>

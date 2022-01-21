@@ -45,6 +45,7 @@ class index {
     typeForUI: KnockoutComputed<string>;
     
     sourceType = ko.observable<Raven.Client.Documents.Indexes.IndexSourceType>();
+    searchEngineType = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
 
     filteredOut = ko.observable<boolean>(false); //UI only property
     badgeClass: KnockoutComputed<string>;
@@ -106,6 +107,7 @@ class index {
         this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
         this.type(dto.Type);
         this.sourceType(dto.SourceType);
+        this.searchEngineType(dto.SearchEngineType);
         this.state(dto.State);
         this.globalIndexingStatus = globalIndexingStatus;
         this.status(dto.Status); 
