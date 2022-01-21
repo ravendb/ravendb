@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.TimeSeries
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
 
-            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name))
+            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection))
             {
                 var stats = Stats.GetStats(context, slicer);
                 if (stats == default || stats.Count == 0)
@@ -2313,7 +2313,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, string documentId, string name)
         {
-            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name))
+            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection: null))
             {
                 return Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
             }
@@ -2756,7 +2756,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Debug.Assert(noNaN, "Rollup has NaN");
                 }
 
-                using (var slicer = new TimeSeriesSliceHolder(context, docId, name).WithBaseline(baseline))
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, name, collectionName.Name).WithBaseline(baseline))
                 {
                     Debug.Assert(tss.EnsureNoOverlap(context, slicer.TimeSeriesKeySlice, collectionName, segment, baseline), "Segment is overlapping another segment");
                 }

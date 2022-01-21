@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Orders;
 using Tests.Infrastructure;
 using Xunit;
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchFact]
-        public void ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
+        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
         {
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
@@ -26,7 +27,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             .MatchOnlyText(t => t
                                 .Name("Id")))));
 
-                SetupElasticEtl(store, @"
+                var config = SetupElasticEtl(store, @"
 var orderData = {
     Id: id(this),
     OrderLinesCount: this.Lines.length,
@@ -43,15 +44,14 @@ loadToOrders(orderData);
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromSeconds(15));
-
-                using (GetDatabase(store.Database).Result.NotificationCenter.GetStored(out var alerts, false))
+                var alert = await AssertWaitForNotNullAsync(() =>
                 {
-                    var alert = alerts.Where(x => x.Json.ToString().Contains("The index 'orders' has invalid mapping for 'Id' property."));
+                    TryGetLoadError(store.Database, config, out var error);
 
-                    Assert.NotNull(alert);
-                }
+                    return Task.FromResult(error);
+                }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
 
+                Assert.Contains("The index 'orders' has invalid mapping for 'Id' property.", alert.Error);
             }
         }
     }

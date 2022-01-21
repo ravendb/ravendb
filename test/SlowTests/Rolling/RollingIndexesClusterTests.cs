@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,7 @@ using Raven.Server;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -231,7 +233,7 @@ namespace SlowTests.Rolling
 
                 await VerifyHistory(cluster, store);
 
-                var count = 0L;
+                var runningIndexes = new ConcurrentSet<Index>();
                 var violation = new StringBuilder();
                 var mre = new ManualResetEventSlim();
                 foreach (var server in Servers)
@@ -246,15 +248,33 @@ namespace SlowTests.Rolling
                         if (index.Name != "ReplacementOf/MyRollingIndex")
                             return;
 
-                        var inc = Interlocked.Increment(ref count);
+                        if (runningIndexes.TryAdd(index) == false)
+                        {
+                            violation.AppendLine($"{index} already exists");
+                        }
+
+                        var inc = runningIndexes.Count;
                         if (inc > 1)
+                        {
                             violation.AppendLine($"{index} started concurrently (count: {inc})");
+                        }
                     };
                     indexStore.ForTestingPurposesOnly().BeforeRollingIndexFinished = index =>
                     {
-                        var dec = Interlocked.Decrement(ref count);
+                        if (runningIndexes.TryRemove(index) == false)
+                        {
+                            violation.AppendLine($"{index} isn't found");
+                        }
+
+                        var dec = runningIndexes.Count;
                         if (dec != 0)
                             violation.AppendLine($"finishing {index} must be zero but is {dec} @ {server.ServerStore.NodeTag}");
+                    };
+
+                    indexStore.ForTestingPurposesOnly().BeforeIndexThreadExit = index =>
+                    {
+                        if (index.IndexingProcessCancellationToken.IsCancellationRequested)
+                            runningIndexes.TryRemove(index);
                     };
                 }
 
@@ -532,9 +552,13 @@ namespace SlowTests.Rolling
 
                 await store.ExecuteIndexAsync(new MyRollingIndex());
 
-                var node = cluster.Nodes.First(x => x != cluster.Leader);
+                RavenServer node = default;
+                await ActionWithLeader(leader =>
+                {
+                    node = cluster.Nodes.First(x => x != leader);
+                    return leader.ServerStore.RemoveFromClusterAsync(node.ServerStore.NodeTag);
+                });
 
-                await store.Operations.SendAsync(new RemoveClusterNodeOperation(node.ServerStore.NodeTag));
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
                 {
                     await node.ServerStore.WaitForState(RachisState.Passive, cts.Token);

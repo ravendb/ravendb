@@ -112,7 +112,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             {
                 try
                 {
-                    task.Wait();
+                    task.Wait(TimeSpan.FromSeconds(3));
                 }
                 catch (OperationCanceledException)
                 {

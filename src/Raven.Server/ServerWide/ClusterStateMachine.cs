@@ -306,6 +306,8 @@ namespace Raven.Server.ServerWide
             });
         }
 
+        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
+
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
         public override void Dispose()
@@ -916,7 +918,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private List<string> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
+        private List<ClusterTransactionCommand.ClusterTransactionErrorInfo> ExecuteClusterTransaction(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             ClusterTransactionCommand clusterTransaction = null;
             Exception exception = null;

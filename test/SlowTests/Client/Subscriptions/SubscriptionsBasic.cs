@@ -1113,6 +1113,52 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task EnsureSingleSubscriptionDoesNotContinueBeforeAckSent()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = await store.Subscriptions.CreateAsync(new() {Query = "from Users"});
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+
+                var holdAck = new AsyncManualResetEvent();
+                var tryTriggerNextBatch = new AsyncManualResetEvent();
+
+                var firstCV = "";
+
+                using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) {MaxDocsPerBatch = 1}))
+                {
+                    worker.Run(async batch =>
+                    {
+                        firstCV = batch.Items[0].ChangeVector;
+                        tryTriggerNextBatch.Set();
+                        await holdAck.WaitAsync();
+                    });
+
+                    await tryTriggerNextBatch.WaitAsync();
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User());
+                        await session.SaveChangesAsync();
+                    }
+                    
+                    var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, subscriptionName);
+                        Assert.Equal(firstCV, connectionState.LastChangeVectorSent); //make sure LastChangeVectorSent didn't advance in server even though there was no ack
+                        holdAck.Set();
+                    }
+                }
+            }
+        }
+
         private class Dog
         {
             public int Name { get; set; }

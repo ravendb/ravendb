@@ -1321,7 +1321,6 @@ namespace SlowTests.Server.Replication
             var nodeA = nodes.First(n => n.ServerStore.NodeTag == "A");
             using var store = GetDocumentStore(new Options { Server = nodeA, ReplicationFactor = 3 });
             var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-
             string nodeTagToRemove = res.Topology.Members.Last(m => m.Equals("A") == false);
             var config = new RevisionsConfiguration { Default = new RevisionsCollectionConfiguration() };
             await RevisionsHelper.SetupRevisions(store, leader.ServerStore, config);
@@ -1340,11 +1339,6 @@ namespace SlowTests.Server.Replication
             }
 
             await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTagToRemove, TimeSpan.FromSeconds(30)));
-            Assert.Equal(1, await WaitForValueAsync(async () =>
-            {
-                var records = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                return records.DeletionInProgress.Count;
-            }, 1));
 
             Assert.True(await WaitForValueAsync(async () =>
             {
@@ -1374,6 +1368,7 @@ namespace SlowTests.Server.Replication
             {
                 entity.Name = $"Change after adding again node {nodeTagToRemove} ";
                 await session.StoreAsync(entity);
+                session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
                 await session.SaveChangesAsync();
             }
             Assert.Equal(await WaitForValueAsync(async () =>
