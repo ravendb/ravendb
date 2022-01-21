@@ -40,11 +40,13 @@ namespace Raven.Client.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
+        [Obsolete("Not used and will be removed and the next major version")]
         public long ExpectedETag { get; set; }
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
+        [Obsolete("Not used and will be removed and the next major version")]
         public long ActualETag { get; set; }
 
         /// <summary>
@@ -56,5 +58,10 @@ namespace Raven.Client.Exceptions
         /// Actual Change Vector.
         /// </summary>
         public string ActualChangeVector { get; set; }
+
+        /// <summary>
+        /// The Document Id.
+        /// </summary>
+        public string Id { get; set; }
     }
 }

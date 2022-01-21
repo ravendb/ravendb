@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils
@@ -20,7 +21,7 @@ namespace Raven.Server.Utils
             _writeLockFile = null;
         }
 
-        public void TryAcquireWriteLock(Logger logger)
+        public void TryAcquireWriteLock(Logger logger, int numberOfRetries = 3)
         {
             var dir = Path.GetDirectoryName(_lockFile);
             try
@@ -42,6 +43,20 @@ namespace Raven.Server.Utils
             }
             catch (Exception e)
             {
+                if (e is IOException && numberOfRetries > 0 && _writeLockFile == null)
+                {
+                    try
+                    {
+                        Thread.Sleep(100);
+                        TryAcquireWriteLock(logger, numberOfRetries - 1);
+                        return;
+                    }
+                    catch
+                    {
+                        // ignore and throw below exception
+                    }
+                }
+
                 _writeLockFile?.Dispose();
                 _writeLockFile = null;
                 string additionalInfo = null;

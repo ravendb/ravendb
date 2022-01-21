@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Routing;
 using Sparrow.Server.Platform.Posix;
 
@@ -13,26 +16,51 @@ namespace Raven.Server.ServerWide
     {
         public static readonly IReadOnlyList<RouteInformation> Routes = RouteScanner.DebugRoutes;
 
-        public static string GetOutputPathFromRouteInformation(RouteInformation route, string prefix)
+        public static string GetOutputPathFromRouteInformation(RouteInformation route, string prefix, string extension) => GetOutputPathFromRouteInformation(route.Path, prefix, extension);
+
+        public static string GetOutputPathFromRouteInformation(string path, string prefix, string extension)
         {
-            var path = route.Path;
             if (path.StartsWith("/debug/"))
                 path = path.Replace("/debug/", string.Empty);
             else if (path.StartsWith("debug/"))
                 path = path.Replace("debug/", string.Empty);
 
             path = path.Replace("/databases/*/", string.Empty)
-                       .Replace("debug/", string.Empty) //if debug/ left in the middle, remove it as well
-                       .Replace("/", ".");
+                .Replace("debug/", string.Empty) //if debug/ left in the middle, remove it as well
+                .Replace("/", ".");
 
             if (path.StartsWith("."))
                 path = path.Substring(1);
 
-            path = string.IsNullOrWhiteSpace(prefix) == false ? 
-                $"{prefix}/{path}.json" : // .ZIP File Format Specification 4.4.17 file name: (Variable)
-                $"{path}.json";
+            path = string.IsNullOrWhiteSpace(prefix) == false ?
+                $"{prefix}/{path}" : // .ZIP File Format Specification 4.4.17 file name: (Variable)
+                path;
+
+            path = string.IsNullOrWhiteSpace(extension) ? path : $"{path}.{extension}";
 
             return path;
+        }
+
+        public static IEnumerable<RouteInformation> GetAuthorizedRoutes(RavenServer server, HttpContext httpContext, string databaseName = null)
+        {
+            var routes = Routes.Where(x => server._forTestingPurposes == null || server._forTestingPurposes.DebugPackage.RoutesToSkip.Contains(x.Path) == false);
+            var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            foreach (var route in routes)
+            {
+                if (server.Certificate.Certificate != null)
+                {
+                    Debug.Assert(feature != null);
+                    if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature, out _))
+                    {
+                        yield return route;
+                    }
+                }
+                else
+                {
+                    yield return route;
+                }
+            }
         }
 
         public static async Task WriteExceptionAsZipEntryAsync(Exception e, ZipArchive archive, string entryName)
@@ -46,41 +74,6 @@ namespace Raven.Server.ServerWide
                 await sw.WriteAsync(e.ToString());
                 await sw.FlushAsync();
             }
-        }
-
-        public static IEnumerable<RouteInformation> GetAuthorizedRoutes(RavenServer.AuthenticateConnection authenticateConnection, string db = null)
-        {
-            return Routes.Where(route =>
-            {
-                bool authorized = false;
-                switch (authenticateConnection.Status)
-                {
-                    case RavenServer.AuthenticationStatus.ClusterAdmin:
-                        authorized = true;
-                        break;
-
-                    case RavenServer.AuthenticationStatus.Operator:
-                        if (route.AuthorizationStatus != AuthorizationStatus.ClusterAdmin)
-                            authorized = true;
-                        break;
-
-                    case RavenServer.AuthenticationStatus.Allowed:
-                        if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin || route.AuthorizationStatus == AuthorizationStatus.Operator)
-                            break;
-                        if (route.TypeOfRoute == RouteInformation.RouteType.Databases
-                            && (db == null || authenticateConnection.CanAccess(db, requireAdmin: route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin, requireWrite: route.EndpointType == EndpointType.Write) == false))
-                            break;
-                        authorized = true;
-                        break;
-
-                    default:
-                        if (route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
-                            authorized = true;
-                        break;
-                }
-
-                return authorized;
-            });
         }
     }
 }

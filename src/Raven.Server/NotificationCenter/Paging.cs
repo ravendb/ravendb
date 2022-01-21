@@ -62,15 +62,25 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal void UpdatePaging(object state)
+        private void UpdatePaging(object state)
         {
+            UpdatePagingInternal(state, out _);
+        }
+
+        internal bool UpdatePagingInternal(object state, out string reasonOfNotUpdating)
+        {
+            var outcome = false;
+            reasonOfNotUpdating = "";
+
             try
             {
                 if (_pagingQueue.IsEmpty)
-                    return;
+                {
+                    reasonOfNotUpdating += "Queue is empty";
+                    return false;
+                }
 
                 PerformanceHint documents = null, queries = null, revisions = null, compareExchange = null;
-
                 while (_pagingQueue.TryDequeue(
                     out PagingInformation pagingInfo))
                 {
@@ -95,29 +105,45 @@ namespace Raven.Server.NotificationCenter
                             compareExchange ??= GetPagingPerformanceHint(PagingCompareExchangeId, pagingInfo.Type);
                             ((PagingPerformanceDetails)compareExchange.Details).Update(pagingInfo);
                             break;
-
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
                 }
 
                 if (documents != null)
+                {
                     _notificationCenter.Add(documents);
+                    outcome = true;
+                }
 
                 if (queries != null)
+                {
                     _notificationCenter.Add(queries);
+                    outcome = true;
+                }
 
                 if (revisions != null)
+                {
                     _notificationCenter.Add(revisions);
+                    outcome = true;
+                }
 
                 if (compareExchange != null)
+                {
                     _notificationCenter.Add(compareExchange);
+                    outcome = true;
+                }
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error in a notification center paging timer", e);
+
+                outcome = false;
+                reasonOfNotUpdating += $"Error in a notification center paging timer. {e}";
             }
+                
+            return outcome;
         }
 
         private PerformanceHint GetPagingPerformanceHint(string id, PagingOperationType type)

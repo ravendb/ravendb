@@ -37,8 +37,8 @@ if(collection == 'ShoppingCarts')
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var errors = await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { "Events/ShoppingCart" }));
-                    Assert.Empty(errors[0].Errors);
+                    var errors = WaitForIndexingErrors(store, new[] { "Events/ShoppingCart" }, errorsShouldExists: false);
+                    Assert.Null(errors);
                     var count = await session.Advanced.AsyncRawQuery<object>("from ShoppingCarts").CountAsync();
                     Assert.Equal(1, count);
                 }

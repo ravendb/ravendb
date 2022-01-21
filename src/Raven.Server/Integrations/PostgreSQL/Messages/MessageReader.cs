@@ -135,6 +135,14 @@ namespace Raven.Server.Integrations.PostgreSQL.Messages
             {
                 reader.AdvanceTo(read.Buffer.Start, read.Buffer.End);
                 read = await reader.ReadAsync(token);
+                
+                if (read.Buffer.Length < minSizeRequired && read.IsCompleted)
+                {
+                    // we aren't making progress and nothing else will be forthcoming
+
+                    throw new PgErrorException(PgErrorCodes.ProtocolViolation,
+                        $"Expected to read at least {minSizeRequired} but got {read.Buffer.Length} and the pipe is already closed");
+                }
             }
 
             return read;

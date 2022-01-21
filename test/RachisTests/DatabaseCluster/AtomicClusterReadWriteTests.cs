@@ -109,7 +109,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(2, exceptions.Count);
             foreach (var exception in exceptions)
             {
-                Assert.IsType<ConcurrencyException>(exception);
+                Assert.IsType<ClusterTransactionConcurrencyException>(exception);
             }
         }
 
@@ -239,11 +239,31 @@ namespace RachisTests.DatabaseCluster
                 await documentStore.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
             }
 
-            await AssertClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+            // await AssertClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+            // {
+            //     using var session = s.OpenAsyncSession();
+            //     return await session.LoadAsync<TestObj>(notDelete);
+            // });
+            
+            //Additional information for investigating RavenDB-17823 
             {
-                using var session = s.OpenAsyncSession();
-                return await session.LoadAsync<TestObj>(notDelete);
-            });
+                var waitResults = await ClusterWaitForNotNull(nodes, documentStore.Database, async s =>
+                {
+                    using var session = s.OpenAsyncSession();
+                    return await session.LoadAsync<TestObj>(notDelete);
+                });
+                var nullCount = waitResults.Count(r => r == null);
+                if (nullCount != 0)
+                {
+                    var results = await ClusterWaitFor(nodes, documentStore.Database, async s =>
+                    {
+                        using var session = s.OpenAsyncSession();
+                        return (await session.LoadAsync<TestObj>(notDelete), await session.Query<TestObj>().CountAsync());
+                    });
+
+                    Assert.True(false, string.Join("\n", results.Select((r => $"is notDelete null:{r.Item1 == null}, actual count {r.Item2}, expected {count}"))));
+                }
+            }
 
             await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
         }

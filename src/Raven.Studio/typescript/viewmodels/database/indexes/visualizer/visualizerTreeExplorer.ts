@@ -2,8 +2,6 @@ import generalUtils = require("common/generalUtils");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-
-
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import { highlight, languages } from "prismjs";

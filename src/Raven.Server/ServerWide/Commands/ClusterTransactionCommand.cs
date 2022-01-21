@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -18,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -66,6 +65,21 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(ChangeVector)] = ChangeVector,
                     [nameof(Document)] = Document?.Clone(context),
                     [nameof(Error)] = Error
+                };
+            }
+        }
+
+        public class ClusterTransactionErrorInfo : IDynamicJsonValueConvertible
+        {
+            public string Message;
+            public ConcurrencyViolation Violation;
+            
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Message)] = Message,
+                    [nameof(Violation)] = Violation.ToJson()
                 };
             }
         }
@@ -154,7 +168,7 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '{identityPartsSeparator}' as part of cluster transaction");
         }
 
-        public List<string> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
+        public List<ClusterTransactionErrorInfo> ExecuteCompareExchangeCommands(DatabaseTopology dbTopology, ClusterOperationContext context, long index, Table items)
         {
             if (Options?.DisableAtomicDocumentWrites == false)
                 EnsureAtomicDocumentWrites(dbTopology, context, items, index);
@@ -163,7 +177,7 @@ namespace Raven.Server.ServerWide.Commands
                 return null;
 
             var toExecute = new List<CompareExchangeCommandBase>(ClusterCommands.Count);
-            var errors = new List<string>();
+            var errors = new List<ClusterTransactionErrorInfo>();
             foreach (var clusterCommand in ClusterCommands)
             {
                 long current;
@@ -173,12 +187,7 @@ namespace Raven.Server.ServerWide.Commands
                         var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context, null);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
-                            if(clusterCommand.Error != null)
-                            {
-                                errors.Add(clusterCommand.Error);
-                            }
-                            errors.Add(
-                                $"Concurrency check failed for putting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                            errors.Add(GenerateErrorInfo(clusterCommand, current));
                             continue;
                         }
                         toExecute.Add(put);
@@ -187,11 +196,7 @@ namespace Raven.Server.ServerWide.Commands
                         var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context, null);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
-                            if (clusterCommand.Error != null)
-                            {
-                                errors.Add(clusterCommand.Error);
-                            }
-                            errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
+                            errors.Add(GenerateErrorInfo(clusterCommand, current, delete: true));
                             continue;
                         }
                         toExecute.Add(delete);
@@ -199,7 +204,7 @@ namespace Raven.Server.ServerWide.Commands
                     default:
                         throw new RachisApplyException(
                             $"Invalid cluster command detected: {clusterCommand.Type}! Only " +
-                            $"CompareExchangePUT and CompareExchangeDELETE are supported.");
+                            "CompareExchangePUT and CompareExchangeDELETE are supported.");
                 }
             }
 
@@ -214,6 +219,32 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             return null;
+        }
+
+        private static ClusterTransactionErrorInfo GenerateErrorInfo(ClusterTransactionDataCommand clusterCommand, long actualIndex, bool delete = false)
+        {
+            var msg = $"Concurrency check failed for {(delete ? "deleting" : "putting")} the key '{clusterCommand.Id}'. " +
+                      $"Requested index: {clusterCommand.Index}, actual index: {actualIndex}";
+
+            var type = ViolationOnType.CompareExchange;
+
+            if (clusterCommand.Error != null)
+            {
+                msg = $"{clusterCommand.Error}{Environment.NewLine}{msg}";
+                type = ViolationOnType.Document;
+            }
+
+            return new ClusterTransactionErrorInfo
+            {
+                Message = msg,
+                Violation = new ConcurrencyViolation
+                {
+                    Id = clusterCommand.Id, 
+                    Actual = actualIndex, 
+                    Expected = clusterCommand.Index, 
+                    Type = type
+                }
+            };
         }
 
         private void EnsureAtomicDocumentWrites(DatabaseTopology dbTopology, ClusterOperationContext context, Table items, long index)
@@ -506,17 +537,44 @@ namespace Raven.Server.ServerWide.Commands
 
         public override object FromRemote(object remoteResult)
         {
-            var rc = new List<string>();
+            var errors = new List<ClusterTransactionErrorInfo>();
             if (remoteResult is BlittableJsonReaderArray array)
             {
                 foreach (var o in array)
                 {
-                    rc.Add(o.ToString());
+                    if (o is not BlittableJsonReaderObject blittable)
+                        continue;
+
+                    errors.Add(ToClusterTransactionErrorInfo(blittable));
                 }
 
-                return rc;
+                return errors;
             }
             return base.FromRemote(remoteResult);
+        }
+
+        private static ClusterTransactionErrorInfo ToClusterTransactionErrorInfo(BlittableJsonReaderObject bjro)
+        {
+            var current = new ConcurrencyViolation();
+            var errorInfo = new ClusterTransactionErrorInfo { Violation = current };
+            bjro.TryGet(nameof(ClusterTransactionErrorInfo.Message), out errorInfo.Message);
+
+            if (!bjro.TryGet(nameof(ClusterTransactionErrorInfo.Violation), out BlittableJsonReaderObject violation))
+                return errorInfo;
+
+            if (violation.TryGet(nameof(ConcurrencyViolation.Id), out string id))
+                current.Id = id;
+
+            if (violation.TryGet(nameof(ConcurrencyViolation.Type), out ViolationOnType type))
+                current.Type = type;
+
+            if (violation.TryGet(nameof(ConcurrencyViolation.Expected), out long expected))
+                current.Expected = expected;
+
+            if (violation.TryGet(nameof(ConcurrencyViolation.Actual), out long actual))
+                current.Actual = actual;
+
+            return errorInfo;
         }
 
         public override string AdditionalDebugInformation(Exception exception)

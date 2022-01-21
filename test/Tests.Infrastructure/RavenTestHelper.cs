@@ -203,8 +203,7 @@ namespace FastTests
         {
             get
             {
-                var local = DateTime.Today;
-                return DateTime.SpecifyKind(local, DateTimeKind.Utc);
+                return DateTime.UtcNow.Date;
             }
         }
 

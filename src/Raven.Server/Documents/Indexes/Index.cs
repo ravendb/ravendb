@@ -3829,7 +3829,11 @@ namespace Raven.Server.Documents.Indexes
                 return null;
             }
 
-            return new DisposableAction(() => _executingIndexing.Release());
+            return new DisposableAction(() =>
+            {
+                DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeIndexThreadExit?.Invoke(this);
+                _executingIndexing.Release();
+            });
         }
 
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client

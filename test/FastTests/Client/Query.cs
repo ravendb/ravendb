@@ -564,25 +564,11 @@ namespace FastTests.Client
                 }
                 using (var newSession = store.OpenSession())
                 {
-                    List<DogsIndex.Result> queryResult;
-                    try
-                    {
-                        queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
-                            .Where(x => x.Age > 2)
-                            .ToList();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        for (int i = 0; i < 3; i++)
-                        {
-                            Console.Beep();
-                        }
-                        Console.ReadLine();
-                        throw;
-                    }
+                    var queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
+                        .Where(x => x.Age > 2)
+                        .ToList();
 
                     Assert.Equal(queryResult[0].Name, "Brian");
                     Assert.Equal(queryResult[1].Name, "Django");
