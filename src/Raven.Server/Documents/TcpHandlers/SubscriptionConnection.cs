@@ -1062,6 +1062,7 @@ namespace Raven.Server.Documents.TcpHandlers
             try
             {
                 await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length, CancellationTokenSource.Token);
+                await TcpConnection.Stream.FlushAsync();
 
                 if (_logger.IsInfoEnabled)
                 {
