@@ -114,10 +114,15 @@ namespace Raven.Server.Documents
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
+
             try
             {
                 if (configuration.Initialized == false)
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
+
+                var databaseName = Name;
+                ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
+                IsSharded = _serverStore.DatabasesLandlord.IsShardedDatabase(databaseName);
 
                 if (Configuration.Core.RunInMemory == false)
                 {
@@ -280,6 +285,8 @@ namespace Raven.Server.Documents
         public StudioConfiguration StudioConfiguration { get; private set; }
 
         public bool Is32Bits { get; }
+
+        public bool IsSharded { get; }
 
         private long _lastDatabaseRecordChangeIndex;
 

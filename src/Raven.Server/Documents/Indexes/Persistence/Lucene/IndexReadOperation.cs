@@ -239,9 +239,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     }
                                 }
 
-                                if (query.Metadata.OrderBy?.Length > 0 && _indexType.IsMapReduce() == false)
+                                // * for sharded queries, we'll send the order by fields separately
+                                // * for a map-reduce index it's fields are the ones that are used for sorting
+                                if (_index.DocumentDatabase.IsSharded && query.Metadata.OrderBy?.Length > 0 && _indexType.IsMapReduce() == false)
                                 {
-                                    // a map-reduce index is going to send the order by fields anyway
                                     foreach (var field in query.Metadata.OrderBy)
                                     {
                                         // TODO: make it work without storing the fields in the index

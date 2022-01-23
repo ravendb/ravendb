@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
             // - TODO: Sharding - etag handling!
-            public ShardedQueryProcessor(TransactionOperationContext context,ShardedQueriesHandler parent,IndexQueryServerSide query)
+            public ShardedQueryProcessor(TransactionOperationContext context, ShardedQueriesHandler parent, IndexQueryServerSide query)
             {
                 _context = context;
                 _result = new ShardedQueryResult();
