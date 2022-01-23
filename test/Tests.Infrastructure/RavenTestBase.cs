@@ -764,9 +764,9 @@ namespace FastTests
         [Flags]
         public enum StaleStatus
         {
-            NonStale = 2,
-            Stale = 2,
-            Error = 4
+            NonStale = 0x1,
+            Stale = 0x2,
+            Error = 0x4
         }
         public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
         {

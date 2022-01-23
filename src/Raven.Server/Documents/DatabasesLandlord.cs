@@ -1237,6 +1237,9 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             {
                 var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
+                if (rawRecord == null)
+                    return false;
+
                 if (rawRecord.IsSharded())
                 {
                     var shardedContext = new ShardedContext(_serverStore, rawRecord);
