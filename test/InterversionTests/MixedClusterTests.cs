@@ -119,6 +119,20 @@ namespace InterversionTests
             var suit = new Version41X(this);
             await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
         }
+
+        [Fact]
+        public async Task UpgradeToLatest()
+        {
+            var latest = "4.2.119";
+            var initialVersions = new[] { latest, latest, latest };
+            var upgradeTo = new List<string>
+            {
+                "current"
+            };
+            var suit = new Version41X(this);
+            await ExecuteUpgradeTest(initialVersions, upgradeTo, suit, suit, suit);
+        }
+
         private async Task ExecuteUpgradeTest(
             string[] initialVersions,
             List<string> upgradeTo,
