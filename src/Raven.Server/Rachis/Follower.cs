@@ -207,6 +207,7 @@ namespace Raven.Server.Rachis
                     {
                         CurrentTerm = _term,
                         LastLogIndex = lastAcknowledgedIndex,
+                        LastCommitIndex = lastCommit,
                         Success = true
                     });
 

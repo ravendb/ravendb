@@ -60,6 +60,7 @@ namespace Raven.Server.Rachis
         public AmbassadorStatus Status;
 
         private long _followerMatchIndex;
+        private long _followerLastCommitIndex;
         private long _lastReplyFromFollower;
         private long _lastSendToFollower;
         private string _lastSentMsg;
@@ -85,6 +86,7 @@ namespace Raven.Server.Rachis
         }
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
+        public long FollowerLastCommitIndex => Interlocked.Read(ref _followerLastCommitIndex);
 
         public DateTime LastReplyFromFollower => new DateTime(Interlocked.Read(ref _lastReplyFromFollower));
         public DateTime LastSendToFollower => new DateTime(Interlocked.Read(ref _lastSendToFollower));
@@ -108,6 +110,12 @@ namespace Raven.Server.Rachis
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
             Interlocked.Exchange(ref _followerMatchIndex, newVal);
             _wakeLeader.Set();
+        }
+
+        private void UpdateLastMatchFromFollower(AppendEntriesResponse response)
+        {
+            Interlocked.Exchange(ref _followerLastCommitIndex, response.LastCommitIndex);
+            UpdateLastMatchFromFollower(response.LastLogIndex);
         }
 
         private void UpdateFollowerTicks()
@@ -365,7 +373,7 @@ namespace Raven.Server.Rachis
                                     RachisConcurrencyException.Throw(msg);
                                 }
 
-                                UpdateLastMatchFromFollower(aer.LastLogIndex);
+                                UpdateLastMatchFromFollower(aer);
                             }
 
                             if (_running == false)
@@ -561,9 +569,10 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"{ToString()}: sending snapshot to {_tag} with index={index} term={term}");
                     }
+
                     // we make sure that we routinely update LastReplyFromFollower here
                     // so we'll not leave the leader thinking we abandoned it
-                    UpdateLastMatchFromFollower(_followerMatchIndex);
+                    UpdateFollowerTicks();
                     UpdateLastSend("Send full snapshot");
                     _connection.Send(context, new InstallSnapshot
                     {
@@ -573,7 +582,7 @@ namespace Raven.Server.Rachis
                     });
 
                     WriteSnapshotToFile(context, new BufferedStream(stream));
-                    UpdateLastMatchFromFollower(_followerMatchIndex);
+                    UpdateFollowerTicks();
                 }
 
                 while (true)
@@ -584,7 +593,7 @@ namespace Raven.Server.Rachis
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
                         break;
                     }
-                    UpdateLastMatchFromFollower(_followerMatchIndex);
+                    UpdateFollowerTicks();
                 }
 
                 if (_engine.Log.IsInfoEnabled)
@@ -597,7 +606,7 @@ namespace Raven.Server.Rachis
         private unsafe void WriteSnapshotToFile(TransactionOperationContext context, Stream dest)
         {
             var dueTime = (int)(_engine.ElectionTimeout.TotalMilliseconds / 3);
-            var timer = new Timer(_ => UpdateLastMatchFromFollower(_followerMatchIndex), null, dueTime, dueTime);
+            var timer = new Timer(_ => UpdateFollowerTicks(), null, dueTime, dueTime);
             long totalSizeInBytes = 0;
             var sp = Stopwatch.StartNew();
 
@@ -690,7 +699,7 @@ namespace Raven.Server.Rachis
                 timer.Dispose(mre);
                 while (mre.WaitOne(dueTime) == false)
                 {
-                    UpdateLastMatchFromFollower(_followerMatchIndex);
+                    UpdateFollowerTicks();
                 }
             }
 
