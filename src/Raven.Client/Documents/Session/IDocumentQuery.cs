@@ -185,14 +185,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="builder">Builder of a Filter query</param>
         /// <returns></returns>
         IDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder);
-
-        /// <summary>
-        /// Filter allows querying on raw documents or indexes without building an index.
-        /// This performs a full-table scan which can be very slow so please use it wisely.
-        /// </summary>
-        /// <param name="rawQuery">RQL statement for Filter clause</param>
-        /// <returns></returns>
-        IDocumentQuery<T> Filter(string rawQuery);
         
         /// <summary>
         /// Limits the number of documents processed by Filter.

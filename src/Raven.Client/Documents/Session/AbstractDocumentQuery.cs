@@ -69,14 +69,10 @@ namespace Raven.Client.Documents.Session
 
         private int _currentClauseDepth;
         
-        private int _currentFilterClauseDepth;
-
         protected string QueryRaw;
-
-        protected string FilterRaw;
-
+        
         protected bool FilterActive = false;
-        public bool IsFilterActive { get { return FilterActive; } }
+        internal bool IsFilterActive { get { return FilterActive; } }
         
         protected Parameters QueryParameters = new Parameters();
 
@@ -1003,23 +999,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(QueryOperatorToken.Or);
         }
 
-        [Obsolete("You shouldn't use this method directly. Use .Filter() only.")]
-        public void TurnOnFilter()
+        internal void TurnOnFilter()
         {
             FilterActive = true;
         }
 
-        [Obsolete("You shouldn't use this method directly. Use .Filter() only.")]
-        public void TurnOffFilter()
+        internal void TurnOffFilter()
         {
             FilterActive = false;
         }
 
-        internal void FilterRawQuery(string query)
-        {
-            FilterRaw = query;
-        }
-        
         /// <summary>
         ///   Specifies a boost weight to the last where clause.
         ///   The higher the boost factor, the more relevant the term will be.
@@ -1596,16 +1585,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildFilter(StringBuilder writer)
         {
-            // if (FilterRaw != FilterRaw is > 0)
-            // {
-            //     if (FilterTokens.Count != 0)
-            //         throw new InvalidQueryException("You cannot use RawQuery in Filter and FilterBuilder together!");
-            //     
-            //     writer.Append(" filter ");
-            //     writer.Append(FilterRaw);
-            //     return;
-            // }
-            
             if (FilterTokens.Count == 0)
                 return;
 
@@ -1630,7 +1609,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             writer
                 .Append(" order by ");
-
+                
             var token = OrderByTokens.First;
             while (token != null)
             {
@@ -1924,11 +1903,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     SelectTokens.AddLast(fieldsToFetch);
             }
         }
-
-        public void AddFilterCondition(string condition)
-        {
-           // FilterTokens.AddLast(Whereto)
-        }
         
         /// <summary>
         ///   Adds an alias to the FieldName of each where token
@@ -2022,10 +1996,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return "$" + AddQueryParameter(value);
         }
 
-        public void AddScanLimit(int limit)
+        internal void AddScanLimit(int limit)
         {
             if (limit <= 0)
-                throw new InvalidDataException("scan_limit need to be positive and bigger than 0.");
+                throw new InvalidDataException("scan_limit needs to be positive and bigger than 0.");
 
             ScanLimit = limit;
         }

@@ -54,7 +54,6 @@ namespace Raven.Client.Documents.Linq
         private readonly LinqQueryHighlightings _highlightings;
         private bool _chainedWhere;
         private int _insideWhere;
-        private bool _filterIsOn = false;
         private int _insideFilter;
         private bool _insideNegate;
         private bool _insideExact;
@@ -364,7 +363,7 @@ namespace Raven.Client.Documents.Linq
                 (andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
                 (andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThanOrEqual);
 
-            if (isPossibleBetween == false || _filterIsOn == true)
+            if (isPossibleBetween == false || IsFilterModeActive())
                 return false;
 
             var leftMember = GetMemberForBetween((BinaryExpression)andAlso.Left);
@@ -588,7 +587,7 @@ namespace Raven.Client.Documents.Linq
 
         private ExpressionInfo GetMemberDirect(Expression expression)
         {
-            var result = LinqPathProvider.GetPath(expression, DocumentQuery.IsFilterActive);
+            var result = LinqPathProvider.GetPath(expression, IsFilterModeActive());
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 
@@ -1357,7 +1356,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.ScanLimit):
                     VisitExpression(expression.Arguments[0]);
-                    DocumentQuery.AddScanLimit((int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
+                    FilterMode(scanLimit: (int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
                     break;
                 case nameof(LinqExtensions.Spatial):
                     VisitExpression(expression.Arguments[0]);
@@ -1775,8 +1774,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     _insideFilter++;
                     VisitExpression(expression.Arguments[0]);
-                    _filterIsOn = true;
-                    DocumentQuery.TurnOnFilter();
+                    FilterMode(@on: true);
                     if (_chainedWhere)
                     {
                         DocumentQuery.AndAlso();
@@ -1786,8 +1784,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         DocumentQuery.OpenSubclause();
                     
                     VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                    DocumentQuery.TurnOnFilter();
-
+                    FilterMode(@on: true);
                     if (_chainedWhere == false && _insideFilter > 1)
                         DocumentQuery.CloseSubclause();
                     if (_chainedWhere)
@@ -1797,11 +1794,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
                 case "Where":
                     {
-                        DocumentQuery.TurnOffFilter();
-                        _filterIsOn = false;
+                        FilterMode(@on: false);
                         _insideWhere++;
                         VisitExpression(expression.Arguments[0]);
-                        DocumentQuery.TurnOffFilter();
+                        FilterMode(@on: false);
                         if (_chainedWhere)
                         {
                             DocumentQuery.AndAlso();
@@ -2021,6 +2017,37 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
+        private bool IsFilterModeActive()
+        {
+            return DocumentQuery switch
+            {
+                DocumentQuery<T> documentQuery => documentQuery.IsFilterActive,
+                AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.IsFilterActive
+            };
+        }
+
+        private void FilterMode(bool @on = false, int scanLimit = -1)
+        {
+            if (DocumentQuery is DocumentQuery<T> docQuery)
+            {
+                if (scanLimit >= 0)
+                    docQuery.AddScanLimit(scanLimit);
+                else if (@on)
+                    docQuery.TurnOnFilter();
+                else
+                    docQuery.TurnOffFilter();
+            }
+            else if (DocumentQuery is AsyncDocumentQuery<T> asyncDocQuery)
+            {
+                if (scanLimit >= 0)
+                    asyncDocQuery.AddScanLimit(scanLimit);
+                else if (@on)
+                    asyncDocQuery.TurnOnFilter();
+                else
+                    asyncDocQuery.TurnOffFilter();            
+            }
+        }
+        
         private void CheckForLetOrLoadFromSelect(MethodCallExpression expression, LambdaExpression lambdaExpression)
         {
             var parameterName = lambdaExpression.Parameters[0].Name;
@@ -2330,7 +2357,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddGroupByAliasIfNeeded(newExpression.Members[index], originalField);
             }
         }
-
+        
         private void AddGroupByAliasIfNeeded(MemberInfo aliasMember, string originalField)
         {
             var alias = GetSelectPath(aliasMember);

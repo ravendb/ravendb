@@ -18,8 +18,6 @@ namespace Raven.Client.Documents.Session
     public interface IAbstractDocumentQuery<T>
     {
         string IndexName { get; }
-
-        bool IsFilterActive { get; }
         
         string CollectionName { get; }
 
@@ -343,11 +341,5 @@ namespace Raven.Client.Documents.Session
         void SuggestUsing(SuggestionBase suggestion);
 
         string ParameterPrefix { get; set; }
-
-        void TurnOnFilter();
-        void TurnOffFilter();
-
-        void AddScanLimit(int limit);
-
     }
 }
