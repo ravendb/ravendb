@@ -14,13 +14,7 @@ public partial class DocumentQuery<T>
         TurnOffFilter();
         return this;
     }
-
-    IDocumentQuery<T> IDocumentQuery<T>.Filter(string rawQuery)
-    {
-        FilterRawQuery(rawQuery);
-        return this;
-    }
-
+    
     IDocumentQuery<T> IDocumentQuery<T>.ScanLimit(int limit)
     {
         AddScanLimit(limit);

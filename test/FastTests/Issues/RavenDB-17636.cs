@@ -463,12 +463,7 @@ filter Name = 'Frank'")
 
         }
     }
-
-    [Fact]
-    public async Task AsyncCanUseFilterQueryOnMapIndexes()
-    {
-    }
-
+    
     [Theory]
     [InlineData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException))]
