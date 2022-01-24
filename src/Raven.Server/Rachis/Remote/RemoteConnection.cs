@@ -367,6 +367,7 @@ namespace Raven.Server.Rachis.Remote
                 [nameof(AppendEntriesResponse.Message)] = aer.Message,
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
                 [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
+                [nameof(AppendEntriesResponse.LastCommitIndex)] = aer.LastCommitIndex,
             };
 
             Send(context, msg);
