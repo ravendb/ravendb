@@ -481,7 +481,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    _engine.SnapshotInstalled(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
+                    _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
                 }, cts, "SnapshotInstalledAsync");
             }
 
@@ -543,6 +543,8 @@ namespace Raven.Server.Rachis
         {
             using (context.OpenWriteTransaction())
             {
+                _engine.OnSnapshotInstalledTask = null;
+
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
                 var lastCommitIndex = _engine.GetLastEntryIndex(context);
 
@@ -568,6 +570,7 @@ namespace Raven.Server.Rachis
 
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+                    _engine.OnSnapshotInstalled(context, snapshot.LastIncludedIndex, token);
                 }
                 else
                 {
@@ -580,7 +583,6 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: {message}");
                         }
-
                         throw new InvalidOperationException(message);
                     }
                 }

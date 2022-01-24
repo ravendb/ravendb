@@ -8,6 +8,8 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Voron.Data;
+using Voron.Impl;
+
 // ReSharper disable InconsistentNaming
 
 namespace Raven.Server.Rachis
@@ -86,7 +88,11 @@ namespace Raven.Server.Rachis
 
         public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
-        public virtual void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public virtual void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        {
+        }
+
+        public virtual void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
         }
     }
