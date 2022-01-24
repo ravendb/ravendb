@@ -833,6 +833,8 @@ namespace Raven.Server.Rachis
             long maxIndex;
             long midpointTerm;
             long midpointIndex;
+            long lastIndex;
+
             using (context.OpenReadTransaction())
             {
                 minIndex = _engine.GetFirstEntryIndex(context);
@@ -847,6 +849,8 @@ namespace Raven.Server.Rachis
                     _engine.GetLastEntryIndex(context), // max
                     negotiation.PrevLogIndex
                 );
+
+                lastIndex = _engine.GetLastEntryIndex(context);
 
                 midpointIndex = (maxIndex + minIndex) / 2;
 
@@ -886,24 +890,53 @@ namespace Raven.Server.Rachis
                 _engine.Timeout.Defer(_connection.Source);
                 if (negotiation.Truncated)
                 {
-                    if (_engine.Log.IsInfoEnabled)
+                    if (lastIndex + 1 == negotiation.PrevLogIndex)
                     {
-                        _engine.Log.Info($"{ToString()}: Got a truncated response from the leader will request all entries");
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"{ToString()}: leader first entry = {negotiation.PrevLogIndex} is the one we need (our last is {lastIndex})");
+                        }
+
+                        connection.Send(context, new LogLengthNegotiationResponse
+                        {
+                            Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                            Message = $"agreed on our last index {lastIndex}",
+                            CurrentTerm = _term,
+                            LastLogIndex = lastIndex,
+                        });
+
+                        // leader's first entry is the next we need 
+                        return false;
                     }
 
-                    RequestAllEntries(context, connection, "We have entries that are already truncated at the leader, will ask for full snapshot");
-                    return true;
+                    if (lastIndex + 1 < negotiation.PrevLogIndex)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"{ToString()}: Got a truncated response from the leader will request all entries");
+                        }
+
+                        RequestAllEntries(context, connection, "We have entries that are already truncated at the leader, will ask for full snapshot");
+                        return true;
+                    }
+                    
+                    // the leader already truncated the suggested index
+                    // Let's try to negotiate from that index upto our last appended index
+                    maxIndex = lastIndex;
+                    minIndex = negotiation.PrevLogIndex;
                 }
-
-                using (context.OpenReadTransaction())
+                else
                 {
-                    if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
+                    using (context.OpenReadTransaction())
                     {
-                        minIndex = Math.Min(midpointIndex + 1, maxIndex);
-                    }
-                    else
-                    {
-                        maxIndex = Math.Max(midpointIndex - 1, minIndex);
+                        if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
+                        {
+                            minIndex = Math.Min(midpointIndex + 1, maxIndex);
+                        }
+                        else
+                        {
+                            maxIndex = Math.Max(midpointIndex - 1, minIndex);
+                        }
                     }
                 }
 
