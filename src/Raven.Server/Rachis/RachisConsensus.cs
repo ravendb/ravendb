@@ -91,9 +91,14 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override void SnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token)
+        public override void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token)
         {
-            StateMachine.OnSnapshotInstalled(lastIncludedIndex, fullSnapshot, _serverStore, token);
+            StateMachine.AfterSnapshotInstalled(lastIncludedIndex, fullSnapshot, _serverStore, token);
+        }
+
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        {
+            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, token);
         }
 
         public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
@@ -299,6 +304,8 @@ namespace Raven.Server.Rachis
         public Action<TransactionOperationContext> SwitchToSingleLeaderAction;
 
         public Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
+
+        public TaskCompletionSource<Task> OnSnapshotInstalledTask;
 
         private string _tag;
         private string _clusterId;
@@ -1396,14 +1403,14 @@ namespace Raven.Server.Rachis
         {
             GetLastCommitIndex(context, out long lastIndex, out long lastTerm);
 
-            long entryTerm;
+            long truncatedTerm;
             long entryIndex;
 
             if (lastIndex < upto)
             {
                 upto = lastIndex; // max we can delete
                 entryIndex = lastIndex;
-                entryTerm = lastTerm;
+                truncatedTerm = lastTerm;
             }
             else
             {
@@ -1411,7 +1418,7 @@ namespace Raven.Server.Rachis
                 if (maybeTerm == null)
                     return;
                 entryIndex = upto;
-                entryTerm = maybeTerm.Value;
+                truncatedTerm = maybeTerm.Value;
             }
 
             GetLastTruncated(context, out lastIndex, out lastTerm);
@@ -1433,11 +1440,16 @@ namespace Raven.Server.Rachis
                     break;
 
                 Debug.Assert(size == sizeof(long));
-                entryTerm = *(long*)reader.Read(1, out size);
+                var entryTerm = *(long*)reader.Read(1, out size);
+
+                if (entryIndex == upto && truncatedTerm != entryTerm)
+                    break;
+
                 Debug.Assert(size == sizeof(long));
 
                 table.Delete(reader.Id);
                 truncatedIndex = entryIndex;
+                truncatedTerm = entryTerm;
 
                 if (truncatedIndex % 1024 == 0 &&
                     sp.ElapsedMilliseconds > (int)ElectionTimeout.TotalMilliseconds / 3)
@@ -1452,7 +1464,7 @@ namespace Raven.Server.Rachis
             {
                 var data = (long*)ptr;
                 data[0] = truncatedIndex;
-                data[1] = entryTerm;
+                data[1] = truncatedTerm;
             }
         }
 
@@ -2121,7 +2133,8 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract void SnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token);
+        public abstract void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token);
+        public abstract void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;

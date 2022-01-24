@@ -261,7 +261,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
+        public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
@@ -3442,52 +3442,74 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction())
+            var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
+
+            foreach (var key in clusterCertificateKeys)
             {
-                // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
-                var clusterCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context);
-
-                foreach (var key in clusterCertificateKeys)
+                using (GetLocalStateByThumbprint(context, key))
                 {
-                    using (GetLocalStateByThumbprint(context, key))
-                    {
-                        DeleteLocalState(context, key);
-                    }
+                    DeleteLocalState(context, key);
                 }
+            }
 
-                token.ThrowIfCancellationRequested();
-
-                var databases = GetDatabaseNames(context).ToArray();
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            token.ThrowIfCancellationRequested();
+            var databases = GetDatabaseNames(context).ToArray();
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    if (tx is LowLevelTransaction llt && llt.Committed)
+                    var tasks = new Task[databases.Length + 2];
+                    // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                    for (var index = 0; index < databases.Length; index++)
                     {
-                        // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                        foreach (var db in databases)
+                        var db = databases[index];
+                        tasks[index] = Task.Run(async () =>
                         {
-                            var t = Task.Run(async () =>
-                            {
-                                await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
-                            }, token);
-                        }
-
-                        var t2 = Task.Run(async () =>
-                        {
-                            await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
-                            if (fullSnapshot)
-                                await OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
+                            await OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
                         }, token);
                     }
-                };
 
-                context.Transaction.Commit();
+                    tasks[databases.Length] = Task.Run(async () =>
+                    {
+                        await OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
+                    });
+
+                    tasks[databases.Length + 1] = Task.Run(async () =>
+                    {
+                        await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                    });
+
+                    _parent.OnSnapshotInstalledTask.TrySetResult(Task.WhenAll(tasks));
+                }
+                else
+                {
+                    _parent.OnSnapshotInstalledTask.TrySetResult(Task.CompletedTask);
+                }
+            };
+        }
+
+        public override void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        {
+            var tcs = _parent.OnSnapshotInstalledTask;
+
+            if (tcs == null)
+                return;
+
+            try
+            {
+                tcs.Task.Wait(token);
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
             }
-            token.ThrowIfCancellationRequested();
-
-            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            catch (OperationCanceledException)
+            {
+                // will not notify here
+            }
+            catch (Exception e)
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, e);
+            }
         }
 
         protected override RachisVersionValidation InitializeValidator()
