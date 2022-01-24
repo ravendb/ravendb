@@ -867,13 +867,22 @@ namespace Raven.Server.Rachis
                         }
                         var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
                         var termFor = _engine.GetTermFor(context, midIndex);
+
+                        truncated |= termFor == null;
+
+                        if (truncated)
+                        {
+                            midIndex = _engine.GetFirstEntryIndex(context);
+                            termFor = _engine.GetTermForKnownExisting(context, midIndex);
+                        }
+
                         Debug.Assert(termFor != 0);
                         lln = new LogLengthNegotiation
                         {
                             Term = _term,
                             PrevLogIndex = midIndex,
                             PrevLogTerm = termFor ?? 0,
-                            Truncated = truncated || termFor == null
+                            Truncated = truncated
                         };
                         if (_engine.Log.IsInfoEnabled)
                         {
