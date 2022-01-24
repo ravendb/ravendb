@@ -258,15 +258,20 @@ namespace FastTests
                 using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    message +=
-                        $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
-                        $"{Environment.NewLine}Last notified Index '{nodes[i].ServerStore.Cluster.LastNotifiedIndex}':" +
-                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}" +
-                        $"{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
+                    message += CollectLogs(context, nodes[i]);
                 }
             }
 
             return message;
+        }
+
+        protected static string CollectLogs(TransactionOperationContext context, RavenServer server)
+        {
+            return 
+                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
+                $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
+                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
+                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
