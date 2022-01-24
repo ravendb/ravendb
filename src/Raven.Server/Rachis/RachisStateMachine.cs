@@ -43,7 +43,13 @@ namespace Raven.Server.Rachis
                 if (flags != RachisEntryFlags.StateMachineCommand)
                 {
                     _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
-                    serverStore.Cluster.NotifyAndSetCompleted(index);
+
+                    var currentIndex = index;
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += t =>
+                    {
+                        if (t is LowLevelTransaction llt && llt.Committed)
+                            serverStore.Cluster.NotifyAndSetCompleted(currentIndex);
+                    };
                     continue;
                 }
 
