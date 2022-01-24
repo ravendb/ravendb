@@ -49,10 +49,11 @@ namespace Raven.Client.Documents.Session
         
         public IGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder)
         {
-            _query.TurnOnFilter();
-            var f = new FilterFactory<T>(_query);
-            builder.Invoke(f);
-            _query.TurnOffFilter();
+            using (_query.FilterModeScope(true))
+            {
+                var f = new FilterFactory<T>(_query);
+                builder.Invoke(f);
+            }
             return this;
         }
     }
@@ -96,10 +97,12 @@ namespace Raven.Client.Documents.Session
         
         public IAsyncGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder)
         {
-            _query.TurnOnFilter();
-            var f = new AsyncFilterFactory<T>(_query);
-            builder.Invoke(f);
-            _query.TurnOffFilter();
+            using (_query.FilterModeScope(true))
+            {
+                var f = new AsyncFilterFactory<T>(_query);
+                builder.Invoke(f);
+            }
+           
             return this;
         }
     }

@@ -102,12 +102,7 @@ namespace Raven.Server.Documents.Queries
 
             public override bool Equals(object obj)
             {
-                if (obj is FilterKey fk)
-                {
-                    return _queryMetadata == fk._queryMetadata;
-                }
-
-                return false;
+                return ReferenceEquals(obj, _queryMetadata);
             }
 
             public override int GetHashCode()

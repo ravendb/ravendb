@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -1356,7 +1357,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.ScanLimit):
                     VisitExpression(expression.Arguments[0]);
-                    FilterMode(scanLimit: (int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
+                    AddScanLimit(scanLimit: (int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
                     break;
                 case nameof(LinqExtensions.Spatial):
                     VisitExpression(expression.Arguments[0]);
@@ -1774,50 +1775,54 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     _insideFilter++;
                     VisitExpression(expression.Arguments[0]);
-                    FilterMode(@on: true);
-                    if (_chainedWhere)
+                    using (FilterModeScope(true))
                     {
-                        DocumentQuery.AndAlso();
-                        DocumentQuery.OpenSubclause();
-                    }
-                    if (_chainedWhere == false && _insideFilter > 1)
-                        DocumentQuery.OpenSubclause();
-                    
-                    VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                    FilterMode(@on: true);
-                    if (_chainedWhere == false && _insideFilter > 1)
-                        DocumentQuery.CloseSubclause();
-                    if (_chainedWhere)
-                        DocumentQuery.CloseSubclause();
-                    _insideFilter--;
-                    break;
-                }
-                case "Where":
-                    {
-                        FilterMode(@on: false);
-                        _insideWhere++;
-                        VisitExpression(expression.Arguments[0]);
-                        FilterMode(@on: false);
                         if (_chainedWhere)
                         {
                             DocumentQuery.AndAlso();
                             DocumentQuery.OpenSubclause();
                         }
-                        if (_chainedWhere == false && _insideWhere > 1)
+
+                        if (_chainedWhere == false && _insideFilter > 1)
                             DocumentQuery.OpenSubclause();
 
-                        if (expression.Arguments.Count == 3)
-                            _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
-
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-                        _insideExact = false;
-
-                        if (_chainedWhere == false && _insideWhere > 1)
+                        if (_chainedWhere == false && _insideFilter > 1)
                             DocumentQuery.CloseSubclause();
                         if (_chainedWhere)
                             DocumentQuery.CloseSubclause();
-                        _chainedWhere = true;
-                        _insideWhere--;
+                        _insideFilter--;
+                    }
+
+                    break;
+                }
+                case "Where":
+                    {
+                        using (FilterModeScope(@on: false))
+                        {
+                            _insideWhere++;
+                            VisitExpression(expression.Arguments[0]);
+                            if (_chainedWhere)
+                            {
+                                DocumentQuery.AndAlso();
+                                DocumentQuery.OpenSubclause();
+                            }
+                            if (_chainedWhere == false && _insideWhere > 1)
+                                DocumentQuery.OpenSubclause();
+
+                            if (expression.Arguments.Count == 3)
+                                _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
+
+                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                            _insideExact = false;
+
+                            if (_chainedWhere == false && _insideWhere > 1)
+                                DocumentQuery.CloseSubclause();
+                            if (_chainedWhere)
+                                DocumentQuery.CloseSubclause();
+                            _chainedWhere = true;
+                            _insideWhere--;
+                        }
                         break;
                     }
                 case "Select":
@@ -2017,37 +2022,34 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private bool IsFilterModeActive()
+        private bool IsFilterModeActive() => DocumentQuery switch
         {
-            return DocumentQuery switch
+            DocumentQuery<T> documentQuery => documentQuery.IsFilterActive,
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.IsFilterActive,
+            _ => throw new InvalidDataException(($"Unknown query type for Filter.")) 
+        };
+        
+
+        private IDisposable FilterModeScope(bool @on) => DocumentQuery switch
+        {
+            DocumentQuery<T> documentQuery => documentQuery.FilterModeScope(@on),
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.FilterModeScope(@on),
+            _ => throw new InvalidDataException(($"Unknown query type for Filter.")) 
+        };        
+        
+        private void AddScanLimit(int scanLimit)
+        {
+            switch (DocumentQuery)
             {
-                DocumentQuery<T> documentQuery => documentQuery.IsFilterActive,
-                AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.IsFilterActive
-            };
+                case DocumentQuery<T> documentQuery:
+                    documentQuery.AddScanLimit(scanLimit);
+                    break;
+                case AsyncDocumentQuery<T> asyncDocumentQuery:
+                    asyncDocumentQuery.AddScanLimit(scanLimit);
+                    break;
+            }
         }
 
-        private void FilterMode(bool @on = false, int scanLimit = -1)
-        {
-            if (DocumentQuery is DocumentQuery<T> docQuery)
-            {
-                if (scanLimit >= 0)
-                    docQuery.AddScanLimit(scanLimit);
-                else if (@on)
-                    docQuery.TurnOnFilter();
-                else
-                    docQuery.TurnOffFilter();
-            }
-            else if (DocumentQuery is AsyncDocumentQuery<T> asyncDocQuery)
-            {
-                if (scanLimit >= 0)
-                    asyncDocQuery.AddScanLimit(scanLimit);
-                else if (@on)
-                    asyncDocQuery.TurnOnFilter();
-                else
-                    asyncDocQuery.TurnOffFilter();            
-            }
-        }
-        
         private void CheckForLetOrLoadFromSelect(MethodCallExpression expression, LambdaExpression lambdaExpression)
         {
             var parameterName = lambdaExpression.Parameters[0].Name;

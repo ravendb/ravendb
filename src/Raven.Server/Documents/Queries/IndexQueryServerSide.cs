@@ -296,8 +296,8 @@ namespace Raven.Server.Documents.Queries
             if (indexQuery.Limit < 0)
                 throw new InvalidQueryException($"{nameof(Limit)} ({nameof(PageSize)}) cannot be negative, but was {indexQuery.Limit}.", indexQuery.Query, indexQuery.QueryParameters);
 
-            if (indexQuery.ScanLimit < 0)
-                throw new InvalidQueryException($"{nameof(ScanLimit)} cannot be negative, but was {indexQuery.ScanLimit}.", indexQuery.Query, indexQuery.QueryParameters);
+            if (indexQuery.ScanLimit <= 0)
+                throw new InvalidQueryException($"{nameof(ScanLimit)} cannot be negative or zero, but was {indexQuery.ScanLimit}.", indexQuery.Query, indexQuery.QueryParameters);
 
             if (indexQuery.Start < 0)
                 throw new InvalidQueryException($"{nameof(Start)} cannot be negative, but was {indexQuery.Start}.", indexQuery.Query, indexQuery.QueryParameters);

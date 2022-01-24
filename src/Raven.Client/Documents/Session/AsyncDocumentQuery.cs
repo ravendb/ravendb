@@ -1115,6 +1115,7 @@ namespace Raven.Client.Documents.Session
                 GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
                 FilterTokens = new LinkedList<QueryToken>(FilterTokens),
                 QueryParameters = new Parameters(QueryParameters),
+                ModeStack = new Stack<bool>(ModeStack),
                 Start = Start,
                 Timeout = Timeout,
                 QueryStats = QueryStats,
