@@ -2419,7 +2419,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        public IEnumerable<(string ItemName, long Index, BlittableJsonReaderObject Value)> ItemsStartingWith(TransactionOperationContext context, string prefix, int start, int take)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
@@ -2445,7 +2445,7 @@ namespace Raven.Server.ServerWide
                 var tvh = new Table.TableValueHolder();
                 if (items.ReadByKey(k, out tvh.Reader) == false)
                     return null;
-                return GetCurrentItem(context, tvh).Item2;
+                return GetCurrentItem(context, tvh).Value;
             }
         }
 
@@ -2713,14 +2713,15 @@ namespace Raven.Server.ServerWide
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
+        private static unsafe (string Key, long Index, BlittableJsonReaderObject Value) GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
         {
             var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
             var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+            var index = Bits.SwapBytes(*(long*)result.Reader.Read(3, out _));
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
-            return (key, doc);
+            return (key, index, doc);
         }
 
         public BlittableJsonReaderObject GetCertificateByThumbprint(TransactionOperationContext context, string thumbprint)
@@ -3267,7 +3268,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
                     oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
 
@@ -3376,7 +3377,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
                     var updatedBackups = new DynamicJsonArray();
 
