@@ -179,8 +179,8 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
         
         /// <summary>
-        ///  Filter allows to query on raw document or index without building an index.
-        ///  This performs a full-table scan which can be very slow so please use it wisely.
+        /// Filter allows you to search documents without building an index.
+        /// This feature uses a full-table scan so use it wisely.
         /// </summary>
         /// <param name="builder">Builder of a Filter query</param>
         /// <returns></returns>

@@ -488,11 +488,7 @@ filter Name = 'Frank'")
         Insert(store, GetDatabaseItems());
         {
             using var session = store.OpenSession();
-            Assert.Throws(typeof(InvalidQueryException), () =>
-            {
-                session.Query<Employee>().Filter(f => f.Active == true).Search(s => s.Name, "*k").ToList();
-            });
-            Assert.Throws(typeof(RavenException), () =>
+            Assert.Throws(typeof(InvalidOperationException), () =>
             {
                 session.Query<Employee>().Filter(f => f.Active == true).Intersect().Filter(f => f.Name == "test").ToList();
             });

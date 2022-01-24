@@ -71,8 +71,9 @@ namespace Raven.Client.Documents.Session
         
         protected string QueryRaw;
         
-        protected bool FilterActive = false;
-        internal bool IsFilterActive { get { return FilterActive; } }
+        internal bool IsFilterActive { get { return ModeStack.Any() && ModeStack.Peek() is true; } }
+        
+        protected Stack<bool> ModeStack = new ();
         
         protected Parameters QueryParameters = new Parameters();
 
@@ -999,16 +1000,26 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(QueryOperatorToken.Or);
         }
 
-        internal void TurnOnFilter()
+        internal IDisposable FilterModeScope(bool @on)
         {
-            FilterActive = true;
+            return new ModeStackScope(ModeStack, @on);
         }
 
-        internal void TurnOffFilter()
+        private class ModeStackScope : IDisposable
         {
-            FilterActive = false;
+            private Stack<bool> _modeStack;
+            public ModeStackScope(Stack<bool> modeStack, bool @on)
+            {
+                _modeStack = modeStack;
+                _modeStack.Push(@on);
+            }
+            
+            public void Dispose()
+            {
+                _modeStack.Pop();
+            }
         }
-
+        
         /// <summary>
         ///   Specifies a boost weight to the last where clause.
         ///   The higher the boost factor, the more relevant the term will be.
@@ -1841,7 +1852,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void IsCurrentlySupported(string methodName)
         {
-            if (FilterActive == false)
+            if (IsFilterActive == false)
                 return;
             
             throw new InvalidQueryException(
@@ -1851,7 +1862,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private LinkedList<QueryToken> GetCurrentWhereTokens()
         {
-            if (FilterActive)
+            if (IsFilterActive)
                 return FilterTokens;
             
             if (_isInMoreLikeThis == false)
