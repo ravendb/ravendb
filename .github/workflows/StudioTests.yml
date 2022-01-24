@@ -1,0 +1,42 @@
+name: tests/studio
+
+on:
+  push:
+    branches:
+        - v5.3
+
+  pull_request:
+    branches:
+        - v5.3
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0'
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build dotnet
+      run: dotnet build
+
+    - name: Install npm dependencies
+      run: npm install
+      working-directory: ./src/Raven.Studio
+  
+    - name: Restore Studio
+      run: npm run restore
+      working-directory: ./src/Raven.Studio
+
+    - name: Compile Studio
+      run: npm run compile
+      working-directory: ./src/Raven.Studio
+
+    - name: Test Studio
+      run: npm run test
+      working-directory: ./src/Raven.Studio
