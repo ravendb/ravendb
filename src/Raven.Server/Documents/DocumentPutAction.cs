@@ -245,8 +245,8 @@ namespace Raven.Server.Documents
                 }
 
                 FlagsProperlySet(flags, changeVector);
-                var bucket = GetBucket(id);
 
+                int bucket = _documentsStorage.GetBucket(id);
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -278,7 +278,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
 
-                UpdateGlobalBucketStats(context, bucket, document.Size, modifiedTicks);
+                UpdateBucketStats(context, bucket, document.Size, modifiedTicks);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
@@ -300,51 +300,6 @@ namespace Raven.Server.Documents
                     Flags = flags,
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
-            }
-        }
-
-        private static void UpdateGlobalBucketStats(DocumentsOperationContext context, int bucket, int documentSize, long modifiedTicks)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(BucketStatsSchema, GlobalBucketStatsSlice);
-
-            TableValueReader existing;
-            int count = 1, size = documentSize;
-            using (GetBucketKeyByteString(context.Allocator, bucket, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            {
-                if (table.ReadByKey(keySlice, out existing))
-                {
-                    count += TableValueToInt((int)BucketStatsTable.Count, ref existing);
-                    size += TableValueToInt((int)BucketStatsTable.Size, ref existing);
-                }
-            }
-            
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(bucket);
-                tvb.Add(size);
-                tvb.Add(modifiedTicks);
-                tvb.Add(count);
-
-                if (existing.Pointer == null)
-                {
-                    table.Insert(tvb);
-                }
-                else
-                {
-                    table.Update(existing.Id, tvb);
-                }
-            }
-        }
-
-        private int GetBucket(string id)
-        {
-            if (ShardHelper.IsShardedName(_documentDatabase.Name) == false) // ?
-                return -1;
-
-            using (_documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-            {
-                return ShardedContext.GetShardId(txContext, id);
             }
         }
 

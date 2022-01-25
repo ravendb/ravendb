@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,7 +30,6 @@ namespace FastTests.Sharding
                     var bucket = ShardedContext.GetShardId(txContext, suffix);
                     Assert.DoesNotContain(bucket, buckets);
                     buckets[i] = bucket;
-
                 }
                 using (var session = store.OpenAsyncSession())
                 {
@@ -85,7 +85,6 @@ namespace FastTests.Sharding
                     var bucket = ShardedContext.GetShardId(txContext, suffix);
                     Assert.DoesNotContain(bucket, buckets);
                     buckets[i] = bucket;
-
                 }
                 using (var session = store.OpenAsyncSession())
                 {
@@ -108,13 +107,13 @@ namespace FastTests.Sharding
                     using (context.OpenReadTransaction())
                     {
                         var stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
-                        if (stats == null)
+                        if (stats.Count == 0)
                             continue;
 
                         notOnAnyShard = false;
                         Assert.Equal(100, stats.Count);
                         Assert.True(stats.Size > 0);
-                        Assert.True(stats.LastAccessed != default);
+                        Assert.True(stats.LastAccessed > 0);
                         
                         break;
                     }
