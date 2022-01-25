@@ -179,8 +179,7 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
         
         /// <summary>
-        /// Filter allows you to search documents without building an index.
-        /// This feature uses a full-table scan so use it wisely.
+        /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering. Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
         /// </summary>
         /// <param name="builder">Builder of a Filter query</param>
         /// <returns></returns>

@@ -71,9 +71,9 @@ namespace Raven.Client.Documents.Session
         
         protected string QueryRaw;
         
-        internal bool IsFilterActive { get { return ModeStack.Any() && ModeStack.Peek() is true; } }
+        internal bool IsFilterActive { get { return FilterModeStack.Any() && FilterModeStack.Peek() is true; } }
         
-        protected Stack<bool> ModeStack = new ();
+        protected Stack<bool> FilterModeStack = new ();
         
         protected Parameters QueryParameters = new Parameters();
 
@@ -739,7 +739,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
-            IsCurrentlySupported(nameof(WhereIn));
+            AssertMethodIsCurrentlySupported(nameof(WhereIn));
             
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -761,7 +761,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <inheritdoc />
         public void WhereStartsWith(string fieldName, object value, bool exact)
         {
-            IsCurrentlySupported(nameof(WhereStartsWith));
+            AssertMethodIsCurrentlySupported(nameof(WhereStartsWith));
 
             var whereParams = new WhereParams
             {
@@ -790,7 +790,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <inheritdoc />
         public void WhereEndsWith(string fieldName, object value, bool exact)
         {
-            IsCurrentlySupported(nameof(WhereEndsWith));
+            AssertMethodIsCurrentlySupported(nameof(WhereEndsWith));
 
             var whereParams = new WhereParams
             {
@@ -819,7 +819,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <returns></returns>
         public void WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
-            IsCurrentlySupported(nameof(WhereBetween));
+            AssertMethodIsCurrentlySupported(nameof(WhereBetween));
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -933,7 +933,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <param name="pattern"> The pattern to match</param>
         public void WhereRegex(string fieldName, string pattern)
         {
-            IsCurrentlySupported(nameof(WhereRegex));
+            AssertMethodIsCurrentlySupported(nameof(WhereRegex));
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -1000,15 +1000,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(QueryOperatorToken.Or);
         }
 
-        internal IDisposable FilterModeScope(bool @on)
+        internal IDisposable GetFilterModeScope(bool @on)
         {
-            return new ModeStackScope(ModeStack, @on);
+            return new FilterModeScope(FilterModeStack, @on);
         }
 
-        private class ModeStackScope : IDisposable
+        private class FilterModeScope : IDisposable
         {
             private Stack<bool> _modeStack;
-            public ModeStackScope(Stack<bool> modeStack, bool @on)
+            public FilterModeScope(Stack<bool> modeStack, bool @on)
             {
                 _modeStack = modeStack;
                 _modeStack.Push(@on);
@@ -1031,7 +1031,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Boost(decimal boost)
         {
-            IsCurrentlySupported(nameof(Boost));
+            AssertMethodIsCurrentlySupported(nameof(Boost));
 
             if (boost == 1m) // 1.0 is the default
                 return;
@@ -1076,7 +1076,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Fuzzy(decimal fuzzy)
         {
-            IsCurrentlySupported(nameof(Fuzzy));
+            AssertMethodIsCurrentlySupported(nameof(Fuzzy));
 
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
@@ -1102,7 +1102,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Proximity(int proximity)
         {
-            IsCurrentlySupported(nameof(Proximity));
+            AssertMethodIsCurrentlySupported(nameof(Proximity));
             
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
@@ -1229,7 +1229,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or)
         {
-            IsCurrentlySupported(nameof(Search));
+            AssertMethodIsCurrentlySupported(nameof(Search));
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
@@ -1407,7 +1407,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
         {
-            IsCurrentlySupported(nameof(ContainsAny));
+            AssertMethodIsCurrentlySupported(nameof(ContainsAny));
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -1425,7 +1425,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
         {
-            IsCurrentlySupported(nameof(ContainsAll));
+            AssertMethodIsCurrentlySupported(nameof(ContainsAll));
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -1850,13 +1850,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public string ParameterPrefix { get; set; } = DefaultParameterPrefix;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void IsCurrentlySupported(string methodName)
+        private void AssertMethodIsCurrentlySupported(string methodName)
         {
             if (IsFilterActive == false)
                 return;
             
             throw new InvalidQueryException(
-                $"{methodName} is currently unsupported for Filter. If you want to use {methodName} in where method you have to put it before \"Filter\".");
+                $"{methodName} is currently unsupported for {nameof(LinqExtensions.Filter)}. If you want to use {methodName} in where method you have to put it before \"Filter\".");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

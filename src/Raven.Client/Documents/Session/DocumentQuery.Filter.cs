@@ -7,7 +7,7 @@ public partial class DocumentQuery<T>
 {
     IDocumentQuery<T> IDocumentQuery<T>.Filter(Action<IFilterFactory<T>> builder)
     {
-        using (FilterModeScope(true))
+        using (GetFilterModeScope(true))
         {
             var f = new FilterFactory<T>(this);
             builder.Invoke(f);

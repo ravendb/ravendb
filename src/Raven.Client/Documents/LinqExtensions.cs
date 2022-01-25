@@ -96,8 +96,7 @@ namespace Raven.Client.Documents
         }
         
         /// <summary>
-        /// Filter allows you to search documents without building an index.
-        /// This feature uses a full-table scan so use it wisely.
+        /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering. Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
         /// </summary>
         /// <typeparam name="T">The type of the object that holds querying type.</typeparam>
         /// <param name="source">The source for querying</param>
