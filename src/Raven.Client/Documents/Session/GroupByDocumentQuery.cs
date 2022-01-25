@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Session
         
         public IGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder)
         {
-            using (_query.FilterModeScope(true))
+            using (_query.GetFilterModeScope(true))
             {
                 var f = new FilterFactory<T>(_query);
                 builder.Invoke(f);
@@ -97,7 +97,7 @@ namespace Raven.Client.Documents.Session
         
         public IAsyncGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder)
         {
-            using (_query.FilterModeScope(true))
+            using (_query.GetFilterModeScope(true))
             {
                 var f = new AsyncFilterFactory<T>(_query);
                 builder.Invoke(f);

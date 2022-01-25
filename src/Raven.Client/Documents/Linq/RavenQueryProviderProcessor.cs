@@ -2026,15 +2026,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             DocumentQuery<T> documentQuery => documentQuery.IsFilterActive,
             AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.IsFilterActive,
-            _ => throw new InvalidDataException(($"Unknown query type for Filter.")) 
+            _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
         };
         
 
         private IDisposable FilterModeScope(bool @on) => DocumentQuery switch
         {
-            DocumentQuery<T> documentQuery => documentQuery.FilterModeScope(@on),
-            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.FilterModeScope(@on),
-            _ => throw new InvalidDataException(($"Unknown query type for Filter.")) 
+            DocumentQuery<T> documentQuery => documentQuery.GetFilterModeScope(@on),
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.GetFilterModeScope(@on),
+            _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
         };        
         
         private void AddScanLimit(int scanLimit)
@@ -2047,6 +2047,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case AsyncDocumentQuery<T> asyncDocumentQuery:
                     asyncDocumentQuery.AddScanLimit(scanLimit);
                     break;
+                default:
+                    throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.");
             }
         }
 
