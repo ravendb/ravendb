@@ -219,7 +219,7 @@ namespace Raven.Server.ServerWide.Commands
             throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
         }
 
-        protected bool TryGetExpires(BlittableJsonReaderObject value, string storageKey, out long ticks)
+        protected bool TryGetExpires(BlittableJsonReaderObject value, out long ticks)
         {
             try
             {
@@ -227,8 +227,7 @@ namespace Raven.Server.ServerWide.Commands
             }
             catch (Exception e)
             {
-                (var database, var key) = CompareExchangeKey.SplitStorageKey(storageKey);
-                throw new RachisApplyException($"Could not apply command {GetType().Name} - failed to get `Expires` for compare exchange key:{key} database:{database}.", e);
+                throw new RachisApplyException($"Could not apply command {GetType().Name} - failed to get `Expires` for compare exchange key:{Key} database:{Database}.", e);
             }
         }
     }
@@ -336,7 +335,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
-            if (TryGetExpires(value, ActualKey, out long ticks))
+            if (TryGetExpires(value, out long ticks))
                 ExpirationTicks = ticks;
 
             Value = value;
@@ -431,7 +430,7 @@ namespace Raven.Server.ServerWide.Commands
 
             using (value)
             {
-                if (CompareExchangeExpirationStorage.TryGetExpires(value, out var ticks) && ticks < CurrentTicks)
+                if (TryGetExpires(value, out var ticks) && ticks < CurrentTicks)
                     return true;
                 return currentIndex == index;
             }

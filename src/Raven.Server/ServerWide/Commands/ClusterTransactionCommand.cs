@@ -30,8 +30,8 @@ namespace Raven.Server.ServerWide.Commands
         public string ClusterTransactionId;
 
         public long DatabaseCommandsCount;
-        //We take the current ticks in advance to ensure consist results of the command execution on all nodes
-        public long CommandCreationTicks;
+        //We take the current ticks in advance to ensure consistent results of the command execution on all nodes
+        public long CommandCreationTicks = long.MinValue;
 
         public class ClusterTransactionDataCommand
         {
