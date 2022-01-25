@@ -1,12 +1,21 @@
 using System;
+using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents
 {
-    public class BucketStats
+    [StructLayout(LayoutKind.Explicit)]
+    internal struct BucketStats
     {
+        [FieldOffset(0)]
         public int BucketId;
+
+        [FieldOffset(4)]
         public int Size;
+
+        [FieldOffset(8)]
         public int Count;
-        public DateTime LastAccessed;
+
+        [FieldOffset(12)]
+        public long LastAccessed;
     }
 }

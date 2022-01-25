@@ -14,6 +14,7 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
@@ -53,8 +54,8 @@ namespace Raven.Server.Documents
         private static readonly Slice DeletedEtagsSlice;
 
         private static readonly Slice DocsBucketAndEtagSlice;
-        internal static readonly Slice GlobalBucketStatsSlice;
-        internal static readonly Slice BucketsSizeSlice;
+        internal static readonly Slice BucketStatsTreeSlice;
+        //internal static readonly Slice BucketsSizeSlice;
 
 
         public static readonly TableSchema DocsSchema = new TableSchema
@@ -69,7 +70,7 @@ namespace Raven.Server.Documents
 
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         public static readonly TableSchema CollectionsSchema = new TableSchema();
-        public static TableSchema BucketStatsSchema = new TableSchema();
+        //public static TableSchema BucketStatsSchema = new TableSchema();
 
         public readonly DocumentDatabase DocumentDatabase;
 
@@ -106,13 +107,8 @@ namespace Raven.Server.Documents
             Name = 0,
         }
 
-        public enum BucketStatsTable
-        {
-            BucketId,
-            Size,
-            LastAccessed,
-            Count
-        }
+        // BucketId (int), Size (int), Count (int), LastAccessed (long)
+        public const int SizeOfBucketStats = sizeof(int) * 3 + sizeof(long); 
 
         static DocumentsStorage()
         {
@@ -134,8 +130,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
 
-                Slice.From(ctx, "GlobalBucketStats", ByteStringType.Immutable, out GlobalBucketStatsSlice);
-                Slice.From(ctx, "BucketsSize", ByteStringType.Immutable, out BucketsSizeSlice);
+                Slice.From(ctx, "BucketStatsTree", ByteStringType.Immutable, out BucketStatsTreeSlice);
             }
             /*
             Collection schema is:
@@ -178,21 +173,6 @@ namespace Raven.Server.Documents
                 StartIndex = (int)TombstoneTable.DeletedEtag,
                 IsGlobal = false,
                 Name = DeletedEtagsSlice
-            });
-
-            BucketStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)BucketStatsTable.BucketId,
-                Count = 1,
-                IsGlobal = true, 
-                Name = GlobalBucketStatsSlice
-            });
-            BucketStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
-            {
-                StartIndex = (int)BucketStatsTable.BucketId,
-                Count = 2,
-                IsGlobal = false, // todo 
-                Name = BucketsSizeSlice
             });
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
@@ -346,8 +326,9 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsBucketAndEtagSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
+
+                    tx.CreateTree(BucketStatsTreeSlice);
                     
-                    BucketStatsSchema.Create(tx, GlobalBucketStatsSlice, 32);
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
@@ -1078,41 +1059,6 @@ namespace Raven.Server.Documents
 
                     yield return document;
                 }
-            }
-        }
-
-        public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
-        {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
-
-            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
-            {
-                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.Indexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
-                {
-                    yield return TableValueToDocument(context, ref result.Result.Reader);
-                }
-            }
-        }
-
-        public BucketStats GetBucketStats(DocumentsOperationContext context, int bucket)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(BucketStatsSchema, GlobalBucketStatsSlice);
-
-            using (GetBucketKeyByteString(context.Allocator, bucket, out var buffer))
-            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
-            {
-                if (table.ReadByKey(keySlice, out var existing) == false)
-                    return null;
-
-                return new BucketStats
-                {
-                    BucketId = bucket,
-                    Size = TableValueToInt((int)BucketStatsTable.Size, ref existing),
-                    Count = TableValueToInt((int)BucketStatsTable.Count, ref existing),
-                    LastAccessed = TableValueToDateTime((int)BucketStatsTable.LastAccessed, ref existing)
-                };
             }
         }
 
@@ -2620,6 +2566,95 @@ namespace Raven.Server.Documents
             return result;
         }
 
+
+        public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(DocsSchema.Indexes[DocsBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return TableValueToDocument(context, ref result.Result.Reader);
+                }
+            }
+        }
+
+        internal BucketStats GetBucketStats(DocumentsOperationContext context, int bucket)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsTreeSlice);
+            using (GetBucketKeyByteString(context.Allocator, bucket, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            {
+                var val = tree.Read(keySlice);
+                if (val == null)
+                    return default;
+
+                return *(BucketStats*)val.Reader.Base;
+            }
+        }
+
+        public static void UpdateBucketStats(DocumentsOperationContext context, int bucket, int itemSize, long lastAccessedTicks)
+        {
+            int count = 1, size = itemSize;
+            var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsTreeSlice);
+
+            using (context.Allocator.Allocate(SizeOfBucketStats, out var buffer))
+            {
+                var stats = (BucketStats*)buffer.Ptr;
+                stats->BucketId = bucket;
+
+                using (Slice.External(context.Allocator, buffer, sizeof(int), out var keySlice))
+                {
+                    var val = tree.Read(keySlice);
+                    if (val != null)
+                    {
+                        var existing = *(BucketStats*)val.Reader.Base;
+                        size += existing.Size;
+                        count += existing.Count;
+                    }
+
+                    stats->Size = size;
+                    stats->Count = count;
+                    stats->LastAccessed = lastAccessedTicks;
+                    tree.Add(keySlice, buffer.Ptr, buffer.Size);
+                }
+
+                /*using (Slice.External(context.Allocator, buffer, sizeof(int), out var keySlice))
+                {
+                    var val = tree.Read(keySlice);
+                    if (val != null)
+                    {
+                        var existing = (BucketStats*)val.Reader.Base;
+                        existing->Size += size;
+                        existing->Count++;
+                        existing->LastAccessed = lastAccessedTicks;
+                    }
+
+                    else
+                    {
+                        stats->Size = size;
+                        stats->Count = 1;
+                        stats->LastAccessed = lastAccessedTicks;
+                        tree.Add(keySlice, buffer.Ptr, buffer.Size);
+                    }
+                }*/
+            }
+        }
+
+        public int GetBucket(string id)
+        {
+            if (ShardHelper.IsShardedName(DocumentDatabase.Name) == false) // ?
+                return -1;
+
+            using (DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                return ShardedContext.GetShardId(txContext, id);
+            }
+        }
+
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagByteString(
             ByteStringContext allocator, int bucket, long etag,
             out ByteString buffer)
@@ -2640,6 +2675,7 @@ namespace Raven.Server.Documents
 
             return scope;
         }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long TableValueToEtag(int index, ref TableValueReader tvr)
