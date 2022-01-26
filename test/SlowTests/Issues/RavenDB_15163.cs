@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
                     Name = "Users/ByName"
                 }));
 
-                var replacementIndexInstance = database.IndexStore.GetIndex("ReplacementOf/Users/ByName");
+                var replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Users/ByName");
 
                 var thrown = false;
 
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
 
                 var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-                database.IndexStore.ReplaceIndexes("Users/ByName", "ReplacementOf/Users/ByName", cts.Token);
+                database.IndexStore.ReplaceIndexes("Users/ByName", $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Users/ByName", cts.Token);
 
                 var indexes = database.IndexStore.GetIndexes().ToList();
 
@@ -71,7 +72,7 @@ namespace SlowTests.Issues
                     Name = "Users/ByName"
                 }));
 
-                replacementIndexInstance = database.IndexStore.GetIndex("ReplacementOf/Users/ByName");
+                replacementIndexInstance = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Users/ByName");
 
                 database.IndexStore.ForTestingPurposesOnly().DuringIndexReplacement_OnOldIndexDeletion += () =>
                 {
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
 
                 cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-                Assert.Throws<IOException>(() => database.IndexStore.ReplaceIndexes("Users/ByName", "ReplacementOf/Users/ByName", cts.Token));
+                Assert.Throws<IOException>(() => database.IndexStore.ReplaceIndexes("Users/ByName", $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Users/ByName", cts.Token));
 
                 indexes = database.IndexStore.GetIndexes().ToList();
 
