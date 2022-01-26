@@ -342,7 +342,9 @@ namespace Raven.Server.Documents
 
             // We materialize the values here because we close the read transaction
             var record = rawRecord.MaterializedRecord;
-            context.CloseTransaction();
+            
+            if (index == -1)
+                context.CloseTransaction(); // other shards use this context we can't close it
 
             DeleteDatabase(dbName, deletionInProgress, record);
             return true;

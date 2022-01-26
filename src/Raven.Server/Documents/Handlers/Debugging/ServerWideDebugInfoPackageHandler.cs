@@ -54,6 +54,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.DocumentsCompression),
             nameof(DatabaseRecord.Analyzers),
             nameof(DatabaseRecord.TimeSeries),
+
+            nameof(DatabaseRecord.Shards),
+            nameof(DatabaseRecord.ShardAllocations),
         };
 
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
