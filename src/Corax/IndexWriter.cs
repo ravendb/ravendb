@@ -47,7 +47,7 @@ namespace Corax
         public IndexFieldsMapping(ByteStringContext context)        
         {
             _context = context;
-            _fields = new Dictionary<Slice, IndexFieldBinding>();
+            _fields = new Dictionary<Slice, IndexFieldBinding>(SliceComparer.Instance);
             _fieldsById = new Dictionary<int, IndexFieldBinding>();
             _fieldsList = new List<IndexFieldBinding>();
         }
@@ -349,7 +349,7 @@ namespace Corax
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
 
-            var keys = SuggestionsKeys.Generate(Transaction.Allocator, SuggestionTermProvider.DefaultNGramSize, slice.AsSpan(), out int keysCount);
+            var keys = SuggestionsKeys.Generate(Transaction.Allocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
             int keySizes = keys.Length / keysCount;            
 
             var bsc = Transaction.Allocator;
@@ -378,7 +378,7 @@ namespace Corax
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
 
-            var keys = SuggestionsKeys.Generate(Transaction.Allocator, SuggestionTermProvider.DefaultNGramSize, sequence, out int keysCount);
+            var keys = SuggestionsKeys.Generate(Transaction.Allocator, Constants.Suggestions.DefaultNGramSize, sequence, out int keysCount);
             int keySizes = keys.Length / keysCount;
 
             var bsc = Transaction.Allocator;

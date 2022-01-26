@@ -1,20 +1,30 @@
-﻿using System;
+﻿using System.IO;
 using Corax.Queries;
-using Voron;
 
 namespace Corax;
 
 public partial class IndexSearcher
 {
-    public SuggestionTermProvider Suggest(int fieldId, string term, Analyzer analyzer = null, int take = -1)
+    public IRawTermProvider Suggest(int fieldId, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, float accuracy,
+        int take = Constants.IndexSearcher.TakeAll) => algorithm switch
     {
-        // TODO: Until we figure out how to best call this through integration, I will add this convenience method. 
-        Slice.From(_transaction.Allocator, term, out var termSlice);
-        return Suggest(fieldId, termSlice, analyzer);
+        StringDistanceAlgorithm.None => Suggest<NoneStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.NGram => Suggest<NoneStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.JaroWinkler => Suggest<JaroWinklerDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.Levenshtein => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        _ => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take)
+    };
+
+    private SuggestionTermProvider<TDistanceProvider> Suggest<TDistanceProvider>(int fieldId, string term, bool sortByPopularity, float accuracy, int take)
+        where TDistanceProvider : IStringDistance
+    {
+        var termSlice = EncodeAndApplyAnalyzer(term, fieldId);
+        if (_fieldMapping.TryGetByFieldId(fieldId, out var binding) == false)
+        {
+            throw new InvalidDataException($"Field {fieldId} is not indexed.");
+        }
+        
+        return SuggestionTermProvider<TDistanceProvider>.YieldFromNGram(this, fieldId, termSlice, binding, default, sortByPopularity, accuracy, take);
     }
 
-    public SuggestionTermProvider Suggest(int fieldId, Slice term, Analyzer analyzer = null, int take = -1)
-    {
-        return SuggestionTermProvider.YieldFromNGram(this, fieldId, term, analyzer, take);
-    }
 }
