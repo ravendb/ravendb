@@ -780,7 +780,11 @@ namespace Raven.Server.Documents
 
             if (HasHigherChangeVector(context, lowerId, expectedChangeVector))
             {
-                throw new ConcurrencyException($"Failed to resolve document conflict with change vector = {expectedChangeVector}, because we have a newer change vector.");
+                throw new ConcurrencyException($"Failed to resolve document conflict with change vector = {expectedChangeVector}, because we have a newer change vector.")
+                {
+                    Id = lowerId.ToString(),
+                    ExpectedChangeVector = expectedChangeVector
+                };
             }
         }
 

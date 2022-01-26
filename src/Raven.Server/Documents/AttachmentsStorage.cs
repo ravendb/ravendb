@@ -952,6 +952,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Attachment {name} of '{documentId}' has change vector {oldChangeVector}, but Put was called with {(expectedChangeVector.Length == 0 ? "expecting new document" : "change vector " + expectedChangeVector)}. Optimistic concurrency violation, transaction will be aborted.")
             {
+                Id = documentId,
                 ActualChangeVector = oldChangeVector,
                 ExpectedChangeVector = expectedChangeVector
             };
@@ -962,6 +963,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Attachment {name} of '{documentId}' does not exist, but Put was called with change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
             {
+                Id = documentId,
                 ExpectedChangeVector = expectedChangeVector
             };
         }
@@ -1051,7 +1053,11 @@ namespace Raven.Server.Documents
                     if (expectedChangeVector != null)
                         throw new ConcurrencyException($"Document {documentId} does not exist, " +
                                                        $"but delete was called with change vector '{expectedChangeVector}' to remove attachment {name}. " +
-                                                       "Optimistic concurrency violation, transaction will be aborted.");
+                                                       "Optimistic concurrency violation, transaction will be aborted.")
+                        {
+                            Id = documentId,
+                            ExpectedChangeVector = expectedChangeVector
+                        };
 
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
                     return;
@@ -1186,7 +1192,10 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
                                                    $"but delete was called with change vector '{expectedChangeVector}'. " +
-                                                   "Optimistic concurrency violation, transaction will be aborted.");
+                                                   "Optimistic concurrency violation, transaction will be aborted.")
+                    {
+                        ExpectedChangeVector = expectedChangeVector
+                    };
 
                 // This basically means that we tried to delete attachment that doesn't exist.
                 long attachmentEtag;

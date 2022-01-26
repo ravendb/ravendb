@@ -439,7 +439,7 @@ namespace SlowTests.Voron.Storage
                 var streamsSizeInMb = new Size(treeReport.Streams.Streams[0].AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
                 var fullStreamsSizeInMb = new Size(fullTreeReport.Streams.AllocatedSpaceInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
                 
-                Assert.Equal(streamsSizeInMb,fullStreamsSizeInMb);
+                Assert.True(streamsSizeInMb == fullStreamsSizeInMb || streamsSizeInMb + 1 == fullStreamsSizeInMb || streamsSizeInMb - 1 == fullStreamsSizeInMb);
             }
         }
 

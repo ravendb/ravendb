@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -307,9 +308,15 @@ namespace SlowTests.Server.Replication
                 await SetupPullReplicationAsync(definitionName, sink, hub);
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
+                var db = await GetDocumentDatabaseInstanceFor(sink);
+                var removedOnSink = new ManualResetEventSlim();
+                db.ReplicationLoader.IncomingReplicationRemoved += _ => removedOnSink.Set();
+
                 pullDefinition.Disabled = true;
                 pullDefinition.TaskId = saveResult.TaskId;
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(pullDefinition));
+
+                Assert.True(removedOnSink.Wait(timeout));
 
                 using (var main = hub.OpenSession())
                 {

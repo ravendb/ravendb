@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Client;
+using Newtonsoft.Json;
 using Parquet;
 using Parquet.Data;
 using Raven.Client.Documents;
@@ -14,6 +15,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -287,9 +289,16 @@ loadToOrders(partitionBy(key),
                         await session.SaveChangesAsync();
                     }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
+                    var database = await GetDatabase(store.Database);
+                    var etlDone = new ManualResetEventSlim();
+                    
+                    database.EtlLoader.BatchCompleted += x =>
+                    {
+                        if (x.Statistics.LoadSuccesses > 0)
+                            etlDone.Set();
+                    };
 
-                    var script = @"
+                    const string script = @"
 var orderData = {
     Company : this.Company,
     RequireAt : new Date(this.RequireAt),
@@ -321,7 +330,12 @@ loadToOrders(partitionBy(key), orderData);
 
 
                     SetupS3OlapEtl(store, script, settings);
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                    var timeout = database.DocumentsStorage.Environment.Options.RunningOn32Bits
+                        ? TimeSpan.FromMinutes(2)
+                        : TimeSpan.FromMinutes(1);
+
+                    Assert.True(etlDone.Wait(timeout), $"olap etl to s3 did not finish in {timeout.TotalMinutes} minutes. stats : {GetPerformanceStats(database)}");
 
                     using (var s3Client = new RavenAwsS3Client(settings, DefaultBackupConfiguration))
                     {
@@ -395,6 +409,13 @@ loadToOrders(partitionBy(key), orderData);
             {
                 await DeleteObjects(settings, salesTableName);
             }
+        }
+
+        private static string GetPerformanceStats(DocumentDatabase database)
+        {
+            var process = database.EtlLoader.Processes.First();
+            var stats = process?.GetLatestPerformanceStats().ToPerformanceStats();
+            return JsonConvert.SerializeObject(stats);
         }
 
         [AmazonS3Fact]

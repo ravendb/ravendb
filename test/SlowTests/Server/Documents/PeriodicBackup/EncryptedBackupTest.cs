@@ -865,7 +865,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var database = await GetDatabase(store.Database);
-                database.NotificationCenter.Paging.UpdatePaging(null);
+                var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
+                Assert.True(outcome, reason);
 
                 int beforeBackupAlertCount;
                 using (database.NotificationCenter.GetStored(out var actions))
