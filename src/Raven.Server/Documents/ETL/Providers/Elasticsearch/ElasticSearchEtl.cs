@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                     var bulkIndexResponse = _client.LowLevel.Bulk<BulkResponse>(indexName, streamHandler, new BulkRequestParameters { Refresh = Refresh.WaitFor });
 
                     if (bulkIndexResponse.IsValid == false)
-                        ThrowElasticSearchLoadException($"Failed to index data to '{index}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
+                        ThrowElasticSearchLoadException($"Failed to index data to '{indexName}' index", bulkIndexResponse.ServerError, bulkIndexResponse.OriginalException,
                             bulkIndexResponse.DebugInformation);
                 }
             }

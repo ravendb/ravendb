@@ -224,6 +224,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(OrdersIndexName);
+                client.Indices.Refresh(OrderLinesIndexName);
+
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrdersIndexName)
                     .Query(q => q
@@ -263,6 +266,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(OrdersIndexName);
+                client.Indices.Refresh(OrderLinesIndexName);
+
+
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -294,6 +301,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(OrdersIndexName);
+                client.Indices.Refresh(OrderLinesIndexName);
+
                 var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
@@ -310,6 +320,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 }
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
+
+                client.Indices.Refresh(OrdersIndexName);
+                client.Indices.Refresh(OrderLinesIndexName);
 
                 var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
                 var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
@@ -422,6 +435,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(UsersIndexName);
+
                 var userResponse1 = client.Search<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
@@ -435,6 +450,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var userObject1 = JObject.FromObject(userResponse1.Documents.First()).ToObject<Dictionary<string, object>>();
                 Assert.NotNull(userObject1);
                 Assert.Equal("Joe Doe", userObject1["Name"]);
+
+                client.Indices.Refresh(UsersIndexName);
 
                 var userResponse2 = client.Search<object>(d => d
                     .Index(UsersIndexName)
@@ -465,6 +482,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(UsersIndexName);
+
                 var userResponse3 = client.Search<object>(d => d
                     .Index(UsersIndexName)
                     .Query(q => q
@@ -478,6 +497,8 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var userObject3 = JObject.FromObject(userResponse3.Documents.First()).ToObject<Dictionary<string, object>>();
                 Assert.NotNull(userObject3);
                 Assert.Equal("Doe Joe", userObject3["Name"]);
+
+                client.Indices.Refresh(UsersIndexName);
 
                 var userResponse4 = client.Search<object>(d => d
                     .Index(UsersIndexName)
