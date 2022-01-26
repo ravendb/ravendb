@@ -15,7 +15,6 @@ using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Sharding;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -222,7 +221,6 @@ namespace Raven.Server.Documents
 
                 if (collectionName.IsHiLo == false && flags.Contain(DocumentFlags.Artificial) == false)
                 {
-
                     Recreate(context, id, oldDoc, ref document, ref flags, nonPersistentFlags, ref documentDebugHash);
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(
@@ -245,8 +243,8 @@ namespace Raven.Server.Documents
                 }
 
                 FlagsProperlySet(flags, changeVector);
-
-                int bucket = _documentsStorage.GetBucket(id);
+                UpdateType updateType;
+                int sizeToAdd, bucket = _documentsStorage.GetBucket(id);
                 using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -263,11 +261,15 @@ namespace Raven.Server.Documents
                     if (oldValue.Pointer == null)
                     {
                         table.Insert(tvb);
+                        updateType = UpdateType.Add;
                     }
                     else
                     {
                         table.Update(oldValue.Id, tvb);
+                        updateType = UpdateType.Update;
                     }
+
+                    sizeToAdd = tvb.Size - oldValue.Size;
                 }
 
                 if (collectionName.IsHiLo == false)
@@ -278,7 +280,7 @@ namespace Raven.Server.Documents
                 _documentDatabase.Metrics.Docs.PutsPerSec.MarkSingleThreaded(1);
                 _documentDatabase.Metrics.Docs.BytesPutsPerSec.MarkSingleThreaded(document.Size);
 
-                UpdateBucketStats(context, bucket, document.Size, modifiedTicks);
+                _documentsStorage.UpdateBucketStats(context, bucket, sizeToAdd, updateType);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

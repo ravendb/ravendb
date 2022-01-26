@@ -55,8 +55,6 @@ namespace Raven.Server.Documents
 
         private static readonly Slice DocsBucketAndEtagSlice;
         internal static readonly Slice BucketStatsTreeSlice;
-        //internal static readonly Slice BucketsSizeSlice;
-
 
         public static readonly TableSchema DocsSchema = new TableSchema
         {
@@ -70,7 +68,6 @@ namespace Raven.Server.Documents
 
         public static readonly TableSchema TombstonesSchema = new TableSchema();
         public static readonly TableSchema CollectionsSchema = new TableSchema();
-        //public static TableSchema BucketStatsSchema = new TableSchema();
 
         public readonly DocumentDatabase DocumentDatabase;
 
@@ -326,7 +323,6 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsBucketAndEtagSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-
                     tx.CreateTree(BucketStatsTreeSlice);
                     
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
@@ -1792,6 +1788,8 @@ namespace Raven.Server.Documents
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
                 TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
 
+                UpdateBucketStats(context, GetBucket(id), sizeToAdd: -tvr.Size, updateType: UpdateType.Remove);
+
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,
@@ -2596,11 +2594,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static void UpdateBucketStats(DocumentsOperationContext context, int bucket, int itemSize, long lastAccessedTicks)
-        {
-            int count = 1, size = itemSize;
-            var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsTreeSlice);
 
+        public void UpdateBucketStats(DocumentsOperationContext context, int bucket, int sizeToAdd, UpdateType updateType)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(BucketStatsTreeSlice);
             using (context.Allocator.Allocate(SizeOfBucketStats, out var buffer))
             {
                 var stats = (BucketStats*)buffer.Ptr;
@@ -2608,17 +2605,38 @@ namespace Raven.Server.Documents
 
                 using (Slice.External(context.Allocator, buffer, sizeof(int), out var keySlice))
                 {
+                    int count, size = sizeToAdd;
                     var val = tree.Read(keySlice);
+                    
                     if (val != null)
                     {
                         var existing = *(BucketStats*)val.Reader.Base;
                         size += existing.Size;
-                        count += existing.Count;
+                        switch (updateType)
+                        {
+                            case UpdateType.Add:
+                                count = existing.Count + 1;
+                                break;
+                            case UpdateType.Remove:
+                                count = existing.Count - 1;
+                                break;
+                            case UpdateType.Update:
+                                count = existing.Count;
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(updateType), updateType, "Unknown UpdateType");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Assert(updateType == UpdateType.Add, "trying to update/remove an item from a value that doesn't exist in the tree. key : " + bucket);
+                        count = 1;
                     }
 
                     stats->Size = size;
                     stats->Count = count;
-                    stats->LastAccessed = lastAccessedTicks;
+                    stats->LastAccessed = DocumentDatabase.Time.GetUtcNow().Ticks;
+
                     tree.Add(keySlice, buffer.Ptr, buffer.Size);
                 }
 
@@ -2643,6 +2661,7 @@ namespace Raven.Server.Documents
                 }*/
             }
         }
+
 
         public int GetBucket(string id)
         {
