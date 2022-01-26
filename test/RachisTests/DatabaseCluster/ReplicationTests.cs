@@ -19,6 +19,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -1087,7 +1088,7 @@ namespace RachisTests.DatabaseCluster
             using (var store2 = GetDocumentStore())
             {
                 var database = await GetDocumentDatabaseInstanceFor(store1);
-                var handlers = new HashSet<OutgoingReplicationHandler>();
+                var handlers = new HashSet<OutgoingReplicationHandlerBase>();
 
                 database.ReplicationLoader.OutgoingReplicationAdded += handler =>
                 {

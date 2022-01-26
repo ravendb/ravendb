@@ -1,9 +1,11 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public interface ILiveReplicationCollector : IDisposable
     {
@@ -33,12 +35,12 @@ namespace Raven.Server.Documents.Replication
                 OutgoingHandlerAdded(handler);
         }
 
-        private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
+        private void OutgoingHandlerRemoved(OutgoingReplicationHandlerBase handler)
         {
             handler.HandleReplicationPulse -= HandleReplicationPulse;
         }
 
-        private void OutgoingHandlerAdded(OutgoingReplicationHandler handler)
+        private void OutgoingHandlerAdded(OutgoingReplicationHandlerBase handler)
         {
             handler.HandleReplicationPulse += HandleReplicationPulse;
         }

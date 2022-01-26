@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Util;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public abstract class ReplicationRunStatsBase
     {

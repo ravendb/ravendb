@@ -32,6 +32,8 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -133,7 +135,8 @@ namespace Raven.Server.Web.System
             {
                 foreach (var incoming in handlers)
                 {
-                    if (incoming._incomingPullReplicationParams?.Name == sinkReplication.HubName)
+                    if (incoming is IncomingPullReplicationHandler pullHandler && 
+                        pullHandler._incomingPullReplicationParams?.Name == sinkReplication.HubName)
                     {
                         handler = incoming;
                         res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
@@ -181,7 +184,7 @@ namespace Raven.Server.Web.System
 
         private IEnumerable<OngoingTask> CollectPullReplicationAsHubTasks(ClusterTopology clusterTopology)
         {
-            var pullReplicationHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(n => n.IsPullReplicationAsHub).ToList();
+            var pullReplicationHandlers = Database.ReplicationLoader.OutgoingHandlers.Where(n => n is OutgoingPullReplicationHandler).ToList();
             foreach (var handler in pullReplicationHandlers)
             {
                 var ex = handler.Destination as ExternalReplication;

@@ -360,6 +360,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task FailoverOnHubNodeFail()
         {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
             var clusterSize = 3;
             var (_, hub) = await CreateRaftCluster(clusterSize);
             var (minionNodes, minion) = await CreateRaftCluster(clusterSize);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,11 +6,12 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -22,150 +22,36 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Senders
 {
-    public class ReplicationDocumentSender : IDisposable
+    public abstract class ReplicationDocumentSenderBase : IDisposable
     {
-        private readonly Logger _log;
+        protected readonly Logger Log;
         private long _lastEtag;
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
         private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
-        internal readonly OutgoingReplicationHandler _parent;
+        internal readonly OutgoingReplicationHandlerBase _parent;
         private OutgoingReplicationStatsScope _statsInstance;
-        internal readonly ReplicationStats _stats = new ReplicationStats();
+        protected readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
 
-        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths)
+        protected ReplicationDocumentSenderBase(Stream stream, OutgoingReplicationHandlerBase parent, Logger log)
         {
-            _log = log;
-            if (pathsToSend != null && pathsToSend.Length > 0)
-                _pathsToSend = new AllowedPathsValidator(pathsToSend);
-            if (destinationAcceptablePaths != null && destinationAcceptablePaths.Length > 0)
-                _destinationAcceptablePaths = new AllowedPathsValidator(destinationAcceptablePaths);
+            Log = log;
             _stream = stream;
             _parent = parent;
-            
-            _shouldSkipSendingTombstones = _parent.Destination is PullReplicationAsSink sink && sink.Mode == PullReplicationMode.SinkToHub &&
-                                           parent._outgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
-                                           _parent._database.ForTestingPurposes?.ForceSendTombstones == false;
         }
 
-        public class MergedReplicationBatchEnumerator : IEnumerator<ReplicationBatchItem>
+        protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
+            bool caseInsensitiveCounters)
         {
-            private readonly List<IEnumerator<ReplicationBatchItem>> _workEnumerators = new List<IEnumerator<ReplicationBatchItem>>();
-            private ReplicationBatchItem _currentItem;
-            private readonly OutgoingReplicationStatsScope _documentRead;
-            private readonly OutgoingReplicationStatsScope _attachmentRead;
-            private readonly OutgoingReplicationStatsScope _tombstoneRead;
-            private readonly OutgoingReplicationStatsScope _countersRead;
-            private readonly OutgoingReplicationStatsScope _timeSeriesRead;
-
-            public MergedReplicationBatchEnumerator(
-                OutgoingReplicationStatsScope documentRead,
-                OutgoingReplicationStatsScope attachmentRead,
-                OutgoingReplicationStatsScope tombstoneRead,
-                OutgoingReplicationStatsScope counterRead,
-                OutgoingReplicationStatsScope timeSeriesRead
-                )
-            {
-                _documentRead = documentRead;
-                _attachmentRead = attachmentRead;
-                _tombstoneRead = tombstoneRead;
-                _countersRead = counterRead;
-                _timeSeriesRead = timeSeriesRead;
-            }
-
-            public void AddEnumerator(ReplicationBatchItem.ReplicationItemType type, IEnumerator<ReplicationBatchItem> enumerator)
-            {
-                if (enumerator == null)
-                    return;
-
-                if (enumerator.MoveNext())
-                {
-                    using (GetStatsFor(type).Start())
-                    {
-                        _workEnumerators.Add(enumerator);
-                    }
-                }
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private OutgoingReplicationStatsScope GetStatsFor(ReplicationBatchItem.ReplicationItemType type)
-            {
-                switch (type)
-                {
-                    case ReplicationBatchItem.ReplicationItemType.Document:
-                        return _documentRead;
-
-                    case ReplicationBatchItem.ReplicationItemType.Attachment:
-                        return _attachmentRead;
-
-                    case ReplicationBatchItem.ReplicationItemType.CounterGroup:
-                        return _countersRead;
-
-                    case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
-                    case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
-                        return _tombstoneRead;
-
-                    case ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment:
-                    case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
-                        return _timeSeriesRead;
-
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-
-            public bool MoveNext()
-            {
-                if (_workEnumerators.Count == 0)
-                    return false;
-
-                var current = _workEnumerators[0];
-                for (var index = 1; index < _workEnumerators.Count; index++)
-                {
-                    if (_workEnumerators[index].Current.Etag < current.Current.Etag)
-                    {
-                        current = _workEnumerators[index];
-                    }
-                }
-
-                _currentItem = current.Current;
-                using (GetStatsFor(_currentItem.Type).Start())
-                {
-                    if (current.MoveNext() == false)
-                    {
-                        _workEnumerators.Remove(current);
-                    }
-
-                    return true;
-                }
-            }
-
-            public void Reset()
-            {
-                throw new NotSupportedException();
-            }
-
-            public ReplicationBatchItem Current => _currentItem;
-
-            object IEnumerator.Current => Current;
-
-            public void Dispose()
-            {
-                foreach (var workEnumerator in _workEnumerators)
-                {
-                    workEnumerator.Dispose();
-                }
-                _workEnumerators.Clear();
-            }
+            return GetReplicationItems(_parent._database, ctx, etag, stats, caseInsensitiveCounters);
         }
 
-        internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
+        protected internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
             var docs = database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
             var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
@@ -222,9 +108,9 @@ namespace Raven.Server.Documents.Replication
                     var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
                     if (lastEtagFromDestinationChangeVector > _lastEtag)
                     {
-                        if (_log.IsInfoEnabled)
+                        if (Log.IsInfoEnabled)
                         {
-                            _log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
+                            Log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
                         }
                         _lastEtag = lastEtagFromDestinationChangeVector;
                     }
@@ -312,12 +198,12 @@ namespace Raven.Server.Documents.Replication
                         }
                     }
 
-                    if (_log.IsInfoEnabled)
+                    if (Log.IsInfoEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
                         {
                             var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
-                            _log.Info(message);
+                            Log.Info(message);
                         }
 
                         var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
@@ -331,7 +217,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         msg += $"total size: {new Size(replicationState.Size + encryptionSize, SizeUnit.Bytes)}";
 
-                        _log.Info(msg);
+                        Log.Info(msg);
                     }
 
                     if (_orderedReplicaItems.Count == 0)
@@ -365,14 +251,14 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (OperationCanceledException)
                     {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Received cancellation notification while sending document replication batch.");
+                        if (Log.IsInfoEnabled)
+                            Log.Info("Received cancellation notification while sending document replication batch.");
                         throw;
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Failed to send document replication batch", e);
+                        if (Log.IsInfoEnabled)
+                            Log.Info("Failed to send document replication batch", e);
                         throw;
                     }
 
@@ -470,8 +356,8 @@ namespace Raven.Server.Documents.Replication
                               $"while we are in legacy mode (downgraded our replication version to match the destination). " +
                               $"Can't send TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support TimeSeries feature. Stopping replication. {item}";
 
-                if (_log.IsInfoEnabled)
-                    _log.Info(message);
+                if (Log.IsInfoEnabled)
+                    Log.Info(message);
 
                 throw new LegacyReplicationViolationException(message);
             }
@@ -494,8 +380,8 @@ namespace Raven.Server.Documents.Replication
 
                 message += "Stopping replication. " + item;
 
-                if (_log.IsInfoEnabled)
-                    _log.Info(message);
+                if (Log.IsInfoEnabled)
+                    Log.Info(message);
 
                 throw new LegacyReplicationViolationException(message);
             }
@@ -513,8 +399,8 @@ namespace Raven.Server.Documents.Replication
                               $"Can't use Cluster Transactions legacy mode, destination {_parent.Destination.FromString()} does not support this feature. " +
                               "Stopping replication.";
 
-                if (_log.IsInfoEnabled)
-                    _log.Info(message);
+                if (Log.IsInfoEnabled)
+                    Log.Info(message);
 
                 throw new LegacyReplicationViolationException(message);
             }
@@ -548,28 +434,16 @@ namespace Raven.Server.Documents.Replication
                               $"while we are in legacy mode (downgraded our replication version to match the destination). " +
                               $"Can't send Incremental-TimeSeries in legacy mode, destination {_parent.Destination.FromString()} does not support Incremental-TimeSeries feature. Stopping replication.";
 
-                if (_log.IsInfoEnabled)
-                    _log.Info(message);
+                if (Log.IsInfoEnabled)
+                    Log.Info(message);
 
                 throw new LegacyReplicationViolationException(message);
             }
         }
 
+        protected virtual TimeSpan GetDelayReplication() => TimeSpan.Zero;
 
-        private TimeSpan GetDelayReplication()
-        {
-            TimeSpan delayReplicationFor = TimeSpan.Zero;
-
-            if (_parent.Destination is ExternalReplication external)
-            {
-                delayReplicationFor = external.DelayReplicationFor;
-                _parent._parent._server.LicenseManager.AssertCanDelayReplication(delayReplicationFor);
-            }
-
-            return delayReplicationFor;
-        }
-
-        private class SkippedReplicationItemsInfo
+        protected class SkippedReplicationItemsInfo
         {
             public long SkippedItems { get; private set; }
 
@@ -626,10 +500,10 @@ namespace Raven.Server.Documents.Replication
 
             if (skippedReplicationItemsInfo.SkippedItems > 0)
             {
-                if (_log.IsInfoEnabled)
+                if (Log.IsInfoEnabled)
                 {
                     var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
-                    _log.Info(message);
+                    Log.Info(message);
                 }
 
                 skippedReplicationItemsInfo.Reset();
@@ -647,16 +521,8 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        protected virtual bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
-                return true;
-
-            if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
-            {
-                return true;
-            }
-
             switch (item)
             {
                 case DocumentReplicationItem doc:
@@ -697,35 +563,12 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
-
-            bool ValidatorSaysToSkip(AllowedPathsValidator validator)
-            {
-                if (validator == null)
-                    return false;
-
-                if (validator.ShouldAllow(item))
-                    return false;
-
-                stats.RecordArtificialDocumentSkip();
-                skippedReplicationItemsInfo.Update(item);
-
-                if (_log.IsInfoEnabled)
-                {
-                    string key = validator.GetItemInformation(item);
-                    _log.Info($"Will skip sending {key} ({item.Type}) because it was not allowed according to the incoming .");
-                }
-
-                return true;
-            }
         }
-
-        private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
-        private readonly bool _shouldSkipSendingTombstones;
-
+        
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
-            if (_log.IsInfoEnabled)
-                _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
+            if (Log.IsInfoEnabled)
+                Log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
 
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue
@@ -760,8 +603,8 @@ namespace Raven.Server.Documents.Replication
             _stream.Flush();
             sw.Stop();
 
-            if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
-                _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
+            if (Log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
+                Log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
 
             var (type, _) = _parent.HandleServerResponse();
             if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
@@ -791,7 +634,7 @@ namespace Raven.Server.Documents.Replication
             _stats.TimeSeriesRead = _stats.Storage.For(ReplicationOperation.Outgoing.TimeSeriesRead, start: false);
         }
 
-        internal class ReplicationStats
+        protected internal class ReplicationStats
         {
             public OutgoingReplicationStatsScope Network;
             public OutgoingReplicationStatsScope Storage;
@@ -802,11 +645,6 @@ namespace Raven.Server.Documents.Replication
             public OutgoingReplicationStatsScope TimeSeriesRead;
         }
 
-        public void Dispose()
-        {
-            _pathsToSend?.Dispose();
-            _destinationAcceptablePaths?.Dispose();
-        }
         private class ReplicationState
         {
             public HashSet<Slice> MissingAttachmentBase64Hashes;
@@ -819,6 +657,11 @@ namespace Raven.Server.Documents.Replication
             public short LastTransactionMarker;
             public int? BatchSize;
             public Size? MaxSizeToSend;
+        }
+
+        public virtual void Dispose()
+        {
+            
         }
     }
 }

@@ -75,6 +75,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;

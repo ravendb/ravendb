@@ -13,6 +13,8 @@ using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionCommands;
@@ -223,11 +225,14 @@ namespace Raven.Server.Documents
                 case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
                     return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
 
-                case nameof(OutgoingReplicationHandler.UpdateSiblingCurrentEtag):
-                    return jsonSerializer.Deserialize<UpdateSiblingCurrentEtagDto>(reader);
+                case nameof(OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtag):
+                    return jsonSerializer.Deserialize<OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtagDto>(reader);
 
                 case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
-                    return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+                    return jsonSerializer.Deserialize<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+
+                case nameof(IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommand):
+                    return jsonSerializer.Deserialize<IncomingPullReplicationHandler.MergedUpdateDatabaseChangeVectorForHubCommandDto>(reader);
 
                 case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
                     return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);

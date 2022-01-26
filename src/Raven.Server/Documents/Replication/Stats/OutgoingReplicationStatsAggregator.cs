@@ -5,7 +5,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Server.Utils.Stats;
 using Sparrow;
 
-namespace Raven.Server.Documents.Replication
+namespace Raven.Server.Documents.Replication.Stats
 {
     public class OutgoingReplicationStatsAggregator : StatsAggregator<OutgoingReplicationRunStats, OutgoingReplicationStatsScope>
     {

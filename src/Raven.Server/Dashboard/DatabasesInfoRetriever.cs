@@ -12,6 +12,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -256,7 +258,7 @@ namespace Raven.Server.Dashboard
             var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
             var sqlEtlCount = database.EtlLoader.SqlDestinations.Count;
             var ravenEtlCount = database.EtlLoader.RavenDestinations.Count;
-            var hubCount = database.ReplicationLoader.OutgoingHandlers.Count(x => x.IsPullReplicationAsHub);
+            var hubCount = database.ReplicationLoader.OutgoingHandlers.Count(x => x is OutgoingPullReplicationHandler);
             var sinkCount = dbRecord.SinkPullReplications.Count;
             var extRepCount = dbRecord.ExternalReplications.Count;
             
