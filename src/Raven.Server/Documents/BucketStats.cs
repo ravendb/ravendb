@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents
@@ -17,5 +16,12 @@ namespace Raven.Server.Documents
 
         [FieldOffset(12)]
         public long LastAccessed;
+    }
+
+    public enum UpdateType
+    {
+        Add,
+        Update,
+        Remove
     }
 }

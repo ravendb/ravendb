@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -31,13 +31,14 @@ namespace FastTests.Sharding
                     Assert.DoesNotContain(bucket, buckets);
                     buckets[i] = bucket;
                 }
+
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int j = 0; j < 100; j++)
                     {
                         await session.StoreAsync(new User(), $"users/{j}${suffix}");
                     }
-                    
+
                     await session.SaveChangesAsync();
                 }
             }
@@ -86,6 +87,7 @@ namespace FastTests.Sharding
                     Assert.DoesNotContain(bucket, buckets);
                     buckets[i] = bucket;
                 }
+
                 using (var session = store.OpenAsyncSession())
                 {
                     for (int j = 0; j < 100; j++)
@@ -103,10 +105,11 @@ namespace FastTests.Sharding
                 var notOnAnyShard = true;
                 foreach (var shardedDb in dbs)
                 {
+                    BucketStats stats;
                     using (shardedDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
+                        stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
                         if (stats.Count == 0)
                             continue;
 
@@ -114,14 +117,41 @@ namespace FastTests.Sharding
                         Assert.Equal(100, stats.Count);
                         Assert.True(stats.Size > 0);
                         Assert.True(stats.LastAccessed > 0);
-                        
-                        break;
                     }
+
+                    if (i == 1)
+                    {
+                        // delete some documents and check stats again
+                        var oldStats = stats;
+                        var suffix = "suffix1";
+
+                        using (var session = store.OpenAsyncSession())
+                        {
+                            for (int j = 0; j < 30; j++)
+                            {
+                                session.Delete($"users/{j}${suffix}");
+                            }
+
+                            await session.SaveChangesAsync();
+                        }
+
+                        using (shardedDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
+
+                            Assert.Equal(70, stats.Count);
+                            Assert.True(oldStats.Size > stats.Size);
+                            Assert.True(stats.LastAccessed > oldStats.LastAccessed);
+                        }
+                    }
+
+                    break;
                 }
 
                 Assert.False(notOnAnyShard);
             }
         }
-
     }
 }
+
