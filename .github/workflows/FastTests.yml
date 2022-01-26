@@ -8,26 +8,54 @@ on:
   pull_request:
     branches:
         - v4.2
+
+env:
+  DOTNET_VERSION: 3.1.416
+
 jobs:
-  build:
+  release:
     runs-on: ${{ matrix.os }}
     strategy:
         matrix:
           os: [ ubuntu-latest, windows-latest ]
-        fail-fast: false  
+        fail-fast: false
     steps:
     - uses: actions/checkout@v2
 
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.416
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Install dependencies
       run: dotnet restore
 
     - name: Test - Release
       run: dotnet test --configuration Release --no-restore
+      env: # Or as an environment variable
+        RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
+        RAVEN_MAX_RUNNING_TESTS: 1
+      working-directory: ./test/FastTests
+
+  debug:
+    runs-on: ${{ matrix.os }}
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest ]
+        fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Test - Debug
+      run: dotnet test --configuration Debug --no-restore
       env: # Or as an environment variable
         RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
         RAVEN_MAX_RUNNING_TESTS: 1
