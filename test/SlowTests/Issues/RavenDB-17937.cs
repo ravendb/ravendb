@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -20,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Can_Add_Database_With_Side_By_Side_Indexes()
+        public async Task Can_Add_Database_Folder_With_Side_By_Side_Indexes()
         {
             var path = NewDataPath();
 
@@ -67,6 +69,37 @@ namespace SlowTests.Issues
 
                 indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
                 Assert.Equal(2, indexStats.Length);
+            }
+        }
+
+        [Fact]
+        public async Task Throw_If_Creating_A_Database_With_Side_By_Side_Indexes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var indexName = $"{Raven.Client.Constants.Documents.Indexing.SideBySideIndexNamePrefix}test";
+                var error = await Assert.ThrowsAsync<RavenException>(async () =>
+                {
+                    await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(GetDatabaseName())
+                    {
+                        Indexes = new Dictionary<string, IndexDefinition>
+                        {
+                            {
+                                indexName,
+                                new IndexDefinition
+                                {
+                                    Name = indexName,
+                                    Maps = new HashSet<string>
+                                    {
+                                        "docs.Orders.Select(order => new {\r\n    order = order,\r\n    x = 0\r\n}).Select(this0 => new {\r\n    Count = 1 / this0.x\r\n})"
+                                    }
+                                }
+                            }
+                        }
+                    }));
+                });
+
+                Assert.Contains("Index name cannot start with ReplacementOf/", error.Message);
             }
         }
 
