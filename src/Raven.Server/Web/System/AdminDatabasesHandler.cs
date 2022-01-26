@@ -360,7 +360,14 @@ namespace Raven.Server.Web.System
                             case IndexType.JavaScriptMap:
                             case IndexType.JavaScriptMapReduce:
                                 var indexDefinition = index.GetIndexDefinition();
-                                databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
+                                if (index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // the side by side index is the last version of this index
+                                    // and it's the one that should be stored in the database record
+                                    indexDefinition.Name = indexDefinition.Name[Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length..];
+                                }
+
+                                databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
                                 break;
                             default:
                                 throw new NotSupportedException(index.Type.ToString());
