@@ -1168,7 +1168,7 @@ CREATE TABLE [dbo].[Orders]
                             using (var session = store.OpenSession())
                             {
 
-                                for (int i = 0; i < 10; i++)
+                                for (int i = 0; i < 6; i++)
                                 {
                                     var order = new Orders.Order();
                                     session.Store(order);
