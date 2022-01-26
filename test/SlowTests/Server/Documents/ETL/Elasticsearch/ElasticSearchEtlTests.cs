@@ -145,7 +145,7 @@ loadToOrders(orderData);
 
                 var ordersCount = client.Count<object>(c => c.Index(OrderIndexName));
                 var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
-
+                
                 Assert.Equal(numberOfOrders, ordersCount.Count);
                 Assert.Equal(numberOfOrders * numberOfLinesPerOrder, orderLinesCount.Count);
 
@@ -363,6 +363,8 @@ loadToOrders(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
+                client.Indices.Refresh(OrderIndexName);
+
                 var orderResponse = client.Search<object>(d => d
                     .Index(OrderIndexName)
                     .Query(q => q
@@ -398,6 +400,8 @@ loadToOrders(orderData);
                 }
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(2), store.Database, config);
+
+                client.Indices.Refresh(OrderIndexName);
 
                 var orderResponse1 = client.Search<object>(d => d
                     .Index(OrderIndexName)

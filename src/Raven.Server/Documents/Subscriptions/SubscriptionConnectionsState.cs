@@ -197,21 +197,12 @@ namespace Raven.Server.Documents.Subscriptions
 
         public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
-            {
-                return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                    SubscriptionId,
-                    SubscriptionName,
-                    connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                    batchId,
-                    addDocumentsToResend);
-            }
-
-            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                 SubscriptionId,
                 SubscriptionName,
                 connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                LastChangeVectorSent);
+                batchId,
+                addDocumentsToResend);
         }
         
         public long GetLastEtagSent()

@@ -90,21 +90,6 @@ namespace Raven.Server.ServerWide
             throw new HttpRequestException($"A call to endpoint <<{route.Method} {route.Path}>> has failed with status code {statusCode}");
         }
 
-        public async Task<BlittableJsonReaderObject> InvokeAndReadObjectAsync(RouteInformation route, JsonOperationContext context, Dictionary<string, Microsoft.Extensions.Primitives.StringValues> parameters = null)
-        {
-            var response = await InvokeAsync(route, parameters);
-
-            try
-            {
-                return await context.ReadForMemoryAsync(response.Body, $"read/local endpoint/{route.Path}");
-            }
-            catch (InvalidStartOfObjectException e)
-            {
-                //precaution, ideally this exception should never be thrown
-                throw new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.", e);
-            }
-        }
-
         private class LocalInvocationCustomHttpContext : HttpContext, IDisposable
         {
             public LocalInvocationCustomHttpContext(string method, string path)
