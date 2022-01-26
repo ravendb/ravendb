@@ -38,6 +38,20 @@ namespace Corax
                 And
             }
         }
+
+        public static class Suggestions
+        {
+            public const int DefaultNGramSize = 4;
+
+            public const float JaroWinklerThreshold = 0.7f;
+            
+            public enum Algorithm
+            {
+                NGram,
+                JaroWinkler,
+                Levenshtein 
+            }
+        }
         
     }
 }

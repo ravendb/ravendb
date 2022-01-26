@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Corax;
 using Corax.Pipeline;
+using Corax.Queries;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
@@ -24,33 +25,47 @@ namespace FastTests.Corax
         }
 
         [Fact]
-        public unsafe void BasicIndexing()
+        public unsafe void NGramBasicIndexing()
         {
             var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };
             var entry2 = new IndexEntryValues { Id = "entry/2", Content = "road mountain" };
             var entry3 = new IndexEntryValues { Id = "entry/3", Content = "mountain roadshow" };
+            var entry4 = new IndexEntryValues { Id = "entry/4", Content = "hello world" };
+            var entry5 = new IndexEntryValues { Id = "entry/5", Content = "ravendbissuper" };
+
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
             var mapping = CreateKnownFields(bsc);
 
-            IndexEntries(bsc, new[] { entry1, entry2, entry3 }, mapping);
+            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, mapping);
 
-                var match = searcher.Suggest(ContentId, "road");
+                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0);
 
-                Span<byte> terms = stackalloc byte[1024];
-                Span<Token> tokens = stackalloc Token[16];
-
+                Span<byte> terms = new byte[1024];
+                Span<Token> tokens = new Token[16];
                 match.Next(ref terms, ref tokens);
-                Assert.Equal(3, tokens.Length);
+
+                var ngrams = new System.Collections.Generic.HashSet<string>();
+                foreach (var token in tokens)
+                {
+                    var term = terms.Slice(token.Offset, (int)token.Length);
+                    var asString = Encoding.UTF8.GetString(term);
+                    ngrams.Add(asString);
+                    Assert.True(asString.Contains("road"));
+                }
+
+                Assert.Equal(3, ngrams.Count);
+                
             }
+
         }
 
         [Fact]
-        public unsafe void WithRemoves()
+        public unsafe void NGramWithRemoves()
         {
             var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };
             var entry2 = new IndexEntryValues { Id = "entry/2", Content = "road mountain" };
@@ -71,7 +86,7 @@ namespace FastTests.Corax
             {
                 using var searcher = new IndexSearcher(Env);
 
-                var match = searcher.Suggest(ContentId, "road");
+                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0f);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
@@ -81,6 +96,37 @@ namespace FastTests.Corax
             }
         }
 
+        [Fact]
+        public unsafe void LevenshteinBasicIndexing()
+        {
+            var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };
+            var entry2 = new IndexEntryValues { Id = "entry/2", Content = "road mountain" };
+            var entry3 = new IndexEntryValues { Id = "entry/3", Content = "mountain roadshow" };
+            var entry4 = new IndexEntryValues { Id = "entry/4", Content = "hello world" };
+            var entry5 = new IndexEntryValues { Id = "entry/5", Content = "ravendbissuper" };
+
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+            var mapping = CreateKnownFields(bsc, Analyzer.DefaultAnalyzer);
+
+            IndexEntries(bsc, new[] { entry1, entry2, entry3, entry4, entry5 }, mapping);
+            {
+                using var searcher = new IndexSearcher(Env, mapping);
+
+                var match = searcher.Suggest(ContentId, "road lakz", true, StringDistanceAlgorithm.Levenshtein, 0.5f);
+
+                Span<byte> terms = stackalloc byte[1024];
+                Span<Token> tokens = stackalloc Token[16];
+
+                match.Next(ref terms, ref tokens);
+                Assert.Equal(1, tokens.Length);
+                Assert.Equal("road lake", Encoding.UTF8.GetString(terms));
+                
+            }
+        }
+        
+        
         public const int IdIndex = 0,
                          ContentIndex = 1;
 
