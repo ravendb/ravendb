@@ -11,6 +11,7 @@ namespace Corax
 {
     public unsafe class Analyzer : IDisposable
     {
+        public static Analyzer DefaultAnalyzer = Create(default(KeywordTokenizer), default(ExactTransformer));
         public const int MaximumSingleTokenLength = 512;
         public static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Create();
         public static readonly ArrayPool<Token> TokensPool = ArrayPool<Token>.Create();
