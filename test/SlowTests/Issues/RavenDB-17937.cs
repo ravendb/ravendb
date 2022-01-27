@@ -21,8 +21,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task Can_Add_Database_Folder_With_Side_By_Side_Indexes()
+        [Theory]
+        [InlineData("Index")]
+        [InlineData("ZIndex")]
+        public async Task Can_Add_Database_Folder_With_Side_By_Side_Indexes(string indexName)
         {
             var path = NewDataPath();
 
@@ -38,11 +40,10 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var index1 = new Index1();
+                var index1 = new Index1(indexName);
                 await index1.ExecuteAsync(store);
-                WaitForIndexing(store);
+                await new Index2(indexName).ExecuteAsync(store);
 
-                await new Index2().ExecuteAsync(store);
                 WaitForIndexing(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -105,10 +106,12 @@ namespace SlowTests.Issues
 
         private class Index1 : AbstractIndexCreationTask<Query.Order>
         {
-            public override string IndexName => "Index";
+            public override string IndexName { get; }
 
-            public Index1()
+            public Index1(string indexName)
             {
+                IndexName = indexName;
+
                 Map = orders =>
                     from order in orders
                     select new
@@ -120,10 +123,12 @@ namespace SlowTests.Issues
 
         private class Index2 : AbstractIndexCreationTask<Query.Order>
         {
-            public override string IndexName => "Index";
+            public override string IndexName { get; }
 
-            public Index2()
+            public Index2(string indexName)
             {
+                IndexName = indexName;
+
                 Map = orders =>
                     from order in orders
                     let x = 0
