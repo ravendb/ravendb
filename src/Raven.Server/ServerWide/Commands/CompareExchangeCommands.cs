@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Exceptions;
+using Raven.Client.Util;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -144,23 +145,20 @@ namespace Raven.Server.ServerWide.Commands
 
         public const long InvalidIndexValue = -1;
         
-        public unsafe bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
+        public bool Validate(ClusterOperationContext context, Table items, long index, out long currentIndex)
         {
-            currentIndex = InvalidIndexValue ;
+            if (index == InvalidIndexValue)
+            {
+                currentIndex = InvalidIndexValue;
+                return true;    
+            }
+
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             {
-                if (items.ReadByKey(keySlice, out var reader))
-                {
-                    currentIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
-
-                    if (index == InvalidIndexValue )
-                        return true;
-
-                    return Index == currentIndex;
-                }
+                return Validate(context, keySlice, items, index, out currentIndex);
             }
-            return index == 0 || index == InvalidIndexValue;
         }
+        protected abstract bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex);
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
@@ -219,6 +217,18 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             throw new RachisApplyException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
+        }
+
+        protected bool TryGetExpires(BlittableJsonReaderObject value, out long ticks)
+        {
+            try
+            {
+                return CompareExchangeExpirationStorage.TryGetExpires(value, out ticks);
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException($"Could not apply command {GetType().Name} - failed to get `Expires` for compare exchange key:{Key} database:{Database}.", e);
+            }
         }
     }
 
@@ -292,6 +302,17 @@ namespace Raven.Server.ServerWide.Commands
                 tombstoneItems.Set(tvb);
             }
         }
+        
+        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex)
+        {
+            if (items.ReadByKey(keySlice, out var reader))
+            {
+                currentIndex = ClusterStateMachine.ReadCompareExchangeOrTombstoneIndex(reader);
+                return currentIndex == index;
+            }
+            currentIndex = InvalidIndexValue;
+            return index == 0;
+        }
     }
 
     public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
@@ -300,6 +321,10 @@ namespace Raven.Server.ServerWide.Commands
 
         internal const int MaxNumberOfCompareExchangeKeyBytes = 512;
         public long? ExpirationTicks;
+        
+        //Should be use only for atomic guard.
+        [JsonDeserializationIgnore]
+        public long CurrentTicks;
 
         public BlittableJsonReaderObject Value;
 
@@ -310,7 +335,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
-            if (CompareExchangeExpirationStorage.HasExpiredMetadata(value, out long ticks, Slices.Empty, ActualKey))
+            if (TryGetExpires(value, out long ticks))
                 ExpirationTicks = ticks;
 
             Value = value;
@@ -394,6 +419,21 @@ namespace Raven.Server.ServerWide.Commands
             throw new CompareExchangeKeyTooBigException(
                 $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, " +
                 $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
+        }
+        
+        protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, long index, out long currentIndex)
+        {
+            BlittableJsonReaderObject value;
+            (currentIndex, value) = ClusterStateMachine.GetCompareExchangeValue(context, keySlice, items);
+            if (currentIndex == InvalidIndexValue)
+                return index == 0;
+
+            using (value)
+            {
+                if (TryGetExpires(value, out var ticks) && ticks < CurrentTicks)
+                    return true;
+                return currentIndex == index;
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Basic;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents;
@@ -24,6 +25,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
 using SlowTests.Rolling;
 using Tests.Infrastructure;
@@ -213,6 +215,45 @@ namespace RachisTests.DatabaseCluster
                 val = await WaitForValueAsync(async () => await GetMembersCount(store), 3);
                 Assert.Equal(3, val);
 
+            }
+        }
+
+        [Fact]
+        public async Task DontMoveToRehabOnNoChangeAfterTimeout()
+        {
+            var clusterSize = 3;
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.MaxChangeVectorDistance)] = "1";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
+            DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "25";
+
+            var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ReplicationFactor = 3, 
+                       Server = cluster.Leader,
+                   }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2);
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.StoreAsync(new User(), "users/2");
+                    await session.SaveChangesAsync();
+
+                    var q = await session.Query<User>().Where(u => u.Name == "foo").ToListAsync();
+                }
+
+                WaitForIndexingInTheCluster(store);
+
+                cluster.Leader.ServerStore.ClusterMaintenanceSupervisor.ForTestingPurposesOnly().SetTriggerTimeoutAfterNoChangeAction("B");
+
+                await Task.Delay(2 * 1000); // twice the StabilizationTime
+
+                var members = await GetMembersCount(store);
+                Assert.Equal(3, members);
             }
         }
 

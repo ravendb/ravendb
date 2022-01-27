@@ -36,6 +36,66 @@ namespace Raven.Server.ServerWide.Maintenance
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
 
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action<ClusterNode> NoChangeFoundAction;
+            internal Action<ClusterNode> BeforeReportBuildAction;
+            internal Action<ClusterNode> AfterSettingReportAction;
+
+            private TriggerState _currentState;
+            private ClusterNode _currentClusterNode;
+
+            internal void SetTriggerTimeoutAfterNoChangeAction(string tag)
+            {
+                AfterSettingReportAction = BeforeReportBuildAction = NoChangeFoundAction = (node) =>
+                {
+                    if (node.ClusterTag != tag)
+                        return;
+
+                    if (_currentClusterNode != node)
+                    {
+                        _currentClusterNode = node;
+                        _currentState = TriggerState.None;
+                    }
+
+                    switch (_currentState)
+                    {
+                        case TriggerState.None:
+                            _currentState = TriggerState.Ready;
+                            break;
+                        case TriggerState.Ready:
+                            _currentState = TriggerState.Armed;
+                            break;
+                        case TriggerState.Armed:
+                            node.OnTimeout();
+                            _currentState = TriggerState.Fired;
+                            break;
+                        case TriggerState.Fired:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                };
+            }
+            private enum TriggerState
+            {
+                None,
+                Ready,
+                Armed,
+                Fired
+            }
+        }
+
         public ClusterMaintenanceSupervisor(ServerStore server, string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
@@ -255,13 +315,17 @@ namespace Raven.Server.ServerWide.Maintenance
                                     break;
                                 }
 
+                                _parent.ForTestingPurposes?.BeforeReportBuildAction(this);
+
                                 var nodeReport = BuildReport(rawReport, connection.SupportedFeatures);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
+
 
                                 UpdateNodeReportIfNeeded(nodeReport, unchangedReports);
                                 unchangedReports.Clear();
 
                                 ReceivedReport = _lastSuccessfulReceivedReport = nodeReport;
+                                _parent.ForTestingPurposes?.AfterSettingReportAction(this);
                             }
                         }
                     }
@@ -286,18 +350,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private void UpdateNodeReportIfNeeded(ClusterNodeStatusReport nodeReport, List<DatabaseStatusReport> unchangedReports)
             {
-                // we take the last received and not the last successful.
-                // we don't want to reuse by miskate a successful report when we recieve an 'unchanged' error.
-                var lastReport = ReceivedReport;
-                if (lastReport.Status != ClusterNodeStatusReport.ReportStatus.Ok)
-                {
-                    return;
-                }
-
                 foreach (var dbReport in nodeReport.Report)
                 {
                     if (dbReport.Value.Status == DatabaseStatus.NoChange)
                     {
+                        _parent.ForTestingPurposes?.NoChangeFoundAction(this);
+
                         unchangedReports.Add(dbReport.Value);
                     }
                 }
@@ -305,22 +363,31 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (unchangedReports.Count == 0)
                     return;
 
+                // we take the last received and not the last successful.
+                // we don't want to reuse by mistake a successful report when we receive an 'unchanged' error.
+                var lastReport = ReceivedReport;
+                if (lastReport.Status != ClusterNodeStatusReport.ReportStatus.Ok)
+                {
+                    throw new InvalidOperationException(
+                        $"We have databases with '{DatabaseStatus.NoChange}' status, but our last report from this node is '{lastReport.Status}'");
+                }
+
                 foreach (var dbReport in unchangedReports)
                 {
                     var dbName = dbReport.Name;
                     if (lastReport.Report.TryGetValue(dbName, out var previous) == false)
                     {
-                        // new db, shouldn't really be the case, but not much we can do, we'll
-                        // show it to the user as is
-                        continue;
+                        throw new InvalidOperationException(
+                            $"We got '{DatabaseStatus.NoChange}' for the database '{dbReport}', but it is missing in the last good report");
                     }
+
                     previous.LastSentEtag = dbReport.LastSentEtag;
                     previous.UpTime = dbReport.UpTime;
                     nodeReport.Report[dbName] = previous;
                 }
             }
 
-            private void OnTimeout()
+            internal void OnTimeout()
             {
                 if (_token.IsCancellationRequested)
                     return;

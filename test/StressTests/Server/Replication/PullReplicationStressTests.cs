@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -72,10 +73,10 @@ namespace StressTests.Server.Replication
                     hubSession.Store(new User(), "foo/bar");
                     hubSession.SaveChanges();
                 }
-
-                var timeout = 3000;
+                
+                var timeout = 5000;
                 Assert.True(WaitForDocument(sinkStore, "foo/bar", timeout), sinkStore.Identifier);
-
+                
                 // test if certificate is retained when we don't send one
                 // sending null as cert - but it should copy old one
                 await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
@@ -85,14 +86,16 @@ namespace StressTests.Server.Replication
                     HubName = pullReplicationName,
                     ConnectionStringName = "ConnectionString-" + hubStore.Database
                 }));
-
+                
                 using (var hubSession = hubStore.OpenSession())
                 {
                     hubSession.Store(new User(), "foo/bar2");
                     hubSession.SaveChanges();
                 }
-
-                Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout), sinkStore.Identifier);
+                
+                var sinkDBInstance = await sinkServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(sinkStore.Database);
+                Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout),
+                    $"incoming handlers on sink {sinkStore.Identifier}: {sinkDBInstance.ReplicationLoader.IncomingRejectionStats.FirstOrDefault().Value?.FirstOrDefault()?.Reason}");
             }
         }
 
