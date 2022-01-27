@@ -237,10 +237,8 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        private async Task<(IDisposable Release, long RegisterConnectionDurationInTicks)> SubscribeAsync()
+        private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync()
         {
-            var timeout = InitialConnectionTimeout;
-
             var random = new Random();
             var registerConnectionDuration = Stopwatch.StartNew();
 
@@ -256,7 +254,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     try
                     {
-                        return (_subscriptionConnectionsState.RegisterSubscriptionConnection(this), registerConnectionDuration.ElapsedTicks);
+                        var disposeOnce = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                        registerConnectionDuration.Stop();
+                        return (disposeOnce, registerConnectionDuration.ElapsedTicks);
                     }
                     catch (TimeoutException)
                     {
@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
                         }
 
-                        timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
+                        var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await Task.Delay(timeout);
                         await SendHeartBeat(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
@@ -360,9 +360,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             await InitAsync();
                             _subscriptionConnectionsState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-                            var result = await SubscribeAsync();
-                            disposeOnDisconnect = result.Release;
-                            registerConnectionDurationInTicks = result.RegisterConnectionDurationInTicks;
+                            (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
                         }
 
                         await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
@@ -1110,10 +1108,10 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var hasMoreDocsTask = _subscriptionConnectionsState.WaitForMoreDocs();
 
-                TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
-
                 var resultingTask = await Task
                     .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
+              
+                TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
