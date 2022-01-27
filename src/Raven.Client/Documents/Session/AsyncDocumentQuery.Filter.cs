@@ -7,7 +7,7 @@ public partial class AsyncDocumentQuery<T>
 {
     IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Filter(Action<IFilterFactory<T>> builder)
     {
-        using (GetFilterModeScope(true))
+        using (SetFilterMode(true))
         {
             var f = new AsyncFilterFactory<T>(this);
             builder.Invoke(f);
