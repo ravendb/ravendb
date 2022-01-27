@@ -334,6 +334,8 @@ namespace Raven.Server.Web.System
                 documentDatabase.Initialize(options);
 
                 var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
+                var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
+
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
                 {
                     Index index = null;
@@ -365,9 +367,11 @@ namespace Raven.Server.Web.System
                                     // the side by side index is the last version of this index
                                     // and it's the one that should be stored in the database record
                                     indexDefinition.Name = indexDefinition.Name[Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length..];
+                                    sideBySideIndexes.Add(indexDefinition.Name, indexDefinition);
+                                    continue;
                                 }
 
-                                databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
+                                databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
                                 break;
                             default:
                                 throw new NotSupportedException(index.Type.ToString());
@@ -382,6 +386,11 @@ namespace Raven.Server.Web.System
                     {
                         index?.Dispose();
                     }
+                }
+
+                foreach ((string key, IndexDefinition value) in sideBySideIndexes)
+                {
+                    databaseRecord.Indexes[key] = value;
                 }
             }
         }
