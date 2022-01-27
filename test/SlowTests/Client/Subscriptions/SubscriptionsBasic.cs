@@ -1114,6 +1114,108 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
+        public async Task Worker_should_consider_RegisterSubscriptionConnection_time_on_calculation_of_LastConnectionFailure()
+        {
+            DoNotReuseServer();
+            var maxErroneousPeriod = TimeSpan.FromSeconds(1);
+            using (var store = GetDocumentStore())
+            {
+                var id1 = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
+                var workerOptions1 = new SubscriptionWorkerOptions(id1) { Strategy = SubscriptionOpeningStrategy.WaitForFree, MaxErroneousPeriod = maxErroneousPeriod };
+
+                var worker1Ack = new AsyncManualResetEvent();
+                var worker1Retry = new AsyncManualResetEvent();
+                using var worker1 = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions1, store.Database);
+                worker1.AfterAcknowledgment += _ =>
+                {
+                    worker1Ack.Set();
+                    return Task.CompletedTask;
+                };
+                worker1.OnSubscriptionConnectionRetry += exception =>
+                {
+                    worker1Retry.Set();
+                };
+                var t1 = worker1.Run(x => { });
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company());
+                    session.SaveChanges();
+                }
+                await worker1Ack.WaitAsync(_reasonableWaitTime);
+
+                var worker2Ack = new AsyncManualResetEvent();
+                var worker2Retry = new ManualResetEvent(false);
+                using var worker2 = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions1, store.Database);
+                worker2.OnSubscriptionConnectionRetry += exception =>
+                {
+                    worker2Retry.Set();
+                };
+                worker2.AfterAcknowledgment += _ =>
+                {
+                    worker2Ack.Set();
+                    return Task.CompletedTask;
+                };
+
+                var t2 = worker2.Run(x => { });
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var testingStuff = db.ForTestingPurposesOnly();
+
+                var worker1Interrupt = new AsyncManualResetEvent();
+                using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                       {
+                           worker1Interrupt.Set();
+                           throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null };
+                       }))
+                {
+                    await worker1Interrupt.WaitAsync(_reasonableWaitTime);
+                }
+
+                await worker1Retry.WaitAsync(_reasonableWaitTime);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company());
+                    session.SaveChanges();
+                }
+
+                await worker2Ack.WaitAsync(_reasonableWaitTime);
+                await Task.Delay(maxErroneousPeriod * 2);
+
+                var worker1AfterRegisterSubscriptionConnection = new AsyncManualResetEvent();
+                worker1Interrupt.Reset(true);
+                var failed = false;
+                using (testingStuff.CallAfterRegisterSubscriptionConnection(time =>
+                       {
+                           if (worker2Retry.WaitOne(_reasonableWaitTime) == false)
+                           {
+                               failed = true;
+                           }
+                           worker1Retry.Reset(true);
+                           worker1AfterRegisterSubscriptionConnection.Set();
+                           throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null, RegisterConnectionDurationInTicks = time };
+                       }))
+                {
+                    using (testingStuff.CallDuringWaitForChangedDocuments(() =>
+                           {
+                               worker1Interrupt.Set();
+                               throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null };
+                           }))
+                    {
+                        Assert.True(await worker1Interrupt.WaitAsync(_reasonableWaitTime));
+                    }
+
+                    await worker1AfterRegisterSubscriptionConnection.WaitAsync(_reasonableWaitTime);
+                }
+                Assert.False(failed, "failed");
+
+                Assert.True(await worker1Retry.WaitAsync(_reasonableWaitTime));
+                Assert.False(t1.IsFaulted);
+                Assert.False(t2.IsFaulted);
+            }
+        }
+
+        [Fact]
         public async Task EnsureSingleSubscriptionDoesNotContinueBeforeAckSent()
         {
             using (var store = GetDocumentStore())

@@ -206,20 +206,22 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks: null, CancellationTokenSource.Token);
 
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             AssertSupportedFeatures();
         }
 
-        private async Task NotifyClientAboutSuccess()
+        private async Task NotifyClientAboutSuccess(long registerConnectionDurationInTicks)
         {
+            TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallAfterRegisterSubscriptionConnection?.Invoke(registerConnectionDurationInTicks);
+
             _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
 
             // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
             SubscriptionState =
-                await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName,
+                await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks,
                     CancellationTokenSource.Token);
 
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
@@ -235,11 +237,10 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        private async Task<IDisposable> Subscribe()
+        private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync()
         {
-            var timeout = InitialConnectionTimeout;
-
             var random = new Random();
+            var registerConnectionDuration = Stopwatch.StartNew();
 
             _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy, WorkerId);
 
@@ -253,18 +254,20 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     try
                     {
-                        return _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                        var disposeOnce = _subscriptionConnectionsState.RegisterSubscriptionConnection(this);
+                        registerConnectionDuration.Stop();
+                        return (disposeOnce, registerConnectionDuration.ElapsedTicks);
                     }
                     catch (TimeoutException)
                     {
-                        if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
+                        if (_logger.IsInfoEnabled)
                         {
                             _logger.Info(
                                 $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
                                 $"{_subscriptionConnectionsState.GetConnectionsAsString()} is released");
                         }
 
-                        timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
+                        var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await Task.Delay(timeout);
                         await SendHeartBeat(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
@@ -352,14 +355,15 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     try
                     {
+                        long registerConnectionDurationInTicks;
                         using (_pendingConnectionScope)
                         {
                             await InitAsync();
                             _subscriptionConnectionsState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
-                            disposeOnDisconnect = await Subscribe();
+                            (disposeOnDisconnect, registerConnectionDurationInTicks) = await SubscribeAsync();
                         }
 
-                        await NotifyClientAboutSuccess();
+                        await NotifyClientAboutSuccess(registerConnectionDurationInTicks);
                         await ProcessSubscriptionAsync();
                     }
                     finally
@@ -538,6 +542,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
                                 [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] =
                                     connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] = subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
                                 [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
                                     new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
                                     {
@@ -684,7 +689,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     AddToStatusDescription(
                                         $"Acknowledging docs processing progress without sending any documents to client. CV: {_subscriptionConnectionsState.LastChangeVectorSent ?? "None"}");
-                                    
+
                                     if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < 53_000)
                                     {
                                         await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
@@ -796,33 +801,33 @@ namespace Raven.Server.Documents.TcpHandlers
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                {
-                    if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
                     {
-                        await _processor.AcknowledgeBatch(CurrentBatchId);
+                        if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
+                        {
+                            await _processor.AcknowledgeBatch(CurrentBatchId);
+                        }
+                        else
+                        {
+                            await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
+                                SubscriptionId,
+                                Options.SubscriptionName,
+                                LastSentChangeVectorInThisConnection,
+                                SubscriptionConnectionsState.LastChangeVectorSent);
+
+                            //since we send the next batch by LastChangeVectorSent, in legacy will represent the last acked cv instead
+                            _subscriptionConnectionsState.LastChangeVectorSent =
+                                ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
+                        }
+
+                        Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
+                        Stats.AckRate?.Mark();
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
+                        });
+
+                        break;
                     }
-                    else
-                    {
-                        await TcpConnection.DocumentDatabase.SubscriptionStorage.LegacyAcknowledgeBatchProcessed(
-                            SubscriptionId,
-                            Options.SubscriptionName,
-                            LastSentChangeVectorInThisConnection,
-                            SubscriptionConnectionsState.LastChangeVectorSent);
-
-                        //since we send the next batch by LastChangeVectorSent, in legacy will represent the last acked cv instead
-                        _subscriptionConnectionsState.LastChangeVectorSent =
-                            ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, LastSentChangeVectorInThisConnection);
-                    }
-
-                    Stats.LastAckReceivedAt = TcpConnection.DocumentDatabase.Time.GetUtcNow();
-                    Stats.AckRate?.Mark();
-                    await WriteJsonAsync(new DynamicJsonValue
-                    {
-                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                    });
-
-                    break;
-                }
                 //precaution, should not reach this case...
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
@@ -1039,7 +1044,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 53_000)
                                 {
                                     CurrentBatchId = await _processor.RecordBatch(lastChangeVectorSentInThisBatch);
-                                    
+
                                     _subscriptionConnectionsState.LastChangeVectorSent =
                                         ChangeVectorUtils.MergeVectors(_subscriptionConnectionsState.LastChangeVectorSent, lastChangeVectorSentInThisBatch);
                                     _subscriptionConnectionsState.PreviouslyRecordedChangeVector =
@@ -1105,6 +1110,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 var resultingTask = await Task
                     .WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
+              
+                TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
