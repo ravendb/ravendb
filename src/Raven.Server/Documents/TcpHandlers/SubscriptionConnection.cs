@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             // first, validate details and make sure subscription exists
-            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDurationInTicks: null, CancellationTokenSource.Token);
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
             if (_supportedFeatures.Subscription.Includes == false)
@@ -224,6 +224,7 @@ namespace Raven.Server.Documents.TcpHandlers
             bool shouldRetry;
 
             var random = new Random();
+            var registerConnectionDuration = Stopwatch.StartNew();
 
             _connectionScope.RecordConnectionInfo(SubscriptionState, ClientUri, _options.Strategy);
 
@@ -243,7 +244,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     }
                     catch (TimeoutException)
                     {
-                        if (timeout == InitialConnectionTimeout && _logger.IsInfoEnabled)
+                        if (_logger.IsInfoEnabled)
                         {
                             _logger.Info(
                                 $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is starting to wait until previous connection from " +
@@ -264,14 +265,17 @@ namespace Raven.Server.Documents.TcpHandlers
                 _connectionState.PendingConnections.TryRemove(this);
             }
 
+            registerConnectionDuration.Stop();
             _pendingConnectionScope.Dispose();
 
             try
             {
+                TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallAfterRegisterSubscriptionConnection?.Invoke(registerConnectionDuration.ElapsedTicks);
+
                 _activeConnectionScope = _connectionScope.For(SubscriptionOperationScope.ConnectionActive);
 
                 // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)
-                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, CancellationTokenSource.Token);
+                SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName, registerConnectionDuration.ElapsedTicks, CancellationTokenSource.Token);
 
                 Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
@@ -501,6 +505,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = connection.TcpConnection.DocumentDatabase.ServerStore.NodeTag,
+                            [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] = subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
                                 new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue
                                 {
@@ -782,7 +787,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
-                
+
                 await SendHeartBeat("Waiting for client ACK");
                 await SendNoopAck();
             }
@@ -1075,6 +1080,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 var hasMoreDocsTask = _waitForMoreDocuments.WaitAsync();
                 var resultingTask = await Task.WhenAny(hasMoreDocsTask, pendingReply, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs))).ConfigureAwait(false);
+
+                TcpConnection.DocumentDatabase.ForTestingPurposes?.Subscription_ActionToCallDuringWaitForChangedDocuments?.Invoke();
 
                 if (CancellationTokenSource.IsCancellationRequested)
                     return false;
