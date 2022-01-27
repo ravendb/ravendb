@@ -1000,7 +1000,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(QueryOperatorToken.Or);
         }
 
-        internal IDisposable GetFilterModeScope(bool @on)
+        internal IDisposable SetFilterMode(bool @on)
         {
             return new FilterModeScope(FilterModeStack, @on);
         }

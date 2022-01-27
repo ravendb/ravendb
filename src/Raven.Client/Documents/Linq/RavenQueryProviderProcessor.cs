@@ -2032,8 +2032,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private IDisposable FilterModeScope(bool @on) => DocumentQuery switch
         {
-            DocumentQuery<T> documentQuery => documentQuery.GetFilterModeScope(@on),
-            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.GetFilterModeScope(@on),
+            DocumentQuery<T> documentQuery => documentQuery.SetFilterMode(@on),
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.SetFilterMode(@on),
             _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
         };        
         
