@@ -384,17 +384,30 @@ namespace Raven.Server.Commercial
                     // license expired, we'll try to update it
                     var updatedLicense = await GetUpdatedLicenseForActivation(license);
                     if (updatedLicense == null)
-                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.");
+                    {
+                        var errorMessage =
+                            $"License already expired on: {licenseStatus.FormattedExpiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.";
+                        if (licenseStatus.IsIsv)
+                        {
+                            errorMessage += $" Since this is an ISV license, you can use this license with any RavenDB version that was released prior to {licenseStatus.FormattedExpiration}";
+                        }
+
+                        throw new LicenseExpiredException(errorMessage);
+                    }
 
                     await Activate(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
                     return;
                 }
+                catch (LicenseExpiredException)
+                {
+                    throw;
+                }
                 catch (Exception e)
                 {
                     if (e is HttpRequestException)
-                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.FormattedExpiration} and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
 
-                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license.", e);
+                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.FormattedExpiration} and we were unable to get an updated license.", e);
                 }
             }
 
@@ -415,6 +428,11 @@ namespace Raven.Server.Commercial
                     Logger.Info(message, e);
 
                 throw new InvalidOperationException("Could not save license!", e);
+            }
+
+            string FormattedExpiration(DateTime dateTime)
+            {
+                return dateTime.ToString("dddd, dd MMMM yyyy");
             }
         }
 
