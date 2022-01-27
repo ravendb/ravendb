@@ -820,6 +820,8 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
+
             if (command.FailoverTopologyEtag == InitialTopologyEtag)
                 command.FailoverTopologyEtag = _nodeSelector?.Topology?.Etag ?? InitialTopologyEtag;
 
