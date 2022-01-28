@@ -1,7 +1,7 @@
 name: compile
 
 on:
-  pull_request
+  pull_request_target
 
 jobs:
   job1:
@@ -90,5 +90,5 @@ jobs:
           PRTAGRETBRANCH: ${{ github.event.pull_request.base.ref }}
           PRNUMBER: ${{ github.event.pull_request.number }}
           PRTITLE: ${{ github.event.pull_request.title }}
-          TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL: pull-requests
