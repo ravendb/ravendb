@@ -1,7 +1,7 @@
 name: conventions
 
 on:
-  pull_request
+  pull_request_target
 
 jobs:
 
@@ -15,7 +15,7 @@ jobs:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
           repoName: ${{ github.event.repository.name }}
           newLabel: ${{ github.event.pull_request.base.ref }}
-          GITHUB_TOKEN: ${{ secrets.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
           Raven_Enable_Per_Test_Logging: 'true'
         if: contains(github.event.pull_request.labels.*.name, env.newLabel) == false
@@ -42,7 +42,7 @@ jobs:
       githubOwner: ${{github.event.pull_request.base.repo.owner.login}}
       repoName: ${{github.event.repository.name}}
       label: ${{github.event.pull_request.base.ref}}
-      GITHUB_TOKEN: ${{ secrets.token }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ghprNumber: ${{ github.event.pull_request.number }}
 
     steps:
@@ -94,6 +94,6 @@ jobs:
           PRTAGRETBRANCH: ${{ github.event.pull_request.base.ref }}
           PRNUMBER: ${{ github.event.pull_request.number }}
           PRTITLE: ${{ github.event.pull_request.title }}
-          TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           CHANNEL: pull-requests
 
