@@ -24,6 +24,22 @@ namespace Raven.Server.Documents.Replication
             _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx, _context);
             return _tmpLazyStringInstance;
         }
+        
+        public LazyStringValue GetDocumentId(ReplicationBatchItem item)
+        {
+            return item switch
+            {
+                AttachmentReplicationItem a => GetDocumentId(a.Key),
+                AttachmentTombstoneReplicationItem at => GetDocumentId(at.Key),
+                CounterReplicationItem c => c.Id,
+                DocumentReplicationItem d => d.Id,
+                RevisionTombstoneReplicationItem r => r.Id,
+                TimeSeriesDeletedRangeItem td => GetDocumentId(td.Key),
+                TimeSeriesReplicationItem t => GetDocumentId(t.Key),
+                _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
+            };
+        }
+
         public string GetItemInformation(ReplicationBatchItem item)
         {
             return item switch

@@ -14,14 +14,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
     {
         private long? _taskId;
 
-        public OutgoingExternalReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, TcpConnectionInfo connectionInfo) : 
+        public OutgoingExternalReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ExternalReplication node, TcpConnectionInfo connectionInfo) : 
             base(parent, database, node, connectionInfo)
         {
-            if (node is ExternalReplication externalReplication)
-            {
-                _taskId = externalReplication.TaskId;
-                DocumentsSend += (_) => UpdateExternalReplicationInfo();
-            }
+            _taskId = node.TaskId;
+            DocumentsSend += (_) => UpdateExternalReplicationInfo();
         }
 
         public override ReplicationDocumentSenderBase CreateDocumentSender(Stream stream, Logger logger)

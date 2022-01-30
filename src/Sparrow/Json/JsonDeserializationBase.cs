@@ -410,7 +410,13 @@ namespace Sparrow.Json
         private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
-            var dictionary = new Dictionary<TK, TV>((IEqualityComparer<TK>)GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.Ordinal)); // we need to deserialize it as we got it, keys could be case sensitive - RavenDB-8713
+            IEqualityComparer<TK> comparer = default;
+
+            if (isStringKey)
+                // we need to deserialize it as we got it, keys could be case sensitive - RavenDB-8713
+                comparer = (IEqualityComparer<TK>)GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.Ordinal);
+
+            var dictionary = new Dictionary<TK, TV>(comparer); 
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)

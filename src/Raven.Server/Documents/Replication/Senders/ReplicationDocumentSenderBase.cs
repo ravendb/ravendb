@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
+                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
                             _parent.ForTestingPurposes?.OnDocumentSenderFetchNewItem?.Invoke();
 

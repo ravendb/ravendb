@@ -127,6 +127,55 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public string _shardedDatabaseId;
+
+        public string ShardedDatabaseId
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ShardedDatabaseId;
+
+                if (_shardedDatabaseId == null)
+                    _record.TryGet(nameof(DatabaseRecord.ShardedDatabaseId), out _shardedDatabaseId);
+
+                return _shardedDatabaseId;
+            }
+        }
+
+        private Dictionary<int, BucketMigration> _bucketMigrations;
+
+        public Dictionary<int, BucketMigration> BucketMigrations
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.BucketMigrations;
+
+                if (_bucketMigrations == null)
+                {
+                    _bucketMigrations = new Dictionary<int, BucketMigration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.BucketMigrations), out BlittableJsonReaderObject obj) && obj != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject bjro)
+                                _bucketMigrations[int.Parse(propertyDetails.Name)] = JsonDeserializationCluster.BucketMigration(bjro);
+                        }
+                    }
+                }
+
+                return _bucketMigrations;
+            }
+        }
+
+
         private DatabaseTopology _topology;
 
         public DatabaseTopology Topology

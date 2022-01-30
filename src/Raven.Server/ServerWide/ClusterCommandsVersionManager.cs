@@ -147,6 +147,11 @@ namespace Raven.Server.ServerWide
 
             [nameof(EditPostgreSqlConfigurationCommand)] = 53_000,
             [nameof(RecordBatchSubscriptionDocumentsCommand)] = 53_000,
+
+            [nameof(StartBucketMigrationCommand)] = 60_000,
+            [nameof(SourceMigrationSendCompletedCommand)] = 60_000,
+            [nameof(DestinationMigrationConfirmCommand)] = 60_000,
+            [nameof(SourceMigrationCleanupCommand)] = 60_000,
         };
 
         public static bool CanPutCommand(string command)

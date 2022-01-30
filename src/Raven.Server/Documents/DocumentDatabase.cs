@@ -90,6 +90,7 @@ namespace Raven.Server.Documents
 
         public string DatabaseGroupId;
         public string ClusterTransactionId;
+        public string ShardedDatabaseId;
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
@@ -191,6 +192,19 @@ namespace Raven.Server.Documents
                 Dispose();
                 throw;
             }
+        }
+
+        public void SetIds(RawDatabaseRecord record)
+        {
+            DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+            ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
+            ShardedDatabaseId = record.ShardedDatabaseId;
+        }
+        public void SetIds(DatabaseRecord record)
+        {
+            DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
+            ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
+            ShardedDatabaseId = record.ShardedDatabaseId;
         }
 
         public ServerStore ServerStore => _serverStore;
@@ -1296,9 +1310,7 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-                        ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
-
+                        SetIds(record);
                         SetUnusedDatabaseIds(record);
                         InitializeFromDatabaseRecord(record);
                         IndexStore.HandleDatabaseRecordChange(record, index);

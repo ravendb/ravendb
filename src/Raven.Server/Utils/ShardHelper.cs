@@ -4,12 +4,76 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-
+using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Threading;
+using Voron;
 
 namespace Raven.Server.Utils
 {
     public static class ShardHelper
     {
+        public const int NumberOfBuckets = 1024 * 1024;
+
+        /// <summary>
+        /// The bucket is a hash of the document id, lower case, reduced to
+        /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
+        /// perfect distribution of data, each shard is going to have about 1MB of data
+        /// per TB of overall db size. That means that even for *very* large databases, the
+        /// size of the shard is still going to be manageable.
+        /// </summary>
+        public static int GetBucket(string key)
+        {
+            using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+            using (DocumentIdWorker.GetLower(context, key, out var lowerId))
+            {
+                return GetBucketFromSlice(lowerId);
+            }
+        }
+        
+        public static int GetBucket(TransactionOperationContext context, string key)
+        {
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
+            {
+                return GetBucketFromSlice(lowerId);
+            }
+        }
+
+        public static int GetBucket(ByteStringContext context, LazyStringValue key)
+        {
+            using (DocumentIdWorker.GetLower(context, key, out var lowerId))
+            {
+                return GetBucketFromSlice(lowerId);
+            }
+        }
+
+        //do not use this directly, we might mutate the slice buffer here.
+        private static unsafe int GetBucketFromSlice(Slice lowerId)
+        {
+            byte* buffer = lowerId.Content.Ptr;
+            int size = lowerId.Size;
+
+            AdjustAfterSeparator((byte)'$', ref buffer, ref size);
+
+            if (size == 0)
+                throw new ArgumentException("Key '" + lowerId + "', has a shard id length of 0");
+
+            var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
+            return (int)(hash % NumberOfBuckets);
+        }
+
+        private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
+        {
+            for (int i = len - 1; i > 0; i--)
+            {
+                if (ptr[i] != expected)
+                    continue;
+                ptr += i + 1;
+                len -= i + 1;
+                break;
+            }
+        }
+
         public static int TryGetShardIndexAndDatabaseName(ref string name)
         {
             int shardIndex = name.IndexOf('$');
@@ -44,6 +108,17 @@ namespace Raven.Server.Utils
                 return shardName;
 
             return shardName.Substring(0, shardIndex);
+        }
+
+        public static string ToShardName(string database, int shard)
+        {
+            var name = ToDatabaseName(database);
+
+            int shardIndex = name.IndexOf('$');
+            if (shardIndex == -1)
+                return $"{name}${shard}";
+
+            return name;
         }
 
         public static bool IsShardedName(string name)
@@ -88,18 +163,6 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static unsafe void AdjustAfterSeparator(byte expected, ref byte* ptr, ref int len)
-        {
-            for (int i = len - 1; i > 0; i--)
-            {
-                if (ptr[i] != expected)
-                    continue;
-                ptr += i + 1;
-                len -= i - 1;
-                break;
-            }
-        }
-
         public static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> shardAllocation, int id)
         {
             for (int i = 0; i < shardAllocation.Count - 1; i++)
@@ -115,6 +178,144 @@ namespace Raven.Server.Utils
         public static int GetShardIndexforDocument(TransactionOperationContext context, List<DatabaseRecord.ShardRangeAssignment> shardAllocation, string docId)
         {
             return GetShardIndex(shardAllocation, GetShardId(context, docId));
+        }
+        public static int GetShardIndex(DatabaseRecord record, int bucket)
+        {
+            for (int i = 0; i < record.ShardAllocations.Count - 1; i++)
+            {
+                if (bucket < record.ShardAllocations[i + 1].RangeStart)
+                    return record.ShardAllocations[i].Shard;
+            }
+
+            return record.ShardAllocations[^1].Shard;
+        }
+
+        public static void MoveBucket(this DatabaseRecord record, int bucket, int toShard)
+        {
+            try
+            {
+                if (bucket >= NumberOfBuckets)
+                    throw new InvalidOperationException($"Total number of buckets is {NumberOfBuckets}, requested: {bucket}");
+
+                if (bucket == 0)
+                {
+                    if (record.ShardAllocations[0].Shard == toShard)
+                        return; // same shard
+
+                    record.ShardAllocations[0].RangeStart++;
+                    record.ShardAllocations.Insert(0, new DatabaseRecord.ShardRangeAssignment { RangeStart = 0, Shard = toShard });
+                    return;
+                }
+
+                if (bucket == NumberOfBuckets - 1)
+                {
+                    if (record.ShardAllocations[^1].Shard == toShard)
+                        return; // same shard
+
+                    record.ShardAllocations.Add(new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket, Shard = toShard });
+                    return;
+                }
+
+                for (int i = 0; i < record.ShardAllocations.Count - 1; i++)
+                {
+                    var start = record.ShardAllocations[i].RangeStart;
+                    var end = record.ShardAllocations[i + 1].RangeStart - 1;
+                    var size = end - start + 1;
+
+                    if (bucket <= end)
+                    {
+                        var currentShard = record.ShardAllocations[i].Shard;
+                        if (currentShard == toShard)
+                            return; // same shard
+
+                        if (size == 1)
+                        {
+                            var next = record.ShardAllocations[i + 1].Shard;
+                            var prev = record.ShardAllocations[i - 1].Shard;
+
+                            if (next == toShard)
+                            {
+                                record.ShardAllocations[i + 1].RangeStart--;
+                                record.ShardAllocations.RemoveAt(i);
+                            }
+
+                            if (prev == toShard)
+                            {
+                                record.ShardAllocations.RemoveAt(i);
+                            }
+
+                            if (next != toShard && prev != toShard)
+                                record.ShardAllocations[i].Shard = toShard;
+
+                            return;
+                        }
+
+                        if (bucket == start)
+                        {
+                            record.ShardAllocations[i].RangeStart++;
+
+                            if (record.ShardAllocations[i - 1].Shard == toShard)
+                                return;
+
+                            record.ShardAllocations.Insert(i + 1, new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket, Shard = toShard });
+                            return;
+                        }
+
+                        if (bucket == end)
+                        {
+                            if (record.ShardAllocations[i + 1].Shard == toShard)
+                            {
+                                record.ShardAllocations[i + 1].RangeStart--;
+                                return;
+                            }
+
+                            record.ShardAllocations.Insert(i + 1, new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket, Shard = toShard });
+                            return;
+                        }
+
+                        // split
+                        record.ShardAllocations.Insert(i + 1, new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket, Shard = toShard });
+
+                        record.ShardAllocations.Insert(i + 2, new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket + 1, Shard = currentShard });
+                        return;
+                    }
+                }
+
+                var lastRange = record.ShardAllocations[^1];
+                if (bucket == lastRange.RangeStart)
+                {
+                    if (toShard == record.ShardAllocations[^2].Shard)
+                    {
+                        record.ShardAllocations[^1].RangeStart++;
+                        return;
+                    }
+                }
+
+                // split last
+                record.ShardAllocations.Insert(record.ShardAllocations.Count, new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket, Shard = toShard });
+                record.ShardAllocations.Insert(record.ShardAllocations.Count,
+                    new DatabaseRecord.ShardRangeAssignment { RangeStart = bucket + 1, Shard = lastRange.Shard });
+            }
+            finally
+            {
+                if (record.ShardAllocations[0].RangeStart != 0)
+                    throw new InvalidOperationException();
+
+                var lastShard = record.ShardAllocations[0].Shard;
+                var lastStart = 0;
+
+                for (int i = 1; i < record.ShardAllocations.Count - 1; i++)
+                {
+                    var current = record.ShardAllocations[i];
+                    if (current.RangeStart <= lastStart)
+                        throw new InvalidOperationException();
+                    if (current.Shard == lastShard)
+                        throw new InvalidOperationException();
+
+                    lastStart = current.RangeStart;
+                    lastShard = current.Shard;
+                }
+            }
         }
     }
 }

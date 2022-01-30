@@ -464,6 +464,10 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateUnusedDatabaseIdsCommand):
                     case nameof(EditLockModeCommand):
                     case nameof(EditPostgreSqlConfigurationCommand):
+                    case nameof(StartBucketMigrationCommand):
+                    case nameof(SourceMigrationSendCompletedCommand):
+                    case nameof(DestinationMigrationConfirmCommand):
+                    case nameof(SourceMigrationCleanupCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
 
@@ -2696,6 +2700,10 @@ namespace Raven.Server.ServerWide
             {
                 using (var rawRecord = ReadRawDatabaseRecord(context, name))
                 {
+                    // we can't squeeze sharded database to a single node
+                    if (rawRecord.IsSharded())
+                        continue;
+
                     var topology = rawRecord.Topology;
                     if (topology.RelevantFor(oldTag) == false)
                     {
@@ -3430,6 +3438,22 @@ namespace Raven.Server.ServerWide
                     throw new InvalidOperationException($"The database record '{name}' is sharded and doesn't contain topology directly.");
 
                 var topology = databaseRecord.Topology;
+                if (topology == null)
+                    throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
+
+                return topology;
+            }
+        }
+
+        public DatabaseTopology ReadDatabaseTopologyForShard<TTransaction>(TransactionOperationContext<TTransaction> context, string name, int shard)
+            where TTransaction : RavenTransaction
+        {
+            using (var databaseRecord = ReadRawDatabaseRecord(context, name))
+            {
+                if (databaseRecord.IsSharded() == false)
+                    throw new InvalidOperationException($"The database record '{name}' is not sharded.");
+
+                var topology = databaseRecord.Shards[shard];
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
 

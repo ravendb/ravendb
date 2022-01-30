@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public OutgoingPullReplicationHandlerAsSink(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsSink node, TcpConnectionInfo connectionInfo) : 
             base(parent, database, node, connectionInfo)
         {
+            PathsToSend = DetailedReplicationHubAccess.Preferred(node.AllowedSinkToHubPaths, node.AllowedHubToSinkPaths);
             CertificateThumbprint = _parent.GetCertificateForReplication(node, out _)?.Thumbprint;
         }
 

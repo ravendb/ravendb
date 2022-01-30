@@ -135,6 +135,7 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
         public static Func<BlittableJsonReaderObject, PostgreSqlConfiguration> PostgreSqlConfiguration = GenerateJsonDeserializationRoutine<PostgreSqlConfiguration>();
+        public static Func<BlittableJsonReaderObject, BucketMigration> BucketMigration = GenerateJsonDeserializationRoutine<BucketMigration>();
 
         public static readonly Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
@@ -240,7 +241,11 @@ namespace Raven.Server.ServerWide
             [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
             [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>(),
             [nameof(EditLockModeCommand)] = GenerateJsonDeserializationRoutine<EditLockModeCommand>(),
-            [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>()
+            [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>(),
+            [nameof(StartBucketMigrationCommand)] = GenerateJsonDeserializationRoutine<StartBucketMigrationCommand>(),
+            [nameof(SourceMigrationSendCompletedCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationSendCompletedCommand>(),
+            [nameof(DestinationMigrationConfirmCommand)] = GenerateJsonDeserializationRoutine<DestinationMigrationConfirmCommand>(),
+            [nameof(SourceMigrationCleanupCommand)] = GenerateJsonDeserializationRoutine<SourceMigrationCleanupCommand>()
         };
     }
 }
