@@ -305,7 +305,7 @@ namespace Raven.Server.Rachis
 
         public Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
 
-        public TaskCompletionSource<Task> OnSnapshotInstalledTask;
+        public Task OnSnapshotInstalledTask;
 
         private string _tag;
         private string _clusterId;

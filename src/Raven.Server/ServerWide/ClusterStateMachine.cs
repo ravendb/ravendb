@@ -3456,6 +3456,7 @@ namespace Raven.Server.ServerWide
 
             token.ThrowIfCancellationRequested();
             var databases = GetDatabaseNames(context).ToArray();
+
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -3481,25 +3482,21 @@ namespace Raven.Server.ServerWide
                         await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
                     });
 
-                    _parent.OnSnapshotInstalledTask.TrySetResult(Task.WhenAll(tasks));
-                }
-                else
-                {
-                    _parent.OnSnapshotInstalledTask.TrySetResult(Task.CompletedTask);
+                    _parent.OnSnapshotInstalledTask = Task.WhenAll(tasks);
                 }
             };
         }
 
         public override void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
         {
-            var tcs = _parent.OnSnapshotInstalledTask;
+            var task = _parent.OnSnapshotInstalledTask;
 
-            if (tcs == null)
+            if (task == null)
                 return;
 
             try
             {
-                tcs.Task.Wait(token);
+                task.Wait(token);
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
             }
             catch (OperationCanceledException)
