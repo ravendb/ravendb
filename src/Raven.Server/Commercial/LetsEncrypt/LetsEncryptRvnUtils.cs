@@ -8,12 +8,12 @@ using Newtonsoft.Json;
 
 namespace Raven.Server.Commercial.LetsEncrypt
 {
-    public static class LetsEncryptByTools
+    public static class LetsEncryptRvnUtils
     {
         private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
-        private static readonly string[] DnsBridgeActions = {"user-domains", "domain-availability", "claim"};
+        private const string DnsAction = "claim";
 
-        public static async Task<byte[]> SetupLetsEncryptByRvn(SetupInfo setupInfo, string settingsPath, SetupProgressAndResult progress, string dataFolder, CancellationToken token)
+        public static async Task<byte[]> SetupLetsEncrypt(SetupInfo setupInfo, string settingsPath, SetupProgressAndResult progress, string dataFolder, CancellationToken token)
         {
             progress?.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
 
@@ -35,7 +35,7 @@ namespace Raven.Server.Commercial.LetsEncrypt
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to initialize lets encrypt challenge: " + e);
+                throw new InvalidOperationException("Failed to initialize lets encrypt challenge", e);
             }
 
             try
@@ -49,19 +49,16 @@ namespace Raven.Server.Commercial.LetsEncrypt
                 };
                 var serializeObject = JsonConvert.SerializeObject(registrationInfo);
 
-                foreach (var action in DnsBridgeActions)
+                try
                 {
-                    try
-                    {
-                        var content = new StringContent(serializeObject, Encoding.UTF8, "application/json");
-                        var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/{action}", content, CancellationToken.None).ConfigureAwait(false);
-                        response.EnsureSuccessStatusCode();
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Failed to perform the given action: {action}", e);
-                    }
-                }            
+                    var content = new StringContent(serializeObject, Encoding.UTF8, "application/json");
+                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/{DnsAction}", content, CancellationToken.None).ConfigureAwait(false);
+                    response.EnsureSuccessStatusCode();
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to perform the given action: {DnsAction}", e);
+                }
            
                 await RavenDnsRecordHelper.UpdateDnsRecordsTask(new RavenDnsRecordHelper.UpdateDnsRecordParameters
                 {
@@ -124,7 +121,7 @@ namespace Raven.Server.Commercial.LetsEncrypt
             }
         }
 
-        public static async Task<byte[]> SetupOwnCertByRvn(SetupInfo setupInfo, string settingsPath, SetupProgressAndResult progress, CancellationToken token)
+        public static async Task<byte[]> ImportCertificateSetup(SetupInfo setupInfo, string settingsPath, SetupProgressAndResult progress, CancellationToken token)
         {
             try
             {
@@ -133,7 +130,7 @@ namespace Raven.Server.Commercial.LetsEncrypt
                 progress?.AddInfo("Starting validation.");
 
                 if (ZipFileHelper.IsValidEmail(setupInfo.Email) == false)
-                    throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
+                    throw new ArgumentException("Invalid e-mail format: " + setupInfo.Email);
 
                 byte[] zipFile;
                 try

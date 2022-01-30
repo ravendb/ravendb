@@ -379,7 +379,7 @@ public static class ZipFileHelper
         }
         catch (Exception e)
         {
-            throw new InvalidOperationException("Failed to create setting file(s).", e);
+            throw new InvalidOperationException("Failed to create settings file(s).", e);
         }
     }
     

@@ -77,7 +77,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         };
 
 
-        var zipBytes = await LetsEncryptByTools.SetupOwnCertByRvn(setupInfo, settingPath, new SetupProgressAndResult(null), CancellationToken.None);
+        var zipBytes = await LetsEncryptRvnUtils.ImportCertificateSetup(setupInfo, settingPath, new SetupProgressAndResult(null), CancellationToken.None);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -259,7 +259,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             },Formatting.Indented);
         await File.WriteAllTextAsync(settingsPath, settingsJson);
         
-        var zipBytes = await LetsEncryptByTools.SetupLetsEncryptByRvn(setupInfo, settingsPath, new SetupProgressAndResult(null), tempPath, CancellationToken.None);
+        var zipBytes = await LetsEncryptRvnUtils.SetupLetsEncrypt(setupInfo, settingsPath, new SetupProgressAndResult(null), tempPath, CancellationToken.None);
 
         X509Certificate2 serverCert;
         X509Certificate2 clientCert;

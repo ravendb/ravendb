@@ -114,7 +114,7 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await LetsEncryptByTools.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptRvnUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -376,7 +376,7 @@ namespace Raven.Server.Commercial
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(setupInfo.Email, token);
 
-            var challengeResult = await LetsEncryptByTools.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptRvnUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             progress.Processed++;
             progress.AddInfo(challengeResult.Challenge != null ? "Successfully received challenge(s) information from Let's Encrypt." : "Using cached Let's Encrypt certificate.");

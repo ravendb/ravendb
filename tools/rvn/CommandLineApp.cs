@@ -7,6 +7,7 @@ using Raven.Server.Commercial;
 using Sparrow.Platform;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Raven.Server.Commercial.LetsEncrypt;
+using Voron.Global;
 
 namespace rvn
 {
@@ -64,11 +65,7 @@ namespace rvn
         {
             _app.Command("create-setup-package", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "This command generates RavenDB setup ZIP file." +
-                                                         $"Mode options to generate ZIP file are \"{LetsEncryptMode}\" and \"{ImportCertificateMode}\"" +
-                                                         $"When using \"{LetsEncryptMode}\" mode, -s|--setup-parameters command option must be set" +
-                                                         $"When using \"{ImportCertificateMode}\" mode, --cert-path command option must be set";
-
+                cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup zip file given --mode and --setup-params.json";
                 
                 cmd.HelpOption(HelpOptionString);
                 
@@ -89,17 +86,14 @@ namespace rvn
                         switch (modeVal)
                         {
                             case ImportCertificateMode when string.IsNullOrEmpty(pathToCertVal):
-                                ExitWithError($"certificate path can not be empty. It must be set when using {ImportCertificateMode} mode", cmd);
+                                ExitWithError("--path option must be set",cmd);
                                 break;
-                            
                             case ImportCertificateMode:
-                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, ImportCertificateMode, pathToCertVal, certPassVal, token);
-                          
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, cmd, ImportCertificateMode, pathToCertVal, certPassVal, token);
                             case LetsEncryptMode when string.IsNullOrEmpty(setupParamVal) == false:
-                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, LetsEncryptMode, null, certPassVal, token);
-                            
+                                return await SetupPackageConfiguratorLetsEncrypt(setupParamVal, packageOutParamVal, cmd, LetsEncryptMode, pathToCertVal, certPassVal, token);
                             default:
-                                ExitWithError("--mode and --setup-parameters command options must be set",cmd);
+                                ExitWithError("--mode and --setup-params options must be set",cmd);
                                 break;
                         }
                        
@@ -109,19 +103,21 @@ namespace rvn
             });
         }
 
-        private static async Task<int> SetupPackageConfiguratorLetsEncrypt(string setupParamsPath, string packageOutParam, string mode, string certPath, string certPass, CancellationToken token)
+        private static async Task<int> SetupPackageConfiguratorLetsEncrypt(string setupParamsPath, string packageOutParam, CommandLineApplication cmd, string mode, string certPath, string certPass, CancellationToken token)
         {
-            var defaultSettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
-
+            var zipFile = Array.Empty<byte>();
+            
             using (StreamReader file = File.OpenText(setupParamsPath ?? string.Empty))
             {
-               
-                var progress = new SetupProgressAndResult(null);
-
+                var progress = new SetupProgressAndResult(null)
+                {
+                    Processed = 0,
+                    Total = 2
+                };
+                
                 JsonSerializer serializer = new();
                 var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
                 
-                var zipFile = Array.Empty<byte>();
                 if (setupInfo != null)
                 {
                     if (packageOutParam == null)
@@ -133,14 +129,14 @@ namespace rvn
                     {
                         var certBytes = await File.ReadAllBytesAsync(certPath, token);
                         var certBase64 = Convert.ToBase64String(certBytes);
-                        setupInfo.Certificate = certBase64;
+                        
+                        setupInfo.Certificate =  certBase64;
                         setupInfo.Password = certPass;
-                        zipFile = await LetsEncryptByTools.SetupOwnCertByRvn(setupInfo, defaultSettingsPath, progress, token);
-                      
+                        zipFile = await LetsEncryptRvnUtils.ImportCertificateSetup(setupInfo, setupParamsPath, progress, token);
                     }
                     else
                     {
-                        zipFile = await LetsEncryptByTools.SetupLetsEncryptByRvn(setupInfo, defaultSettingsPath, progress, null ,token);
+                        zipFile = await LetsEncryptRvnUtils.SetupLetsEncrypt(setupInfo, setupParamsPath, progress, string.Empty ,token);
                     }
                 }
                 var path = Path.Combine(AppContext.BaseDirectory, packageOutParam);
@@ -193,7 +189,8 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description =
+                    "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
                 cmd.OnExecute(() =>
@@ -365,7 +362,8 @@ namespace rvn
                         });
                     }, multipleValues: true);
 
-                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
+                    subcmd.ExtendedHelpText = Environment.NewLine +
+                                              "Restores the encryption key on a new machine and protects it for the current OS user or the current Master Key (whichever method was chosen to protect secrets). " +
                                               "This is typically used as part of the restore process of an encrypted server store on a new machine";
                 });
 
@@ -418,6 +416,7 @@ namespace rvn
                                               "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." +
                                               Environment.NewLine + EncryptionCommandsNote;
                     subcmd.HelpOption(HelpOptionString);
+                    subcmd.Description = "Decrypts RavenDB files";
                     subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
                         subcmd.OnExecute(() =>
@@ -450,12 +449,12 @@ namespace rvn
         
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("-s|--setup-parameters", "Calls setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
         {
-            return cmd.Option("-o|--package-output-file", "Default output file name", CommandOptionType.SingleValue);
+            return cmd.Option("-o|--package-output-file", "default output file", CommandOptionType.SingleValue);
         } 
         private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
         {
@@ -464,7 +463,7 @@ namespace rvn
         
         private static CommandOption ConfigureCertPassword(CommandLineApplication cmd)
         {
-            return cmd.Option("--password", "Certificate password", CommandOptionType.SingleValue);
+            return cmd.Option("-p|--password", "Certificate password", CommandOptionType.SingleValue);
         }
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
@@ -498,12 +497,12 @@ namespace rvn
 
             if (directory.Exists == false)
             {
-                throw new InvalidOperationException($"Directory does not exist: { argument.Value }.");
+                throw new InvalidOperationException($"Directory does not exist: {argument.Value}.");
             }
 
             if (directory.Name.Equals("System"))
             {
-                if (File.Exists(Path.Combine(directory.FullName, Voron.Global.Constants.DatabaseFilename)) == false)
+                if (File.Exists(Path.Combine(directory.FullName, Constants.DatabaseFilename)) == false)
                     throw new InvalidOperationException("Please provide a valid System directory.");
             }
             else
