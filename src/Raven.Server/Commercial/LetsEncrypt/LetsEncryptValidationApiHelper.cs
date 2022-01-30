@@ -140,13 +140,13 @@ public class LetsEncryptValidationApiHelper
         switch (setupMode)
         {
             case SetupMode.LetsEncrypt when setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false:
-                throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'.");
+                throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'. Nodes: " + setupInfo.NodeSetupInfos.Keys);
             case SetupMode.LetsEncrypt when ZipFileHelper.IsValidEmail(setupInfo.Email) == false:
-                throw new ArgumentException("Invalid email address.");
+                throw new ArgumentException("Invalid email address: " + setupInfo.Email);
             case SetupMode.LetsEncrypt when IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false:
-                throw new ArgumentException("Invalid domain name.");
+                throw new ArgumentException("Invalid domain name: " + setupInfo.Domain);
             case SetupMode.LetsEncrypt when setupInfo.ClientCertNotAfter.HasValue && setupInfo.ClientCertNotAfter <= DateTime.UtcNow.Date:
-                throw new ArgumentException("The client certificate expiration date must be in the future.");
+                throw new ArgumentException("The client certificate expiration date must be in the future. Client certificate expiration date: " + setupInfo.ClientCertNotAfter);
             case SetupMode.Secured when string.IsNullOrWhiteSpace(setupInfo.Certificate):
                 throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
         }
