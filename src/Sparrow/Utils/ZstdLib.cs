@@ -190,6 +190,7 @@ namespace Sparrow.Utils
 
                 if (PlatformDetails.Is32Bits)
                 {
+                    // set windowLog size to 256KB 
                     var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_windowLog, 16);
                     AssertZstdSuccess(rc);
                 }
