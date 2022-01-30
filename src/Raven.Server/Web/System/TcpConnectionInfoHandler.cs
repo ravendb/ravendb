@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -80,7 +82,18 @@ namespace Raven.Server.Web.System
 
             if (verifyDatabase.HasValue && verifyDatabase.Value)
             {
-                await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                var result = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(database);
+                switch (result.DatabaseStatus)
+                {
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Database:
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
+                        break;
+                    case DatabasesLandlord.DatabaseSearchResult.Status.Missing:
+                        DatabaseDoesNotExistException.Throw(database);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unexpected " + nameof(DatabasesLandlord.DatabaseSearchResult));
+                }
             }
 
             if (await AuthenticateAsync(HttpContext, ServerStore, database, remoteTask) == false)

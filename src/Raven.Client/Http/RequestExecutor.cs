@@ -584,7 +584,7 @@ namespace Raven.Client.Http
             await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
         }
 
-        private async Task WaitForTopologyUpdate(Task topologyUpdate)
+        internal async Task WaitForTopologyUpdate(Task topologyUpdate)
         {
             try
             {
@@ -1839,7 +1839,7 @@ namespace Raven.Client.Http
             }, HttpStatusCode.ServiceUnavailable, e);
         }
 
-        protected Task _firstTopologyUpdate;
+        internal Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         protected bool Disposed => _disposeOnceRunner.Disposed;

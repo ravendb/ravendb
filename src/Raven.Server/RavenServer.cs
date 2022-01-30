@@ -38,6 +38,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Https;
 using Raven.Server.Integrations.PostgreSQL;
@@ -2349,37 +2350,57 @@ namespace Raven.Server
         private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header,
             JsonOperationContext.MemoryBuffer bufferToCopy, X509Certificate2 cert)
         {
-            var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
-            if (databaseLoadingTask == null)
+            var result = ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(header.DatabaseName);
+            switch (result.DatabaseStatus)
             {
-                DatabaseDoesNotExistException.Throw(header.DatabaseName);
-                return true;
+                case DatabasesLandlord.DatabaseSearchResult.Status.Sharded:
+                    tcp.ShardedContext = result.ShardedContext;
+                    break;
+                case DatabasesLandlord.DatabaseSearchResult.Status.Database:
+                    var databaseLoadingTask = result.DatabaseTask;
+                    if (databaseLoadingTask == null)
+                    {
+                        DatabaseDoesNotExistException.Throw(header.DatabaseName);
+                        return true;
+                    }
+
+                    var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
+                    if (databaseLoadingTask.IsCompleted == false)
+                    {
+                        var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
+                        if (resultingTask != databaseLoadingTask)
+                        {
+                            ThrowTimeoutOnDatabaseLoad(header);
+                        }
+                    }
+
+                    tcp.DocumentDatabase = await databaseLoadingTask;
+                    if (tcp.DocumentDatabase == null)
+                        DatabaseDoesNotExistException.Throw(header.DatabaseName);
+
+                    Debug.Assert(tcp.DocumentDatabase != null);
+
+                    if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
+                        ThrowDatabaseShutdown(tcp.DocumentDatabase);
+
+                    tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
+                    break;
+                case DatabasesLandlord.DatabaseSearchResult.Status.Missing:
+                    DatabaseDoesNotExistException.Throw(header.DatabaseName);
+                    return true;
+                default:
+                    throw new InvalidOperationException("Unexpected " + nameof(DatabasesLandlord.DatabaseSearchResult));
             }
 
-            var databaseLoadTimeout = ServerStore.DatabasesLandlord.DatabaseLoadTimeout;
-
-            if (databaseLoadingTask.IsCompleted == false)
-            {
-                var resultingTask = await Task.WhenAny(databaseLoadingTask, Task.Delay(databaseLoadTimeout));
-                if (resultingTask != databaseLoadingTask)
-                {
-                    ThrowTimeoutOnDatabaseLoad(header);
-                }
-            }
-
-            tcp.DocumentDatabase = await databaseLoadingTask;
-            if (tcp.DocumentDatabase == null)
-                DatabaseDoesNotExistException.Throw(header.DatabaseName);
-
-            Debug.Assert(tcp.DocumentDatabase != null);
-
-            if (tcp.DocumentDatabase.DatabaseShutdown.IsCancellationRequested)
-                ThrowDatabaseShutdown(tcp.DocumentDatabase);
-
-            tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
             switch (header.Operation)
             {
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                    if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Sharded)
+                    {
+                        ShardedSubscriptionConnection.SendShardedSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
+                        break;
+                    }
+
                     SubscriptionConnection.SendSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
                     break;
 

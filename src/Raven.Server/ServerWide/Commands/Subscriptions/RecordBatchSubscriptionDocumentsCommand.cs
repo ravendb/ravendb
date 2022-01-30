@@ -1,12 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -17,7 +20,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class RecordBatchSubscriptionDocumentsCommand : UpdateValueForDatabaseCommand
+    public class RecordBatchSubscriptionDocumentsCommand :  UpdateValueForShardCommand
     {
         public long SubscriptionId;
         public string SubscriptionName;
@@ -85,7 +88,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
 
-                var topology = record.Topology;
+                var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
                 var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
                 var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
                 if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
@@ -104,16 +107,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     context.ReadObject(existingValue, subscriptionName);
                     shouldUpdateChangeVector = false;
                 }
-                
-                if (subscriptionState.ChangeVectorForNextBatchStartingPoint != PreviouslyRecordedChangeVector)
-                {
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscriptionState.ChangeVectorForNextBatchStartingPoint}, received value: {PreviouslyRecordedChangeVector}");
-                }
+
+                CheckConcurrencyForBatchCv(subscriptionState.ChangeVectorForNextBatchStartingPoint, subscriptionName);
 
                 if (shouldUpdateChangeVector)
                 {
-                    subscriptionState.ChangeVectorForNextBatchStartingPoint =
-                        ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
+                    subscriptionState.ChangeVectorForNextBatchStartingPoint = ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
                     subscriptionState.NodeTag = NodeTag;
                     using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
                     {
@@ -162,7 +161,82 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 }
             }
         }
-        
+
+        private void CheckConcurrencyForBatchCv(string subscriptionStateChangeVectorForNextBatchStartingPoint, string subscriptionName)
+        {
+            if (ShardName == null)
+            {
+                if (subscriptionStateChangeVectorForNextBatchStartingPoint != PreviouslyRecordedChangeVector)
+                {
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscriptionStateChangeVectorForNextBatchStartingPoint}, received value: {PreviouslyRecordedChangeVector}.");
+                }
+
+                return;
+            }
+
+            if (string.IsNullOrEmpty(PreviouslyRecordedChangeVector))
+            {
+                if (string.IsNullOrEmpty(subscriptionStateChangeVectorForNextBatchStartingPoint))
+                {
+                    // both cvs are null, can update
+                    return;
+                }
+
+                // we fetched the batch when previously known CV was null, but now the CV in storage is not null
+                // this can happen if other shard updated the CV, meanwhile
+                // we need to check if all parts of local shard CV are not in CV stored in storage
+
+                var currentLocalShardCv1 = ShardLocalChangeVector.ToChangeVector();
+                var currentCvInStorage1 = subscriptionStateChangeVectorForNextBatchStartingPoint.ToChangeVector();
+
+                foreach (var entry in currentLocalShardCv1)
+                {
+                    if (currentCvInStorage1.Any(x => x.DbId == entry.DbId))
+                    {
+                        ThrowSubscriptionChangeVectorUpdateConcurrencyException(subscriptionStateChangeVectorForNextBatchStartingPoint, subscriptionName);
+                    }
+                }
+
+                return;
+            }
+
+            if (string.IsNullOrEmpty(subscriptionStateChangeVectorForNextBatchStartingPoint))
+            {
+                // cv in storage is null but we fetched the batch starting from PreviouslyRecordedChangeVector
+                ThrowSubscriptionChangeVectorUpdateConcurrencyException(subscriptionStateChangeVectorForNextBatchStartingPoint, subscriptionName);
+            }
+
+            var currentCvInStorage = subscriptionStateChangeVectorForNextBatchStartingPoint.ToChangeVector();
+            var currentCvInCommand = PreviouslyRecordedChangeVector.ToChangeVector();
+            var currentLocalShardCv = ShardLocalChangeVector.ToChangeVector();
+
+            // both CVs (change vector used to fetch the batch, last recorded(acknowledged) change vector in storage) has entries
+            // we need to take each database id of shard's local CV
+            // then check if the sub-CV with this database id is equal in both CVs
+
+            //TODO: egor CV persistence will have to be changed because of the resharding 
+            // https://issues.hibernatingrhinos.com/issue/RavenDB-13106
+            foreach (var entry in currentLocalShardCv)
+            {
+                var lastStorageCv = currentCvInStorage.FirstOrDefault(x => x.DbId == entry.DbId);
+                var lastCommandCv = currentCvInCommand.FirstOrDefault(x => x.DbId == entry.DbId);
+                if (lastStorageCv.Equals(lastCommandCv) == false)
+                {
+                    ThrowSubscriptionChangeVectorUpdateConcurrencyException(subscriptionStateChangeVectorForNextBatchStartingPoint, subscriptionName);
+                }
+            }
+        }
+
+        private void ThrowSubscriptionChangeVectorUpdateConcurrencyException(string subscriptionStateChangeVectorForNextBatchStartingPoint, string subscriptionName)
+        {
+            var lastKnowCvStr = PreviouslyRecordedChangeVector == null ? " is null" : $" '{PreviouslyRecordedChangeVector}'";
+            throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge sharded subscription with name '{subscriptionName}' on shard '{ShardName}', " +
+                                                                         $"due to inconsistency in change vector progress. " +
+                                                                         $"Probably there was an admin intervention that changed the change vector value. " +
+                                                                         $"Stored value: {subscriptionStateChangeVectorForNextBatchStartingPoint}, received value{lastKnowCvStr}," +
+                                                                         $"local shard change vector: '{ShardLocalChangeVector}'");
+        }
+
         public override string GetItemId()
         {
             throw new System.NotImplementedException();

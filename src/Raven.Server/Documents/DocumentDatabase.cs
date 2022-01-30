@@ -104,6 +104,10 @@ namespace Raven.Server.Documents
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
+            // check if sharded 
+            string originalName = Name;
+            var index = ShardHelper.TryGetShardIndexAndDatabaseName(ref originalName);
+            Parent = index != -1 ? originalName : null;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
@@ -148,9 +152,6 @@ namespace Raven.Server.Documents
 
                             if (isEncrypted && MasterKey == null)
                             {
-                                // check if sharded 
-                                string originalName = Name;
-                                var index = ShardHelper.TryGetShardIndexAndDatabaseName(ref originalName);
                                 if (index != -1)
                                     MasterKey = serverStore.GetSecretKey(ctx, originalName);
 
@@ -245,6 +246,7 @@ namespace Raven.Server.Documents
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
+        public string Parent { get; }
         public string Name { get; }
 
         private class ShardProperties

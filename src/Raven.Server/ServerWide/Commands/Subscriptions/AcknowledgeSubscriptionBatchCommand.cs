@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
@@ -7,19 +6,19 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
-using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
+    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForShardCommand
     {
         public string ChangeVector;
         public string LastKnownSubscriptionChangeVector; // Now this used only for backward compatibility
@@ -53,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            var topology = record.Topology;
+            var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
             if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
@@ -72,33 +71,15 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return context.ReadObject(existingValue, SubscriptionName);
             }
 
-            if (IsLegacyCommand())
-            {
-                if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
-
-                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
-            }
-            
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
             
             return context.ReadObject(subscription.ToJson(), subscriptionName);
         }
 
-        private bool IsLegacyCommand()
-        {
-            return BatchId == null || // from old node
-                   BatchId == SubscriptionConnection.NonExistentBatch; // from new node, but has lower cluster version
-        }
-
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
         {
             base.Execute(context, items, index, record, state, out result);
-
-            if (IsLegacyCommand()) 
-                return;
-
             ExecuteAcknowledgeSubscriptionBatch(context, index);
         }
 
@@ -150,7 +131,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        private static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnection.NonExistentBatch);
+        private static readonly long SwappedNonExistentBatch = Bits.SwapBytes(SubscriptionConnectionBase.NonExistentBatch);
 
         public static Func<string> GetLastResponsibleNode(
             bool hasHighlyAvailableTasks,
