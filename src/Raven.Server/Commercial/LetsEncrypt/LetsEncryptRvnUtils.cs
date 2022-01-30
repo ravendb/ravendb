@@ -11,7 +11,6 @@ namespace Raven.Server.Commercial.LetsEncrypt
     public static class LetsEncryptRvnUtils
     {
         private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
-        private const string DnsAction = "claim";
 
         public static async Task<byte[]> SetupLetsEncrypt(SetupInfo setupInfo, string settingsPath, SetupProgressAndResult progress, string dataFolder, CancellationToken token)
         {
@@ -52,12 +51,12 @@ namespace Raven.Server.Commercial.LetsEncrypt
                 try
                 {
                     var content = new StringContent(serializeObject, Encoding.UTF8, "application/json");
-                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/{DnsAction}", content, CancellationToken.None).ConfigureAwait(false);
+                    var response = await ApiHttpClient.Instance.PostAsync($"/api/v1/dns-n-cert/claim", content, CancellationToken.None).ConfigureAwait(false);
                     response.EnsureSuccessStatusCode();
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to perform the given action: {DnsAction}", e);
+                    throw new InvalidOperationException($"Failed to claim the given domain: {registrationInfo.Domain}", e);
                 }
            
                 await RavenDnsRecordHelper.UpdateDnsRecordsTask(new RavenDnsRecordHelper.UpdateDnsRecordParameters
