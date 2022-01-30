@@ -11,6 +11,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task RemoveEntryFromRaftLogEP()
         {
-            var (_, leader) = await CreateRaftCluster(3);
+            var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
             var database = GetDatabaseName();
 
             await CreateDatabaseInClusterInner(new DatabaseRecord(database), 3, leader.WebUrl, null);
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
 
                 var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
 
-                _ = leader.ServerStore.Engine.CurrentLeader.PutAsync(cmd, new TimeSpan(2000));
+                await Assert.ThrowsAsync<UnknownClusterCommand>(() => leader.ServerStore.SendToLeaderAsync(cmd));
 
                 var cmd2 = new CreateDatabaseOperation.CreateDatabaseCommand(new DatabaseRecord("Toli"), 1);
 
@@ -67,7 +68,6 @@ namespace SlowTests.Issues
                         }
                     },
                     Name = "Toli"
-
                 });
 
                 foreach (var server in Servers)
@@ -75,18 +75,12 @@ namespace SlowTests.Issues
                     Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
-                long index;
-                using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var tx = context.OpenReadTransaction())
-                {
-                    leader.ServerStore.Engine.GetLastCommitIndex(context, out index, out long term);
-                }
-
+                var index = LastRaftIndexForCommand(leader, nameof(TestCommandWithRaftId));
 
                 List<string> nodelist = new List<string>();
                 var res = await WaitForValueAsync(async () =>
                 {
-                    nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index + 1));
+                    nodelist = await store.Maintenance.SendAsync(new RemoveEntryFromRaftLogOperation(index));
                     return nodelist.Count;
                 }, 3);
                 Assert.Equal(3, res);
@@ -97,7 +91,7 @@ namespace SlowTests.Issues
                     await WaitForValueAsync(async () =>
                     {
                         documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-                        using (documentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (var tx = context.OpenReadTransaction())
                         {
                             server.ServerStore.Engine.GetLastCommitIndex(context, out index2, out long term);
@@ -115,9 +109,8 @@ namespace SlowTests.Issues
                     Assert.Contains(server.ServerStore.NodeTag, nodelist);
                 }
             }
-
-
         }
+
 
         private class RemoveEntryFromRaftLogOperation : IMaintenanceOperation<List<string>>
         {
