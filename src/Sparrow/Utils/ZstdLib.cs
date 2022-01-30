@@ -53,24 +53,28 @@ namespace Sparrow.Utils
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createCCtx();
+
+        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
+        private static extern UIntPtr ZSTD_CCtx_setParameter(void* cctx, ZSTD_cParameter p, int value);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeCCtx(void* cctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern void* ZSTD_createDCtx();
-        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void* ZSTD_createDStream();
-        [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
-        private static extern UIntPtr ZSTD_freeDStream(void* dctx);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         private static extern UIntPtr ZSTD_freeDCtx(void* dctx);
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern uint ZSTD_isError(UIntPtr code);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr ZSTD_getErrorName(UIntPtr code);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_compressCCtx(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize, int compressionLevel);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_decompressDCtx(void* ctx, byte* dst, UIntPtr dstCapacity, byte* src, UIntPtr srcSize);
 
@@ -82,12 +86,13 @@ namespace Sparrow.Utils
 
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createCDict(byte* dictBuffer, UIntPtr dictSize, int compressionLevel);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_freeCDict(void* CDict);
 
-
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern void* ZSTD_createDDict(void* dictBuffer, UIntPtr dictSize);
+
         [DllImport(LIBZSTD, CallingConvention = CallingConvention.Cdecl)]
         public static extern UIntPtr ZSTD_freeDDict(void* ddict);
 
@@ -121,6 +126,31 @@ namespace Sparrow.Utils
             ZSTD_e_end = 2
         }
 
+        public enum ZSTD_cParameter
+        {
+            ZSTD_c_compressionLevel = 100, /* Set compression parameters according to pre-defined cLevel table.
+                              * Note that exact compression parameters are dynamically determined,
+                              * depending on both compression level and srcSize (when known).
+                              * Default level is ZSTD_CLEVEL_DEFAULT==3.
+                              * Special: value 0 means default, which is controlled by ZSTD_CLEVEL_DEFAULT.
+                              * Note 1 : it's possible to pass a negative compression level.
+                              * Note 2 : setting a level does not automatically set all other compression parameters
+                              *   to default. Setting this will however eventually dynamically impact the compression
+                              *   parameters which have not been manually set. The manually set
+                              *   ones will 'stick'. */
+            /* Advanced compression parameters :
+             * It's possible to pin down compression parameters to some specific values.
+             * In which case, these values are no longer dynamically selected by the compressor */
+            ZSTD_c_windowLog = 101,    /* Maximum allowed back-reference distance, expressed as power of 2.
+                              * This will set a memory budget for streaming decompression,
+                              * with larger values requiring more memory
+                              * and typically compressing more.
+                              * Must be clamped between ZSTD_WINDOWLOG_MIN and ZSTD_WINDOWLOG_MAX.
+                              * Special: value 0 means "use default windowLog".
+                              * Note: Using a windowLog greater than ZSTD_WINDOWLOG_LIMIT_DEFAULT
+                              *       requires explicitly allowing such size at streaming decompression stage. */
+        };
+
         public static void AssertZstdSuccess(UIntPtr v)
         {
             if (ZSTD_isError(v) == 0)
@@ -145,22 +175,10 @@ namespace Sparrow.Utils
 
         public class CompressContext : IDisposable
         {
-            private void* _sdtx;
-            public void* Streaming => _sdtx != null ? _sdtx : (_sdtx = CreateStreaming());
             private void* _cctx;
             public void* Compression => _cctx != null ? _cctx : (_cctx = CreateCompression());
             private void* _dctx;
             public void* Decompression => _dctx != null ? _dctx : (_dctx = CreateDecompression());
-
-            private void* CreateStreaming()
-            {
-                var sdtx = ZSTD_createDStream();
-                if (sdtx == null)
-                {
-                    throw new OutOfMemoryException("Unable to create compression context");
-                }
-                return sdtx;
-            }
 
             private void* CreateCompression()
             {
@@ -169,6 +187,13 @@ namespace Sparrow.Utils
                 {
                     throw new OutOfMemoryException("Unable to create compression context");
                 }
+
+                if (PlatformDetails.Is32Bits)
+                {
+                    var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_windowLog, 16);
+                    AssertZstdSuccess(rc);
+                }
+
                 return cctx;
             }
 
@@ -179,6 +204,7 @@ namespace Sparrow.Utils
                 {
                     throw new OutOfMemoryException("Unable to create compression context");
                 }
+
                 return dctx;
             }
 
@@ -188,12 +214,6 @@ namespace Sparrow.Utils
                 {
                     ZSTD_freeCCtx(_cctx);
                     _cctx = null;
-                }
-
-                if (_sdtx != null)
-                {
-                    ZSTD_freeDStream(_sdtx);
-                    _sdtx = null;
                 }
 
                 if (_dctx != null)
@@ -299,7 +319,7 @@ namespace Sparrow.Utils
 
             public override string ToString()
             {
-                return "Dictionary #" + Id 
+                return "Dictionary #" + Id
 #if DEBUG
                      + " - " + DictionaryHash
 #endif
