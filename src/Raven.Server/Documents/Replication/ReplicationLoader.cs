@@ -562,7 +562,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     // if the stream closed, it is our duty to reconnect
-                    AddAndStartOutgoingReplication(destination, true);
+                    AddAndStartOutgoingReplication(destination);
                 }
             }
         }
@@ -616,7 +616,17 @@ namespace Raven.Server.Documents.Replication
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPullParams, buffer);
 
             IncomingReplicationHandler newIncoming;
-            if (incomingPullParams == null)
+
+            if (getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Migration)
+            {
+                newIncoming = new IncomingMigrationReplicationHandler(
+                    tcpConnectionOptions,
+                    getLatestEtagMessage,
+                    this,
+                    buffer,
+                    getLatestEtagMessage.ReplicationsType);
+            }
+            else if (incomingPullParams == null)
             {
                 newIncoming = new IncomingReplicationHandler(
                     tcpConnectionOptions,
@@ -778,12 +788,12 @@ namespace Raven.Server.Documents.Replication
                             continue;
                         }
 
-                        if (failure.External &&
-                            IsMyTask(ravenConnectionStrings, topology, failure.Node as ExternalReplicationBase) == false)
+                        if (failure.Node is ExternalReplicationBase exNode &&
+                            IsMyTask(ravenConnectionStrings, topology, exNode) == false)
                             // no longer my task
                             continue;
 
-                        AddAndStartOutgoingReplication(failure.Node, failure.External);
+                        AddAndStartOutgoingReplication(failure.Node);
                     }
                     catch (Exception e)
                     {
@@ -938,6 +948,8 @@ namespace Raven.Server.Documents.Replication
             HandleInternalReplication(newRecord, instancesToDispose);
             HandleExternalReplication(newRecord, instancesToDispose);
             HandleHubPullReplication(newRecord, instancesToDispose);
+            HandleMigrationReplication(newRecord, instancesToDispose);
+
             var destinations = new List<ReplicationNode>();
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
@@ -945,6 +957,92 @@ namespace Raven.Server.Documents.Replication
             _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
 
             DisposeConnections(instancesToDispose);
+        }
+
+        private void HandleMigrationReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        {
+            var myShard = ShardHelper.TryGetShardIndex(newRecord.DatabaseName);
+            
+            // remove
+            foreach (var handler in OutgoingHandlers)
+            {
+                if (handler is OutgoingMigrationReplicationHandler migrationHandler == false)
+                    continue;
+
+                if (newRecord.BucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)
+                {
+                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    continue;
+                }
+
+                if (migrationHandler.BucketMigrationNode.ForBucketMigration(migration) == false)
+                {
+                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    continue;
+                }
+
+                var source = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
+                
+                var destTopology = GetTopologyForShard(migration.DestinationShard);
+                var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, migration, getLastResponsibleNode: null);
+
+                if (_server.NodeTag != source || migrationHandler.Destination.Url != _clusterTopology.GetUrlFromTag(destNode))
+                {
+                    RegisterMigrationConnectionToDispose(instancesToDispose, migrationHandler);
+                    continue;
+                }
+
+                // even if the status is ownership transferred we will keep the connection open to send any left overs if needed
+            }
+
+            // add
+            foreach (var migration in newRecord.BucketMigrations)
+            {
+                var process = migration.Value;
+
+                if (myShard != process.SourceShard)
+                    continue;
+
+                var node = newRecord.Topology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
+                if (node == _server.NodeTag)
+                {
+                    var current = OutgoingHandlers.OfType<OutgoingMigrationReplicationHandler>().SingleOrDefault(
+                        o => o.BucketMigrationNode.ForBucketMigration(process));
+
+                    if (current == null)
+                    {
+                        var destTopology = GetTopologyForShard(process.DestinationShard);
+                        var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
+                        var migrationDestination = new BucketMigrationReplication(destNode, process.MigrationIndex)
+                        {
+                            Bucket = process.Bucket,
+                            Shard = process.DestinationShard,
+                            Database = ShardHelper.ToShardName(newRecord.DatabaseName, process.DestinationShard),
+                            Url = _clusterTopology.GetUrlFromTag(destNode)
+                        };
+
+                        Task.Run(() => AddAndStartOutgoingReplication(migrationDestination));
+                    }
+                }
+            }
+        }
+
+        private DatabaseTopology GetTopologyForShard(int shard)
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                return _server.Cluster.ReadDatabaseTopologyForShard(ctx, ShardHelper.ToDatabaseName(Database.Name), shard);
+            }
+        }
+
+        private void RegisterMigrationConnectionToDispose(List<IDisposable> instancesToDispose, OutgoingMigrationReplicationHandler handler)
+        {
+            var reconnect = _reconnectQueue.SingleOrDefault(i => i.Node == handler.Destination);
+            if (reconnect != null)
+                _reconnectQueue.TryRemove(reconnect);
+
+            instancesToDispose.Add(handler);
         }
 
         private void HandleHubPullReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
@@ -1109,7 +1207,7 @@ namespace Raven.Server.Documents.Replication
                     // here we might have blocking calls to fetch the tcp info.
                     try
                     {
-                        StartOutgoingConnections(newDestinations, external: true);
+                        StartOutgoingConnections(newDestinations);
                     }
                     catch (Exception e)
                     {
@@ -1350,7 +1448,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd, bool external = false)
+        private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
         {
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
@@ -1362,7 +1460,7 @@ namespace Raven.Server.Documents.Replication
 
                 if (_log.IsInfoEnabled)
                     _log.Info("Initialized outgoing replication for " + destination.FromString());
-                AddAndStartOutgoingReplication(destination, external);
+                AddAndStartOutgoingReplication(destination);
             }
 
             if (_log.IsInfoEnabled)
@@ -1404,9 +1502,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
+        internal void AddAndStartOutgoingReplication(ReplicationNode node)
         {
-            var info = GetConnectionInfo(node, external);
+            var info = GetConnectionInfo(node);
 
             if (info == null)
             {
@@ -1426,23 +1524,23 @@ namespace Raven.Server.Documents.Replication
                     return;
 
                 OutgoingReplicationHandlerBase outgoingReplication;
-                if (node is PullReplicationAsSink sink)
+
+                switch (node)
                 {
-                    outgoingReplication = new OutgoingPullReplicationHandlerAsSink(this, Database, sink, info)
-                    {
-                        PathsToSend = DetailedReplicationHubAccess.Preferred(sink.AllowedSinkToHubPaths, sink.AllowedHubToSinkPaths)
-                    };
-                }
-                else
-                {
-                    if (external)
-                    {
-                        outgoingReplication = new OutgoingExternalReplicationHandler(this, Database, node, info);
-                    }
-                    else
-                    {
-                        outgoingReplication = new OutgoingInternalReplicationHandler(this, Database, node, info);
-                    }
+                    case PullReplicationAsSink sinkNode:
+                        outgoingReplication = new OutgoingPullReplicationHandlerAsSink(this, Database, sinkNode, info);
+                        break;
+                    case InternalReplication clusterNode:
+                        outgoingReplication = new OutgoingInternalReplicationHandler(this, Database, clusterNode, info);
+                        break;
+                    case ExternalReplication externalNode:
+                        outgoingReplication = new OutgoingExternalReplicationHandler(this, Database, externalNode, info);
+                        break;
+                    case BucketMigrationReplication migrationNode:
+                        outgoingReplication = new OutgoingMigrationReplicationHandler(this, Database, migrationNode, info);
+                        break;
+                    default:
+                        throw new ArgumentException($"Unknown node type {node.GetType().FullName}");
                 }
 
                 if (_outgoing.TryAdd(outgoingReplication) == false)
@@ -1450,6 +1548,7 @@ namespace Raven.Server.Documents.Replication
                     outgoingReplication.Dispose();
                     return;
                 }
+
 
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
@@ -1465,12 +1564,11 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
+        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node)
         {
             var shutdownInfo = _outgoingFailureInfo.GetOrAdd(node, new ConnectionShutdownInfo
             {
                 Node = node,
-                External = external,
                 MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
             });
 
@@ -1481,23 +1579,19 @@ namespace Raven.Server.Documents.Replication
 
                 switch (node)
                 {
-                    case ExternalReplicationBase exNode:
-                    {
-                            var database = exNode.ConnectionString.Database;
-                            if (node is PullReplicationAsSink sink)
-                            {
-                                return GetPullReplicationTcpInfo(sink, certificate, database);
-                            }
+                    case PullReplicationAsSink sinkNode:
+                        return GetPullReplicationTcpInfo(sinkNode, certificate, sinkNode.ConnectionString.Database);
 
-                            // normal external replication
-                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                    }
-                    case InternalReplication internalNode:
+                    case ExternalReplication exNode:
+                        return GetExternalReplicationTcpInfo(exNode, certificate, exNode.ConnectionString.Database);
+
+                    case BucketMigrationReplication _:
+                    case InternalReplication _:
                     {
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdownToken))
                         {
                             cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
-                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                            return ReplicationUtils.GetTcpInfo(node.Url, node.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
                                 "Replication",
                         certificate, cts.Token);
                         }
@@ -1543,7 +1637,7 @@ namespace Raven.Server.Documents.Replication
                     OccurredAt = SystemTime.UtcNow,
                     Direction = ReplicationPulseDirection.OutgoingGetTcpInfo,
                     To = node,
-                    IsExternal = external,
+                    IsExternal = node is ExternalReplicationBase,
                     ExceptionMessage = e.Message,
                 };
                 OutgoingReplicationConnectionFailed?.Invoke(replicationPulse);
@@ -1667,6 +1761,7 @@ namespace Raven.Server.Documents.Replication
         {
             switch (node)
             {
+                case BucketMigrationReplication _:
                 case InternalReplication _:
                 case ExternalReplication _:
                     authorizationInfo = null;
@@ -1946,8 +2041,6 @@ namespace Raven.Server.Documents.Replication
             }
 
             public string DestinationDbId;
-
-            public bool External;
 
             public long LastHeartbeatTicks;
 

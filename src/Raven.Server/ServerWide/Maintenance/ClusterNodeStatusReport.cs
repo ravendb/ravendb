@@ -60,6 +60,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
         public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
+        public Dictionary<BucketNumber, BucketReport> ReportPerBucket;
 
         public class ObservedIndexStatus
         {

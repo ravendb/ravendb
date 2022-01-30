@@ -118,6 +118,12 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
+                            if (type == nameof(DestinationMigrationConfirmCommand))
+                            {
+                                if (rawRecord.BucketMigrations.Any(m => m.Value.ConfirmationIndex == index))
+                                    _shardedDatabases.Clear();
+                            }
+
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(
@@ -233,8 +239,7 @@ namespace Raven.Server.Documents
 
                 case ClusterDatabaseChangeType.PendingClusterTransactions:
                 case ClusterDatabaseChangeType.ClusterTransactionCompleted:
-                    database.DatabaseGroupId = topology.DatabaseTopologyIdBase64;
-                    database.ClusterTransactionId = topology.ClusterTransactionIdBase64;
+                    database.SetIds(rawRecord);
                     database.NotifyOnPendingClusterTransaction(index, changeType);
                     break;
                 default:

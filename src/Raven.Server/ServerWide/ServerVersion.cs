@@ -23,11 +23,11 @@ namespace Raven.Server.ServerWide
         public static string FullVersion => 
             _fullVersion ?? (_fullVersion = RavenVersionAttribute.Instance.FullVersion);
 
-        public const int DevBuildNumber = 53;
+        public const int DevBuildNumber = 60;
 
         public static bool IsNightlyOrDev(long buildVersion)
         {
-            return buildVersion >= 50 && buildVersion < 60;
+            return buildVersion >= 60 && buildVersion < 70;
         }
     }
 }

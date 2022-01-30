@@ -519,57 +519,7 @@ namespace Tests.Infrastructure
             return WaitForDocument<dynamic>(store, docId, predicate: null, timeout: timeout, database);
         }
 
-        protected bool WaitForDocument<T>(IDocumentStore store,
-            string docId,
-            Func<T, bool> predicate,
-            int timeout = 10000,
-            string database = null)
-        {
-            if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
-                Debugger.IsAttached)
-                timeout *= 100;
-
-            var sw = Stopwatch.StartNew();
-            Exception ex = null;
-            while (sw.ElapsedMilliseconds < timeout)
-            {
-                using (var session = store.OpenSession(database ?? store.Database))
-                {
-                    try
-                    {
-                        var doc = session.Load<T>(docId);
-                        if (doc != null)
-                        {
-                            if (predicate == null || predicate(doc))
-                                return true;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        ex = e;
-                        // expected that we might get conflict, ignore and wait
-                    }
-                }
-
-                Thread.Sleep(100);
-            }
-
-            using (var session = store.OpenSession(database ?? store.Database))
-            {
-                //one last try, and throw if there is still a conflict
-                var doc = session.Load<T>(docId);
-                if (doc != null)
-                {
-                    if (predicate == null || predicate(doc))
-                        return true;
-                }
-            }
-            if (ex != null)
-            {
-                throw ex;
-            }
-            return false;
-        }
+        
 
         public async Task<T[]> AssertClusterWaitForNotNull<T>(
             List<RavenServer> nodes,

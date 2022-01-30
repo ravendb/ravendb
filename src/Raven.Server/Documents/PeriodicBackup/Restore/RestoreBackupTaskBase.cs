@@ -294,8 +294,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
                         await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
-                        database.ClusterTransactionId = databaseRecord.Topology.ClusterTransactionIdBase64;
-                        database.DatabaseGroupId = databaseRecord.Topology.DatabaseTopologyIdBase64;
+                        database.SetIds(databaseRecord);
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {

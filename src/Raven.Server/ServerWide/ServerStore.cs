@@ -269,6 +269,10 @@ namespace Raven.Server.ServerWide
         private bool _disposed;
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
+        private ShardingStore _sharding;
+        public ShardingStore Sharding => _sharding;
+
+
         public ClusterMaintenanceSupervisor ClusterMaintenanceSupervisor;
         private int _serverCertificateChanged;
 
@@ -770,6 +774,8 @@ namespace Raven.Server.ServerWide
 
             CheckSwapOrPageFileAndRaiseNotification();
 
+
+            _sharding = new ShardingStore(this);
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
@@ -2708,6 +2714,9 @@ namespace Raven.Server.ServerWide
                 {
                     InitializeTopology(shardTopology);
                 }
+
+                if (string.IsNullOrEmpty(record.ShardedDatabaseId))
+                    record.ShardedDatabaseId = Guid.NewGuid().ToBase64Unpadded();
             }
 
             var addDatabaseCommand = new AddDatabaseCommand(raftRequestId)
@@ -3473,7 +3482,7 @@ namespace Raven.Server.ServerWide
         }
         
         public readonly MemoryCache QueryClauseCache;
-
+        
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)

@@ -22,6 +22,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
@@ -69,6 +70,12 @@ namespace Raven.Client.ServerWide
             public int RangeStart;
             public int Shard;
         }
+
+        public Dictionary<int, BucketMigration> BucketMigrations;
+
+        public long MigrationCutOffIndex;
+
+        public string ShardedDatabaseId;
 
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
@@ -487,6 +494,58 @@ namespace Raven.Client.ServerWide
         No,
         SoftDelete,
         HardDelete
+    }
+
+    public enum MigrationStatus
+    {
+        Pending,
+        Moving,
+        Moved,
+        OwnershipTransferred
+    }
+
+    public class BucketMigration : IDatabaseTask
+    {
+        public MigrationStatus Status;
+        public int Bucket;
+        public int SourceShard;
+        public int DestinationShard;
+        public long MigrationIndex;
+        public long? ConfirmationIndex;
+        public string LastSourceChangeVector;
+
+        public List<string> ConfirmedDestinations = new List<string>();
+        public List<string> ConfirmedSourceCleanup = new List<string>();
+
+        public string MentorNode;
+        public override string ToString()
+        {
+            return $"Bucket '{Bucket}' is migrated from '{SourceShard}' to '{DestinationShard}' at status '{Status}'.{Environment.NewLine}" +
+                   $"Migrations index '{MigrationIndex}', Last change vector from source '{LastSourceChangeVector}', " +
+                   $"Propagated to {string.Join(", ", ConfirmedDestinations)} and confirmed at {ConfirmationIndex}, Cleaned up at {string.Join(", ",ConfirmedSourceCleanup)}";
+        }
+
+        private ulong? _hashCode;
+
+        public ulong GetTaskKey()
+        {
+            if (_hashCode.HasValue)
+                return _hashCode.Value;
+
+            var hash = Hashing.Combine((ulong)SourceShard, (ulong)DestinationShard);
+            hash = Hashing.Combine(hash, (ulong)Bucket);
+            _hashCode = Hashing.Combine(hash, (ulong)MigrationIndex);
+
+            return _hashCode.Value;
+        }
+
+        public string GetMentorNode() => MentorNode;
+
+        public string GetDefaultTaskName() => GetTaskName();
+
+        public string GetTaskName() => $"Bucket '{Bucket}' migration from '{SourceShard}' to '{DestinationShard}' @ {MigrationIndex}";
+
+        public bool IsResourceIntensive() => false;
     }
 
     public class DocumentsCompressionConfiguration : IDynamicJson

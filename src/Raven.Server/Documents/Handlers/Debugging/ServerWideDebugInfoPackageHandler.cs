@@ -57,6 +57,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             nameof(DatabaseRecord.Shards),
             nameof(DatabaseRecord.ShardAllocations),
+            nameof(DatabaseRecord.BucketMigrations),
+            nameof(DatabaseRecord.MigrationCutOffIndex),
+            nameof(DatabaseRecord.ShardedDatabaseId),
         };
 
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]

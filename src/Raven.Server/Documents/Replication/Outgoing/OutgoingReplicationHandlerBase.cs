@@ -567,6 +567,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     return ReplicationLatestEtagRequest.ReplicationType.External;
                 case OutgoingInternalReplicationHandler:
                     return ReplicationLatestEtagRequest.ReplicationType.Internal;
+                case OutgoingMigrationReplicationHandler:
+                    return ReplicationLatestEtagRequest.ReplicationType.Migration;
                 default:
                     throw new ArgumentException($"Unknown type: {GetType()}");
             }

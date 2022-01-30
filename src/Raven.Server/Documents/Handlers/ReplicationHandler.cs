@@ -305,6 +305,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Key"] = new DynamicJsonValue
                         {
+                            [nameof(item.Key)] = item.Key.GetType(),
                             [nameof(item.Key.Url)] = item.Key.Url,
                             [nameof(item.Key.Database)] = item.Key.Database,
                             [nameof(item.Key.Disabled)] = item.Key.Disabled
@@ -315,7 +316,6 @@ namespace Raven.Server.Documents.Handlers
                             [nameof(item.Value.Errors)] = new DynamicJsonArray(item.Value.Errors.Select(e => e.ToString())),
                             [nameof(item.Value.NextTimeout)] = item.Value.NextTimeout,
                             [nameof(item.Value.RetryOn)] = item.Value.RetryOn,
-                            [nameof(item.Value.External)] = item.Value.External,
                             [nameof(item.Value.DestinationDbId)] = item.Value.DestinationDbId,
                             [nameof(item.Value.LastHeartbeatTicks)] = item.Value.LastHeartbeatTicks,
                         }

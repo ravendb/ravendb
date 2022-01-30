@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
     {
         private long _lastDestinationEtag;
 
-        public OutgoingInternalReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node,
+        public OutgoingInternalReplicationHandler(ReplicationLoader parent, DocumentDatabase database, InternalReplication node,
             TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
         {
