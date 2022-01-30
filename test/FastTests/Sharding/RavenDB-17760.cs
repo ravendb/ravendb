@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -150,6 +152,81 @@ namespace FastTests.Sharding
                 }
 
                 Assert.False(notOnAnyShard);
+            }
+        }
+
+        [Fact]
+        public async Task CanGetConflictsByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var storage = db.DocumentsStorage;
+
+                using (context.OpenWriteTransaction())
+                {
+                    // add some conflicts
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var id = $"users/{i}${suffix}";
+                        var doc = context.ReadObject(new DynamicJsonValue(), id);
+                        storage.ConflictsStorage.AddConflict(context, id, DateTime.UtcNow.Ticks, doc, $"incoming-cv-{i}", "users", DocumentFlags.None);
+                    }
+
+                    context.Transaction.Commit();
+                }
+
+                using (context.OpenReadTransaction())
+                {
+                    var conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, 0).ToList();
+                    var expected = 20; // 2 conflicts per doc
+                    Assert.Equal(expected, conflicts.Count);
+                }
+
+                // check stats
+                using (context.OpenReadTransaction())
+                {
+                    var stats = storage.GetBucketStats(context, bucket);
+                    var expected = 110; // 100 docs + 20 conflicts - 10 deletions
+                    Assert.Equal(expected, stats.Count);
+                }
             }
         }
     }

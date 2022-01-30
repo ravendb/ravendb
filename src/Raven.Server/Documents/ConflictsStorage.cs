@@ -8,7 +8,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -33,6 +32,7 @@ namespace Raven.Server.Documents
         private static readonly Slice ConflictedCollectionSlice;
         public static readonly Slice ConflictsSlice;
         private static readonly Slice ConflictsIdSlice;
+        private static readonly Slice ConflictsBucketAndEtagSlice;
 
         public static readonly TableSchema ConflictsSchema = new TableSchema()
         {
@@ -52,10 +52,11 @@ namespace Raven.Server.Documents
             ChangeVector = 2,
             Id = 3,
             Data = 4,
-            Etag = 5,
-            Collection = 6,
-            LastModified = 7,
-            Flags = 8
+            Bucket = 5,
+            Etag = 6,
+            Collection = 7,
+            LastModified = 8,
+            Flags = 9
         }
 
         static ConflictsStorage()
@@ -68,6 +69,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "AllConflictedDocsEtags", ByteStringType.Immutable, out AllConflictedDocsEtagsSlice);
                 Slice.From(ctx, "ConflictedCollection", ByteStringType.Immutable, out ConflictedCollectionSlice);
                 Slice.From(ctx, "Conflicts", ByteStringType.Immutable, out ConflictsSlice);
+                Slice.From(ctx, "ConflictsBucketAndEtag", ByteStringType.Immutable, out ConflictsBucketAndEtagSlice);
             }
             /*
              The structure of conflicts table starts with the following fields:
@@ -115,6 +117,13 @@ namespace Raven.Server.Documents
                 Count = 1,
                 IsGlobal = true,
                 Name = ConflictedCollectionSlice
+            });
+            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)ConflictsTable.Bucket,
+                Count = 2,
+                IsGlobal = true,
+                Name = ConflictsBucketAndEtagSlice
             });
         }
 
@@ -194,6 +203,21 @@ namespace Raven.Server.Documents
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice], etag, 0))
             {
                 yield return TableValueToConflictDocument(context, ref tvr.Reader);
+            }
+        }
+
+        public static IEnumerable<DocumentConflict> GetConflictsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
+
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(ConflictsSchema.Indexes[ConflictsBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return TableValueToConflictDocument(context, ref result.Result.Reader);
+                }
             }
         }
 
@@ -355,6 +379,9 @@ namespace Raven.Server.Documents
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);
                     changeVectors.Add(conflicted.ChangeVector);
 
+                    var bucket = TableValueToInt((int)ConflictsTable.Bucket, ref conflictDocument.Reader);
+                    _documentsStorage.UpdateBucketStats(context, bucket, -conflictDocument.Reader.Size, UpdateType.Remove);
+
                     if (conflicted.Flags.Contain(DocumentFlags.HasAttachments) == false)
                         return;
 
@@ -411,8 +438,12 @@ namespace Raven.Server.Documents
 
             using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
             {
-                if (conflictsTable.DeleteByKey(changeVectorSlice) == false)
+                if (conflictsTable.ReadByKey(changeVectorSlice, out var tvr) == false)
                     return;
+                
+                var bucket = TableValueToInt((int)ConflictsTable.Bucket, ref tvr);
+                conflictsTable.DeleteByKey(changeVectorSlice);
+                _documentsStorage.UpdateBucketStats(context, bucket, -tvr.Size, UpdateType.Remove);
 
                 var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
                 tx.AfterCommitWhenNewTransactionsPrevented += _ =>
@@ -420,38 +451,6 @@ namespace Raven.Server.Documents
                     Interlocked.Decrement(ref ConflictsCount);
                 };
             }
-        }
-
-        public DocumentConflict GetConflictForChangeVector(
-            DocumentsOperationContext context,
-            string id,
-            LazyStringValue changeVector)
-        {
-            var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-            using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
-            {
-                foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
-                {
-                    var currentChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr.Result.Reader);
-                    if (changeVector.CompareTo(currentChangeVector) == 0)
-                    {
-                        var dataPtr = tvr.Result.Reader.Read((int)ConflictsTable.Data, out int size);
-                        var doc = size == 0 ? null : new BlittableJsonReaderObject(dataPtr, size, context);
-                        Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
-                        return new DocumentConflict
-                        {
-                            ChangeVector = currentChangeVector,
-                            Id = context.AllocateStringValue(id, tvr.Result.Reader.Read((int)ConflictsTable.Id, out size), size),
-                            StorageId = tvr.Result.Reader.Id,
-                            //size == 0 --> this is a tombstone conflict
-                            Doc = doc
-                        };
-                    }
-                }
-            }
-            return null;
         }
 
         public bool HasConflictsFor(DocumentsOperationContext context, LazyStringValue id)
@@ -536,14 +535,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void ThrowConcurrencyExceptionOnConflict(long? expectedEtag, long? currentMaxConflictEtag)
-        {
-            throw new ConcurrencyException(
-                $"Tried to resolve document conflict with etag = {expectedEtag}, but the current max conflict etag is {currentMaxConflictEtag}. " +
-                "This means that the conflict information with which you are trying to resolve the conflict is outdated. " +
-                "Get conflict information and try resolving again.");
-        }
-
         public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(string documentChangeVector,
             DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
         {
@@ -583,6 +574,7 @@ namespace Raven.Server.Documents
             var conflictsTable = tx.OpenTable(ConflictsSchema, ConflictsSlice);
 
             var fromSmuggler = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler);
+            int bucket = _documentsStorage.GetBucket(id);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
@@ -597,22 +589,12 @@ namespace Raven.Server.Documents
 
                     if (fromSmuggler == false)
                     {
-                        using (Slice.From(context.Allocator, existingDoc.ChangeVector, out Slice cv))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-                        using (conflictsTable.Allocate(out TableValueBuilder tvb))
-                        {
-                            tvb.Add(lowerId);
-                            tvb.Add(SpecialChars.RecordSeparator);
-                            tvb.Add(cv);
-                            tvb.Add(idPtr);
-                            tvb.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
-                            tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                            tvb.Add(collectionSlice);
-                            tvb.Add(existingDoc.LastModified.Ticks);
-                            tvb.Add((int)existingDoc.Flags);
-                            if (conflictsTable.Set(tvb))
-                                Interlocked.Increment(ref ConflictsCount);
-                        }
+                        AddToConflictsTable(existingDoc.ChangeVector,
+                            collectionName.Name,
+                            existingDoc.Data.BasePointer, 
+                            existingDoc.Data.Size, 
+                            existingDoc.LastModified.Ticks, 
+                            (int)existingDoc.Flags);
                     }
 
                     // we delete the data directly, without generating a tombstone, because we have a 
@@ -621,7 +603,10 @@ namespace Raven.Server.Documents
 
                     //make sure that the relevant collection tree exists
                     var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                    table.DirectRead(existingDoc.StorageId, out int size);
                     table.Delete(existingDoc.StorageId);
+
+                    _documentsStorage.UpdateBucketStats(context, bucket, -size, UpdateType.Remove);
                 }
                 else if (existing.Tombstone != null)
                 {
@@ -629,22 +614,12 @@ namespace Raven.Server.Documents
 
                     if (fromSmuggler == false)
                     {
-                        using (Slice.From(context.Allocator, existingTombstone.ChangeVector, out var cv))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, existingTombstone.Collection, out Slice collectionSlice))
-                        using (conflictsTable.Allocate(out TableValueBuilder tvb))
-                        {
-                            tvb.Add(lowerId);
-                            tvb.Add(SpecialChars.RecordSeparator);
-                            tvb.Add(cv);
-                            tvb.Add(idPtr);
-                            tvb.Add(null, 0);
-                            tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
-                            tvb.Add(collectionSlice);
-                            tvb.Add(existingTombstone.LastModified.Ticks);
-                            tvb.Add((int)existingTombstone.Flags);
-                            if (conflictsTable.Set(tvb))
-                                Interlocked.Increment(ref ConflictsCount);
-                        }
+                        AddToConflictsTable(existingTombstone.ChangeVector,
+                            existingTombstone.Collection,
+                            data: null,
+                            dataSize: 0,
+                            existingTombstone.LastModified.Ticks,
+                            (int)existingTombstone.Flags);
                     }
 
                     // we delete the data directly, without generating a tombstone, because we have a 
@@ -654,7 +629,12 @@ namespace Raven.Server.Documents
                     collectionName = _documentsStorage.GetCollection(existingTombstone.Collection, throwIfDoesNotExist: true);
 
                     var table = tx.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+
+                    //table.DirectRead(existingTombstone.StorageId, out int size); //todo aviv : uncomment when handling tombstones
+                    //_documentsStorage.UpdateBucketStats(context, bucket, -size, UpdateType.Remove);
+
                     table.Delete(existingTombstone.StorageId);
+
                 }
                 else // has existing conflicts
                 {
@@ -690,8 +670,6 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                var etag = _documentsStorage.GenerateNextEtag();
-
                 byte* doc = null;
                 var docSize = 0;
                 string collection;
@@ -706,22 +684,12 @@ namespace Raven.Server.Documents
                     collection = incomingTombstoneCollection;
                 }
 
-                using (Slice.From(context.Allocator, incomingChangeVector, out var cv))
-                using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
-                using (conflictsTable.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(lowerId);
-                    tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add(cv);
-                    tvb.Add(idPtr);
-                    tvb.Add(doc, docSize);
-                    tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(collectionSlice);
-                    tvb.Add(lastModifiedTicks);
-                    tvb.Add((int)flags);
-                    if (conflictsTable.Set(tvb))
-                        Interlocked.Increment(ref ConflictsCount);
-                }
+                AddToConflictsTable(incomingChangeVector,
+                    collection,
+                    doc,
+                    docSize,
+                    lastModifiedTicks,
+                    (int)flags);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
@@ -730,6 +698,41 @@ namespace Raven.Server.Documents
                     Id = id,
                     Type = DocumentChangeTypes.Conflict,
                 });
+
+                void AddToConflictsTable(string changeVector, string col, byte* data, int dataSize, long lastModified, int documentFlags)
+                {
+                    int sizeToAdd, oldSize = 0;
+                    UpdateType updateType = default;
+                    using (Slice.From(context.Allocator, changeVector, out Slice cv))
+                    {
+                        if (conflictsTable.ReadByKey(cv, out var tvr))
+                        {
+                            updateType = UpdateType.Update;
+                            oldSize = tvr.Size;
+                        }
+
+                        using (DocumentIdWorker.GetStringPreserveCase(context, col, out Slice collectionSlice))
+                        using (conflictsTable.Allocate(out TableValueBuilder tvb))
+                        {
+                            tvb.Add(lowerId);
+                            tvb.Add(SpecialChars.RecordSeparator);
+                            tvb.Add(cv);
+                            tvb.Add(idPtr);
+                            tvb.Add(data, dataSize);
+                            tvb.Add(bucket);
+                            tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
+                            tvb.Add(collectionSlice);
+                            tvb.Add(lastModified);
+                            tvb.Add(documentFlags);
+                            if (conflictsTable.Set(tvb))
+                                Interlocked.Increment(ref ConflictsCount);
+
+                            sizeToAdd = tvb.Size - oldSize;
+                        }
+                    }
+
+                    _documentsStorage.UpdateBucketStats(context, bucket, sizeToAdd, updateType);
+                }
             }
         }
 
