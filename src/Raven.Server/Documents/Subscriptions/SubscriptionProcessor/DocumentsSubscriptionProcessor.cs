@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
         public override Task<long> RecordBatch(string lastChangeVectorSentInThisBatch)
         {
-            return Database.SubscriptionStorage.RecordBatchDocuments(
+            return Database.SubscriptionStorage.RecordBatchDocuments(Connection.Shard,
                 SubscriptionConnectionsState.SubscriptionId,
                 SubscriptionConnectionsState.SubscriptionName,
                 BatchItems,

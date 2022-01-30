@@ -195,17 +195,8 @@ namespace Raven.Client.Documents.Subscriptions
             foreach (var item in batch.Messages)
             {
                 var curDoc = item.Data;
-
-                if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                    ThrowRequired("@metadata field");
-                if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
-                    ThrowRequired("@id field");
-                if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false ||
-                    changeVector == null)
-                    ThrowRequired("@change-vector field");
-                else
-                    lastReceivedChangeVector = changeVector;
-
+                (BlittableJsonReaderObject metadata, string id, string changeVector) = BatchFromServer.GetMetadataFromBlittable(curDoc);
+                lastReceivedChangeVector = changeVector;
                 metadata.TryGet(Constants.Documents.Metadata.Projection, out bool projection);
 
                 if (_logger.IsInfoEnabled)
@@ -250,11 +241,6 @@ namespace Raven.Client.Documents.Subscriptions
                 });
             }
             return lastReceivedChangeVector;
-        }
-
-        private static void ThrowRequired(string name)
-        {
-            throw new InvalidOperationException("Document must have a " + name);
         }
     }
 }

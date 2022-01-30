@@ -30,6 +30,27 @@ namespace Raven.Client.Documents.Subscriptions
         public List<BlittableJsonReaderObject> Includes;
         public List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> CounterIncludes;
         public List<BlittableJsonReaderObject> TimeSeriesIncludes;
+
+
+        internal static (BlittableJsonReaderObject, string, string) GetMetadataFromBlittable(BlittableJsonReaderObject curDoc)
+        {
+            if (curDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                ThrowRequired("@metadata field");
+
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
+                ThrowRequired("@id field");
+
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false ||
+                changeVector == null)
+                ThrowRequired("@change-vector field");
+
+            return (metadata, id, changeVector);
+        }
+
+        private static void ThrowRequired(string name)
+        {
+            throw new InvalidOperationException($"Document must have a {name}.");
+        }
     }
 
     internal class SubscriptionConnectionServerMessage
@@ -99,6 +120,7 @@ namespace Raven.Client.Documents.Subscriptions
             MaxErroneousPeriod = TimeSpan.FromMinutes(5);
             SendBufferSizeInBytes = DefaultSendBufferSizeInBytes;
             ReceiveBufferSizeInBytes = DefaultReceiveBufferSizeInBytes;
+            ShardedConnectionMaxErroneousPeriod = TimeSpan.FromMinutes(5);
         }
 
         /// <summary>
@@ -162,5 +184,10 @@ namespace Raven.Client.Documents.Subscriptions
         public int ReceiveBufferSizeInBytes { get; set; }
 
         public string WorkerId { get; internal set; }
+
+        /// <summary>
+        /// Maximum amount of time during which a sharded subscription connection may be in erroneous state. Default: 5 minutes
+        /// </summary>
+        public TimeSpan ShardedConnectionMaxErroneousPeriod { get; set; }
     }
 }

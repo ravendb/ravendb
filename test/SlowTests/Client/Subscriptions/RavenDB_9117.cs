@@ -81,7 +81,7 @@ namespace SlowTests.Client.Subscriptions
 
                 await index.WaitWithTimeout(_reasonableWaitTime);
 
-                await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
+                await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result.Index, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
                 signalWhenForcefullyUpdatedCV.Set();
                 Assert.True(await Assert.ThrowsAsync<SubscriptionChangeVectorUpdateConcurrencyException>(() => tcs.Task).WaitWithTimeout(_reasonableWaitTime));
             }

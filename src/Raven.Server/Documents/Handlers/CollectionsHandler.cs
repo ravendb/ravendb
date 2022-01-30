@@ -88,5 +88,25 @@ namespace Raven.Server.Documents.Handlers
                 AddPagingPerformanceHint(PagingOperationType.Documents, "Collection", HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
             }
         }
+
+        [RavenAction("/databases/*/collections/last-change-vector", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetLastDocumentChangeVectorForCollection()
+        {
+            var collection = GetStringQueryString("collection");
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var result = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, collection);
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Collection");
+                    writer.WriteString(collection);
+                    writer.WritePropertyName("LastChangeVector");
+                    writer.WriteString(result);
+                    writer.WriteEndObject();
+                }
+            }
+        }
     }
 }

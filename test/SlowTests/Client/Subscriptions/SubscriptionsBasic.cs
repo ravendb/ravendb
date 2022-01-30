@@ -348,7 +348,7 @@ namespace SlowTests.Client.Subscriptions
 
                     await index.WaitWithTimeout(_reasonableWaitTime);
 
-                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result.Item2, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
 
                     using (var session = store.OpenSession())
                     {
