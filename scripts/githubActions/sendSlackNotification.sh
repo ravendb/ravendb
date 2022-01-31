@@ -7,5 +7,4 @@ data='{"channel":"'$CHANNEL'","attachments":[{"mrkdwn_in":["text"],"color":"dang
 curl -H "Content-type: application/json" \
  --data "$data" \
  -H "Authorization: Bearer $SLACK_TOKEN" \
- -X POST https://slack.com/api/chat.postMessage &>/dev/null 
- 
+ -X POST https://slack.com/api/chat.postMessage &>/dev/null
