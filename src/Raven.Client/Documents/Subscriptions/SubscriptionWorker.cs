@@ -373,7 +373,7 @@ namespace Raven.Client.Documents.Subscriptions
                 if (connectionStatus.Type == SubscriptionConnectionServerMessage.MessageType.Error)
                     message += $". Exception: {connectionStatus.Exception}";
 
-                throw new SubscriptionMessageTypeException(message);
+                throw new Exception(message);
             }
 
             switch (connectionStatus.Status)
