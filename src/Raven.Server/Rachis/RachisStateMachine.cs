@@ -92,11 +92,9 @@ namespace Raven.Server.Rachis
         {
         }
 
-        public virtual TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public virtual Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
-            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
-            tcs.TrySetResult(Task.CompletedTask);
-            return tcs;
+            return Task.CompletedTask;
         }
     }
 }
