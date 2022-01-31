@@ -1189,6 +1189,9 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice start, Slice prefix, long skip)
         {
             var tree = GetTree(index);
+            if (tree == null)
+                yield break;
+
             using (var it = tree.Iterate(true))
             {
                 it.SetRequiredPrefix(prefix);
