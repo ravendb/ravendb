@@ -408,7 +408,6 @@ namespace Raven.Server.Rachis
 
             long prevTerm;
             bool requestSnapshot;
-            bool requestFullSnapshot = false;
             using (context.OpenReadTransaction())
             {
                 prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
@@ -428,7 +427,6 @@ namespace Raven.Server.Rachis
                     CurrentTerm = _term,
                     LastLogIndex = 0
                 });
-                requestFullSnapshot = true;
             }
             else if (prevTerm != negotiation.PrevLogTerm)
             {
@@ -439,7 +437,7 @@ namespace Raven.Server.Rachis
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
-                requestFullSnapshot = NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
+                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
@@ -467,9 +465,13 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Start receiving snapshot");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
+            Task onFullSnapshotInstalledTask = null;
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() => ReadAndCommitSnapshot(context, snapshot, cts.Token), cts, "ReadAndCommitSnapshot");
+                KeepAliveAndExecuteAction(() =>
+                {
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(context, snapshot, cts.Token);
+                }, cts, "ReadAndCommitSnapshot");
             }
 
             _debugRecorder.Record("Snapshot was received and committed");
@@ -481,7 +483,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
+                    _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token);
                 }, cts, "SnapshotInstalledAsync");
             }
 
@@ -539,12 +541,12 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadAndCommitSnapshot(TransactionOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private Task ReadAndCommitSnapshot(TransactionOperationContext context, InstallSnapshot snapshot, CancellationToken token)
         {
+            Task onFullSnapshotInstalledTask = null;
+
             using (context.OpenWriteTransaction())
             {
-                _engine.OnSnapshotInstalledTask = null;
-
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
                 var lastCommitIndex = _engine.GetLastEntryIndex(context);
 
@@ -570,7 +572,7 @@ namespace Raven.Server.Rachis
 
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
-                    _engine.OnSnapshotInstalled(context, snapshot.LastIncludedIndex, token);
+                    onFullSnapshotInstalledTask = _engine.OnSnapshotInstalled(context, snapshot.LastIncludedIndex, token).Task;
                 }
                 else
                 {
@@ -624,6 +626,7 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            return onFullSnapshotInstalledTask;
         }
 
         private bool InstallSnapshot(TransactionOperationContext context, CancellationToken token)

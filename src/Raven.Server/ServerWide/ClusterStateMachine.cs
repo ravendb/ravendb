@@ -3442,9 +3442,10 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
+            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             foreach (var key in clusterCertificateKeys)
             {
@@ -3482,21 +3483,24 @@ namespace Raven.Server.ServerWide
                         await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
                     });
 
-                    _parent.OnSnapshotInstalledTask = Task.WhenAll(tasks);
+                    tcs.TrySetResult(Task.WhenAll(tasks));
+                    return;
                 }
+
+                tcs.TrySetResult(null);
             };
+
+            return tcs;
         }
 
-        public override void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
-            var task = _parent.OnSnapshotInstalledTask;
-
-            if (task == null)
+            if (onFullSnapshotInstalledTask == null)
                 return;
 
             try
             {
-                task.Wait(token);
+                onFullSnapshotInstalledTask.Wait(token);
                 _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
             }
             catch (OperationCanceledException)
