@@ -3442,10 +3442,9 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
-            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             foreach (var key in clusterCertificateKeys)
             {
@@ -3458,6 +3457,7 @@ namespace Raven.Server.ServerWide
             token.ThrowIfCancellationRequested();
             var databases = GetDatabaseNames(context).ToArray();
 
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
@@ -3483,14 +3483,29 @@ namespace Raven.Server.ServerWide
                         await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
                     });
 
-                    tcs.TrySetResult(Task.WhenAll(tasks));
-                    return;
+                    Task.WhenAll(tasks).ContinueWith(task =>
+                    {
+                        if (task.IsCompletedSuccessfully)
+                        {
+                            tcs.TrySetResult(null);
+                        }
+                        else if (task.IsCanceled)
+                        {
+                            tcs.TrySetCanceled();
+                        }
+                        else
+                        {
+                            tcs.TrySetException(task.Exception!);
+                        }
+                    }, token);
                 }
-
-                tcs.TrySetResult(null);
+                else
+                {
+                    tcs.TrySetCanceled();
+                }
             };
 
-            return tcs;
+            return tcs.Task;
         }
 
         public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
