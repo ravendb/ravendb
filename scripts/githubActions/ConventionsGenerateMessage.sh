@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x 
-
 function getStageSummary {
   message=$1
   resultPrefix='\u274C'
@@ -14,7 +12,7 @@ function getStageSummary {
 status_message=$(cat pass_status_message/status_message.txt)
 status_whitespace=$(cat pass_status_whitespace/status_whitespace.txt)
 
-[[ $status_message =~ "true" && $status_whitespace =~ "true" ]] && exit 0
+[[ $status_message =~ "true" && $status_whitespace =~ "true" ]] && echo "ok" > notificationMessage.txt && exit 0
 
 
 header="<${PRLINK}|[${PRTAGRETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 prefix_x='\u274C'
 prefix_check='\u2714'
 prefix_question='\u2753'
@@ -15,7 +13,7 @@ else
   status_studio="false"
 fi
 
-[[ $status_server =~ "true" && $status_studio =~ "true" ]] && exit 0
+[[ $status_server =~ "true" && $status_studio =~ "true" ]] && echo "ok" > notificationMessage.txt && exit 0
 
 
 header="<${PRLINK}|[${PRTAGRETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
