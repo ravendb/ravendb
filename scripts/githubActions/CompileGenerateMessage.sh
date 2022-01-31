@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 prefix_x='\u274C'
 prefix_check='\u2714'
 prefix_question='\u2753'
@@ -33,9 +35,4 @@ studio_summary="${studio_prefix} Studio Compilation"
 
 message="${header}\n${server_summary}\n${studio_summary}"
 
-data='{"channel":"'$CHANNEL'","attachments":[{"mrkdwn_in":["text"],"color":"danger","text":"'$message'"}]}'
-
-curl -H "Content-type: application/json" \
- --data "$data" \
- -H "Authorization: Bearer $SLACK_TOKEN" \
- -X POST https://slack.com/api/chat.postMessage &>/dev/null 
+echo $message > notificationMessage.txt

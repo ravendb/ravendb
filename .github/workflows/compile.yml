@@ -1,7 +1,7 @@
 name: compile
 
 on:
-  pull_request_target
+  pull_request
 
 jobs:
   job1:
@@ -66,9 +66,9 @@ jobs:
   job2:
     if: always()
     needs: job1
-    name: Send status to Slack
+    name: Generate Slack notification message
     runs-on: ubuntu-latest
-      
+
     steps:
       - uses: actions/checkout@v2
       - name: Download artifacts 1
@@ -83,12 +83,15 @@ jobs:
           name: pass_status_studio
         
       - name: Generate message
-        if: github.event.pull_request.base.repo.owner.login == 'ravendb' && github.event.repository.name == 'ravendb'
-        run: ./scripts/githubActions/CompileNotifySlack.sh
+        run: ./scripts/githubActions/CompileGenerateMessage.sh
         env:
           PRLINK: ${{ github.event.pull_request.html_url }}
           PRTAGRETBRANCH: ${{ github.event.pull_request.base.ref }}
           PRNUMBER: ${{ github.event.pull_request.number }}
           PRTITLE: ${{ github.event.pull_request.title }}
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
-          CHANNEL: pull-requests
+      
+      - name: Upload artifact slack_message
+        uses: actions/upload-artifact@v1
+        with:
+          name: notification
+          path: notificationMessage.txt
