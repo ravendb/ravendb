@@ -48,7 +48,7 @@ namespace SlowTests.Core.Commands
                     {
                         try
                         {
-                            putTask.Wait(TimeSpan.FromMinutes(1));
+                            putTask.Wait(TimeSpan.FromSeconds(15));
                         }
                         catch (AggregateException e) when (e.InnerException is OperationCanceledException)
                         {
