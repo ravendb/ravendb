@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            Paging(out query.Offset, out query.Limit, out query.ScanLimit);
+            Paging(out query.Offset, out query.Limit, out query.FilterLimit);
             if (queryType == QueryType.Select &&
                 Scanner.TryScan("INCLUDE"))
             {
@@ -275,11 +275,11 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private void Paging(out ValueExpression offset, out ValueExpression limit, out ValueExpression scanLimit)
+        private void Paging(out ValueExpression offset, out ValueExpression limit, out ValueExpression filterLimit)
         {
             offset = null;
             limit = null;
-            scanLimit = null;
+            filterLimit = null;
 
             if (Scanner.TryScan("LIMIT"))
             {
@@ -311,10 +311,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 offset = second;
             }
 
-            if (Scanner.TryScan("SCAN_LIMIT"))
+            if (Scanner.TryScan("FILTER_LIMIT"))
             {
-                if (Value(out scanLimit) == false)
-                    ThrowInvalidQueryException("SCAN_LIMIT must contain a value");
+                if (Value(out filterLimit) == false)
+                    ThrowInvalidQueryException("FILTER_LIMIT must contain a value");
             }
         }
 
@@ -1838,7 +1838,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             "UPDATE",
             "OFFSET",
             "LIMIT",
-            "SCAN_LIMIT",
+            "FILTER_LIMIT",
             "SCALE"
         };
 

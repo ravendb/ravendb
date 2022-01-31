@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 continue;
                             }
 
-                            if (scannedDocuments.Value >= query.ScanLimit)
+                            if (scannedDocuments.Value >= query.FilterLimit)
                             {
                                 break;
                             }
@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
 
-                    if (returnedResults >= pageSize || scannedDocuments.Value >= query.ScanLimit)
+                    if (returnedResults >= pageSize || scannedDocuments.Value >= query.FilterLimit)
                         break;
 
                     Debug.Assert(_maxNumberOfOutputsPerDocument > 0);

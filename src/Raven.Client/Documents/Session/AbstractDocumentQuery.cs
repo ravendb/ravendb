@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Limits filter clause.
         /// </summary>
-        protected int? ScanLimit;
+        protected int? FilterLimit;
         
         /// <summary>
         /// Timeout for this query
@@ -1306,11 +1306,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     .Append(AddQueryParameter(PageSize));
             }
 
-            if (FilterTokens.Count > 0 && ScanLimit is not null)
+            if (FilterTokens.Count > 0 && FilterLimit is not null)
             {
                 queryText
-                    .Append(" scan_limit $")
-                    .Append(AddQueryParameter(ScanLimit));
+                    .Append(" filter_limit $")
+                    .Append(AddQueryParameter(FilterLimit));
             }
         }
 
@@ -2007,12 +2007,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return "$" + AddQueryParameter(value);
         }
 
-        internal void AddScanLimit(int limit)
+        internal void AddFilterLimit(int filterLimit)
         {
-            if (limit <= 0)
-                throw new InvalidDataException("scan_limit needs to be positive and bigger than 0.");
-
-            ScanLimit = limit;
+            if (filterLimit <= 0)
+                throw new InvalidDataException("filter_limit needs to be positive and bigger than 0.");
+            if (filterLimit is not int.MaxValue)
+                FilterLimit = filterLimit;
         }
     }
 }

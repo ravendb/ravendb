@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Queries.AST
         public string UpdateBody;
         public ValueExpression Offset;
         public ValueExpression Limit;
-        public ValueExpression ScanLimit;
+        public ValueExpression FilterLimit;
 
         public bool TryAddFunction(DeclaredFunction func)
         {

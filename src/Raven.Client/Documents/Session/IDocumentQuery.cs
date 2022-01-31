@@ -182,16 +182,10 @@ namespace Raven.Client.Documents.Session
         /// Filter allows querying on documents without the need for issuing indexes. It is meant for exploratory queries or post query filtering. Criteria are evaluated at query time so please use Filter wisely to avoid performance issues.
         /// </summary>
         /// <param name="builder">Builder of a Filter query</param>
+        /// <param name="limit">Limits the number of documents processed by Filter.</param>
         /// <returns></returns>
-        IDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder);
+        IDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder, int limit = int.MaxValue);
         
-        /// <summary>
-        /// Limits the number of documents processed by Filter.
-        /// </summary>
-        /// <param name="limit"></param>
-        /// <returns></returns>
-        IDocumentQuery<T> ScanLimit(int limit);
-
         IAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder);
 
         IAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
