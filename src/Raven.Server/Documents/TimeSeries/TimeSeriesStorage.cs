@@ -300,22 +300,36 @@ namespace Raven.Server.Documents.TimeSeries
                 (changeVector, etag) = GenerateChangeVector(context);
             }
 
-            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithEtag(etag))
-            using (table.Allocate(out var tvb))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
+            var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
+
+            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
             {
-                tvb.Add(sliceHolder.TimeSeriesKeySlice);
-                tvb.Add(Bits.SwapBytes(etag));
-                tvb.Add(cv);
-                tvb.Add(sliceHolder.CollectionSlice);
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add(from.Ticks);
-                tvb.Add(to.Ticks);
+                if (table.SeekOneBackwardByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, sliceHolder.TimeSeriesKeySlice, out var segmentValueReader) ||
+                    table.SeekOnePrimaryKeyWithPrefix(sliceHolder.TimeSeriesPrefixSlice, sliceHolder.TimeSeriesKeySlice, out segmentValueReader))
+                {
+                    var item = CreateDeletedRangeItem(context, ref segmentValueReader);
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                    {
+                        return null;
+                    }
+                }
 
-                table.Set(tvb);
+                using (table.Allocate(out var tvb))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                {
+                    tvb.Add(sliceHolder.TimeSeriesKeySlice);
+                    tvb.Add(Bits.SwapBytes(etag));
+                    tvb.Add(cv);
+                    tvb.Add(sliceHolder.CollectionSlice);
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add(from.Ticks);
+                    tvb.Add(to.Ticks);
+
+                    table.Set(tvb);
+                }
+
+                return changeVector;
             }
-
-            return changeVector;
         }
 
         public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null, bool updateMetadata = true)
@@ -323,7 +337,9 @@ namespace Raven.Server.Documents.TimeSeries
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
+            if (InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector) == null)
+                return null;
+
 
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
@@ -2266,7 +2282,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private enum DeletedRangeTable
         {
-            // lower document id, record separator, lower time series name, record separator, local etag
+            // lower document id, record separator, lower time series name, record separator, change vector hash
             RangeKey = 0,
 
             Etag = 1,
