@@ -1506,7 +1506,7 @@ namespace Raven.Server.Documents.Replication
 
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
             {
-                using (var slicer = new TimeSeriesSliceHolder(context, docId, segment.Name, collection: null))
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, segment.Name))
                 {
                     var localName = tss.Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
                     if (localName == null || localName.CompareTo(segment.Name) <= 0)

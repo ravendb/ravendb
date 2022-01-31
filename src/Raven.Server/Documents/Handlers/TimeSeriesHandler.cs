@@ -979,7 +979,7 @@ namespace Raven.Server.Documents.Handlers
 
                     foreach (var item in items)
                     {
-                        using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name, collectionName.Name).WithBaseline(item.Baseline))
+                        using (var slicer = new TimeSeriesSliceHolder(context, docId, item.Name).WithBaseline(item.Baseline))
                         {
                             if (tss.TryAppendEntireSegmentFromSmuggler(context, slicer.TimeSeriesKeySlice, collectionName, item))
                             {
