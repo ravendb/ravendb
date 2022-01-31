@@ -329,7 +329,6 @@ namespace SlowTests.Server.Documents.TimeSeries
                         var c2 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
                         var c3 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
 
-
                         Assert.Equal(750, c2);
                         Assert.Equal(2, c3);
                     }
