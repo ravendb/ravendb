@@ -91,14 +91,14 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token)
+        public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
-            StateMachine.AfterSnapshotInstalled(lastIncludedIndex, fullSnapshot, _serverStore, token);
+            StateMachine.AfterSnapshotInstalled(lastIncludedIndex, onFullSnapshotInstalledTask, token);
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
-            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, token);
+            return StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, token);
         }
 
         public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
@@ -304,8 +304,6 @@ namespace Raven.Server.Rachis
         public Action<TransactionOperationContext> SwitchToSingleLeaderAction;
 
         public Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
-
-        public Task OnSnapshotInstalledTask;
 
         private string _tag;
         private string _clusterId;
@@ -2133,8 +2131,8 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token);
-        public abstract void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token);
+        public abstract void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
+        public abstract TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;

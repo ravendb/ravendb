@@ -88,12 +88,15 @@ namespace Raven.Server.Rachis
 
         public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
-        public virtual void AfterSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public virtual void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
         }
 
-        public virtual void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public virtual TaskCompletionSource<Task> OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
+            var tcs = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs.TrySetResult(Task.CompletedTask);
+            return tcs;
         }
     }
 }
