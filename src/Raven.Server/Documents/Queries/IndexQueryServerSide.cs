@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries
         public int? Limit;
 
         [JsonDeserializationIgnore]
-        public int? ScanLimit { get; set; }
+        public int? FilterLimit { get; set; }
         
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
@@ -181,9 +181,9 @@ namespace Raven.Server.Documents.Queries
                     result.PageSize = Math.Min(limit, result.PageSize);
                 }
                 
-                if (result.Metadata.Query.ScanLimit != null)
+                if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.ScanLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.ScanLimit, int.MaxValue);
+                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
             }
         }
@@ -260,9 +260,9 @@ namespace Raven.Server.Documents.Queries
                     result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
                 
-                if (result.Metadata.Query.ScanLimit != null)
+                if (result.Metadata.Query.FilterLimit != null)
                 {
-                    result.ScanLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.ScanLimit, int.MaxValue);
+                    result.FilterLimit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.FilterLimit, int.MaxValue);
                 }
 
                 if (tracker != null)
@@ -296,8 +296,8 @@ namespace Raven.Server.Documents.Queries
             if (indexQuery.Limit < 0)
                 throw new InvalidQueryException($"{nameof(Limit)} ({nameof(PageSize)}) cannot be negative, but was {indexQuery.Limit}.", indexQuery.Query, indexQuery.QueryParameters);
 
-            if (indexQuery.ScanLimit <= 0)
-                throw new InvalidQueryException($"{nameof(ScanLimit)} cannot be negative or zero, but was {indexQuery.ScanLimit}.", indexQuery.Query, indexQuery.QueryParameters);
+            if (indexQuery.FilterLimit <= 0)
+                throw new InvalidQueryException($"{nameof(FilterLimit)} cannot be negative or zero, but was {indexQuery.FilterLimit}.", indexQuery.Query, indexQuery.QueryParameters);
 
             if (indexQuery.Start < 0)
                 throw new InvalidQueryException($"{nameof(Start)} cannot be negative, but was {indexQuery.Start}.", indexQuery.Query, indexQuery.QueryParameters);

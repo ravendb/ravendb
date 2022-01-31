@@ -143,13 +143,14 @@ public interface IFilterFactory<T>
 
 }
 
-public class FilterFactory<T> : IFilterFactory<T>
+internal class FilterFactory<T> : IFilterFactory<T>
 {
-    private DocumentQuery<T> _documentQuery;
+    private IAbstractDocumentQuery<T> _documentQuery;
 
-    public FilterFactory(DocumentQuery<T> documentQuery)
+    public FilterFactory(IAbstractDocumentQuery<T> documentQuery, int filterLimit = int.MaxValue)
     {
         _documentQuery = documentQuery;
+        SetFilterLimit(filterLimit);
     }
 
     /// <inheritdoc />
@@ -162,14 +163,14 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> Equals<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereEquals(GetFieldName(propertySelector), value);
         return this;
     }
 
     /// <inheritdoc />
     public IFilterFactory<T> Equals<TValue>(Expression<Func<T, object>> propertySelector, MethodCall value)
     {
-        _documentQuery.WhereEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereEquals(GetFieldName(propertySelector), value);
         return this;
     }
     
@@ -204,14 +205,14 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> NotEquals<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereNotEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereNotEquals(GetFieldName(propertySelector), value);
         return this;
     }
 
     /// <inheritdoc />
     public IFilterFactory<T> NotEquals<TValue>(Expression<Func<T, object>> propertySelector, MethodCall value)
     {
-        _documentQuery.WhereNotEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereNotEquals(GetFieldName(propertySelector), value);
         return this;
     }
 
@@ -232,7 +233,7 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> GreaterThan<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereGreaterThan(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereGreaterThan(GetFieldName(propertySelector), value);
         return this;
     }
 
@@ -246,7 +247,7 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> GreaterThanOrEqual<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereGreaterThanOrEqual(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereGreaterThanOrEqual(GetFieldName(propertySelector), value);
         return this;
     }
 
@@ -260,7 +261,7 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> LessThan<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereLessThan(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereLessThan(GetFieldName(propertySelector), value);
         return this;
     }
 
@@ -274,7 +275,7 @@ public class FilterFactory<T> : IFilterFactory<T>
     /// <inheritdoc />
     public IFilterFactory<T> LessThanOrEqual<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
     {
-        _documentQuery.WhereLessThanOrEqual(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
+        _documentQuery.WhereLessThanOrEqual(GetFieldName(propertySelector), value);
         return this;
     }
 
@@ -311,176 +312,26 @@ public class FilterFactory<T> : IFilterFactory<T>
         _documentQuery.CloseSubclause();
         return this;
     }
+
+    private string GetFieldName(Expression<Func<T, object>> propertySelector) => _documentQuery switch
+    {
+        AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.GetMemberQueryPath(propertySelector.Body),
+        DocumentQuery<T> documentQuery => documentQuery.GetMemberQueryPath(propertySelector.Body),
+        _ => throw new ArgumentOutOfRangeException(nameof(_documentQuery))
+    };
     
-}
-
-public class AsyncFilterFactory<T> : IFilterFactory<T>
-{
-    private AsyncDocumentQuery<T> _documentQuery;
-
-    public AsyncFilterFactory(AsyncDocumentQuery<T> documentQuery)
+    private void SetFilterLimit(int limit)
     {
-        _documentQuery = documentQuery;
+        switch (_documentQuery)
+        {
+            case AsyncDocumentQuery<T> asyncDocumentQuery:
+                asyncDocumentQuery.AddFilterLimit(limit);
+                break;
+            case DocumentQuery<T> documentQuery:
+                documentQuery.AddFilterLimit(limit);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(_documentQuery));
+        }
     }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> Equals(string fieldName, MethodCall value)
-    {
-        _documentQuery.WhereEquals(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> Equals<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> Equals<TValue>(Expression<Func<T, object>> propertySelector, MethodCall value)
-    {
-        _documentQuery.WhereEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-    
-    /// <inheritdoc />
-    public IFilterFactory<T> Equals(string fieldName, object value)
-    {
-        _documentQuery.WhereEquals(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> Equals(WhereParams WhereParams)
-    {
-        _documentQuery.WhereEquals(WhereParams);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> NotEquals(string fieldName, object value)
-    {
-        _documentQuery.WhereNotEquals(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> NotEquals(string fieldName, MethodCall value)
-    {
-        _documentQuery.WhereNotEquals(fieldName, (object)value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> NotEquals<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereNotEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> NotEquals<TValue>(Expression<Func<T, object>> propertySelector, MethodCall value)
-    {
-        _documentQuery.WhereNotEquals(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> NotEquals(WhereParams WhereParams)
-    {
-        _documentQuery.WhereNotEquals(WhereParams);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> GreaterThan(string fieldName, object value)
-    {
-        _documentQuery.WhereGreaterThan(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> GreaterThan<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereGreaterThan(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> GreaterThanOrEqual(string fieldName, object value)
-    {
-        _documentQuery.WhereGreaterThanOrEqual(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> GreaterThanOrEqual<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereGreaterThanOrEqual(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> LessThan(string fieldName, object value)
-    {
-        _documentQuery.WhereLessThan(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> LessThan<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereLessThan(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> LessThanOrEqual(string fieldName, object value)
-    {
-        _documentQuery.WhereLessThanOrEqual(fieldName, value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> LessThanOrEqual<TValue>(Expression<Func<T, object>> propertySelector, TValue value)
-    {
-        _documentQuery.WhereLessThanOrEqual(_documentQuery.GetMemberQueryPath(propertySelector.Body), value);
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IFilterFactory<T> AndAlso()
-    {
-        _documentQuery.AndAlso();
-        return this;
-    }
-    /// <inheritdoc />
-    public IFilterFactory<T> OrElse()
-    {
-        _documentQuery.OrElse();
-        return this;
-    }
-    
-    /// <inheritdoc />
-    public IFilterFactory<T> Not()
-    {
-        _documentQuery.NegateNext();
-        return this;
-    }
-    
-    /// <inheritdoc />
-    public IFilterFactory<T> OpenSubclause()
-    {
-        _documentQuery.OpenSubclause();
-        return this;
-    }
-    
-    /// <inheritdoc />
-    public IFilterFactory<T> CloseSubclause()
-    {
-        _documentQuery.CloseSubclause();
-        return this;
-    }
-    
 }

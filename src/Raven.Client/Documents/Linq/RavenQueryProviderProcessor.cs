@@ -1355,10 +1355,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Filter):
                     VisitQueryableMethodCall(expression);
                     break;
-                case nameof(LinqExtensions.ScanLimit):
-                    VisitExpression(expression.Arguments[0]);
-                    AddScanLimit(scanLimit: (int)LinqPathProvider.GetValueFromExpression(expression.Arguments[1], typeof(int)));
-                    break;
                 case nameof(LinqExtensions.Spatial):
                     VisitExpression(expression.Arguments[0]);
 
@@ -1792,6 +1788,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (_chainedWhere)
                             DocumentQuery.CloseSubclause();
                         _insideFilter--;
+                        if (expression.Arguments.Count is 3 && LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var limit))
+                        {
+                            AddFilterLimit((int)limit);
+                        }
                     }
 
                     break;
@@ -2037,15 +2037,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
         };        
         
-        private void AddScanLimit(int scanLimit)
+        private void AddFilterLimit(int filterLimit)
         {
             switch (DocumentQuery)
             {
                 case DocumentQuery<T> documentQuery:
-                    documentQuery.AddScanLimit(scanLimit);
+                    documentQuery.AddFilterLimit(filterLimit);
                     break;
                 case AsyncDocumentQuery<T> asyncDocumentQuery:
-                    asyncDocumentQuery.AddScanLimit(scanLimit);
+                    asyncDocumentQuery.AddFilterLimit(filterLimit);
                     break;
                 default:
                     throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.");

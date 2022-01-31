@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (_filterScriptRun != null)
                 {
-                    if ( _scannedResults.Value == _query.ScanLimit)
+                    if ( _scannedResults.Value == _query.FilterLimit)
                     {
                         return (false, null);
                     }

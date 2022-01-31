@@ -1204,7 +1204,7 @@ namespace Raven.Client.Documents.Session
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator,
-                ScanLimit = ScanLimit
+                FilterLimit = FilterLimit
             };
 
             return query;

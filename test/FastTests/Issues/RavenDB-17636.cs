@@ -70,7 +70,7 @@ public class FilterTests : RavenTestBase
         // scan limit
         using (var s = store.OpenSession())
         {
-            result = s.Advanced.RawQuery<Employee>("from Employees filter Active = true scan_limit 1")
+            result = s.Advanced.RawQuery<Employee>("from Employees filter Active = true filter_limit 1")
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
@@ -78,17 +78,15 @@ public class FilterTests : RavenTestBase
 
             result = s.Advanced.DocumentQuery<Employee>()
                 .Filter(
-                    f => f.Equals("Active", true)
+                    f => f.Equals("Active", true), 1
                 )
-                .ScanLimit(1)
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
             Assert.Equal(1, stats.ScannedResults);
 
             result = s.Query<Employee>()
-                .Filter(f => f.Active == true)
-                .ScanLimit(1)
+                .Filter(f => f.Active == true, 1)
                 .Statistics(out stats)
                 .SingleOrDefault();
             Assert.Equal("Jane", result.Name);
@@ -188,16 +186,14 @@ public class FilterTests : RavenTestBase
         {
             result = await s.Advanced
                 .AsyncDocumentQuery<Employee>()
-                .Filter(f => f.Equals("Active", true))
-                .ScanLimit(1)
+                .Filter(f => f.Equals("Active", true), 1)
                 .Statistics(out stats)
                 .SingleOrDefaultAsync();
             Assert.Equal("Jane", result.Name);
             Assert.Equal(1, stats.ScannedResults);
 
             result = await s.Query<Employee>()
-                .Filter(f => f.Active == true)
-                .ScanLimit(1)
+                .Filter(f => f.Active == true, 1)
                 .Statistics(out stats)
                 .SingleOrDefaultAsync();
             Assert.Equal("Jane", result.Name);
@@ -322,7 +318,7 @@ public class FilterTests : RavenTestBase
         // scan limit
         using (var s = store.OpenSession())
         {
-            var emp = s.Advanced.RawQuery<Employee>("from Employees order by Name desc filter Active = true scan_limit 1")
+            var emp = s.Advanced.RawQuery<Employee>("from Employees order by Name desc filter Active = true filter_limit 1")
                 .Statistics(out var stats)
                 .SingleOrDefault();
             Assert.Equal("Sandra", emp.Name);
@@ -333,8 +329,7 @@ public class FilterTests : RavenTestBase
         {
             var emp = s.Advanced.DocumentQuery<Employee>()
                 .OrderByDescending("Name")
-                .Filter(f => f.Equals(e => e.Active, true))
-                .ScanLimit(1)
+                .Filter(f => f.Equals(e => e.Active, true), 1)
                 .Statistics(out var stats)
                 .SingleOrDefault();
             Assert.Equal("Sandra", emp.Name);
@@ -345,8 +340,7 @@ public class FilterTests : RavenTestBase
         {
             var emp = s.Query<Employee>()
                 .OrderByDescending(x => x.Name)
-                .Filter(x => x.Active == true)
-                .ScanLimit(1)
+                .Filter(x => x.Active == true, 1)
                 .Statistics(out var stats)
                 .SingleOrDefault();
             Assert.Equal("Sandra", emp.Name);

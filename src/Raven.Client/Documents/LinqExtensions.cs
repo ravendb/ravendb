@@ -58,24 +58,6 @@ namespace Raven.Client.Documents
 
             return Include(source, IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(), conventions));
         }
-
-        /// <summary>
-        /// Limits the number of documents processed by Filter.
-        /// </summary>
-        /// <param name="source">The source for querying</param>
-        /// <param name="limit">scanning limit</param>
-        /// <typeparam name="TResult">The type of the object that holds limit for filter.</typeparam>
-        /// <returns></returns>
-        public static IRavenQueryable<TResult> ScanLimit<TResult>(this IQueryable<TResult> source, int limit)
-        {
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-
-            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
-            var expression = ConvertExpressionIfNecessary(source);
-
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(limit)));
-            return (IRavenQueryable<TResult>)queryable;
-        }
         
         /// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
@@ -101,15 +83,17 @@ namespace Raven.Client.Documents
         /// <typeparam name="T">The type of the object that holds querying type.</typeparam>
         /// <param name="source">The source for querying</param>
         /// <param name="predicate"></param>
+        /// <param name="limit">Limits the number of documents processed by Filter.</param>
         /// <returns></returns>
-        public static IRavenQueryable<T> Filter<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> predicate)
+        public static IRavenQueryable<T> Filter<T>(this IRavenQueryable<T> source, Expression<Func<T, bool>> predicate, int limit = int.MaxValue)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate, Expression.Constant(limit)));
+            
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -118,7 +102,8 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IRavenQueryable<T> Filter<T>(
             this IQueryable<T> source,
-            Expression<Func<T, bool>> predicate)
+            Expression<Func<T, bool>> predicate,
+            int limit = int.MaxValue)
         
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -126,7 +111,7 @@ namespace Raven.Client.Documents
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate, Expression.Constant(limit)));
             return (IRavenQueryable<T>)queryable;
         }
 
