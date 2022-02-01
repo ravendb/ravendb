@@ -291,7 +291,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     _scannedResults.Value++;
                     object self = _filterScriptRun.Translate(_context, _inner.Current);
-                    using(_queryTimings?.For(nameof(QueryTimingsScope.Names.JavaScript)))
+                    using(_queryTimings?.For(nameof(QueryTimingsScope.Names.Filter)))
                     using (var result = _filterScriptRun.Run(_context, _context, "execute", _inner.Current!.Id, new[]{self, _query.QueryParameters}, _queryTimings))
                     {
                         if (result.BooleanValue != true)

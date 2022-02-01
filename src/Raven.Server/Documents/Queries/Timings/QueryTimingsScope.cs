@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Includes;
             public static string Setup;
             public static string Optimizer;
+            public static string Filter;
         }
 
         public QueryTimingsScope(bool start = true) : base(null, start)
