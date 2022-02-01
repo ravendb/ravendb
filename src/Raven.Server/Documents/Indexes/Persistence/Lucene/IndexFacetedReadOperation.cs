@@ -323,13 +323,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
 
                 var val = kvp.Value;
-                double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0;
+                double min = value.Min ?? double.MaxValue, max = value.Max ?? double.MinValue, sum = value.Sum ?? 0, avg = value.Average ?? 0;
                 int[] array = docsInQuery.Array;
                 for (var index = 0; index < docsInQuery.Count; index++)
                 {
                     var doc = array[index];
                     var currentVal = doubles[doc - docBase];
                     sum += currentVal;
+                    avg += currentVal;
                     min = Math.Min(min, currentVal);
                     max = Math.Max(max, currentVal);
                 }
@@ -341,7 +342,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (val.Average)
                 {
-                    value.Average = sum; // actual average handled later
+                    value.Average = avg;
                 }
 
                 if (val.Max)
