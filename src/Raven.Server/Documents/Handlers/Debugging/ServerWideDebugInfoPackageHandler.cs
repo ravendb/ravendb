@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         await WriteServerInfo(archive, jsonOperationContext, localEndpointClient);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
-                            WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext);
+                            await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext);
                             await WriteDatabaseInfo(archive, jsonOperationContext, localEndpointClient, databaseName);
                         }
 
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             rawRecord.Topology.RelevantFor(ServerStore.NodeTag) == false)
                             continue;
                         
-                        WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext, token);
+                        await WriteDatabaseRecord(archive, databaseName, jsonOperationContext, transactionOperationContext, token);
 
                         if (rawRecord.IsDisabled ||
                             rawRecord.DatabaseState == DatabaseStateStatus.RestoreInProgress ||
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async void WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
+        private async Task WriteDatabaseRecord(ZipArchive archive, string databaseName, JsonOperationContext jsonOperationContext, TransactionOperationContext transactionCtx, CancellationToken token = default)
         {
             var entryName = DebugInfoPackageUtils.GetOutputPathFromRouteInformation("/database-record", databaseName, "json");
             try
