@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             scannedDocuments.Value++;
 
                             object self = filterScriptRun.Translate(documentsContext, doc);
-                            using(queryTimings?.For(nameof(QueryTimingsScope.Names.JavaScript)))
+                            using(queryTimings?.For(nameof(QueryTimingsScope.Names.Filter)))
                             using (var result = filterScriptRun.Run(documentsContext, documentsContext, "execute", new[]{self, query.QueryParameters}, queryTimings))
                             {
                                 if (result.BooleanValue != true)

@@ -7,8 +7,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries.Timings;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -447,17 +449,16 @@ filter Name = 'Frank'")
                     shape)
                 .SingleOrDefault();
             Assert.Equal("Frank", emp.Name);
-            
+
             emp = s
                 .Query<Employee>()
-                .Spatial(f => f.Point(x => x.Location.Latitude, x => x.Location.Longitude), f=> f.RelatesToShape(shape, SpatialRelation.Within))
-                .Filter(p=> p.Name == "Frank")
+                .Spatial(f => f.Point(x => x.Location.Latitude, x => x.Location.Longitude), f => f.RelatesToShape(shape, SpatialRelation.Within))
+                .Filter(p => p.Name == "Frank")
                 .SingleOrDefault();
             Assert.Equal("Frank", emp.Name);
-
         }
     }
-    
+
     [Theory]
     [InlineData("from Employees filter spatial.within(spatial.point(Location.Latitude, Location.Longitude), spatial.wkt($wkt))", typeof(RavenException))]
     [InlineData("from Employees filter MoreLikeThis('emps/jane')", typeof(RavenException))]
@@ -606,7 +607,7 @@ filter Name = 'Frank'")
         {
             //no sense, just for RQL check
             using var session = store.OpenSession();
-            var q = session.Query<Employee>().Where(w => (w.Age >= 30) && (w.Age >= 30 || w.Age > 30)).Filter(f => f.Age <= 40 && (f.Age <=40 || f.Age < 40)).ToList();
+            var q = session.Query<Employee>().Where(w => (w.Age >= 30) && (w.Age >= 30 || w.Age > 30)).Filter(f => f.Age <= 40 && (f.Age <= 40 || f.Age < 40)).ToList();
             Assert.NotNull(q);
             Assert.Equal(2, q.Count);
             Assert.InRange(q[0].Age, 30, 40);
@@ -638,11 +639,11 @@ filter Name = 'Frank'")
             {
                 var q = session.Query<BlogPost, BlogIndex>().Filter(p => p.Tags.Contains("news"));
 
-                Assert.Throws(typeof(InvalidQueryException), ()=> q.AggregateUsing("facets/BlogFacets").Execute());
+                Assert.Throws(typeof(InvalidQueryException), () => q.AggregateUsing("facets/BlogFacets").Execute());
             }
         }
     }
-    
+
     private List<(Employee Entity, string Id)> GetDatabaseItems(List<(Employee Entity, string Id)> additional = null)
     {
         return new(additional ?? new())
@@ -651,6 +652,31 @@ filter Name = 'Frank'")
             (new Employee("Mark", "emps/jane", false, 33), "emps/mark"),
             (new Employee("Sandra", "emps/jane", true, 35), "emps/sandra"),
         };
+    }
+
+    [Fact]
+    public void Timings()
+    {
+        using var store = GetDocumentStore();
+        var data = GetDatabaseItems();
+        Insert(store, data);
+
+
+        using (var session = store.OpenSession())
+        {
+            var query =
+                session.Advanced.RawQuery<Employee>(
+                        "declare function check(r, prefix) { return r.Name[0] == prefix} from Employees as e where e.Active = true filter check(e, $prefix) include timings()")
+                    .AddParameter("name", "Jane")
+                    .AddParameter("prefix", "J")
+                    .Timings(out var timings);
+
+            var queryResult = query.ToList();
+            Assert.Equal("Jane", queryResult[0].Name);
+
+            Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Filter)]
+                .DurationInMs >= 0);
+        }
     }
 
     private void Insert(DocumentStore store, List<(Employee Entity, string Id)> data)
@@ -673,7 +699,7 @@ filter Name = 'Frank'")
         public int Count { get; set; }
         public string Manager { get; set; }
     }
-    
+
     private class BlogPost
     {
         public string Title { get; set; }
