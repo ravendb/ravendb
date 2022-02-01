@@ -18,6 +18,7 @@ fi
 
 header="<${PRLINK}|[${PRTAGRETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
 
+studio_prefix=$prefix_x
 if [[ $status_server =~ "true" ]]; then 
   server_prefix=$prefix_check
 else
