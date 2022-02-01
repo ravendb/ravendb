@@ -1,6 +1,7 @@
 using System;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -51,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             {
                 if (items.ReadByKey(valueNameLowered, out var tvr) == false)
                 {
-                    throw new RachisApplyException($"Cannot find subscription {index}");
+                    throw new SubscriptionDoesNotExistException($"Cannot find subscription {index}");
                 }
 
                 var ptr = tvr.Read(2, out int size);
