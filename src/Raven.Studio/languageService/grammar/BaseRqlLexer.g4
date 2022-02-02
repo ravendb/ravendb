@@ -236,6 +236,9 @@ JS_SELECT
    : S E L E C T ' '* OP_CUR -> pushMode (JAVASCRIPT_STATEMENT)
    ;
 
+JS_JSON:
+   OP_CUR -> pushMode (JAVASCRIPT_STATEMENT);
+
 SORTING
    : A S C
    | A S C E N D I N G
@@ -281,6 +284,14 @@ LIMIT
 
 FUZZY
    : F U Z Z Y
+   ;
+
+FILTER
+   : F I L T E R
+   ;
+   
+FILTER_LIMIT
+   : F I L T E R '_' L I M I T
    ;
 
 TIMESERIES
