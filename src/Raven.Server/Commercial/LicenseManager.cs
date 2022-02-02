@@ -398,6 +398,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
+            ValidateLicenseActivation(licenseStatus);
             ThrowIfCannotActivateLicense(licenseStatus);
 
             try
@@ -418,6 +419,23 @@ namespace Raven.Server.Commercial
             }
         }
 
+        private void ValidateLicenseActivation(LicenseStatus newLicenseStatus)
+        {
+
+            var currentLicenseType = _serverStore.LicenseManager.LicenseStatus.Type;
+            if (currentLicenseType != LicenseType.Developer && newLicenseStatus.Type == LicenseType.Developer)
+            {
+                // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
+                if (_serverStore.Server.Certificate.Certificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                {
+                    string msg = "The server certificate expiration date is more than 4 months from now. " +
+                                 $"This is not allowed when trying to change the license form {currentLicenseType} the {LicenseType.Developer} license. " +
+                                 "Use short term certificate before changing the license";
+                    
+                    throw new InvalidOperationException(msg);
+                }
+            }
+        }
         private void ResetLicense(string error)
         {
             LicenseStatus = new LicenseStatus
