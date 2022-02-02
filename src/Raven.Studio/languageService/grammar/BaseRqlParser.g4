@@ -3,7 +3,7 @@ parser grammar BaseRqlParser;
 
 options { tokenVocab = BaseRqlLexer; }
 prog
-   : functionStatment* fromStatement groupByStatement? whereStatement? orderByStatement? loadStatement? updateStatement? selectStatement? includeStatement? limitStatement? EOF
+   : functionStatment* fromStatement groupByStatement? whereStatement? orderByStatement? loadStatement? updateStatement? filterStatement? selectStatement? includeStatement? limitStatement? jsonBody? EOF
    ;
    //          FROM STATEMENT          //
    
@@ -244,7 +244,8 @@ includeStatement
    //          LIMIT STATEMENT          //
    
 limitStatement
-   : LIMIT variable ((COMMA | OFFSET) variable)?
+   : LIMIT variable ((COMMA | OFFSET) variable)? (FILTER_LIMIT variable)?
+   | (FILTER_LIMIT variable) (LIMIT variable ((COMMA | OFFSET) variable)? )?
    ;
    //          UTILS SEGMENT           //
    
@@ -466,3 +467,11 @@ updateBody:
    US_OP updateBody* US_CL 
     ;
 
+filterStatement:
+   filterMode expr;
+    
+filterMode:
+   FILTER;
+
+jsonBody:
+   jsBody;
