@@ -605,7 +605,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (_source is StreamSource streamSource)
                     {
-                        foreach (var iDisposable in streamSource._toDispose)
+                        foreach (var iDisposable in streamSource.ToDispose)
                         {
                             actions.RegisterForDisposal(iDisposable);
                         }

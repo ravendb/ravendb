@@ -93,15 +93,15 @@ namespace SlowTests.Sharding
                 //counters
                 session.CountersFor("users/2").Increment("Downloads", 100);
                 //Attachments
-                await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
-                await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
-                await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
-                {
-                    session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
-                    session.Advanced.Attachments.Store("users/2", names[1], fileStream);
-                    session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
-                    await session.SaveChangesAsync();
-                }
+                 await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                 await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                 await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
+                 {
+                     session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
+                     session.Advanced.Attachments.Store("users/2", names[1], fileStream);
+                     session.Advanced.Attachments.Store("users/3", names[2], profileStream, "image/png");
+                     await session.SaveChangesAsync();
+                 }
             }
             
             //tombstone + revision
@@ -130,7 +130,7 @@ namespace SlowTests.Sharding
             };
 
             var operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
-             operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
+            operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
             var result = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
             //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
             //Cluster transaction
@@ -282,13 +282,13 @@ namespace SlowTests.Sharding
                             OperateOnTypes = DatabaseItemType.Documents
                         }, file);
                         //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        await Task.Delay(TimeSpan.FromSeconds(50));
 
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents
                         }, file2);
-                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        await Task.Delay(TimeSpan.FromSeconds(50));
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -375,7 +375,7 @@ namespace SlowTests.Sharding
                         }, file);
                         //WaitForUserToContinueTheTest(store1);
                         //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        await Task.Delay(TimeSpan.FromSeconds(50));
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents

@@ -66,7 +66,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private DatabaseItemType _operateOnTypes;
-        public List<IDisposable> _toDispose;
+        public List<IDisposable> ToDispose;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         private readonly ByteStringContext _byteStringContext;
 
@@ -86,7 +86,7 @@ namespace Raven.Server.Smuggler.Documents
             _returnBuffer = _context.GetMemoryBuffer(out _buffer);
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
-            _toDispose = new List<IDisposable>();
+            ToDispose = new List<IDisposable>();
 
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
@@ -850,7 +850,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 values = ConvertToBlob(values, actions);
-                _toDispose.Add(reader);
+                ToDispose.Add(reader);
 
                 yield return new CounterGroupDetail
                 {
@@ -1303,7 +1303,7 @@ namespace Raven.Server.Smuggler.Documents
                         Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                     };
                     if (actions == null)
-                        _toDispose.Add(attachment);
+                        ToDispose.Add(attachment);
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
                     if (ShouldSkip(attachmentInfo))
                         continue;
@@ -1437,7 +1437,7 @@ namespace Raven.Server.Smuggler.Documents
                             Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                         };
                         if (actions == null)
-                            _toDispose.Add(attachment.Stream);
+                            ToDispose.Add(attachment.Stream);
 
                         attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
                         attachments.Add(attachment);

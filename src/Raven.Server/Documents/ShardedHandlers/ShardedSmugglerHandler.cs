@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations("Export failed .", e);
 
-                    result.AddError($"Error occurred during export. Exception: {e.Message}");
+                    result.AddError($"Error occurred during export. Exception: {e}");
                     await WriteResultAsync(context, result, ResponseBodyStream());
 
                     HttpContext.Abort();
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             await gzipStream.CopyToAsync(exportOutputStream);
                         }
 
-                    }, tcs, blittableJson);
+                    }, blittableJson);
 
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 }
@@ -125,57 +125,25 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private async Task DoImportInternalAsync(JsonOperationContext context, Stream stream,
+        private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream,
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, Action<IOperationProgress> onProgress,
             OperationCancelToken token, BlittableJsonReaderObject optionsAsBlittable)
         {
-            var contextList = new List<JsonOperationContext>();
-            var destinationList = new List<ISmugglerDestination>();
-            try
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext tContext))
+            using (var source = new StreamSource(stream, jsonOperationContext, ShardedContext.DatabaseName, options))
             {
-                for (int i = 0; i < ShardedContext.ShardCount; i++)
+                DatabaseRecord record;
+                using (tContext.OpenReadTransaction())
                 {
-                    ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext);
-                    contextList.Add(jsonOperationContext);
+                    record = Server.ServerStore.Cluster.ReadDatabase(tContext, ShardedContext.DatabaseName);
                 }
 
-                var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var smuggler = new ShardedDatabaseSmuggler(ContextPool, source, jsonOperationContext, tContext, record,
+                    Server.ServerStore, ShardedContext, this, optionsAsBlittable, options, result,
+                    onProgress, token: token.Token);
 
-                var streamList = new List<Stream>();
-                for (int i = 0; i < ShardedContext.ShardCount; i++)
-                {
-                    streamList.Add(GetOutputStream(new MemoryStream(), options));
-                }
-
-                using (ContextPool.AllocateOperationContext(out TransactionOperationContext tContext))
-                using (var source = new StreamSource(stream, context, ShardedContext.DatabaseName, options))
-                {
-                    DatabaseRecord record;
-                    using (tContext.OpenReadTransaction())
-                    {
-                        record = Server.ServerStore.Cluster.ReadDatabase(tContext, ShardedContext.DatabaseName);
-                    }
-
-                    for (int i = 0; i < ShardedContext.ShardCount; i++)
-                    {
-                        destinationList.Add(new StreamDestination(streamList[i], contextList[i], source));
-                    }
-
-                    var smuggler = new ShardedDatabaseSmuggler(source, destinationList, context, tContext, record,
-                        Server.ServerStore, Server.Time, ShardedContext, this, contextList, optionsAsBlittable, streamList, tcs, options, result,
-                        onProgress, token: token.Token);
-
-                    await smuggler.ExecuteAsync();
-                }
-
-            }
-            finally
-            {
-                for (int i = 0; i < ShardedContext.ShardCount; i++)
-                {
-                    contextList[i].Dispose();
-                }
+                await smuggler.ExecuteAsync();
             }
         }
     }
