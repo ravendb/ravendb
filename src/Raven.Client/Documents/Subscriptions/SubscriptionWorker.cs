@@ -772,6 +772,10 @@ namespace Raven.Client.Documents.Subscriptions
 
                     _processingCts.Cancel();
                     return false;
+
+                case SubscriptionMessageTypeException _:
+                    goto default;
+
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
                 case SubscriptionInvalidStateException _:
