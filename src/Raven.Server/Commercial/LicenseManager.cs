@@ -398,7 +398,6 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            ValidateLicenseActivation(licenseStatus);
             ThrowIfCannotActivateLicense(licenseStatus);
 
             try
@@ -418,24 +417,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Could not save license!", e);
             }
         }
-
-        private void ValidateLicenseActivation(LicenseStatus newLicenseStatus)
-        {
-
-            var currentLicenseType = _serverStore.LicenseManager.LicenseStatus.Type;
-            if (currentLicenseType != LicenseType.Developer && newLicenseStatus.Type == LicenseType.Developer)
-            {
-                // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
-                if (_serverStore.Server.Certificate.Certificate.NotAfter > DateTime.UtcNow.AddMonths(4))
-                {
-                    string msg = "The server certificate expiration date is more than 4 months from now. " +
-                                 $"This is not allowed when trying to change the license form {currentLicenseType} the {LicenseType.Developer} license. " +
-                                 "Use short term certificate before changing the license";
-                    
-                    throw new InvalidOperationException(msg);
-                }
-            }
-        }
+        
         private void ResetLicense(string error)
         {
             LicenseStatus = new LicenseStatus
@@ -924,6 +906,18 @@ namespace Raven.Server.Commercial
                                        "The provided license cannot be activated as it doesn't contain this feature. " +
                                        "In order to use this license please disable SNMP Monitoring in the server configuration";
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
+            }
+            
+            if (_serverStore.LicenseManager.LicenseStatus.Type != LicenseType.Developer && newLicenseStatus.Type == LicenseType.Developer)
+            {
+                if (_serverStore.Server.Certificate.Certificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                {
+                    var msg = "The server certificate expiration date is more than 4 months from now. " +
+                                   $"This is not allowed when trying to change the license form {_serverStore.LicenseManager.LicenseStatus.Type} to {LicenseType.Developer}. " +
+                                   "Use short term certificate before changing the license";
+                    
+                    throw new InvalidOperationException(msg);
+                }
             }
 
             var encryptedDatabasesCount = 0;
