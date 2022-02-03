@@ -3226,7 +3226,7 @@ namespace Raven.Server.ServerWide
             return res;
         }
 
-        public DynamicJsonValue GetLogDetails(TransactionOperationContext context, int max = 100)
+        public DynamicJsonValue GetLogDetails(ClusterOperationContext context, int max = 100)
         {
             RachisConsensus.GetLastTruncated(context, out var index, out var term);
             var range = Engine.GetLogEntriesRange(context);

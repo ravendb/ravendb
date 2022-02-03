@@ -276,25 +276,23 @@ namespace FastTests
             for (var i = 0; i < nodes.Count; i++)
             {
                 message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
-                using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
+                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
-                using (clusterContext.OpenReadTransaction())
                 {
-                    message += CollectLogs(context, clusterContext, nodes[i]);
+                    message += CollectLogs(context, nodes[i]);
                 }
             }
 
             return message;
         }
 
-        protected static string CollectLogs(TransactionOperationContext context, ClusterOperationContext clusterContext, RavenServer server)
+        protected static string CollectLogs(ClusterOperationContext context, RavenServer server)
         {
             return
                 $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
                 $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
                 $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
-                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(clusterContext)}";
+                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)

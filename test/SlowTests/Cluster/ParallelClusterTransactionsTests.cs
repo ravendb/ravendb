@@ -106,15 +106,13 @@ namespace SlowTests.Cluster
                         foreach (var n in cluster.Nodes)
                         {
                             var lastNodeNotifiedIndex = n.ServerStore.Cluster.LastNotifiedIndex;
-                            using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                            using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
+                            using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
-                            using (clusterContext.OpenReadTransaction())
                             {
                                 var lastCommitIndex = n.ServerStore.Engine.GetLastCommitIndex(context);
                                 if (lastNodeNotifiedIndex > lastCommitIndex)
                                 {
-                                    var logs = CollectLogs(context, clusterContext, n);
+                                    var logs = CollectLogs(context, n);
                                     throw new InvalidOperationException(
                                         $"node {n.ServerStore.NodeTag} notified {lastNodeNotifiedIndex}, committed: {lastCommitIndex}{Environment.NewLine}{logs}");
                                 }
