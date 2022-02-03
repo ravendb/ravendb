@@ -14,10 +14,11 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
     public class ShardedSubscriptionWorker : AbstractSubscriptionWorker<dynamic>
     {
         private readonly RequestExecutor _shardRequestExecutor;
-
-        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re) : base(options, dbName)
+        private readonly ShardedSubscriptionConnection _parent;
+        public ShardedSubscriptionWorker(SubscriptionWorkerOptions options, string dbName, RequestExecutor re, ShardedSubscriptionConnection parent) : base(options, dbName)
         {
-            _shardRequestExecutor = re; 
+            _shardRequestExecutor = re;
+            _parent = parent;
         }
 
         internal override RequestExecutor GetRequestExecutor()
@@ -77,6 +78,9 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                         SendBatchToClientTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously),
                         ConfirmFromShardSubscriptionConnectionTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
                     };
+
+                    // Set the start handling worker MRE on ShardedSubscriptionConnection
+                    _parent._mre.Set();
 
                     // wait for ShardedSubscriptionConnection to redirect the batch to client worker
                     await PublishedBatchItem.SendBatchToClientTcs.Task;
