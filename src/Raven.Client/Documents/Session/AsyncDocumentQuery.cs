@@ -1113,7 +1113,9 @@ namespace Raven.Client.Documents.Session
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens),
                 GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
+                FilterTokens = new LinkedList<QueryToken>(FilterTokens),
                 QueryParameters = new Parameters(QueryParameters),
+                FilterModeStack = new Stack<bool>(FilterModeStack),
                 Start = Start,
                 Timeout = Timeout,
                 QueryStats = QueryStats,
@@ -1137,7 +1139,8 @@ namespace Raven.Client.Documents.Session
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
                 IsIntersect = IsIntersect,
-                DefaultOperator = DefaultOperator
+                DefaultOperator = DefaultOperator,
+                FilterLimit = FilterLimit
             };
 
             return query;

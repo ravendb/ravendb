@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
 
-        protected override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+        public override unsafe Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
             var storedValue = input.GetField(_storedValueFieldName).GetBinaryValue(state);
 

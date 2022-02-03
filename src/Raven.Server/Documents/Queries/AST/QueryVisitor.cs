@@ -32,7 +32,12 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitWhereClause(q.Where);
             }
-
+            
+            if (q.Filter != null)
+            {
+                VisitFilterClause(q.Filter);
+            }
+            
             if (q.OrderBy != null)
             {
                 VisitOrderBy(q.OrderBy);
@@ -62,6 +67,11 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitInclude(q.Include);
             }
+        }
+
+        public virtual void VisitFilterClause(QueryExpression filter)
+        {
+            VisitExpression(filter);
         }
 
         public virtual void VisitMatchExpression(QueryExpression expr)

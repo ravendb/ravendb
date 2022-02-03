@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (_from > _to)
                 return false;
 
-            using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name, collection: null).WithBaseline(_from))
+            using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
             {
                 if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
                 {
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             while (true)
             {
-                using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name, collection: null).WithBaseline(date))
+                using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(date))
                 {
                     if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
                         return null;

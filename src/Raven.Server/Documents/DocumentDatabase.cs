@@ -1779,7 +1779,7 @@ namespace Raven.Server.Documents
             internal Action ActionToCallDuringDocumentDatabaseInternalDispose;
 
             internal Action CollectionRunnerBeforeOpenReadTransaction;
-            
+
             internal bool SkipDrainAllRequests = false;
 
             internal Action<string, string> DisposeLog;
@@ -1791,6 +1791,22 @@ namespace Raven.Server.Documents
                 ActionToCallDuringDocumentDatabaseInternalDispose = action;
 
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
+            }
+
+            internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
+            internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
+
+            internal IDisposable CallDuringWaitForChangedDocuments(Action action)
+            {
+                Subscription_ActionToCallDuringWaitForChangedDocuments = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallDuringWaitForChangedDocuments = null);
+            }
+            internal IDisposable CallAfterRegisterSubscriptionConnection(Action<long> action)
+            {
+                Subscription_ActionToCallAfterRegisterSubscriptionConnection = action;
+
+                return new DisposableAction(() => Subscription_ActionToCallAfterRegisterSubscriptionConnection = null);
             }
         }
     }

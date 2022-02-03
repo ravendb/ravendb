@@ -34,7 +34,8 @@ namespace Raven.Client.Documents.Session.Tokens
             "load",
             "group",
             "order",
-            "include"
+            "include",
+            "filter"
         };
     }
 }

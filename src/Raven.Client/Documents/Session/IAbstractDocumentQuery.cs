@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session
     public interface IAbstractDocumentQuery<T>
     {
         string IndexName { get; }
-
+        
         string CollectionName { get; }
 
         /// <summary>
@@ -341,6 +341,5 @@ namespace Raven.Client.Documents.Session
         void SuggestUsing(SuggestionBase suggestion);
 
         string ParameterPrefix { get; set; }
-
     }
 }

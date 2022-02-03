@@ -7,6 +7,7 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
     {
         public string AppropriateNode;
         internal long Index;
+        internal long? RegisterConnectionDurationInTicks;
         public readonly Dictionary<string, string> Reasons = new Dictionary<string, string>();
 
         public SubscriptionDoesNotBelongToNodeException(string message) : base(message)

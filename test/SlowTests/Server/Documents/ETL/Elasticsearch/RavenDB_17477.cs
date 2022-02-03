@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Orders;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +22,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                client.Indices.Create("orders", c => c
+                client.Indices.Create(OrdersIndexName, c => c
                     .Map(m => m
                         .Properties(p => p
                             .MatchOnlyText(t => t
@@ -34,9 +35,9 @@ var orderData = {
     TotalCost: 0
 };
 
-loadToOrders(orderData);
-", new List<string> { "orders" }, configurationName: "my-etl", transformationName: "my-transformation");
-                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadErrors != 0);
+loadTo" + OrdersIndexName + @"(orderData);", 
+                    new []{ new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" } },
+                    new List<string> { "orders" }, configurationName: "my-etl", transformationName: "my-transformation");
 
                 using (var session = store.OpenSession())
                 {
@@ -51,7 +52,7 @@ loadToOrders(orderData);
                     return Task.FromResult(error);
                 }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
 
-                Assert.Contains("The index 'orders' has invalid mapping for 'Id' property.", alert.Error);
+                Assert.Contains($"The index '{OrdersIndexName}' has invalid mapping for 'Id' property.", alert.Error);
             }
         }
     }

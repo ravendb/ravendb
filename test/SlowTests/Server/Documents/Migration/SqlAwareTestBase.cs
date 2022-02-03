@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using FastTests;
 using MySql.Data.MySqlClient;
 using Npgsql;
@@ -202,22 +203,39 @@ namespace SlowTests.Server.Documents.Migration
 
             return new DisposableAction(() =>
             {
-                using (var con = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
+                var numberOfRetries = 3;
+
+                do
                 {
-                    con.Open();
-
-                    using (var dbCommand = con.CreateCommand())
+                    try
                     {
-                        dbCommand.CommandTimeout = CommandTimeout;
-                        var dropDatabaseQuery = "IF EXISTS(select * from sys.databases where name= '{0}') " +
-                                                "ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
-                                                "IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE [{0}]";
-                        dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
+                        using (var con = new SqlConnection(MssqlConnectionString.Instance.VerifiedConnectionString.Value))
+                        {
+                            con.Open();
 
-                        dbCommand.ExecuteNonQuery();
+                            using (var dbCommand = con.CreateCommand())
+                            {
+                                dbCommand.CommandTimeout = CommandTimeout;
+                                var dropDatabaseQuery = "IF EXISTS(select * from sys.databases where name= '{0}') " +
+                                                        "ALTER DATABASE [{0}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
+                                                        "IF EXISTS(select * from sys.databases where name= '{0}') DROP DATABASE [{0}]";
+                                dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
+
+                                dbCommand.ExecuteNonQuery();
+                            }
+                            con.Close();
+                        }
+
+                        return;
                     }
-                    con.Close();
-                }
+                    catch
+                    {
+                        if (--numberOfRetries <= 0)
+                            throw;
+
+                        Thread.Sleep(1000);
+                    }
+                } while (true);
             });
         }
 

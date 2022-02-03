@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Subscriptions
             return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, CancellationToken token)
+        public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name, long? registerConnectionDurationInTicks, CancellationToken token)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id, token);
 
@@ -264,7 +264,10 @@ namespace Raven.Server.Documents.Subscriptions
                     throw new SubscriptionDoesNotBelongToNodeException(
                         $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
-                        databaseTopologyAvailabilityExplanation, id);
+                        databaseTopologyAvailabilityExplanation, id)
+                    {
+                        RegisterConnectionDurationInTicks = registerConnectionDurationInTicks
+                    };
                 }
                 if (subscription.Disabled)
                     throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");

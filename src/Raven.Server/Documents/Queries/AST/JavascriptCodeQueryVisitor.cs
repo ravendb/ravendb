@@ -11,7 +11,8 @@ namespace Raven.Server.Documents.Queries.AST
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
         private static readonly string[] UnsupportedQueryMethodsInJavascript = {
-            "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis"
+            "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis",
+            "Spatial.Wkt", "Spatial.Point", "Spatial.Intersects", "Spatial.Contains", "Spatial.Disjoint", "Spatial.Sum"
         };
 
         public JavascriptCodeQueryVisitor(StringBuilder sb, Query q)
@@ -175,7 +176,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (UnsupportedQueryMethodsInJavascript.Any(x=>
                 x.Equals(expr.Name.Value, StringComparison.OrdinalIgnoreCase)))
             {
-                throw new NotSupportedException($"'{expr.Name.Value}' query method is not supported by subscriptions");
+                throw new NotSupportedException($"'{expr.Name.Value}' query method is not supported for this type of query");
             }
             
             _sb.Append(expr.Name.Value);
@@ -204,6 +205,9 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (expr.Value == ValueTokenType.String)
                 _sb.Append('"');
+
+            if (expr.Value == ValueTokenType.Parameter)
+                _sb.Append('$');
             
             _sb.Append(expr.Token.Value.Replace("\\", "\\\\"));
 

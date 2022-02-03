@@ -5,20 +5,20 @@ import d3 = require("d3");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 
-class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>> {
+class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>> {
 
     private static readonly isoParser = d3.time.format.iso;
-    private readonly onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void;
+    private readonly onData: (data: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void;
 
     private readonly dateCutOff: Date;
-    private mergedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
-    private pendingDataToApply: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+    private mergedData: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+    private pendingDataToApply: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
 
     private updatesPaused = false;
     loading = ko.observable<boolean>(true);
 
     constructor(db: database, 
-                onData: (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void,
+                onData: (data: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => void,
                 dateCutOff?: Date) {
         super(db);
         this.onData = onData;
@@ -55,7 +55,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         this.loading(false);
     }
 
-    protected onMessage(e: resultsDto<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>) {
+    protected onMessage(e: resultsDto<Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>) {
         this.loading(false);
 
         if (this.updatesPaused) {
@@ -68,7 +68,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         }
     }
 
-    private mergeIncomingData(e: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) {
+    private mergeIncomingData(e: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) {
         let hasAnyChange = false;
         e.forEach(replicationStatsFromEndpoint => {
             const replicationDesc = replicationStatsFromEndpoint.Description;
@@ -116,7 +116,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
     }
 
     static fillCache(perf: Raven.Client.Documents.Replication.ReplicationPerformanceBase,
-                     type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType,
+                     type: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceType,
                      description: string) {
 
         const withCache = perf as ReplicationPerformanceBaseWithCache;
