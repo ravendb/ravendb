@@ -18,6 +18,8 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedTcpHandlers
 {
@@ -25,10 +27,12 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
     {
         private readonly Dictionary<string, SubscriptionShardHolder> _shardWorkers = new Dictionary<string, SubscriptionShardHolder>();
         public static ConcurrentDictionary<string, ShardedSubscriptionConnection> Connections = new ConcurrentDictionary<string, ShardedSubscriptionConnection>();
+        public  AsyncManualResetEvent _mre;
 
         private ShardedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer buffer)
             : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.ShardedContext.DatabaseName, CancellationTokenSource.CreateLinkedTokenSource(tcpConnection.ShardedContext.DatabaseShutdown))
         {
+            _mre = new AsyncManualResetEvent();
         }
 
        /*
@@ -122,8 +126,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             {
                 var re = TcpConnection.ShardedContext.RequestExecutors[i];
                 var shard = TcpConnection.ShardedContext.GetShardedDatabaseName(i);
-
-                var shardWorker = new ShardedSubscriptionWorker(_options, shard, re);
+                var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, parent: this);
 
                 var worker = new SubscriptionShardHolder
                 {
@@ -144,126 +147,171 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         private async Task MaintainConnectionWithClientWorker()
         {
-            var exceptions = new Dictionary<string, Exception>();
-            var shardsToReconnect = new List<string>();
-            var heartbeatSp = Stopwatch.StartNew();
-            var reconnectSp = Stopwatch.StartNew();
-            var didBatch = false;
+            var hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
             while (CancellationTokenSource.IsCancellationRequested == false)
             {
-                exceptions.Clear();
-                shardsToReconnect.Clear();
-                if (didBatch == false)
-                    await Task.Delay(500);
-
-                if (heartbeatSp.ElapsedMilliseconds >= 3000)
+                var whenAny = await Task.WhenAny(TimeoutManager.WaitFor(TimeSpan.FromSeconds(3), CancellationTokenSource.Token), hasBatch);
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                HandleBatchFromWorkersResult result;
+                if (whenAny == hasBatch)
+                {
+                    Interlocked.Exchange(ref _mre, new AsyncManualResetEvent());
+                    hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
+                    result = await TryHandleBatchFromWorkersAndCheckReconnect(redirectBatch: true);
+                }
+                else
                 {
                     await SendHeartBeat("Waited for 3000ms for batch from shard workers");
-                    heartbeatSp.Restart();
-                }
-                didBatch = false;
-                var stopping = false;
-                foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    if (stopping)
-                        continue;
-
-                    if (shardHolder.PullingTask.IsFaulted == false)
-                    {
-                        ShardedSubscriptionWorker.PublishedBatch batch = shardHolder.Worker.PublishedBatchItem;
-                        if (batch == null)
-                            continue;
-
-                        didBatch = true;
-                        // Send to client
-                        try
-                        {
-                            await WriteBatchToClientAndAck(batch, shard);
-
-                            // here we let sharded subscription worker know that we sent the batch to the actual client worker
-                            // and received an ack request from it
-                            batch.SendBatchToClientTcs.SetResult();
-                        }
-                        catch (Exception e)
-                        {
-                            // need to fail the shard subscription worker
-                            batch.SendBatchToClientTcs.TrySetException(e);
-                            throw;
-                        }
-
-                        // here we are waiting for sharded subscription worker to send ack to the shard subscription connection
-                        // and receive the confirm from the shard subscription connection
-                        await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
-
-                        // send confirm to client and continue processing
-                        await SendConfirmToClient();
-                        continue;
-                    }
-
-                    exceptions.Add(shard, shardHolder.PullingTask.Exception);
-
-                    shardsToReconnect.Add(shard);
-
-                    if (shardHolder.LastErrorDateTime.HasValue == false)
-                    {
-                        shardHolder.LastErrorDateTime = DateTime.UtcNow;
-                        continue;
-                    }
-
-                    if (DateTime.UtcNow - shardHolder.LastErrorDateTime.Value <= _options.ShardedConnectionMaxErroneousPeriod)
-                        continue;
-
-                    // we are stopping this subscription
-                    stopping = true;
+                    result = await TryHandleBatchFromWorkersAndCheckReconnect(redirectBatch: false);
                 }
 
-                if (exceptions.Count == _shardWorkers.Count && stopping == false)
-                {
-                    stopping = true;
-                    foreach (var worker in _shardWorkers)
-                    {
-                        var ex = exceptions[worker.Key];
-                        Debug.Assert(ex != null, "ex != null");
+                if (result.Stopping)
+                    ThrowStoppingSubscriptionException(result);
 
-                        (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, null, null, throwOnRedirectNodeNotFound: false);
-                        if (shouldTryToReconnect)
-                        {
-                            // we have at least one worker to try to reconnect
-                            stopping = false;
-                        }
-                    }
-                }
-
-                if (stopping)
-                {
-                    throw new AggregateException($"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' because shard {string.Join(", ", exceptions.Keys)} workers failed.", exceptions.Values);
-                }
-
-                if (reconnectSp.ElapsedMilliseconds < 3000)
-                    continue;
-
-                // try reconnect faulted workers, this will happen every 3 sec
-                foreach (var shard in shardsToReconnect)
-                {
-                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
-
-                    if (_shardWorkers.ContainsKey(shard) == false)
-                        continue;
-
-                    using (var old = _shardWorkers[shard].Worker)
-                    {
-                        _shardWorkers[shard].Worker = new ShardedSubscriptionWorker(_options, shard, _shardWorkers[shard].RequestExecutor);
-                        var t = _shardWorkers[shard].Worker.RunInternal(CancellationTokenSource.Token);
-                        _shardWorkers[shard].PullingTask = t;
-                    }
-                }
-
-                reconnectSp.Restart();
+                ReconnectWorkersIfNeeded(result.ShardsToReconnect);
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        }
+
+        private void ThrowStoppingSubscriptionException(HandleBatchFromWorkersResult result)
+        {
+            throw new AggregateException(
+                $"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' because shard {string.Join(", ", result.Exceptions.Keys)} workers failed.",
+                result.Exceptions.Values);
+        }
+
+        private void ReconnectWorkersIfNeeded(List<string> shardsToReconnect)
+        {
+            if (shardsToReconnect.Count == 0)
+                return;
+
+            foreach (var shard in shardsToReconnect)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                if (_shardWorkers.ContainsKey(shard) == false)
+                    continue;
+
+                using (var old = _shardWorkers[shard].Worker)
+                {
+                    _shardWorkers[shard].Worker = new ShardedSubscriptionWorker(_options, shard, _shardWorkers[shard].RequestExecutor, parent: this);
+                    var t = _shardWorkers[shard].Worker.RunInternal(CancellationTokenSource.Token);
+                    _shardWorkers[shard].PullingTask = t;
+                }
+            }
+        }
+
+        private class HandleBatchFromWorkersResult
+        {
+            public Dictionary<string, Exception> Exceptions;
+            public List<string> ShardsToReconnect;
+            public bool Stopping;
+        }
+
+        private async Task<HandleBatchFromWorkersResult> TryHandleBatchFromWorkersAndCheckReconnect(bool redirectBatch)
+        {
+            var result = new HandleBatchFromWorkersResult
+            {
+                Exceptions = new Dictionary<string, Exception>(), 
+                ShardsToReconnect = new List<string>(), 
+                Stopping = false
+            };
+            foreach ((string shard, SubscriptionShardHolder shardHolder) in _shardWorkers)
+            {
+                CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                if (result.Stopping)
+                    continue;
+
+                if (shardHolder.PullingTask.IsFaulted == false)
+                {
+                    if (redirectBatch == false)
+                        continue;
+
+                    var batch = shardHolder.Worker.PublishedBatchItem;
+                    if (batch == null)
+                        continue;
+
+                    await RedirectBatchAndConfirm(batch, shard);
+                    continue;
+                }
+
+                result.Exceptions.Add(shard, shardHolder.PullingTask.Exception);
+                result.ShardsToReconnect.Add(shard);
+
+                if (CanContinueSubscription(shardHolder))
+                    continue;
+
+                // we are stopping this subscription
+                result.Stopping = true;
+            }
+
+            if (result.Exceptions.Count == _shardWorkers.Count && result.Stopping == false)
+            {
+                // stop subscription if all workers have unrecoverable exception
+                result.Stopping = CanStopSubscription(result.Exceptions);
+            }
+
+            return result;
+        }
+
+        private bool CanStopSubscription(IReadOnlyDictionary<string, Exception> exceptions)
+        {
+            bool stopping = true;
+            foreach (var worker in _shardWorkers)
+            {
+                var ex = exceptions[worker.Key];
+                Debug.Assert(ex != null, "ex != null");
+
+                (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, null, null, throwOnRedirectNodeNotFound: false);
+                if (shouldTryToReconnect)
+                {
+                    // we have at least one worker to try to reconnect
+                    stopping = false;
+                }
+            }
+
+            return stopping;
+        }
+
+        private async Task RedirectBatchAndConfirm(ShardedSubscriptionWorker.PublishedBatch batch, string shard)
+        {
+            try
+            {
+                // Send to client
+                await WriteBatchToClientAndAck(batch, shard);
+
+                // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
+                batch.SendBatchToClientTcs.SetResult();
+            }
+            catch (Exception e)
+            {
+                // need to fail the shard subscription worker
+                batch.SendBatchToClientTcs.TrySetException(e);
+                throw;
+            }
+
+            // wait for sharded subscription worker to send ack to the shard subscription connection
+            // and receive the confirm from the shard subscription connection
+            await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
+
+            // send confirm to client and continue processing
+            await SendConfirmToClient();
+        }
+
+        private bool CanContinueSubscription(SubscriptionShardHolder shardHolder)
+        {
+            if (shardHolder.LastErrorDateTime.HasValue == false)
+            {
+                shardHolder.LastErrorDateTime = DateTime.UtcNow;
+                return true;
+            }
+
+            if (DateTime.UtcNow - shardHolder.LastErrorDateTime.Value <= _options.ShardedConnectionMaxErroneousPeriod)
+                return true;
+
+            return false;
         }
 
         private async Task WriteBatchToClientAndAck(ShardedSubscriptionWorker.PublishedBatch batch, string shard)
