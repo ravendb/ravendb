@@ -52,6 +52,15 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         public PublishedBatch PublishedBatchItem;
 
+        /*
+         *** ShardedSubscriptionWorker batch handling flow:
+         * 1. reads batch from shard
+         * 2. publish the batch
+         * 3. Wait for ShardedSubscriptionConnection to redirect the batch to client (and receive ACK request for it)
+         * 4. Send ACK request to shard and wait for CONFIRM from shard
+         * 5. Set TCS so ShardedSubscriptionConnection will send CONFIRM to the client
+         * 6. continue processing Subscription
+         */
         internal override async Task ProcessSubscriptionInternal(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
         {
             while (_processingCts.IsCancellationRequested == false)
@@ -82,9 +91,21 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     _processingCts.Token.ThrowIfCancellationRequested();
                     if (receivedMessage == null || receivedMessage.Type != SubscriptionConnectionServerMessage.MessageType.Confirm)
                     {
-                        var name = receivedMessage == null ? "null" : receivedMessage.Type.ToString();
+                        string name;
+                        string exception;
+                        if (receivedMessage == null)
+                        {
+                            name = "null";
+                            exception = "None";
+                        }
+                        else
+                        {
+                            name = receivedMessage.Type.ToString();
+                            exception = receivedMessage.Exception;
+                        }
+
                         throw new InvalidOperationException(
-                            $"On sharded worker '{_dbName}' the {nameof(SubscriptionConnectionServerMessage)} is {name} but expected {nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)}.");
+                            $"On sharded worker '{_dbName}' the {nameof(SubscriptionConnectionServerMessage)} is {name} but expected {nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)}. Exception: {exception}");
                     }
 
                     // got confirm from subscription connection (shard), now ShardedSubscriptionConnection can send confirm to actual client
