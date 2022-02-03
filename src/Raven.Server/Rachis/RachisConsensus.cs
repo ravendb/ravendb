@@ -96,7 +96,7 @@ namespace Raven.Server.Rachis
             StateMachine.AfterSnapshotInstalled(lastIncludedIndex, onFullSnapshotInstalledTask, token);
         }
 
-        public override Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             return StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, token);
         }
@@ -2141,7 +2141,7 @@ namespace Raven.Server.Rachis
         public abstract long Apply(ClusterOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
         public abstract void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token);
-        public abstract Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token);
+        public abstract Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;

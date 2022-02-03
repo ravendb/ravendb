@@ -3958,7 +3958,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
                     var hasChanges = false;
 
@@ -4104,71 +4104,71 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
 
-                foreach (var key in clusterCertificateKeys)
+            foreach (var key in clusterCertificateKeys)
+            {
+                using (GetLocalStateByThumbprint(context, key))
                 {
-                    using (GetLocalStateByThumbprint(context, key))
-                    {
-                        DeleteLocalState(context, key);
-                    }
+                    DeleteLocalState(context, key);
                 }
+            }
 
-                token.ThrowIfCancellationRequested();
+            token.ThrowIfCancellationRequested();
             var databases = GetDatabaseNames(context).ToArray();
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    if (tx is LowLevelTransaction llt && llt.Committed)
-                    {
                     var tasks = new Task[databases.Length + 2];
-                        // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                    // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                     for (var index = 0; index < databases.Length; index++)
-                        {
+                    {
                         var db = databases[index];
                         tasks[index] = Task.Run(async () =>
-                            {
-                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
-                            }, token);
-                        }
+                                {
+                                    await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                                }, token);
+                    }
 
                     tasks[databases.Length] = Task.Run(async () =>
-                        {
-                        await OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
                     });
 
                     tasks[databases.Length + 1] = Task.Run(async () =>
                     {
-                        await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
                     });
 
                     Task.WhenAll(tasks).ContinueWith(task =>
-                    {
-                        if (task.IsCompletedSuccessfully)
                         {
-                            tcs.TrySetResult(null);
-                        }
-                        else if (task.IsCanceled)
-                        {
-                            tcs.TrySetCanceled();
-                        }
-                        else
-                        {
-                            tcs.TrySetException(task.Exception!);
-                        }
+                            if (task.IsCompletedSuccessfully)
+                            {
+                                tcs.TrySetResult(null);
+                            }
+                            else if (task.IsCanceled)
+                            {
+                                tcs.TrySetCanceled();
+                            }
+                            else
+                            {
+                                tcs.TrySetException(task.Exception!);
+                            }
                         }, token);
-                    }
+                }
                 else
                 {
                     tcs.TrySetCanceled();
                 }
-                };
+            };
 
             return tcs.Task;
-            }
+        }
 
         public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
@@ -4178,8 +4178,8 @@ namespace Raven.Server.ServerWide
             try
             {
                 onFullSnapshotInstalledTask.Wait(token);
-            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
-        }
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            }
             catch (OperationCanceledException)
             {
                 // will not notify here

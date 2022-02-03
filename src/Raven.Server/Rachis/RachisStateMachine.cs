@@ -96,7 +96,7 @@ namespace Raven.Server.Rachis
         {
         }
 
-        public virtual Task OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, CancellationToken token)
+        public virtual Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
             return Task.CompletedTask;
         }

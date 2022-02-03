@@ -24,7 +24,7 @@ namespace SlowTests.Cluster
         }
 
         // the values are lower to make the cluster less stable
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
         {
             if (options == null)
             {
@@ -106,13 +106,15 @@ namespace SlowTests.Cluster
                         foreach (var n in cluster.Nodes)
                         {
                             var lastNodeNotifiedIndex = n.ServerStore.Cluster.LastNotifiedIndex;
-                            using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (ctx.OpenReadTransaction())
+                            using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                            using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
+                            using (context.OpenReadTransaction())
+                            using (clusterContext.OpenReadTransaction())
                             {
-                                var lastCommitIndex = n.ServerStore.Engine.GetLastCommitIndex(ctx);
+                                var lastCommitIndex = n.ServerStore.Engine.GetLastCommitIndex(context);
                                 if (lastNodeNotifiedIndex > lastCommitIndex)
                                 {
-                                    var logs = CollectLogs(ctx, n);
+                                    var logs = CollectLogs(context, clusterContext, n);
                                     throw new InvalidOperationException(
                                         $"node {n.ServerStore.NodeTag} notified {lastNodeNotifiedIndex}, committed: {lastCommitIndex}{Environment.NewLine}{logs}");
                                 }
@@ -180,10 +182,10 @@ namespace SlowTests.Cluster
 
                 foreach (var n in cluster.Nodes.Where(x => x.ServerStore.Engine.CurrentTerm >= maxTerm))
                 {
-                    using (n.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    using (n.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        var currentLog = n.ServerStore.Engine.GetLastEntryIndex(ctx);
+                        var currentLog = n.ServerStore.Engine.GetLastEntryIndex(context);
                         if (maxLog < currentLog)
                             maxLog = currentLog;
                     }
@@ -193,10 +195,10 @@ namespace SlowTests.Cluster
                 {
                     await node.ServerStore.Cluster.WaitForIndexNotification(maxLog, TimeSpan.FromMinutes(1));
 
-                    using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    using (node.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
                     {
-                        compareExchangeCount.Add(node.ServerStore.Cluster.GetNumberOfCompareExchange(ctx, db));
+                        compareExchangeCount.Add(node.ServerStore.Cluster.GetNumberOfCompareExchange(context, db));
                     }
                 }
 
