@@ -304,10 +304,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
             {
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(sliceHolder.TimeSeriesPrefixSlice, sliceHolder.TimeSeriesKeySlice, out var segmentValueReader) ||
-                    table.SeekOnePrimaryKeyWithPrefix(sliceHolder.TimeSeriesPrefixSlice, sliceHolder.TimeSeriesKeySlice, out segmentValueReader))
+                if (table.ReadByKey(sliceHolder.TimeSeriesKeySlice, out var tableValueReader))
                 {
-                    var item = CreateDeletedRangeItem(context, ref segmentValueReader);
+                    var item = CreateDeletedRangeItem(context, ref tableValueReader);
                     if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
                     {
                         return null;
@@ -339,7 +338,6 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector) == null)
                 return null;
-
 
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
