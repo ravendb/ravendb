@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public class ClusterState
+    internal class ClusterState
     {
         public ClusterState()
         {
