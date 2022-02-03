@@ -73,8 +73,11 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<int, BucketMigration> BucketMigrations;
 
+        // change vectors with a MOVE element below this will be considered as permanent
+        // pointers with the migration index below this one will be purged
         public long MigrationCutOffIndex;
 
+        // the dbid part with the MOVE tag upon migration
         public string ShardedDatabaseId;
 
         // public OnGoingTasks tasks;  tasks for this node..
@@ -499,8 +502,18 @@ namespace Raven.Client.ServerWide
     public enum MigrationStatus
     {
         None,
+
+        // source is in progress of sending the bucket
         Moving,
+        
+        // the source has completed to send everything he has
+        // and the destinations member nodes start confirm having all docs
+        // at this stage writes will still go to the source shard
         Moved,
+        
+        // all member nodes confirmed receiving the bucket
+        // the mapping is updated so any traffic will go now to the destination
+        // the source will start the cleanup process
         OwnershipTransferred
     }
 
