@@ -236,9 +236,6 @@ JS_SELECT
    : S E L E C T ' '* OP_CUR -> pushMode (JAVASCRIPT_STATEMENT)
    ;
 
-JS_JSON:
-   OP_CUR -> pushMode (JAVASCRIPT_STATEMENT);
-
 SORTING
    : A S C
    | A S C E N D I N G
@@ -317,16 +314,15 @@ NUM
    : DIGIT+ (DOT DIGIT+)?
    ;
 
-STRING
-   : SINGLE_QUOTE_STRING
-   | ('"' ('\\"' | .)*? '"')
-   | ('\'' ('\\"' | .)*? '\'')
+DOUBLE_QUOTE_STRING
+   : '"' ('\\"' | .)*? '"'
    | '"' UTFEscape '"'
-   | '\'' UTFEscape '\''
    ;
 
 SINGLE_QUOTE_STRING
    : '\'' (('\'\'') | ('\\'+ ~ '\\') | ~ ('\'' | '\\'))* '\''
+   | ('\'' ('\\"' | .)*? '\'')
+   | '\'' UTFEscape '\''
    ;
 
 WORD
