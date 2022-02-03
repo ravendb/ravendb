@@ -46,7 +46,7 @@ type trackInfo = {
 }
 
 type exportFileFormat = {
-    Replication: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[];
+    Replication: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[];
     Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
     Subscription: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[];
 }
@@ -337,7 +337,7 @@ class ongoingTasksStats extends viewModelBase {
     /* private */
 
     // The live data from endpoint
-    private replicationData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+    private replicationData: Raven.Server.Documents.Replication.Stats.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
     private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
     private subscriptionData: Raven.Server.Documents.Subscriptions.SubscriptionTaskPerformanceStats[] = [];
     
