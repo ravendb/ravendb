@@ -207,6 +207,7 @@ namespace Raven.Server.Rachis
                     {
                         CurrentTerm = _term,
                         LastLogIndex = lastAcknowledgedIndex,
+                        LastCommitIndex = lastCommit,
                         Success = true
                     });
 
@@ -407,7 +408,6 @@ namespace Raven.Server.Rachis
 
             long prevTerm;
             bool requestSnapshot;
-            bool requestFullSnapshot = false;
             using (context.OpenReadTransaction())
             {
                 prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
@@ -427,7 +427,6 @@ namespace Raven.Server.Rachis
                     CurrentTerm = _term,
                     LastLogIndex = 0
                 });
-                requestFullSnapshot = true;
             }
             else if (prevTerm != negotiation.PrevLogTerm)
             {
@@ -438,7 +437,7 @@ namespace Raven.Server.Rachis
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
-                requestFullSnapshot = NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
+                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
@@ -466,9 +465,13 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Start receiving snapshot");
 
             // reading the snapshot from network and committing it to the disk might take a long time. 
+            Task onFullSnapshotInstalledTask = null;
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() => ReadAndCommitSnapshot(context, snapshot, cts.Token), cts, "ReadAndCommitSnapshot");
+                KeepAliveAndExecuteAction(() =>
+                {
+                    onFullSnapshotInstalledTask = ReadAndCommitSnapshot(context, snapshot, cts.Token);
+                }, cts, "ReadAndCommitSnapshot");
             }
 
             _debugRecorder.Record("Snapshot was received and committed");
@@ -480,7 +483,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    _engine.SnapshotInstalled(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
+                    _engine.AfterSnapshotInstalled(snapshot.LastIncludedIndex, onFullSnapshotInstalledTask, cts.Token);
                 }, cts, "SnapshotInstalledAsync");
             }
 
@@ -538,8 +541,10 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void ReadAndCommitSnapshot(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
+        private Task ReadAndCommitSnapshot(ClusterOperationContext context, InstallSnapshot snapshot, CancellationToken token)
         {
+            Task onFullSnapshotInstalledTask = null;
+
             using (context.OpenWriteTransaction())
             {
                 var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
@@ -567,6 +572,8 @@ namespace Raven.Server.Rachis
 
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
+
+                    onFullSnapshotInstalledTask = _engine.OnSnapshotInstalled(context, snapshot.LastIncludedIndex, token);
                 }
                 else
                 {
@@ -579,7 +586,6 @@ namespace Raven.Server.Rachis
                         {
                             _engine.Log.Info($"{ToString()}: {message}");
                         }
-
                         throw new InvalidOperationException(message);
                     }
                 }
@@ -621,6 +627,7 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            return onFullSnapshotInstalledTask;
         }
 
         private bool InstallSnapshot(ClusterOperationContext context, CancellationToken token)
@@ -832,6 +839,8 @@ namespace Raven.Server.Rachis
             long maxIndex;
             long midpointTerm;
             long midpointIndex;
+            long lastIndex;
+
             using (context.OpenReadTransaction())
             {
                 minIndex = _engine.GetFirstEntryIndex(context);
@@ -846,6 +855,8 @@ namespace Raven.Server.Rachis
                     _engine.GetLastEntryIndex(context), // max
                     negotiation.PrevLogIndex
                 );
+
+                lastIndex = _engine.GetLastEntryIndex(context);
 
                 midpointIndex = (maxIndex + minIndex) / 2;
 
@@ -885,8 +896,29 @@ namespace Raven.Server.Rachis
                 _engine.Timeout.Defer(_connection.Source);
                 if (negotiation.Truncated)
                 {
+                    if (lastIndex + 1 == negotiation.PrevLogIndex)
+                    {
                     if (_engine.Log.IsInfoEnabled)
                     {
+                            _engine.Log.Info($"{ToString()}: leader first entry = {negotiation.PrevLogIndex} is the one we need (our last is {lastIndex})");
+                        }
+
+                        connection.Send(context, new LogLengthNegotiationResponse
+                        {
+                            Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                            Message = $"agreed on our last index {lastIndex}",
+                            CurrentTerm = _term,
+                            LastLogIndex = lastIndex,
+                        });
+
+                        // leader's first entry is the next we need 
+                        return false;
+                    }
+
+                    if (lastIndex + 1 < negotiation.PrevLogIndex)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
                         _engine.Log.Info($"{ToString()}: Got a truncated response from the leader will request all entries");
                     }
 
@@ -894,6 +926,13 @@ namespace Raven.Server.Rachis
                     return true;
                 }
 
+                    // the leader already truncated the suggested index
+                    // Let's try to negotiate from that index upto our last appended index
+                    maxIndex = lastIndex;
+                    minIndex = negotiation.PrevLogIndex;
+                }
+                else
+                {
                 using (context.OpenReadTransaction())
                 {
                     if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
@@ -904,6 +943,7 @@ namespace Raven.Server.Rachis
                     {
                         maxIndex = Math.Max(midpointIndex - 1, minIndex);
                     }
+                }
                 }
 
                 midpointIndex = (maxIndex + minIndex) / 2;

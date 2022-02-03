@@ -1,5 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Sparrow.Json;
@@ -28,14 +30,21 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var itemId = GetItemId();
             if (existingValue == null)
-                throw new RachisApplyException($"Subscription with id '{itemId}' does not exist");
+                throw new SubscriptionDoesNotExistException($"Subscription with id '{itemId}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var topology = record.Topology;
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
-            if (topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode) != NodeTag)
-                throw new RachisApplyException($"Can't update subscription with name '{itemId}' by node {NodeTag}, because it's not it's task to update this subscription");
+            var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
+
+            if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
+                throw new DatabaseDoesNotExistException(
+                    $"Stopping subscription '{SubscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
+
+            if (appropriateNode != NodeTag)
+                throw new SubscriptionDoesNotBelongToNodeException(
+                    $"Can't update subscription with name {itemId} by node {NodeTag}, because it's not its task to update this subscription");
 
             subscription.LastClientConnectionTime = LastClientConnectionTime;
             subscription.NodeTag = NodeTag;

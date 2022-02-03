@@ -1307,13 +1307,14 @@ namespace Raven.Server.ServerWide
         {
             try
             {
+                string certThumbprint;
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var cert = Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (cert == null)
                         return;
-                    if (cert.TryGet(nameof(CertificateReplacement.Thumbprint), out string certThumbprint) == false)
+                    if (cert.TryGet(nameof(CertificateReplacement.Thumbprint), out certThumbprint) == false)
                         throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Thumbprint)}' property");
 
                     if (cert.TryGet(nameof(CertificateReplacement.Certificate), out string base64Cert) == false)
@@ -1338,10 +1339,10 @@ namespace Raven.Server.ServerWide
                             NotificationSeverity.Error));
                         return;
                     }
-
-                    // we got it, now let us let the leader know about it
-                    await SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
                 }
+
+                // we got it, now let us let the leader know about it
+                await SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
             }
             catch (Exception e)
             {
