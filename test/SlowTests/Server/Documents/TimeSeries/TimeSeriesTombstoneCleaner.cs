@@ -170,7 +170,11 @@ namespace SlowTests.Server.Documents.TimeSeries
                     tsCount1 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
                 }
 
-                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
+                var storage2 = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                cleaner = storage2.TombstoneCleaner;
+                await cleaner.ExecuteCleanup();
+
                 long tsCount2 = 0;
                 using (storage2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
