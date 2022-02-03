@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
-            Definition._clusterState ??= new ClusterState();
+            Definition.ClusterState ??= new ClusterState();
             Source = source;
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;

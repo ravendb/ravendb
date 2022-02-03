@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Indexes
     {
         protected IndexDefinitionBase()
         {
-            _clusterState = new ClusterState();
+            ClusterState = new ClusterState();
         }
 
         /// <summary>
@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public IndexState? State { get; set; }
 
-        [JsonDeserializationNoIgnore]
-        internal ClusterState _clusterState;
+        [ForceJsonSerialization]
+        internal ClusterState ClusterState;
     }
 }

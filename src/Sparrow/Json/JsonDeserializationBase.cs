@@ -75,7 +75,7 @@ namespace Sparrow.Json
                 };
                 foreach (var fieldInfo in typeof(T).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                 {
-                    if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(JsonDeserializationNoIgnoreAttribute)) == false))
+                    if ((fieldInfo.IsPublic == false) && (fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false))
                         continue;
 
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
@@ -92,7 +92,7 @@ namespace Sparrow.Json
                 foreach (var propertyInfo in typeof(T).GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                 {
                     if ((propertyInfo.GetGetMethod(true)?.IsPublic == false) &&
-                        propertyInfo.IsDefined(typeof(JsonDeserializationNoIgnoreAttribute)) == false)
+                        propertyInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false)
                         continue;
 
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))

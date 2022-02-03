@@ -1171,7 +1171,7 @@ namespace Raven.Server.Documents.Indexes
             if (indexDef != null)
             {
                 differences = existingIndex.Definition.Compare(indexDef);
-                if (indexDef._clusterState?.LastStateIndex > (existingIndex.Definition._clusterState?.LastStateIndex ?? -1))
+                if (indexDef.ClusterState?.LastStateIndex > (existingIndex.Definition._clusterState?.LastStateIndex ?? -1))
                 {
                     differences |= IndexDefinitionCompareDifferences.State;
                 }
@@ -1816,7 +1816,7 @@ namespace Raven.Server.Documents.Indexes
                     differences |= IndexDefinitionCompareDifferences.State;
 
                 index.Definition._clusterState ??= new ClusterState();
-                index.Definition._clusterState.LastStateIndex = (indexDefinition._clusterState?.LastStateIndex ?? 0);
+                index.Definition._clusterState.LastStateIndex = (indexDefinition.ClusterState?.LastStateIndex ?? 0);
 
                 if (differences != IndexDefinitionCompareDifferences.None)
                 {
