@@ -8,6 +8,8 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Voron.Data;
+using Voron.Impl;
+
 // ReSharper disable InconsistentNaming
 
 namespace Raven.Server.Rachis
@@ -47,7 +49,13 @@ namespace Raven.Server.Rachis
                 if (flags != RachisEntryFlags.StateMachineCommand)
                 {
                     _parent.LogHistory.UpdateHistoryLog(context, index, _parent.CurrentTerm, cmd, null, null);
-                    serverStore.Cluster.NotifyAndSetCompleted(index);
+
+                    var currentIndex = index;
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += t =>
+                    {
+                        if (t is LowLevelTransaction llt && llt.Committed)
+                            serverStore.Cluster.NotifyAndSetCompleted(currentIndex);
+                    };
                     continue;
                 }
 
@@ -84,8 +92,13 @@ namespace Raven.Server.Rachis
 
         public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate, CancellationToken token);
 
-        public virtual void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public virtual void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
         {
+        }
+
+        public virtual Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
+        {
+            return Task.CompletedTask;
         }
     }
 }

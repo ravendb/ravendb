@@ -270,7 +270,7 @@ namespace Raven.Server.ServerWide
             });
         }
 
-        public long LastNotifiedIndex => _rachisLogIndexNotifications.LastModifiedIndex;
+        public long LastNotifiedIndex => Interlocked.Read(ref _rachisLogIndexNotifications.LastModifiedIndex);
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
@@ -2717,7 +2717,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public IEnumerable<(string ItemName, BlittableJsonReaderObject Value)> ItemsStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string prefix, long start, long take)
+        public IEnumerable<(string ItemName, long Index, BlittableJsonReaderObject Value)> ItemsStartingWith<TTransaction>(TransactionOperationContext<TTransaction> context, string prefix, long start, long take)
             where TTransaction : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
@@ -2745,7 +2745,7 @@ namespace Raven.Server.ServerWide
                 var tvh = new Table.TableValueHolder();
                 if (items.ReadByKey(k, out tvh.Reader) == false)
                     return null;
-                return GetCurrentItem(context, tvh).Item2;
+                return GetCurrentItem(context, tvh).Value;
             }
         }
 
@@ -3093,15 +3093,16 @@ namespace Raven.Server.ServerWide
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe (string, BlittableJsonReaderObject) GetCurrentItem<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
+        private static unsafe (string Key, long Index, BlittableJsonReaderObject Value) GetCurrentItem<TTransaction>(TransactionOperationContext<TTransaction> context, Table.TableValueHolder result)
             where TTransaction : RavenTransaction
         {
             var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
             var key = Encoding.UTF8.GetString(result.Reader.Read(1, out size), size);
+            var index = Bits.SwapBytes(*(long*)result.Reader.Read(3, out _));
 
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
-            return (key, doc);
+            return (key, index, doc);
         }
 
         public BlittableJsonReaderObject GetCertificateByThumbprint<TTransaction>(TransactionOperationContext<TTransaction> context, string thumbprint)
@@ -3684,7 +3685,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
                     var databaseName = key.Substring(dbKey.Length);
                     var newBackups = new DynamicJsonArray();
 
@@ -3829,7 +3830,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
                     var externalReplication = JsonDeserializationCluster.ExternalReplication(serverWideBlittable);
                     var databaseName = key.Substring(dbKey.Length);
@@ -3957,7 +3958,7 @@ namespace Raven.Server.ServerWide
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
-                    var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
+                    var (key, _, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
 
                     var hasChanges = false;
 
@@ -4103,52 +4104,90 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public override Task OnSnapshotInstalled(ClusterOperationContext context, long lastIncludedIndex, CancellationToken token)
         {
-            using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenWriteTransaction())
+            var clusterCertificateKeys = GetCertificateThumbprintsFromCluster(context);
+
+            foreach (var key in clusterCertificateKeys)
             {
-                // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
-                var clusterCertificateKeys = serverStore.Cluster.GetCertificateThumbprintsFromCluster(context);
-
-                foreach (var key in clusterCertificateKeys)
+                using (GetLocalStateByThumbprint(context, key))
                 {
-                    using (GetLocalStateByThumbprint(context, key))
-                    {
-                        DeleteLocalState(context, key);
-                    }
+                    DeleteLocalState(context, key);
                 }
-
-                token.ThrowIfCancellationRequested();
-
-                var databases = GetDatabaseNames(context).ToArray();
-                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-                {
-                    if (tx is LowLevelTransaction llt && llt.Committed)
-                    {
-                        // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                        foreach (var db in databases)
-                        {
-                            var t = Task.Run(async () =>
-                            {
-                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
-                            }, token);
-                        }
-
-                        var t2 = Task.Run(async () =>
-                        {
-                            await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
-                            if (fullSnapshot)
-                                await Changes.OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
-                        }, token);
-                    }
-                };
-
-                context.Transaction.Commit();
             }
-            token.ThrowIfCancellationRequested();
 
-            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            token.ThrowIfCancellationRequested();
+            var databases = GetDatabaseNames(context).ToArray();
+
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
+                {
+                    var tasks = new Task[databases.Length + 2];
+                    // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                    for (var index = 0; index < databases.Length; index++)
+                    {
+                        var db = databases[index];
+                        tasks[index] = Task.Run(async () =>
+                                {
+                                    await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
+                                }, token);
+                    }
+
+                    tasks[databases.Length] = Task.Run(async () =>
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
+                    });
+
+                    tasks[databases.Length + 1] = Task.Run(async () =>
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                    });
+
+                    Task.WhenAll(tasks).ContinueWith(task =>
+                        {
+                            if (task.IsCompletedSuccessfully)
+                            {
+                                tcs.TrySetResult(null);
+                            }
+                            else if (task.IsCanceled)
+                            {
+                                tcs.TrySetCanceled();
+                            }
+                            else
+                            {
+                                tcs.TrySetException(task.Exception!);
+                            }
+                        }, token);
+                }
+                else
+                {
+                    tcs.TrySetCanceled();
+                }
+            };
+
+            return tcs.Task;
+        }
+
+        public override void AfterSnapshotInstalled(long lastIncludedIndex, Task onFullSnapshotInstalledTask, CancellationToken token)
+        {
+            if (onFullSnapshotInstalledTask == null)
+                return;
+
+            try
+            {
+                onFullSnapshotInstalledTask.Wait(token);
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            }
+            catch (OperationCanceledException)
+            {
+                // will not notify here
+            }
+            catch (Exception e)
+            {
+                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, e);
+            }
         }
 
         protected override RachisVersionValidation InitializeValidator()
