@@ -99,13 +99,6 @@ namespace Raven.Server.Documents.Replication.Senders
                         return true;
                     }
 
-                    if (doc.Id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        stats.RecordSystemDocumentSkip();
-                        skippedReplicationItemsInfo.Update(item, isArtificial: false);
-                        return true;
-                    }
-
                     break;
             }
 

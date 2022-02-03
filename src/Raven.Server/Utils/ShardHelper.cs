@@ -195,7 +195,7 @@ namespace Raven.Server.Utils
             try
             {
                 if (bucket >= NumberOfBuckets)
-                    throw new InvalidOperationException($"Total number of buckets is {NumberOfBuckets}, requested: {bucket}");
+                    throw new InvalidOperationException($"For database '{record.DatabaseName}' total number of buckets is {NumberOfBuckets}, requested: {bucket}");
 
                 if (bucket == 0)
                 {
@@ -298,23 +298,31 @@ namespace Raven.Server.Utils
             }
             finally
             {
-                if (record.ShardAllocations[0].RangeStart != 0)
-                    throw new InvalidOperationException();
+                ValidateBucketsMapping(record);
+            }
+        }
 
-                var lastShard = record.ShardAllocations[0].Shard;
-                var lastStart = 0;
+        private static void ValidateBucketsMapping(DatabaseRecord record)
+        {
+            if (record.ShardAllocations[0].RangeStart != 0)
+                throw new InvalidOperationException($"At database '{record.DatabaseName}', " +
+                                                    $"First mapping must start with zero, actual: {record.ShardAllocations[0].RangeStart}");
 
-                for (int i = 1; i < record.ShardAllocations.Count - 1; i++)
-                {
-                    var current = record.ShardAllocations[i];
-                    if (current.RangeStart <= lastStart)
-                        throw new InvalidOperationException();
-                    if (current.Shard == lastShard)
-                        throw new InvalidOperationException();
+            var lastShard = record.ShardAllocations[0].Shard;
+            var lastStart = 0;
 
-                    lastStart = current.RangeStart;
-                    lastShard = current.Shard;
-                }
+            for (int i = 1; i < record.ShardAllocations.Count - 1; i++)
+            {
+                var current = record.ShardAllocations[i];
+                if (current.RangeStart <= lastStart)
+                    throw new InvalidOperationException($"At database '{record.DatabaseName}', " +
+                                                        $"Overlap detected between mapping '{i}' and '{i-1}' start: {current.RangeStart}, previous end: {lastStart}");
+                if (current.Shard == lastShard)                    
+                    throw new InvalidOperationException($"At database '{record.DatabaseName}', " +
+                                                        $"Not merged shard continuous range detected between mapping '{i}' and '{i-1}' at shard: {current.Shard}");
+
+                lastStart = current.RangeStart;
+                lastShard = current.Shard;
             }
         }
     }

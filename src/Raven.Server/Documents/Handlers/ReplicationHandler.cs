@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ["Key"] = new DynamicJsonValue
                         {
-                            [nameof(item.Key)] = item.Key.GetType(),
+                            [nameof(item.Key)] = item.Key.GetType().ToString(),
                             [nameof(item.Key.Url)] = item.Key.Url,
                             [nameof(item.Key.Database)] = item.Key.Database,
                             [nameof(item.Key.Disabled)] = item.Key.Disabled

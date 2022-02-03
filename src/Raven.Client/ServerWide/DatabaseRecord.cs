@@ -498,7 +498,7 @@ namespace Raven.Client.ServerWide
 
     public enum MigrationStatus
     {
-        Pending,
+        None,
         Moving,
         Moved,
         OwnershipTransferred
