@@ -19,6 +19,12 @@ import { InExprContext } from "./BaseRqlParser";
 import { BetweenExprContext } from "./BaseRqlParser";
 import { NormalFuncContext } from "./BaseRqlParser";
 import { BooleanExpressionContext } from "./BaseRqlParser";
+import { FilterBinaryExpressionContext } from "./BaseRqlParser";
+import { FilterOpParContext } from "./BaseRqlParser";
+import { FilterEqualExpressionContext } from "./BaseRqlParser";
+import { FilterMathExpressionContext } from "./BaseRqlParser";
+import { FilterNormalFuncContext } from "./BaseRqlParser";
+import { FilterBooleanExpressionContext } from "./BaseRqlParser";
 import { JavaScriptFunctionContext } from "./BaseRqlParser";
 import { TimeSeriesFunctionContext } from "./BaseRqlParser";
 import { TsMathExpressionContext } from "./BaseRqlParser";
@@ -107,6 +113,17 @@ import { TsSelectScaleProjectionContext } from "./BaseRqlParser";
 import { TsSelectVariableContext } from "./BaseRqlParser";
 import { TsIdentifiersContext } from "./BaseRqlParser";
 import { UpdateBodyContext } from "./BaseRqlParser";
+import { FilterStatementContext } from "./BaseRqlParser";
+import { FilterExprContext } from "./BaseRqlParser";
+import { FilterModeContext } from "./BaseRqlParser";
+import { ParameterBeforeQueryContext } from "./BaseRqlParser";
+import { ParameterValueContext } from "./BaseRqlParser";
+import { JsonContext } from "./BaseRqlParser";
+import { JsonObjContext } from "./BaseRqlParser";
+import { JsonPairContext } from "./BaseRqlParser";
+import { JsonArrContext } from "./BaseRqlParser";
+import { JsonValueContext } from "./BaseRqlParser";
+import { StringContext } from "./BaseRqlParser";
 
 
 /**
@@ -244,6 +261,54 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitBooleanExpression?: (ctx: BooleanExpressionContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterBinaryExpression`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterBinaryExpression?: (ctx: FilterBinaryExpressionContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterOpPar`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterOpPar?: (ctx: FilterOpParContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterEqualExpression`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterEqualExpression?: (ctx: FilterEqualExpressionContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterMathExpression`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterMathExpression?: (ctx: FilterMathExpressionContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterNormalFunc`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterNormalFunc?: (ctx: FilterNormalFuncContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by the `filterBooleanExpression`
+	 * labeled alternative in `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterBooleanExpression?: (ctx: FilterBooleanExpressionContext) => Result;
 
 	/**
 	 * Visit a parse tree produced by the `javaScriptFunction`
@@ -867,5 +932,82 @@ export interface BaseRqlParserVisitor<Result> extends ParseTreeVisitor<Result> {
 	 * @return the visitor result
 	 */
 	visitUpdateBody?: (ctx: UpdateBodyContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.filterStatement`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterStatement?: (ctx: FilterStatementContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.filterExpr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterExpr?: (ctx: FilterExprContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.filterMode`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitFilterMode?: (ctx: FilterModeContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.parameterBeforeQuery`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitParameterBeforeQuery?: (ctx: ParameterBeforeQueryContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.parameterValue`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitParameterValue?: (ctx: ParameterValueContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.json`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitJson?: (ctx: JsonContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.jsonObj`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitJsonObj?: (ctx: JsonObjContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.jsonPair`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitJsonPair?: (ctx: JsonPairContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.jsonArr`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitJsonArr?: (ctx: JsonArrContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.jsonValue`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitJsonValue?: (ctx: JsonValueContext) => Result;
+
+	/**
+	 * Visit a parse tree produced by `BaseRqlParser.string`.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	visitString?: (ctx: StringContext) => Result;
 }
 
