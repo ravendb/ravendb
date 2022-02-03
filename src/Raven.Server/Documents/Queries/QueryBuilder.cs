@@ -551,16 +551,16 @@ namespace Raven.Server.Documents.Queries
             switch (value)
             {
                 case LazyStringValue lsv:
-                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 case string valueAsString:
                     fixed (char* buffer = valueAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 default:
                     var otherAsString = value.ToString();
                     fixed (char* buffer = otherAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
             }
 
