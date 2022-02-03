@@ -16,7 +16,7 @@ fi
 [[ $status_server =~ "true" && $status_studio =~ "true" ]] && echo "ok" > notificationMessage.txt && exit 0
 
 
-header="<${PRLINK}|[${PRTAGRETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
+header="<${PRLINK}|[${PRTARGETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
 
 studio_prefix=$prefix_x
 if [[ $status_server =~ "true" ]]; then 

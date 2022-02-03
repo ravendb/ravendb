@@ -15,7 +15,7 @@ status_whitespace=$(cat pass_status_whitespace/status_whitespace.txt)
 [[ $status_message =~ "true" && $status_whitespace =~ "true" ]] && echo "ok" > notificationMessage.txt && exit 0
 
 
-header="<${PRLINK}|[${PRTAGRETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
+header="<${PRLINK}|[${PRTARGETBRANCH}] [PR #${PRNUMBER}] ${PRTITLE}> failed (<$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|GITHUB ACTIONS>)"
 message_summary=$(getStageSummary 'Commit Message Conventions' $status_message)
 whitespace_summary=$(getStageSummary 'Commit Whitespace Conventions' $status_whitespace)
 
