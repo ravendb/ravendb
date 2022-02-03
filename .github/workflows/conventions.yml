@@ -90,7 +90,7 @@ jobs:
         run: ./scripts/githubActions/ConventionsGenerateMessage.sh
         env:
           PRLINK: ${{ github.event.pull_request.html_url }}
-          PRTAGRETBRANCH: ${{ github.event.pull_request.base.ref }}
+          PRTARGETBRANCH: ${{ github.event.pull_request.base.ref }}
           PRNUMBER: ${{ github.event.pull_request.number }}
           PRTITLE: ${{ github.event.pull_request.title }}
       

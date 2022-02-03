@@ -15,7 +15,9 @@ jobs:
           echo "DOTNET_VERSION=${dotnet_version}.x" >> $GITHUB_ENV
       - name: Install 3.1 sdk
         if: startsWith( env.DOTNET_VERSION, '3' )
-        run: curl -sL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --version 3.1.416
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
       - name: Setup .NET 6
         uses: actions/setup-dotnet@v1
         with:
@@ -85,7 +87,7 @@ jobs:
         run: ./scripts/githubActions/CompileGenerateMessage.sh
         env:
           PRLINK: ${{ github.event.pull_request.html_url }}
-          PRTAGRETBRANCH: ${{ github.event.pull_request.base.ref }}
+          PRTARGETBRANCH: ${{ github.event.pull_request.base.ref }}
           PRNUMBER: ${{ github.event.pull_request.number }}
           PRTITLE: ${{ github.event.pull_request.title }}
       
