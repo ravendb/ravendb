@@ -966,7 +966,7 @@ namespace Raven.Server.Documents.Replication
             // remove
             foreach (var handler in OutgoingHandlers)
             {
-                if (handler is OutgoingMigrationReplicationHandler migrationHandler == false)
+                if (handler is not OutgoingMigrationReplicationHandler migrationHandler)
                     continue;
 
                 if (newRecord.BucketMigrations.TryGetValue(migrationHandler.BucketMigrationNode.Bucket, out var migration) == false)

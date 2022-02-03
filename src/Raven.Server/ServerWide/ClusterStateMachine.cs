@@ -3453,6 +3453,10 @@ namespace Raven.Server.ServerWide
                 if (databaseRecord.IsSharded() == false)
                     throw new InvalidOperationException($"The database record '{name}' is not sharded.");
 
+                if (shard >= databaseRecord.Shards.Length)
+                    throw new InvalidOperationException($"Requested invalid shard. " +
+                                                        $"Requested shard '{shard}', while the database record '{name}' has '{databaseRecord.Shards.Length}' shards.");
+
                 var topology = databaseRecord.Shards[shard];
                 if (topology == null)
                     throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
