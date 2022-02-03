@@ -124,6 +124,12 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WritePropertyName("Where");
             base.VisitWhereClause(where);
         }
+        
+        public override void VisitFilterClause(QueryExpression filter)
+        {
+            _writer.WritePropertyName("Filter");
+            base.VisitWhereClause(filter);
+        }
 
         public override void VisitCompoundWhereExpression(BinaryExpression @where)
         {

@@ -41,7 +41,7 @@ namespace Sparrow.Utils
                 alreadyOnBuffer.Valid = alreadyOnBuffer.Used = 0; // consume all the data from the buffer
             }
 
-            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _inner = innerInput ?? throw new ArgumentNullException(nameof(inner));
             _input = ZstdStream.Decompress(inner);
             _output = ZstdStream.Compress(inner);
             _dispose = new DisposeOnce<SingleAttempt>(DisposeInternal);

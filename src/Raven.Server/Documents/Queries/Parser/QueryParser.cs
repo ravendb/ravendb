@@ -169,6 +169,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan("LOAD"))
                 query.Load = SelectClauseExpressions("LOAD", false);
+            
+                
+            if (Scanner.TryScan("FILTER") && Expression(out query.Filter) == false)
+            {
+                message = "Unable to parse FILTER clause";
+                return false;
+            }
 
             switch (queryType)
             {
@@ -216,7 +223,17 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            Paging(out query.Offset, out query.Limit);
+            Paging(out query.Offset, out query.Limit, out query.FilterLimit);
+            if (queryType == QueryType.Select &&
+                Scanner.TryScan("INCLUDE"))
+            {
+                if (query.Include != null)
+                {
+                    message = "Query already has an include statement, but encountered a second one";
+                    return false;
+                }
+                query.Include = IncludeClause();
+            }
 
             if (recursive == false && Scanner.AtEndOfInput() == false)
             {
@@ -258,10 +275,11 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private void Paging(out ValueExpression offset, out ValueExpression limit)
+        private void Paging(out ValueExpression offset, out ValueExpression limit, out ValueExpression filterLimit)
         {
             offset = null;
             limit = null;
+            filterLimit = null;
 
             if (Scanner.TryScan("LIMIT"))
             {
@@ -291,6 +309,12 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowInvalidQueryException("Offset must contain a value");
 
                 offset = second;
+            }
+
+            if (Scanner.TryScan("FILTER_LIMIT"))
+            {
+                if (Value(out filterLimit) == false)
+                    ThrowInvalidQueryException("FILTER_LIMIT must contain a value");
             }
         }
 
@@ -1806,6 +1830,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             "AS",
             "SELECT",
             "WHERE",
+            "FILTER",
             "LOAD",
             "GROUP",
             "ORDER",
@@ -1813,6 +1838,7 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             "UPDATE",
             "OFFSET",
             "LIMIT",
+            "FILTER_LIMIT",
             "SCALE"
         };
 

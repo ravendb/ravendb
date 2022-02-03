@@ -826,6 +826,29 @@ namespace RachisTests
         }
 
         [Fact]
+        public async Task AddNodeToClusterWithoutError()
+        {
+            var (_, leader) = await CreateRaftCluster(1);
+
+            var server2 = GetNewServer();
+            var server2Url = server2.ServerStore.GetNodeHttpServerUrl();
+            Servers.Add(server2);
+
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(server2Url, watcher: true), ctx);
+                await server2.ServerStore.Engine.WaitForTopology(Leader.TopologyModification.NonVoter);
+            }
+
+            using (server2.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var logs = ctx.ReadObject(server2.ServerStore.Engine.InMemoryDebug.ToJson(),"watcher-logs").ToString();
+                Assert.False(logs.Contains("Exception"), logs);
+            }
+        }
+
+        [Fact]
         public async Task ResetServerShouldPreserveTopology()
         {
             var cluster = await CreateRaftCluster(3, shouldRunInMemory: false);

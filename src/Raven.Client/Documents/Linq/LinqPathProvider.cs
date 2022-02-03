@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Get the path from the expression, including considering dictionary calls
         /// </summary>
-        public Result GetPath(Expression expression)
+        public Result GetPath(Expression expression, bool isFilterActive = false)
         {
             expression = SimplifyExpression(expression);
 
@@ -60,6 +60,15 @@ namespace Raven.Client.Documents.Linq
                         throw new ArgumentException("Not supported computation: " + callExpression +
                                             ". You cannot use computation in RavenDB queries (only simple member expressions are allowed).");
 
+                    if (isFilterActive)
+                    {
+                        return new Result
+                        {
+                            MemberType = callExpression.Method.ReturnType,
+                            IsNestedPath = false,
+                            Path = "Count"
+                        };
+                    }
                     var target = GetPath(callExpression.Arguments[0]);
                     return new Result
                     {

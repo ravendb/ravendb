@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Results
             return string.IsNullOrEmpty(key) == false;
         }
 
-        protected override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
+        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields)
         {
             return DocumentsStorage.Get(_context, id, fields);
         }

@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.TimeSeries
         public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice, NameSlice;
         public DateTime CurrentBaseline;
 
-        public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name, string collection)
+        public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name, string collection = null)
         {
             _context = context;
             DocId = documentId;

@@ -73,7 +73,7 @@ namespace Raven.Server.Web.System
                             return;
                         }
 
-                        WriteDatabaseInfo(databaseName, dbDoc.Item2, context, w);
+                        WriteDatabaseInfo(databaseName, dbDoc.Value, context, w);
                     });
                     writer.WriteEndObject();
                 }

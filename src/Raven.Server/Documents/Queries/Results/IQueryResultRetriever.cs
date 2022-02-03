@@ -11,6 +11,9 @@ namespace Raven.Server.Documents.Queries.Results
         (Document Document, List<Document> List) Get(ref RetrieverInput retrieverInput, CancellationToken token);
 
         bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
+
+        Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+
     }
 
     public ref struct RetrieverInput

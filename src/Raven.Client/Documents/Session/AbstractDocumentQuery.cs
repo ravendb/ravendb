@@ -7,8 +7,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -21,6 +23,7 @@ using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow;
 using Sparrow.Json;
@@ -53,6 +56,11 @@ namespace Raven.Client.Documents.Session
         protected bool Negate;
 
         /// <summary>
+        /// Whether to negate the next operation in Filter
+        /// </summary>
+        protected bool NegateFilter;
+        
+        /// <summary>
         /// The index to query
         /// </summary>
         public string IndexName { get; }
@@ -60,14 +68,19 @@ namespace Raven.Client.Documents.Session
         public string CollectionName { get; }
 
         private int _currentClauseDepth;
-
+        
         protected string QueryRaw;
-
+        
+        internal bool IsFilterActive { get { return FilterModeStack.Any() && FilterModeStack.Peek() is true; } }
+        
+        protected Stack<bool> FilterModeStack = new ();
+        
         protected Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
 
         protected bool IsGroupBy;
+        
 
         /// <summary>
         /// The session for this query
@@ -99,6 +112,8 @@ namespace Raven.Client.Documents.Session
 
         protected LinkedList<QueryToken> WithTokens = new LinkedList<QueryToken>();
 
+        protected LinkedList<QueryToken> FilterTokens = new();
+
         protected QueryToken GraphRawQuery { get; private set; }
 
         /// <summary>
@@ -109,6 +124,11 @@ namespace Raven.Client.Documents.Session
         private readonly DocumentConventions _conventions;
 
         /// <summary>
+        /// Limits filter clause.
+        /// </summary>
+        protected int? FilterLimit;
+        
+        /// <summary>
         /// Timeout for this query
         /// </summary>
         protected TimeSpan? Timeout;
@@ -117,7 +137,7 @@ namespace Raven.Client.Documents.Session
         /// Should we wait for non stale results
         /// </summary>
         protected bool TheWaitForNonStaleResults;
-
+        
         /// <summary>
         /// Holds the query stats
         /// </summary>
@@ -201,7 +221,7 @@ namespace Raven.Client.Documents.Session
 
         public void UsingDefaultOperator(QueryOperator @operator)
         {
-            if (WhereTokens.Count != 0)
+            if (GetCurrentWhereTokens().Count != 0)
                 throw new InvalidOperationException("Default operator can only be set before any where clause is added.");
 
             DefaultOperator = @operator;
@@ -339,7 +359,8 @@ namespace Raven.Client.Documents.Session
             if (SelectTokens.Count != 0 ||
                 WhereTokens.Count != 0 ||
                 OrderByTokens.Count != 0 ||
-                GroupByTokens.Count != 0)
+                GroupByTokens.Count != 0 ||
+                FilterTokens.Count != 0)
                 throw new InvalidOperationException("You can only use RawQuery on a new query, without applying any operations (such as Where, Select, OrderBy, GroupBy, etc)");
             QueryRaw = query;
         }
@@ -718,6 +739,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
+            AssertMethodIsCurrentlySupported(nameof(WhereIn));
+            
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -738,6 +761,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <inheritdoc />
         public void WhereStartsWith(string fieldName, object value, bool exact)
         {
+            AssertMethodIsCurrentlySupported(nameof(WhereStartsWith));
+
             var whereParams = new WhereParams
             {
                 FieldName = fieldName,
@@ -765,6 +790,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <inheritdoc />
         public void WhereEndsWith(string fieldName, object value, bool exact)
         {
+            AssertMethodIsCurrentlySupported(nameof(WhereEndsWith));
+
             var whereParams = new WhereParams
             {
                 FieldName = fieldName,
@@ -792,6 +819,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <returns></returns>
         public void WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
+            AssertMethodIsCurrentlySupported(nameof(WhereBetween));
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -904,6 +933,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// <param name="pattern"> The pattern to match</param>
         public void WhereRegex(string fieldName, string pattern)
         {
+            AssertMethodIsCurrentlySupported(nameof(WhereRegex));
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -951,6 +982,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
         
+        
+        
         /// <summary>
         ///   Add an OR to the query
         /// </summary>
@@ -967,6 +1000,26 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(QueryOperatorToken.Or);
         }
 
+        internal IDisposable SetFilterMode(bool @on)
+        {
+            return new FilterModeScope(FilterModeStack, @on);
+        }
+
+        private class FilterModeScope : IDisposable
+        {
+            private Stack<bool> _modeStack;
+            public FilterModeScope(Stack<bool> modeStack, bool @on)
+            {
+                _modeStack = modeStack;
+                _modeStack.Push(@on);
+            }
+            
+            public void Dispose()
+            {
+                _modeStack.Pop();
+            }
+        }
+        
         /// <summary>
         ///   Specifies a boost weight to the last where clause.
         ///   The higher the boost factor, the more relevant the term will be.
@@ -978,6 +1031,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Boost(decimal boost)
         {
+            AssertMethodIsCurrentlySupported(nameof(Boost));
+
             if (boost == 1m) // 1.0 is the default
                 return;
 
@@ -1021,6 +1076,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Fuzzy(decimal fuzzy)
         {
+            AssertMethodIsCurrentlySupported(nameof(Fuzzy));
+
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null)
@@ -1045,6 +1102,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </remarks>
         public void Proximity(int proximity)
         {
+            AssertMethodIsCurrentlySupported(nameof(Proximity));
+            
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null || whereToken.WhereOperator != WhereOperator.Search)
@@ -1170,6 +1229,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or)
         {
+            AssertMethodIsCurrentlySupported(nameof(Search));
+
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
 
@@ -1203,9 +1264,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             BuildWhere(queryText);
             BuildOrderBy(queryText);
             BuildLoad(queryText);
+            BuildFilter(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
-
+            
             if (compatibilityMode == false)
                 BuildPagination(queryText);
 
@@ -1242,6 +1304,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     .Append(AddQueryParameter(Start))
                     .Append(", $")
                     .Append(AddQueryParameter(PageSize));
+            }
+
+            if (FilterTokens.Count > 0 && FilterLimit is not null)
+            {
+                queryText
+                    .Append(" filter_limit $")
+                    .Append(AddQueryParameter(FilterLimit));
             }
         }
 
@@ -1338,6 +1407,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
         {
+            AssertMethodIsCurrentlySupported(nameof(ContainsAny));
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -1354,6 +1425,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
         {
+            AssertMethodIsCurrentlySupported(nameof(ContainsAll));
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -1521,6 +1594,25 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
+        private void BuildFilter(StringBuilder writer)
+        {
+            if (FilterTokens.Count == 0)
+                return;
+
+            writer
+                .Append(" filter ");
+            
+            var token = FilterTokens.First;
+            while (token != null)
+            {
+                DocumentQueryHelper.AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+
+                token.Value.WriteTo(writer);
+
+                token = token.Next;
+            }
+        }
+        
         private void BuildOrderBy(StringBuilder writer)
         {
             if (OrderByTokens.Count == 0)
@@ -1528,7 +1620,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             writer
                 .Append(" order by ");
-
+                
             var token = OrderByTokens.First;
             while (token != null)
             {
@@ -1758,8 +1850,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public string ParameterPrefix { get; set; } = DefaultParameterPrefix;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AssertMethodIsCurrentlySupported(string methodName)
+        {
+            if (IsFilterActive == false)
+                return;
+            
+            throw new InvalidQueryException(
+                $"{methodName} is currently unsupported for {nameof(LinqExtensions.Filter)}. If you want to use {methodName} in where method you have to put it before \"Filter\".");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private LinkedList<QueryToken> GetCurrentWhereTokens()
         {
+            if (IsFilterActive)
+                return FilterTokens;
+            
             if (_isInMoreLikeThis == false)
                 return WhereTokens;
 
@@ -1772,6 +1877,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException($"Last token is not '{nameof(MoreLikeThisToken)}'.");
 
             return moreLikeThisToken.WhereTokens;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private LinkedList<QueryToken> GetCurrentFilterTokens()
+        {
+            return FilterTokens;
         }
 
         protected void UpdateFieldsToFetchToken(FieldsToFetchToken fieldsToFetch)
@@ -1803,7 +1914,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     SelectTokens.AddLast(fieldsToFetch);
             }
         }
-
+        
         /// <summary>
         ///   Adds an alias to the FieldName of each where token
         /// </summary>
@@ -1894,6 +2005,14 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public string ProjectionParameter(object value)
         {
             return "$" + AddQueryParameter(value);
+        }
+
+        internal void AddFilterLimit(int filterLimit)
+        {
+            if (filterLimit <= 0)
+                throw new InvalidDataException("filter_limit needs to be positive and bigger than 0.");
+            if (filterLimit is not int.MaxValue)
+                FilterLimit = filterLimit;
         }
     }
 }

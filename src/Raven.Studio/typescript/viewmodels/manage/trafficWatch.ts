@@ -183,13 +183,6 @@ class trafficWatch extends viewModelBase {
         }
     }
     
-    attached() {
-        super.attached();
-        
-        awesomeMultiselect.build($("#visibleTypesSelectorHttp"), this.getOptions(this.filteredTypeDataHttp));
-        awesomeMultiselect.build($("#visibleTypesSelectorTcp"), this.getOptions(this.filteredTypeDataTcp));
-    }
-    
     private getOptions(filteredTypeData: typeData[]): (opts: any) => void {
         return (opts: any) => {
             opts.enableHTML = true;
@@ -397,6 +390,9 @@ class trafficWatch extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+
+        awesomeMultiselect.build($("#visibleTypesSelectorHttp"), this.getOptions(this.filteredTypeDataHttp));
+        awesomeMultiselect.build($("#visibleTypesSelectorTcp"), this.getOptions(this.filteredTypeDataTcp));
 
         $('.traffic-watch [data-toggle="tooltip"]').tooltip({
             html: true

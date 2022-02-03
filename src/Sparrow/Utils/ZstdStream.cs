@@ -57,7 +57,7 @@ namespace Sparrow.Utils
                 {
                     var output = new ZstdLib.ZSTD_outBuffer {Source = pBuffer, Position = UIntPtr.Zero, Size = (UIntPtr)buffer.Length};
                     var input = new ZstdLib.ZSTD_inBuffer {Source = pOutput, Position = UIntPtr.Zero, Size = (UIntPtr)_decompressionInput.Length};
-                    var v = ZstdLib.ZSTD_decompressStream(_compressContext.Streaming, &output, &input);
+                    var v = ZstdLib.ZSTD_decompressStream(_compressContext.Decompression, &output, &input);
                     ZstdLib.AssertZstdSuccess(v);
                     _compressedBytesCount += (long)input.Position;
                     _uncompressedBytesCount += (long)output.Position;
