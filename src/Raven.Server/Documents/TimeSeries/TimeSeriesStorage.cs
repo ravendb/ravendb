@@ -306,8 +306,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (table.ReadByKey(sliceHolder.TimeSeriesKeySlice, out var tableValueReader))
                 {
-                    var item = CreateDeletedRangeItem(context, ref tableValueReader);
-                    if (ChangeVectorUtils.GetConflictStatus(changeVector, item.ChangeVector) == ConflictStatus.AlreadyMerged)
+                    var existingChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueReader);
+
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
                     {
                         return null;
                     }
@@ -1867,6 +1868,12 @@ namespace Raven.Server.Documents.TimeSeries
                 var item = CreateDeletedRangeItem(context, ref tvh.Reader);
                 yield return item;
             }
+        }
+
+        private static string ExtractDeletedRangeChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        {
+            var changeVectorPtr = reader.Read((int)DeletedRangeTable.ChangeVector, out int changeVectorSize);
+            return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
         }
 
         private static TimeSeriesDeletedRangeItem CreateDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
