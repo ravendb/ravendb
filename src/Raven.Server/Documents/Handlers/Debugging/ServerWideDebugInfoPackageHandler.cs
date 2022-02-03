@@ -399,10 +399,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonContext))
-            {
-                return jsonContext.ReadObject(djv, "databaserecord");
-            }
+            return context.ReadObject(djv, "databaserecord");
         }
 
         internal class NodeDebugInfoRequestHeader

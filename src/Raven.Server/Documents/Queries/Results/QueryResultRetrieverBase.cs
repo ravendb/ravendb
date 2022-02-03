@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key);
 
-        protected abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
+        public abstract Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state);
 
         protected abstract Document LoadDocument(string id);
 

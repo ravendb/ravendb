@@ -17,32 +17,64 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {
     public class ElasticSearchEtlTestBase : EtlTestBase
     {
-        // we're using a single instance of ES for all tests which can run in parallel
-        // there is no notion of a database in ES and we use the same index names in the tests
-        // so we are limiting the number of concurrent tests running against ES to avoid data conflicts
-        // https://www.elastic.co/guide/en/elasticsearch/reference/current/_mapping_concepts_across_sql_and_elasticsearch.html
+        private HashSet<string> _definedIndexes = new HashSet<string>();
 
-        private static readonly SemaphoreSlim ConcurrentEsEtlTests = new SemaphoreSlim(1, 1);
         public ElasticSearchEtlTestBase(ITestOutputHelper output) : base(output)
         {
-            
+            IndexSuffix = Guid.NewGuid().ToString().Replace("-", string.Empty);
         }
 
-        protected ElasticSearchEtlConfiguration SetupElasticEtl(DocumentStore store, string script, IEnumerable<string> collections = null, bool applyToAllDocuments = false,
-            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, [CallerMemberName] string caller = null, string configurationName = null, string transformationName = null, string[] nodes = null)
+        protected string IndexSuffix { get; set; }
+
+        protected string[] DefaultCollections = { "Orders" };
+
+        protected string OrdersIndexName => $"Orders{IndexSuffix}".ToLower();
+
+        protected string OrderLinesIndexName => $"OrderLines{IndexSuffix}".ToLower();
+
+        protected string DefaultScript =>
+            @"
+var orderData = {
+    Id: id(this),
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
+};
+
+for (var i = 0; i < this.OrderLines.length; i++) {
+    var line = this.OrderLines[i];
+    var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
+    orderData.TotalCost += line.Cost * line.Quantity;
+    loadToOrderLines" + IndexSuffix + @"({
+        OrderId: id(this),
+        Qty: line.Quantity,
+        Product: line.Product,
+        Cost: line.Cost
+    });
+}
+
+loadToOrders" + IndexSuffix + @"(orderData);";
+
+        protected List<ElasticSearchIndex> DefaultIndexes => new List<ElasticSearchIndex>()
+        {
+            new() {IndexName = OrdersIndexName, DocumentIdProperty = "Id"},
+            new() {IndexName = OrderLinesIndexName, DocumentIdProperty = "OrderId"},
+        };
+
+        protected ElasticSearchEtlConfiguration SetupElasticEtl(DocumentStore store, string script, IEnumerable<ElasticSearchIndex> indexes, IEnumerable<string> collections, bool applyToAllDocuments = false,
+            global::Raven.Client.Documents.Operations.ETL.ElasticSearch.Authentication authentication = null, string configurationName = null, string transformationName = null, string[] nodes = null)
         {
             var connectionStringName = $"{store.Database}@{store.Urls.First()} to ELASTIC";
+
+            foreach (var index in indexes)
+            {
+                _definedIndexes.Add(index.IndexName);
+            }
 
             var config = new ElasticSearchEtlConfiguration
             {
                 Name = configurationName ?? connectionStringName,
                 ConnectionStringName = connectionStringName,
-                ElasticIndexes =
-                {
-                    new ElasticSearchIndex {IndexName = $"Orders", DocumentIdProperty = "Id"},
-                    new ElasticSearchIndex {IndexName = $"OrderLines", DocumentIdProperty = "OrderId"},
-                    new ElasticSearchIndex {IndexName = $"Users", DocumentIdProperty = "UserId"},
-                },
+                ElasticIndexes = indexes.ToList(),
                 Transforms =
                 {
                     new Transformation
@@ -62,50 +94,37 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
 
         protected IDisposable GetElasticClient(out ElasticClient client)
         {
-            ElasticClient localClient;
+            ElasticClient localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
 
-            ConcurrentEsEtlTests.Wait();
-
-            try
-            {
-                localClient = client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value });
-
-                CleanupIndexes(localClient);
-            }
-            catch
-            {
-                ConcurrentEsEtlTests.Release();
-                throw;
-            }
+            CleanupIndexes(localClient);
 
             return new DisposableAction(() =>
             {
-                try
-                {
-                    CleanupIndexes(localClient);
-                }
-                finally 
-                {
-                    ConcurrentEsEtlTests.Release();
-                }
+                CleanupIndexes(localClient);
             });
         }
 
         protected void CleanupIndexes(ElasticClient client)
         {
-            client.Indices.Refresh();
-
-            var response = client.Indices.Delete(Indices.All);
-
-            if (response.IsValid == false)
+            if (_definedIndexes.Count > 0)
             {
-                if (response.ServerError?.Status == 404)
-                    return;
+                var response = client.Indices.Delete(Indices.Index(_definedIndexes.Select(x => x.ToLower())));
 
-                throw new InvalidOperationException($"Failed to cleanup indexes: {response.ServerError}", response.OriginalException);
+                if (response.IsValid == false)
+                {
+                    if (response.ServerError?.Status == 404)
+                        return;
+
+                    Exception inner;
+
+                    if (Context.TestException != null)
+                        inner = new AggregateException(response.OriginalException, Context.TestException);
+                    else
+                        inner = response.OriginalException;
+
+                    throw new InvalidOperationException($"Failed to cleanup indexes: {response.ServerError}. Check inner exceptions for details", inner);
+                }
             }
-
-            client.Indices.Refresh();
         }
 
         protected void AssertEtlDone(ManualResetEventSlim etlDone, TimeSpan timeout, string databaseName, ElasticSearchEtlConfiguration config)

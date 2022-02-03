@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        private const string ScriptWithNoIdMethodUsage = @"
+        private string ScriptWithNoIdMethodUsage => @"
 var orderData = {
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
@@ -32,14 +32,14 @@ for (var i = 0; i < this.Lines.length; i++) {
     var line = this.Lines[i];
     var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
     orderData.TotalCost += cost;
-    loadToOrderLines({
+    loadTo" + OrderLinesIndexName + @"({
         Qty: line.Quantity,
         Product: line.Product,
         Cost: cost
     });
 }
 
-loadToOrders(orderData);
+loadTo" + OrdersIndexName + @"(orderData);
 ";
 
         [RequiresElasticSearchFact]
@@ -48,7 +48,7 @@ loadToOrders(orderData);
             using (var store = GetDocumentStore())
             using (GetElasticClient(out var client))
             {
-                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, new List<string> { "Orders" });
+                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, DefaultIndexes, new List<string> { "Orders" });
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -67,8 +67,8 @@ loadToOrders(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCount = client.Count<object>(c => c.Index("orders"));
-                var orderLinesCount = client.Count<object>(c => c.Index("orderlines"));
+                var ordersCount = client.Count<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCount = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.True(ordersCount.IsValid);
                 Assert.True(orderLinesCount.IsValid);
@@ -87,8 +87,8 @@ loadToOrders(orderData);
 
                 AssertEtlDone(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-                var ordersCountAfterDelete = client.Count<object>(c => c.Index("orders"));
-                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index("orderlines"));
+                var ordersCountAfterDelete = client.Count<object>(c => c.Index(OrdersIndexName));
+                var orderLinesCountAfterDelete = client.Count<object>(c => c.Index(OrderLinesIndexName));
 
                 Assert.True(ordersCount.IsValid);
                 Assert.True(orderLinesCount.IsValid);
@@ -136,8 +136,8 @@ loadToOrders(orderData);
                                        ConnectionStringName = "simulate",
                                        ElasticIndexes =
                                        {
-                                           new ElasticSearchIndex { IndexName = "Orders", DocumentIdProperty = "Id" },
-                                           new ElasticSearchIndex { IndexName = "OrderLines", DocumentIdProperty = "OrderId" },
+                                           new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" },
+                                           new ElasticSearchIndex { IndexName = OrderLinesIndexName, DocumentIdProperty = "OrderId" },
                                            new ElasticSearchIndex { IndexName = "NotUsedInScript", DocumentIdProperty = "OrderId" },
                                        },
                                        Transforms =
@@ -153,13 +153,13 @@ loadToOrders(orderData);
 
                         Assert.Equal(2, result.Summary.Count);
 
-                        var orderLines = result.Summary.First(x => x.IndexName == "orderlines");
+                        var orderLines = result.Summary.First(x => x.IndexName == OrderLinesIndexName);
 
                         Assert.Equal(2, orderLines.Commands.Length); // delete by query and bulk
 
                         Assert.Contains(@"""OrderId"":""orders/1-a""", orderLines.Commands[1]);
 
-                        var orders = result.Summary.First(x => x.IndexName == "orders");
+                        var orders = result.Summary.First(x => x.IndexName == OrdersIndexName);
 
                         Assert.Equal(2, orders.Commands.Length); // delete by query and bulk
 
