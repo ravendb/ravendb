@@ -312,6 +312,8 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         return null;
                     }
+
+                    // in case of a hash collision (Conflict) we overwrite the existing entry
                 }
 
                 using (table.Allocate(out var tvb))
