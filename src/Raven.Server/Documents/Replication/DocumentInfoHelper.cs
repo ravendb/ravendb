@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Replication
             return _tmpLazyStringInstance;
         }
         
+        // TODO unify if possible with AllowedPathsValidator
         public LazyStringValue GetDocumentId(ReplicationBatchItem item)
         {
             return item switch

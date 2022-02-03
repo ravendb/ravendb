@@ -54,7 +54,8 @@ namespace SlowTests.Sharding
                     await Server.ServerStore.Sharding.SourceMigrationCompleted(store.Database, bucket, result.Index, changeVector);
                 }
 
-                await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
+                result = await Server.ServerStore.Sharding.DestinationMigrationConfirm(store.Database, bucket, result.Index);
+                await Server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
 
                 // the document will be written to the new location
                 using (var session = store.OpenAsyncSession())

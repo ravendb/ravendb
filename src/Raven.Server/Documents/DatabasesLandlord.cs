@@ -118,16 +118,18 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
-                            if (type == nameof(DestinationMigrationConfirmCommand))
-                            {
-                                if (rawRecord.BucketMigrations.Any(m => m.Value.ConfirmationIndex == index))
-                                    _shardedDatabases.Clear();
-                            }
-
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord);
+                            }
+
+                            // we need to update this upon any shard topology change
+                            // and upon migration completion
+                            if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var shardedContextTask))
+                            {
+                                var shardedContext = shardedContextTask.Result; // this isn't really a task
+                                shardedContext.UpdateDatabaseRecord(rawRecord);
                             }
                         }
                         else
@@ -567,7 +569,6 @@ namespace Raven.Server.Documents
                 DatabasesCache.Clear();
 
 
-
                 exceptionAggregator.ThrowIfNeeded();
             }
             finally
@@ -602,29 +603,28 @@ namespace Raven.Server.Documents
 
         public DatabaseSearchResult TryGetOrCreateDatabase(StringSegment databaseName)
         {
+            if (DatabasesCache.TryGetValue(databaseName, out var databaseTask))
+            {
+                return new DatabaseSearchResult
+                {
+                    DatabaseStatus = DatabaseSearchResult.Status.Database,
+                    DatabaseTask = databaseTask
+                };
+            }
+
             if (_shardedDatabases.TryGetValue(databaseName, out var database))
             {
-                var shardedContext = database.Result;
-                if (shardedContext == null)
-                {
-                    return new DatabaseSearchResult
-                    {
-                        DatabaseStatus = DatabaseSearchResult.Status.Database,
-                        DatabaseTask = TryGetOrCreateResourceStore(databaseName)
-                    };
-                }
                 return new DatabaseSearchResult
                 {
                     DatabaseStatus = DatabaseSearchResult.Status.Sharded,
-                    ShardedContext = shardedContext
+                    ShardedContext = database.Result
                 };
             }
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                context.OpenReadTransaction();
-
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, databaseName.Value);
+                var databaseRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
                 if (databaseRecord == null)
                 {
                     return new DatabaseSearchResult
@@ -644,13 +644,13 @@ namespace Raven.Server.Documents
                         ShardedContext = shardedContext
                     };
                 }
-                _shardedDatabases.GetOrAdd(databaseName, Task.FromResult((ShardedContext)null));
-                return new DatabaseSearchResult
-                {
-                    DatabaseStatus = DatabaseSearchResult.Status.Database,
-                    DatabaseTask = TryGetOrCreateResourceStore(databaseName)
-                };
             }
+            
+            return new DatabaseSearchResult
+            {
+                DatabaseStatus = DatabaseSearchResult.Status.Database,
+                DatabaseTask = TryGetOrCreateResourceStore(databaseName)
+            };
         }
 
         public IEnumerable<Task<DocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
@@ -1222,8 +1222,7 @@ namespace Raven.Server.Documents
                 var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
                 if (rawRecord.IsSharded())
                 {
-                    var databaseRecord = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
-                    var shardedContext = new ShardedContext(_serverStore, databaseRecord);
+                    var shardedContext = new ShardedContext(_serverStore, rawRecord);
                     _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext));
                     return true;
                 }

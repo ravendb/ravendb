@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -14,11 +16,11 @@ namespace Raven.Server.Documents.Sharding
     {
         public const int NumberOfShards = 1024 * 1024;
 
-        private readonly DatabaseRecord _record;
+        private DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
 
-        public ShardedContext(ServerStore server, DatabaseRecord record)
+        public ShardedContext(ServerStore server, RawDatabaseRecord record)
         {
             //TODO: reduce the record to the needed fields
             _record = record;
@@ -36,6 +38,11 @@ namespace Raven.Server.Documents.Sharding
                     server.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
+        }
+
+        public void UpdateDatabaseRecord(DatabaseRecord record)
+        {
+            Interlocked.Exchange(ref _record, record);
         }
 
         public string DatabaseName => _record.DatabaseName;
@@ -107,6 +114,7 @@ namespace Raven.Server.Documents.Sharding
 
         public bool HasTopologyChanged(long etag)
         {
+            // TODO fix this
             return _record.Topology?.Stamp?.Index > etag;
         }
 
