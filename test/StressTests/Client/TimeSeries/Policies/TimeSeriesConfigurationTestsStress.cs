@@ -76,6 +76,14 @@ namespace StressTests.Client.TimeSeries.Policies
                 await Task.Delay((TimeSpan)(p4.RetentionTime * 2));
                 // nothing should be left
 
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "marker/2");
+                    session.SaveChanges();
+
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, store.Database, "marker/2", null, TimeSpan.FromSeconds(15)));
+                }
+
                 foreach (var node in cluster.Nodes)
                 {
                     using (var nodeStore = GetDocumentStore(new Options
