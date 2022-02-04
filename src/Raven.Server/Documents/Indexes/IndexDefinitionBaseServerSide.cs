@@ -19,6 +19,11 @@ namespace Raven.Server.Documents.Indexes
 {
     public abstract class IndexDefinitionBaseServerSide
     {
+        protected IndexDefinitionBaseServerSide()
+        {
+            ClusterState = new ClusterState();
+        }
+
         public string Name { get; protected set; }
 
         public abstract long Version { get; }
@@ -31,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; set; }
 
-        internal ClusterState _clusterState;
+        internal readonly ClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
 
@@ -164,7 +169,7 @@ namespace Raven.Server.Documents.Indexes
 
             MapFields = new Dictionary<string, IndexFieldBase>(StringComparer.Ordinal);
             IndexFields = new Dictionary<string, IndexField>(StringComparer.Ordinal);
-            _clusterState = new ClusterState();
+
             foreach (var field in mapFields)
             {
                 MapFields.Add(field.Name, field);
@@ -184,7 +189,7 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
             State = state;
             _indexVersion = indexVersion;
-            _clusterState.LastStateIndex = clusterIndexForState ?? 0;
+            ClusterState.LastStateIndex = clusterIndexForState ?? 0;
         }
 
         static IndexDefinitionBaseServerSide()
