@@ -1123,7 +1123,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _indexStorage.WriteDefinition(definition);
 
-                if (definition._clusterState?.LastStateIndex > (Definition._clusterState?.LastStateIndex ?? -1))
+                if (definition.ClusterState?.LastStateIndex > (Definition.ClusterState?.LastStateIndex ?? -1))
                 {
                     switch (definition.State)
                     {
