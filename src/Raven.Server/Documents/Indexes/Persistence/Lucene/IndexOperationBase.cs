@@ -6,15 +6,22 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
+using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
 using Query = Lucene.Net.Search.Query;
 using Version = Lucene.Net.Util.Version;
 
@@ -266,6 +273,74 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return int.MaxValue;
 
             return (int)pageSize;
+        }
+        
+        protected struct FilterDocument : IDisposable
+        {
+            private readonly IndexQueryServerSide _query;
+            private readonly DocumentsOperationContext _documentsContext;
+            private readonly Reference<int> _skippedResults;
+            private readonly Reference<int> _scannedDocuments;
+            private readonly IQueryResultRetriever _retriever;
+            private readonly QueryTimingsScope _queryTimings;
+            private readonly ScriptRunner.SingleRun _filterScriptRun;
+            private ScriptRunner.ReturnRun _filterSingleRun;
+            
+            public FilterDocument(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,QueryTimingsScope queryTimings)
+            {
+                _query = query;
+                _documentsContext = documentsContext;
+                _skippedResults = skippedResults;
+                _scannedDocuments = scannedDocuments;
+                _retriever = retriever;
+                _queryTimings = queryTimings;
+                if (query.Metadata.FilterScript is not null)
+                {
+                    var key = new CollectionQueryEnumerable.FilterKey(query.Metadata);
+                    _filterSingleRun = index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
+                }
+                else
+                {
+                    _filterScriptRun = null;
+                    _filterSingleRun = default;
+                }
+            }
+
+            public bool TryFilter(global::Lucene.Net.Documents.Document document, string key, IState state, out bool overLimit)
+            {
+                overLimit = false;
+                if (_filterScriptRun == null) 
+                    return true;
+            
+                var doc = _retriever.DirectGet(document, key, DocumentFields.All, state);
+                if (doc == null)
+                {
+                    _skippedResults.Value++;
+                }
+
+                if (_scannedDocuments.Value >= _query.FilterLimit)
+                {
+                    overLimit = true;
+                    return false;
+                }
+                _scannedDocuments.Value++;
+
+                object self = _filterScriptRun.Translate(_documentsContext, doc);
+                using(_queryTimings?.For(nameof(QueryTimingsScope.Names.Filter)))
+                using (var result = _filterScriptRun.Run(_documentsContext, _documentsContext, "execute", new[]{self, _query.QueryParameters}, _queryTimings))
+                {
+                    if (result.BooleanValue == true) 
+                        return true;
+                
+                    _skippedResults.Value++;
+                    return false;
+                }
+            }
+            
+            public void Dispose()
+            {
+                _filterSingleRun.Dispose();
+            }
         }
     }
 }
