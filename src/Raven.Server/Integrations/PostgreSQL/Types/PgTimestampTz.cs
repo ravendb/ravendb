@@ -14,12 +14,21 @@ namespace Raven.Server.Integrations.PostgreSQL.Types
 
         public override ReadOnlyMemory<byte> ToBytes(object value, PgFormat formatCode)
         {
-            if (formatCode == PgFormat.Text)
+            switch (value)
             {
-                return Encoding.UTF8.GetBytes(((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss.fffffffzz"));
-            }
+                case DateTime dateTimeValue:
+                    if (formatCode == PgFormat.Text)
+                        return Encoding.UTF8.GetBytes(dateTimeValue.ToString("yyyy-MM-dd HH:mm:ss.fffffffzz"));
 
-            return BitConverter.GetBytes(IPAddress.HostToNetworkOrder(GetTimestampTz((DateTime)value)));
+                    return BitConverter.GetBytes(IPAddress.HostToNetworkOrder(GetTimestampTz(dateTimeValue)));
+                case DateTimeOffset dateTimeOffsetValue:
+                    if (formatCode == PgFormat.Text)
+                        return Encoding.UTF8.GetBytes(dateTimeOffsetValue.ToString("yyyy-MM-dd HH:mm:ss.fffffffzz"));
+
+                    return BitConverter.GetBytes(IPAddress.HostToNetworkOrder(GetTimestampTz(dateTimeOffsetValue)));
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(value), $"Unable to convert {value} to {nameof(PgTimestampTz)} type");
+            }
         }
 
         public override object FromBytes(byte[] buffer, PgFormat formatCode)

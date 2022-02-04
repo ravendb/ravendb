@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Results
             return djv;
         }
         
-        protected override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
+        public override unsafe Document DirectGet(ref RetrieverInput retrieverInput,string id, DocumentFields fields)
         {
             BlittableJsonReaderObject result;
             if (retrieverInput.LuceneDocument is null)

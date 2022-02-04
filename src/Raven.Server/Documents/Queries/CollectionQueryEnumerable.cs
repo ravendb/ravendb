@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
@@ -31,7 +32,8 @@ namespace Raven.Server.Documents.Queries
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly IncludeRevisionsCommand _includeRevisionsCommand;
         private readonly IncludeCompareExchangeValuesCommand _includeCompareExchangeValuesCommand;
-        private readonly Reference<int> _totalResults;
+        private readonly Reference<int> _totalResults, _scannedResults;
+        private readonly Reference<long> _skippedResults;
         private readonly CancellationToken _token;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
@@ -41,7 +43,7 @@ namespace Raven.Server.Documents.Queries
         public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection,
             IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
             IncludeRevisionsCommand includeRevisionsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
-            CancellationToken token)
+            Reference<int> scannedResults, Reference<long> skippedResults, CancellationToken token)
         {
             _database = database;
             _documents = documents;
@@ -57,24 +59,59 @@ namespace Raven.Server.Documents.Queries
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
             _totalResults = totalResults;
             _token = token;
+            _scannedResults = scannedResults;
+            _skippedResults = skippedResults;
         }
 
         public string StartAfterId { get; set; }
 
         public Reference<long> AlreadySeenIdsCount { get; set; }
 
-        public Reference<long> SkippedResults { get; set; }
-
         public DocumentFields Fields { get; set; } = DocumentFields.All;
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, StartAfterId, AlreadySeenIdsCount, Fields, SkippedResults, _token);
+            return new Enumerator(_database, _documents, SearchEngineType.None, _fieldsToFetch, _collection, _isAllDocsCollection, _query,
+                _queryTimings, _context, _includeDocumentsCommand, _includeRevisionsCommand, _includeCompareExchangeValuesCommand, _totalResults, _scannedResults, 
+                StartAfterId, AlreadySeenIdsCount, Fields, _skippedResults, _token);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        public class FilterKey : ScriptRunnerCache.Key
+        {
+            private readonly QueryMetadata _queryMetadata;
+
+            public FilterKey(QueryMetadata queryMetadata)
+            {
+                _queryMetadata = queryMetadata;
+            }
+
+            public override void GenerateScript(ScriptRunner runner)
+            {
+                if (_queryMetadata.DeclaredFunctions != null)
+                {
+                    foreach (var function in _queryMetadata.DeclaredFunctions)
+                    {
+                        runner.AddScript(function.Value.FunctionText);
+                    }
+                }
+
+                runner.AddScript(_queryMetadata.FilterScript);
+            }
+
+            public override bool Equals(object obj)
+            {
+                return ReferenceEquals(obj, _queryMetadata);
+            }
+
+            public override int GetHashCode()
+            {
+                return _queryMetadata.GetHashCode();
+            }
         }
 
         private class Enumerator : IEnumerator<Document>
@@ -83,9 +120,11 @@ namespace Raven.Server.Documents.Queries
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
             private readonly Reference<int> _totalResults;
+            private readonly Reference<int> _scannedResults;
             private readonly string _collection;
             private readonly bool _isAllDocsCollection;
             private readonly IndexQueryServerSide _query;
+            private readonly QueryTimingsScope _queryTimings;
             private readonly string _startAfterId;
             private readonly Reference<long> _alreadySeenIdsCount;
             private readonly DocumentFields _fields;
@@ -106,12 +145,13 @@ namespace Raven.Server.Documents.Queries
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
             private readonly CancellationToken _token;
+            private readonly ScriptRunner.SingleRun _filterScriptRun;
+            private ScriptRunner.ReturnRun _releaseFilterScriptRunner;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, SearchEngineType searchEngineType, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand,
-                IncludeRevisionsCommand includeRevisionsCommand,
-                IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults,
-                string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
+                IncludeRevisionsCommand includeRevisionsCommand,IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand, Reference<int> totalResults, 
+                Reference<int> scannedResults, string startAfterId, Reference<long> alreadySeenIdsCount, DocumentFields fields, Reference<long> skippedResults, CancellationToken token)
             {
                 _documents = documents;
                 _searchEngineType = searchEngineType;
@@ -119,8 +159,10 @@ namespace Raven.Server.Documents.Queries
                 _collection = collection;
                 _isAllDocsCollection = isAllDocsCollection;
                 _query = query;
+                _queryTimings = queryTimings;
                 _context = context;
                 _totalResults = totalResults;
+                _scannedResults = scannedResults;
                 _totalResults.Value = 0;
                 _startAfterId = startAfterId;
                 _alreadySeenIdsCount = alreadySeenIdsCount;
@@ -134,6 +176,12 @@ namespace Raven.Server.Documents.Queries
                 _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, searchEngineType, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
+                
+                if (_query.Metadata.FilterScript != null)
+                {
+                    var key = new FilterKey(_query.Metadata);
+                    _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
+            	}
             }
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
@@ -183,6 +231,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (hasNext == false)
                             return false;
+                        _skippedResults.Value++;
                         continue;
                     }
 
@@ -238,7 +287,25 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 _innerCount++;
+
+                if (_filterScriptRun != null)
+                {
+                    if ( _scannedResults.Value == _query.FilterLimit)
+                    {
+                        return (false, null);
+                    }
+                    _scannedResults.Value++;
+                    object self = _filterScriptRun.Translate(_context, _inner.Current);
+                    using(_queryTimings?.For(nameof(QueryTimingsScope.Names.Filter)))
+                    using (var result = _filterScriptRun.Run(_context, _context, "execute", _inner.Current!.Id, new[]{self, _query.QueryParameters}, _queryTimings))
+                    {
+                        if (result.BooleanValue != true)
+                            return (true, null);
+                    }
+                }
+                
                 RetrieverInput retrieverInput = new(null, QueryResultRetrieverBase.ZeroScore, null);
+
                 if (_fieldsToFetch.IsProjection)
                 {
                     var result = _resultsRetriever.GetProjectionFromDocument(_inner.Current, ref retrieverInput, _fieldsToFetch, _context, _token);
@@ -429,6 +496,7 @@ namespace Raven.Server.Documents.Queries
                         id.Release(_context.Allocator);
                     }
                 }
+                _releaseFilterScriptRunner.Dispose();
             }
 
             private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor

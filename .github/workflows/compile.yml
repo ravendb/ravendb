@@ -1,0 +1,98 @@
+name: compile
+
+on:
+  pull_request
+
+jobs:
+  job1:
+    name: Compile Server & Studio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Grep .Net version
+        run: |
+          dotnet_version=$(grep '<TargetFramework>' < src/Raven.Server/Raven.Server.csproj | tr -cd [:digit:].)
+          echo "DOTNET_VERSION=${dotnet_version}.x" >> $GITHUB_ENV
+      - name: Install 3.1 sdk
+        if: startsWith( env.DOTNET_VERSION, '3' )
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
+      - name: Setup .NET 6
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
+      - name: Restore
+        run: |
+          git clean -xfd
+          dotnet restore
+
+      - name: Build Server
+        run: |
+          dotnet build
+          echo "true" > status_server.txt
+      - name: Server Failed
+        if: failure()
+        run: echo "false" > status_server.txt
+
+      - name: Upload artifact status_server
+        if: always()
+        uses: actions/upload-artifact@v1
+        with:
+          name: pass_status_server
+          path: status_server.txt
+
+      - name: Setup nodejs
+        uses: actions/setup-node@v2
+        with:
+          node-version: '10'
+      - name: Restore
+        run: |
+          npm install
+          npm run restore
+        working-directory: src/Raven.Studio
+
+      - name: Compile Studio
+        run: |
+          npm run compile
+          echo "true" > status_studio.txt
+        working-directory: src/Raven.Studio
+
+      - name: Upload artifact status_studio
+        uses: actions/upload-artifact@v1
+        with:
+          name: pass_status_studio
+          path: src/Raven.Studio/status_studio.txt
+  
+  job2:
+    if: always()
+    needs: job1
+    name: Generate Slack notification message
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download artifacts 1
+        uses: actions/download-artifact@v1
+        with:
+          name: pass_status_server
+
+      - name: Download artifacts 2
+        if: needs.job1.result == 'success'
+        uses: actions/download-artifact@v1
+        with:
+          name: pass_status_studio
+        
+      - name: Generate message
+        run: ./scripts/githubActions/CompileGenerateMessage.sh
+        env:
+          PRLINK: ${{ github.event.pull_request.html_url }}
+          PRTARGETBRANCH: ${{ github.event.pull_request.base.ref }}
+          PRNUMBER: ${{ github.event.pull_request.number }}
+          PRTITLE: ${{ github.event.pull_request.title }}
+      
+      - name: Upload artifact slack_message
+        uses: actions/upload-artifact@v1
+        with:
+          name: notification
+          path: notificationMessage.txt

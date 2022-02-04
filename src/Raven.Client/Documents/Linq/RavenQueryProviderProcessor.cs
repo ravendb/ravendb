@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -54,6 +55,7 @@ namespace Raven.Client.Documents.Linq
         private readonly LinqQueryHighlightings _highlightings;
         private bool _chainedWhere;
         private int _insideWhere;
+        private int _insideFilter;
         private bool _insideNegate;
         private bool _insideExact;
         private SpecialQueryType _queryType = SpecialQueryType.None;
@@ -362,7 +364,7 @@ namespace Raven.Client.Documents.Linq
                 (andAlso.Left.NodeType == ExpressionType.LessThan && andAlso.Right.NodeType == ExpressionType.GreaterThan) ||
                 (andAlso.Left.NodeType == ExpressionType.LessThanOrEqual && andAlso.Right.NodeType == ExpressionType.GreaterThanOrEqual);
 
-            if (isPossibleBetween == false)
+            if (isPossibleBetween == false || IsFilterModeActive())
                 return false;
 
             var leftMember = GetMemberForBetween((BinaryExpression)andAlso.Left);
@@ -586,7 +588,7 @@ namespace Raven.Client.Documents.Linq
 
         private ExpressionInfo GetMemberDirect(Expression expression)
         {
-            var result = LinqPathProvider.GetPath(expression);
+            var result = LinqPathProvider.GetPath(expression, IsFilterModeActive());
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
 
@@ -1234,6 +1236,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 VisitLinqExtensionsMethodCall(expression);
                 return;
             }
+
             if (declaringType == typeof(Queryable))
             {
                 VisitQueryableMethodCall(expression);
@@ -1347,6 +1350,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     DocumentQuery.ContainsAll(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
                     break;
                 case nameof(LinqExtensions.Where):
+                    VisitQueryableMethodCall(expression);
+                    break;
+                case nameof(LinqExtensions.Filter):
                     VisitQueryableMethodCall(expression);
                     break;
                 case nameof(LinqExtensions.Spatial):
@@ -1761,31 +1767,62 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     VisitExpression(expression.Arguments[0]);
                     break;
-                case "Where":
+                case "Filter":
+                {
+                    _insideFilter++;
+                    VisitExpression(expression.Arguments[0]);
+                    using (FilterModeScope(true))
                     {
-                        _insideWhere++;
-                        VisitExpression(expression.Arguments[0]);
                         if (_chainedWhere)
                         {
                             DocumentQuery.AndAlso();
                             DocumentQuery.OpenSubclause();
                         }
-                        if (_chainedWhere == false && _insideWhere > 1)
+
+                        if (_chainedWhere == false && _insideFilter > 1)
                             DocumentQuery.OpenSubclause();
 
-                        if (expression.Arguments.Count == 3)
-                            _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
-
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
-
-                        _insideExact = false;
-
-                        if (_chainedWhere == false && _insideWhere > 1)
+                        if (_chainedWhere == false && _insideFilter > 1)
                             DocumentQuery.CloseSubclause();
                         if (_chainedWhere)
                             DocumentQuery.CloseSubclause();
-                        _chainedWhere = true;
-                        _insideWhere--;
+                        _insideFilter--;
+                        if (expression.Arguments.Count is 3 && LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var limit))
+                        {
+                            AddFilterLimit((int)limit);
+                        }
+                    }
+
+                    break;
+                }
+                case "Where":
+                    {
+                        using (FilterModeScope(@on: false))
+                        {
+                            _insideWhere++;
+                            VisitExpression(expression.Arguments[0]);
+                            if (_chainedWhere)
+                            {
+                                DocumentQuery.AndAlso();
+                                DocumentQuery.OpenSubclause();
+                            }
+                            if (_chainedWhere == false && _insideWhere > 1)
+                                DocumentQuery.OpenSubclause();
+
+                            if (expression.Arguments.Count == 3)
+                                _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
+
+                            VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+                            _insideExact = false;
+
+                            if (_chainedWhere == false && _insideWhere > 1)
+                                DocumentQuery.CloseSubclause();
+                            if (_chainedWhere)
+                                DocumentQuery.CloseSubclause();
+                            _chainedWhere = true;
+                            _insideWhere--;
+                        }
                         break;
                     }
                 case "Select":
@@ -1985,6 +2022,36 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
+        private bool IsFilterModeActive() => DocumentQuery switch
+        {
+            DocumentQuery<T> documentQuery => documentQuery.IsFilterActive,
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.IsFilterActive,
+            _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
+        };
+        
+
+        private IDisposable FilterModeScope(bool @on) => DocumentQuery switch
+        {
+            DocumentQuery<T> documentQuery => documentQuery.SetFilterMode(@on),
+            AsyncDocumentQuery<T> asyncDocumentQuery => asyncDocumentQuery.SetFilterMode(@on),
+            _ => throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.") 
+        };        
+        
+        private void AddFilterLimit(int filterLimit)
+        {
+            switch (DocumentQuery)
+            {
+                case DocumentQuery<T> documentQuery:
+                    documentQuery.AddFilterLimit(filterLimit);
+                    break;
+                case AsyncDocumentQuery<T> asyncDocumentQuery:
+                    asyncDocumentQuery.AddFilterLimit(filterLimit);
+                    break;
+                default:
+                    throw new NotSupportedException($"Currently {DocumentQuery.GetType()} doesn't support {nameof(LinqExtensions.Filter)}.");
+            }
+        }
+
         private void CheckForLetOrLoadFromSelect(MethodCallExpression expression, LambdaExpression lambdaExpression)
         {
             var parameterName = lambdaExpression.Parameters[0].Name;
@@ -2036,7 +2103,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                    (mce.Method.DeclaringType == typeof(RavenQuery) ||
                     mce.Object?.Type == typeof(IDocumentSession));
         }
-
+        
         private bool CheckForNestedLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce, out string selectPath)
         {
             if (lambdaExpression.Body is MemberExpression memberExpression)
@@ -2058,7 +2125,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return false;
 
         }
-
+        
         private bool HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
         {
             if (CheckForNestedLoad(lambdaExpression, out var mce, out var member) == false)
@@ -2294,7 +2361,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddGroupByAliasIfNeeded(newExpression.Members[index], originalField);
             }
         }
-
+        
         private void AddGroupByAliasIfNeeded(MemberInfo aliasMember, string originalField)
         {
             var alias = GetSelectPath(aliasMember);

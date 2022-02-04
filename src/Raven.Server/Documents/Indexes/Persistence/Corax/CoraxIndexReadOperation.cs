@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<int> totalResults, Reference<int> skippedResults,
-            IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+            Reference<int> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var pageSize = query.PageSize;
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
@@ -60,6 +60,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (result is null)
                 yield break;
 
+            if (query.Metadata.FilterScript != null)
+            {
+                throw new NotSupportedException(
+                    "Filter isn't supported by Corax. We need to extract the filter feature implementation so it won't be implemented inside the read operations");
+            }
 
             var ids = ArrayPool<long>.Shared.Rent(CoraxGetPageSize(_indexSearcher, BufferSize));
 
@@ -111,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
-            Reference<int> skippedResults, IQueryResultRetriever retriever,
+            Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             throw new NotImplementedException();

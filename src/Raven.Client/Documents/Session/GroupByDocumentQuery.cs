@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session
 {
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Session
             _query.GroupByKey(fieldName, projectedName);
             return this;
         }
-
+        
         public IDocumentQuery<T> SelectSum(GroupByField field, params GroupByField[] fields)
         {
             if (field == null)
@@ -44,6 +45,17 @@ namespace Raven.Client.Documents.Session
         {
             _query.GroupByCount(projectedName);
             return _query;
+        }
+        
+        public IGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder, int limit)
+        {
+            using (_query.SetFilterMode(true))
+            {
+                var f = new FilterFactory<T>(_query, limit);
+                builder.Invoke(f);
+            }
+            
+            return this;
         }
     }
 
@@ -82,6 +94,17 @@ namespace Raven.Client.Documents.Session
         {
             _query.GroupByCount(projectedName);
             return _query;
+        }
+        
+        public IAsyncGroupByDocumentQuery<T> Filter(Action<IFilterFactory<T>> builder, int limit)
+        {
+            using (_query.SetFilterMode(true))
+            {
+                var f = new FilterFactory<T>(_query, limit);
+                builder.Invoke(f);
+            }
+           
+            return this;
         }
     }
 }

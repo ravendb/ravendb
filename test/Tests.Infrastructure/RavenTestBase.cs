@@ -219,8 +219,8 @@ namespace FastTests
             var notDisposed = Servers.Count(s => s.ServerStore.Disposed == false);
             var notPassive = Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
 
-            Assert.True(Servers.Count == notDisposed,$"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
-            Assert.True(Servers.Count == notPassive,$"Unequal not passive nodes {Servers.Count} != {notPassive}");
+            Assert.True(Servers.Count == notDisposed, $"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
+            Assert.True(Servers.Count == notPassive, $"Unequal not passive nodes {Servers.Count} != {notPassive}");
 
             await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
         }
@@ -276,22 +276,25 @@ namespace FastTests
             for (var i = 0; i < nodes.Count; i++)
             {
                 message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
-                using (nodes[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
+                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
-                using (clusterContext.OpenReadTransaction())
                 {
-                    message +=
-                        $"{Environment.NewLine}Log for server '{nodes[i].ServerStore.NodeTag}':" +
-                        $"{Environment.NewLine}Last notified Index '{nodes[i].ServerStore.Cluster.LastNotifiedIndex}':" +
-                        $"{Environment.NewLine}{context.ReadObject(nodes[i].ServerStore.GetLogDetails(context), "LogSummary/" + i)}" +
-                        $"{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(clusterContext)}";
+                    message += CollectLogs(context, nodes[i]);
                 }
             }
 
             return message;
         }
-        
+
+        protected static string CollectLogs(ClusterOperationContext context, RavenServer server)
+        {
+            return
+                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
+                $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
+                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
+                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
+        }
+
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
@@ -641,7 +644,7 @@ namespace FastTests
             }
             else
             {
-                timeout ??= errorsShouldExists is true 
+                timeout ??= errorsShouldExists is true
                     ? TimeSpan.FromSeconds(5)
                     : TimeSpan.FromSeconds(1);
             }
@@ -679,7 +682,7 @@ namespace FastTests
 
             if (errorsShouldExists is null)
                 throw new TimeoutException(msg);
-            
+
             return null;
         }
 
@@ -723,9 +726,9 @@ namespace FastTests
             return ret;
         }
 
-        protected static async Task<TC> WaitForSingleAsync<TC>(Func<Task<TC>> act,int timeout = 15000, int interval = 100) where  TC : ICollection =>
+        protected static async Task<TC> WaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection =>
             await WaitForCountAsync(act, 1, timeout, interval);
-        protected static async Task<TC> WaitForCountAsync<TC>(Func<Task<TC>> act, int count,int timeout = 15000, int interval = 100) where  TC : ICollection =>
+        protected static async Task<TC> WaitForCountAsync<TC>(Func<Task<TC>> act, int count, int timeout = 15000, int interval = 100) where TC : ICollection =>
             await WaitForPredicateAsync(a => a != null && a.Count == count, act, timeout, interval);
 
         protected static async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable

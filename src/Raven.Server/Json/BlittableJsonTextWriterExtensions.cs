@@ -504,6 +504,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            if (result.ScannedResults != null)
+            {
+                writer.WritePropertyName(nameof(result.ScannedResults));
+                writer.WriteInteger(result.ScannedResults.Value);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();

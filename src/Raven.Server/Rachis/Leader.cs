@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -107,13 +108,19 @@ namespace Raven.Server.Rachis
 
         private int _steppedDown;
 
-        public void StepDown()
+        public void StepDown(bool forceElection = true)
         {
             if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter in the cluster");
 
             if (Interlocked.CompareExchange(ref _steppedDown, 1, 0) == 1)
                 return;
+
+            if (forceElection == false)
+            {
+                _errorOccurred.TrySetException(new NotLeadingException("Was forced to step down"));
+                return;
+            }
 
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             if (_engine.Log.IsInfoEnabled)
@@ -563,17 +570,17 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters.Values)
             {
-                lowestIndex = Math.Min(lowestIndex, voter.FollowerMatchIndex);
+                lowestIndex = Math.Min(lowestIndex, voter.FollowerLastCommitIndex);
             }
 
             foreach (var promotable in _promotables.Values)
             {
-                lowestIndex = Math.Min(lowestIndex, promotable.FollowerMatchIndex);
+                lowestIndex = Math.Min(lowestIndex, promotable.FollowerLastCommitIndex);
             }
 
             foreach (var nonVoter in _nonVoters.Values)
             {
-                lowestIndex = Math.Min(lowestIndex, nonVoter.FollowerMatchIndex);
+                lowestIndex = Math.Min(lowestIndex, nonVoter.FollowerLastCommitIndex);
             }
 
             return lowestIndex;

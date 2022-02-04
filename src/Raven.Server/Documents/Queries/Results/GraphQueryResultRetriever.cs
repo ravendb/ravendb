@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
         }
 
-        protected override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(_context, id);
+        public override Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields) => DocumentsStorage.Get(_context, id);
 
         protected override Document LoadDocument(string id) => DocumentsStorage.Get(_context, id);
 

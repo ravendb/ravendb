@@ -123,6 +123,14 @@ namespace Raven.Server.Documents.Queries.AST
             base.VisitWhereClause(where);
             _sb.AppendLine();
         }
+        
+        public override void VisitFilterClause(QueryExpression where)
+        {
+            EnsureSpace();
+            _sb.Append("FILTER ");
+            base.VisitWhereClause(where);
+            _sb.AppendLine();
+        }
 
         public override void VisitNegatedExpression(NegatedExpression expr)
         {

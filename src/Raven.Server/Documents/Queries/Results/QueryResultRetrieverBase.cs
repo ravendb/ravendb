@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public abstract bool TryGetKey(ref RetrieverInput retrieverInput, out string key);
 
-        protected abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
+        public abstract Document DirectGet(ref RetrieverInput retrieverInput, string id, DocumentFields fields);
 
         protected abstract Document LoadDocument(string id);
 
