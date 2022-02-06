@@ -758,5 +758,16 @@ namespace Sparrow.Json
                 FlushInternal();
             }
         }
+
+        public void WriteNextOperationIdAndNodeTag(long operationId, string nodeTag)
+        {
+            WriteStartObject();
+            WritePropertyName("Id");
+            WriteInteger(operationId);
+            WriteComma();
+            WritePropertyName("NodeTag");
+            WriteString(nodeTag);
+            WriteEndObject();
+        }
     }
 }
