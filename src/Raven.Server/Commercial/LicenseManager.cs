@@ -429,11 +429,6 @@ namespace Raven.Server.Commercial
 
                 throw new InvalidOperationException("Could not save license!", e);
             }
-
-            string FormattedExpiration(DateTime dateTime)
-            {
-                return dateTime.ToString("dddd, dd MMMM yyyy");
-            }
         }
         
         private void ResetLicense(string error)
