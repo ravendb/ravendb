@@ -755,7 +755,12 @@ namespace SlowTests.Issues
                 await new SimpleIndex().ExecuteAsync(store);
 
                 documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-
+                var res = WaitForValue(() =>
+                {
+                    var ind = documentDatabase.IndexStore.GetIndex(indexName);
+                    return ind != null;
+                }, true);
+                Assert.True(res);
                 documentDatabase.IndexStore.StopIndex(indexName);
                 Assert.Equal(IndexRunningStatus.Paused, documentDatabase.IndexStore.GetIndex(indexName).Status);
 
