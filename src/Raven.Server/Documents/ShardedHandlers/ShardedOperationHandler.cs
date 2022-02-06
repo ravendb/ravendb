@@ -18,13 +18,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Id");
-                    writer.WriteInteger(nextId);
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(GetNextOperationIdCommand.NodeTag));
-                    writer.WriteString(Server.ServerStore.NodeTag);
-                    writer.WriteEndObject();
+                    writer.WriteNextOperationIdAndNodeTag(nextId, Server.ServerStore.NodeTag);
                 }
             }
         }
