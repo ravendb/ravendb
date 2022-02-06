@@ -908,18 +908,8 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
             
-            if (_serverStore.LicenseManager.LicenseStatus.Type != LicenseType.Developer && newLicenseStatus.Type == LicenseType.Developer)
-            {
-                if (_serverStore.Server.Certificate.Certificate.NotAfter > DateTime.UtcNow.AddMonths(4))
-                {
-                    var msg = "The server certificate expiration date is more than 4 months from now. " +
-                                   $"This is not allowed when trying to change the license form {_serverStore.LicenseManager.LicenseStatus.Type} to {LicenseType.Developer}. " +
-                                   "Use short term certificate before changing the license";
-                    
-                    throw new InvalidOperationException(msg);
-                }
-            }
-
+            SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore, newLicenseStatus);
+            
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
