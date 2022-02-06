@@ -730,10 +730,10 @@ namespace Raven.Server.ServerWide
 
             var certificateNotAfter = serverStore.Server.Certificate.Certificate.NotAfter;
             var certificateNotBefore = serverStore.Server.Certificate.Certificate.NotBefore;
-            var concat = certificateNotBefore.AddMonths(ServerCertificateUsageLimitation);
+            var certificateMaxDuration = certificateNotBefore.AddMonths(ServerCertificateUsageLimitation);
             string msg;
             
-            if (certificateNotAfter > concat)
+            if (certificateNotAfter > certificateMaxDuration)
             {
                 msg = $"The server certificate total duration is greater than {ServerCertificateUsageLimitation} months." +
                       $"This is not allowed when using {LicenseType.Developer} license." +
