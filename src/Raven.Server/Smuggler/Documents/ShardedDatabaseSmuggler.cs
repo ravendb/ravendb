@@ -32,7 +32,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class ShardedDatabaseSmuggler : BaseSmuggler 
+    public class ShardedDatabaseSmuggler : SmugglerBase
     {
         private readonly TransactionOperationContext _transactionOperationContext;
         private readonly List<DatabaseRecord.ShardRangeAssignment> _shardAllocation;

@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public abstract class BaseSmuggler
+    public abstract class SmugglerBase
     {
         internal readonly ISmugglerSource _source;
         internal readonly DatabaseSmugglerOptionsServerSide _options;
@@ -29,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         public readonly JsonOperationContext _context;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
 
-        public BaseSmuggler(ISmugglerSource source, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, 
+        public SmugglerBase(ISmugglerSource source, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, 
             SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
             CancellationToken token = default)
         {

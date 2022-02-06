@@ -23,7 +23,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
 {
-    public class DatabaseSmuggler : BaseSmuggler
+    public class DatabaseSmuggler : SmugglerBase
     {
         private readonly ISmugglerDestination _destination;
         private readonly SmugglerPatcher _patcher;
