@@ -52,6 +52,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -3044,7 +3045,10 @@ namespace Raven.Server.ServerWide
                     return;
                 }
 
-                _engine.AcceptNewConnection(tcp.Stream, disconnect, remoteEndpoint);
+                var features = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Cluster, tcp.ProtocolVersion);
+                var remoteConnection = new RemoteConnection(_engine.Tag, _engine.CurrentTerm, tcp.Stream, features.Cluster, disconnect);
+
+                _engine.AcceptNewConnection(remoteConnection, remoteEndpoint);
             }
             catch (IOException e)
             {

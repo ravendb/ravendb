@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Rachis.Json.Sync;
 using Raven.Server.ServerWide;
 using Sparrow;
@@ -21,6 +22,7 @@ namespace Raven.Server.Rachis.Remote
         private string _destTag;
         private string _src;
         private readonly Stream _stream;
+        private readonly TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures _features;
         private readonly JsonOperationContext.MemoryBuffer _buffer;
         private readonly JsonOperationContext _context;
         private readonly IDisposable _releaseBuffer;
@@ -32,17 +34,19 @@ namespace Raven.Server.Rachis.Remote
         public string Source => _src;
         public Stream Stream => _stream;
         public string Dest => _destTag;
+        public TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures Features => _features;
 
-        public RemoteConnection(string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
-            : this(dest: "?", src, term, stream, disconnect, caller)
+        public RemoteConnection(string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
+            : this(dest: "?", src, term, stream,features, disconnect, caller)
         {
         }
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features, Action disconnect, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
             _stream = stream;
+            _features = features;
             _disconnect = disconnect;
             _context = JsonOperationContext.ShortTermSingleUse();
             _releaseBuffer = _context.GetMemoryBuffer(out _buffer);
