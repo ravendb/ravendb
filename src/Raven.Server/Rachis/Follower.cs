@@ -701,9 +701,9 @@ namespace Raven.Server.Rachis
                                 switch (flags)
                                 {
                                     case TreeFlags.None:
-                                    case TreeFlags.FixedSizeTrees:
-                                    case TreeFlags.LeafsCompressed:
 
+                                        // this is a very specific code to block receiving 'CompareExchangeByExpiration' which is a multi-value tree
+                                        // while here we expect a normal tree
                                         if (SliceComparer.Equals(valKey, CompareExchangeExpirationStorage.CompareExchangeByExpiration))
                                             throw new InvalidOperationException($"{valKey} is a multi-tree, please upgrade the leader node.");
 

@@ -664,8 +664,6 @@ namespace Raven.Server.Rachis
                                                 switch (type)
                                                 {
                                                     case TreeFlags.None:
-                                                    case TreeFlags.FixedSizeTrees:
-                                                    case TreeFlags.LeafsCompressed:
                                                         var reader = treeIterator.CreateReaderForCurrent();
                                                         binaryWriter.Write(reader.Length);
                                                         copier.Copy(reader.Base, reader.Length);
@@ -679,7 +677,7 @@ namespace Raven.Server.Rachis
                                                             throw new NotSupportedException(
                                                                 $"The connection '{_connection}' doesn't support '{type}', please upgrade node '{_connection.Dest}'");
 
-                                                        var count = tree.MultiCount(currentTreeValueKey);
+                                                        long count = tree.MultiCount(currentTreeValueKey);
                                                         binaryWriter.Write(count);
                                                         totalSizeInBytes += sizeof(long);
 
