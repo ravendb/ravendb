@@ -401,8 +401,14 @@ namespace Raven.Server.ServerWide
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                // make sure that we are using supported encryption format by bouncy castle
+                rawData = loadedCertificate.Export(X509ContentType.Pfx);
+
                 ValidateExpiration(executable, loadedCertificate, serverStore);
+
                 ValidatePrivateKey(executable, null, rawData, out  privateKey);
+
                 ValidateKeyUsages(executable, loadedCertificate);
 
             }
@@ -572,16 +578,18 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, string password, ServerStore serverStore)
         {
+            // make sure that we are using supported encryption format by bouncy castle
+            var rawData = loadedCertificate.Export(X509ContentType.Pfx, password);
+
             ValidateExpiration(source, loadedCertificate, serverStore);
 
-            ValidatePrivateKey(source, password, rawBytes, out var privateKey);
+            ValidatePrivateKey(source, password, rawData, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
             
-            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
-
+            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawData, password);
 
             return new RavenServer.CertificateHolder
             {
@@ -668,6 +676,9 @@ namespace Raven.Server.ServerWide
 
                 // we need to load it as exportable because we might need to send it over the cluster
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
+                // make sure that we are using supported encryption format by bouncy castle
+                rawData = loadedCertificate.Export(X509ContentType.Pfx, password);
 
                 ValidateExpiration(path, loadedCertificate, serverStore);
 

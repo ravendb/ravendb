@@ -1458,7 +1458,7 @@ namespace Raven.Server.ServerWide
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
 
-                    Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
+                    Server.SetCertificate(newClusterCertificate, Configuration.Security.CertificatePassword);
 
                     NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
                     NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));

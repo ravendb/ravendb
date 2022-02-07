@@ -1252,7 +1252,7 @@ namespace Raven.Server.Commercial
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certificateFileName);
 
-            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword, serverStore);
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, certPassword, serverStore);
 
             if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
             {
@@ -1450,7 +1450,7 @@ namespace Raven.Server.Commercial
                             }
 
                             serverStore.Server.Certificate =
-                                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
+                                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, setupInfo.Password, serverStore);
 
                             serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
 
