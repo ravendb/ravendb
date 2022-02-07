@@ -39,6 +39,12 @@
                                                                                   DatabaseRecordItemType.ElasticSearchEtls |
                                                                                   DatabaseRecordItemType.PostgreSQLIntegration;
 
+        internal const DatabaseItemType OperateOnLastShardOnly = DatabaseItemType.Indexes |
+                                                              DatabaseItemType.DatabaseRecord |
+                                                              DatabaseItemType.ReplicationHubCertificates |
+                                                              DatabaseItemType.Identities |
+                                                              DatabaseItemType.Subscriptions;
+
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()

@@ -64,11 +64,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             var oldOperateOnType = options.OperateOnTypes;
 
-            var operateOnTypes = options.OperateOnTypes &= ~(DatabaseItemType.DatabaseRecord |
-                                                             DatabaseItemType.Subscriptions |
-                                                             DatabaseItemType.Identities |
-                                                             DatabaseItemType.Indexes |
-                                                             DatabaseItemType.ReplicationHubCertificates);
+            var operateOnTypes = options.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnLastShardOnly;
 
             blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.OperateOnTypes), operateOnTypes);
 
@@ -87,7 +83,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                     {
                         using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
-                            var firstLoop = true;
                             await gzipStream.CopyToAsync(exportOutputStream);
                         }
 
