@@ -2,19 +2,14 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Crypto.Prng;
-using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Json;
@@ -29,346 +24,256 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public static class SettingsZipFileHelper
 {
-    public static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(CompleteClusterConfigurationParameters parameters)
+    internal static async Task<byte[]> GetSetupZipFile(GetSetupZipFileParameters parameters)
     {
-        try
-        {
-            await using (var ms = new MemoryStream())
-            {
-                using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
-                using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
-                {
-                    parameters.Progress?.AddInfo("Loading and validating server certificate.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
-
-                    byte[] serverCertBytes;
-                    X509Certificate2 serverCert;
-                    string domainFromCert;
-                    string publicServerUrl;
-                    CertificateUtils.CertificateHolder serverCertificateHolder;
-
-                    try
-                    {
-                        var base64 = parameters.SetupInfo.Certificate;
-                        serverCertBytes = Convert.FromBase64String(base64);
-                        serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-                        var localNodeTag = parameters.SetupInfo.LocalNodeTag;
-                        publicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
-                            parameters.SetupInfo,
-                            localNodeTag,
-                            parameters.SetupInfo.NodeSetupInfos[localNodeTag].Port,
-                            parameters.SetupInfo.NodeSetupInfos[localNodeTag].TcpPort,
-                            out _,
-                            out domainFromCert);
-
-                        if (parameters.OnBeforeAddingNodesToCluster != null)
-                            await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
-
-                        foreach (var node in parameters.SetupInfo.NodeSetupInfos)
-                        {
-                            if (node.Key == parameters.SetupInfo.LocalNodeTag)
-                                continue;
-                            
-                            parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
-                            parameters.OnProgress?.Invoke(parameters.Progress);
-
-
-                            parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
-                                parameters.SetupInfo, node.Key,
-                                node.Value.Port,
-                                node.Value.TcpPort, out _, out _);
-
-                            if (parameters.AddNodeToCluster != null)
-                                await parameters.AddNodeToCluster(node.Key);
-                        }
-
-                        serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
-                            parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Could not load the certificate in the local server.", e);
-                    }
-
-                    parameters.Progress?.AddInfo("Generating the client certificate.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
-
-                    X509Certificate2 clientCert;
-
-                    var name = (parameters.SetupMode == SetupMode.Secured)
-                        ? domainFromCert.ToLower()
-                        : parameters.SetupInfo.Domain.ToLower();
-
-                    byte[] certBytes;
-                    try
-                    {
-                        // requires server certificate to be loaded
-                        var clientCertificateName = $"{name}.client.certificate";
-                        var result = LetsEncryptCertificateUtil.GenerateCertificate(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
-                        certBytes = result.CertBytes;
-
-                        if (parameters.PutCertificate != null)
-                            await parameters.PutCertificate(result.CertificateDefinition);
-
-                        clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Could not generate a client certificate for '{name}'.", e);
-                    }
-
-
-                    if (parameters.RegisterClientCert != null)
-                        await parameters.RegisterClientCertInOs(parameters.OnProgress, parameters.Progress, clientCert);
-
-                    parameters.Progress?.AddInfo("Writing certificates to zip archive.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
-
-                    try
-                    {
-                        var entry = archive.CreateEntry($"admin.client.certificate.{name}.pfx");
-
-                        // Structure of external attributes field: https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute/14727#14727
-                        // The permissions go into the most significant 16 bits of an int
-                        entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
-
-                        await using (var entryStream = entry.Open())
-                        {
-                            var export = clientCert.Export(X509ContentType.Pfx);
-                            if (parameters.Token != CancellationToken.None)
-                                await entryStream.WriteAsync(export, parameters.Token);
-                            else
-                                await entryStream.WriteAsync(export, CancellationToken.None);
-                        }
-
-                        await LetsEncryptCertificateUtil.WriteCertificateAsPemAsync($"admin.client.certificate.{name}", certBytes, null, archive);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to write the certificates to a zip archive.", e);
-                    }
-
-                    BlittableJsonReaderObject settingsJson;
-                    if (parameters.OnSettingsPath != null)
-                    {
-                        string settingsPath = parameters.OnSettingsPath.Invoke();
-                        await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
-                        {
-                            settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
-                        }
-                    }
-                    else
-                    {
-                        await using (var ms2 = new MemoryStream())
-                        {
-                            ms2.WriteByte((byte)'{');
-                            ms2.WriteByte((byte)'}');
-                            ms2.Position = 0;
-                            settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json");
-                        }
-                    }
         
-                    settingsJson.Modifications = new DynamicJsonValue(settingsJson);
+        parameters.Progress?.AddInfo("Writing certificates to zip archive.");
+        parameters.OnProgress?.Invoke(parameters.Progress);
+        
+        await using (var ms = new MemoryStream())
+        {
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                try
+                {
+                    
+                    var entry = archive.CreateEntry($"admin.client.certificate.{parameters.CompleteClusterConfigurationResult.Domain}.pfx");
 
-                    if (parameters.SetupMode == SetupMode.LetsEncrypt)
+                    // Structure of external attributes field: https://unix.stackexchange.com/questions/14705/the-zip-formats-external-file-attribute/14727#14727
+                    // The permissions go into the most significant 16 bits of an int
+                    entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
+
+                    await using (var entryStream = entry.Open())
                     {
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = parameters.SetupInfo.Email;
-
-                        try
-                        {
-                            var licenseString = JsonConvert.SerializeObject(parameters.SetupInfo.License, Formatting.Indented);
-
-                            var entry = archive.CreateEntry("license.json");
-                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-
-                            await using (var entryStream = entry.Open())
-                            await using (var writer = new StreamWriter(entryStream))
-                            {
-                                await writer.WriteAsync(licenseString);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Failed to write license.json in zip archive.", e);
-                        }
+                        var export = parameters.CompleteClusterConfigurationResult.ClientCert.Export(X509ContentType.Pfx);
+                        if (parameters.Token != CancellationToken.None)
+                            await entryStream.WriteAsync(export, parameters.Token);
+                        else
+                            await entryStream.WriteAsync(export, CancellationToken.None);
                     }
 
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString();
-                    
-                    if (parameters.SetupInfo.EnableExperimentalFeatures)
+                    await LetsEncryptCertificateUtil.WriteCertificateAsPemAsync(
+                        $"admin.client.certificate.{parameters.CompleteClusterConfigurationResult.Domain}",
+                        parameters.CompleteClusterConfigurationResult.CertBytes,
+                        null,
+                        archive);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write the certificates to a zip archive.", e);
+                }
+
+                BlittableJsonReaderObject settingsJson;
+                if (parameters.OnSettingsPath != null)
+                {
+                    string settingsPath = parameters.OnSettingsPath.Invoke();
+                    await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                     {
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                     }
-                    
-                    if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                }
+                else
+                {
+                    await using (var ms2 = new MemoryStream())
                     {
-                        if (parameters.OnPutServerWideStudioConfigurationValues != null)
-                            await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment);
+                        ms2.WriteByte((byte)'{');
+                        ms2.WriteByte((byte)'}');
+                        ms2.Position = 0;
+                        settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json");
                     }
-                    
-                    var certificateFileName = $"cluster.server.certificate.{name}.pfx";
-                    string certPath;
-                    if (parameters.OnGetCertificatePath != null)
-                        certPath = await parameters.OnGetCertificatePath(certificateFileName);
-                    else
-                        certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
-                    
-                    if (parameters.SetupInfo.ModifyLocalServer)
-                    {
-                        await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
-                        {
-                            if (parameters.Token != CancellationToken.None)
-                            {
-                                await certFile.WriteAsync(serverCertBytes, parameters.Token);
-                            }
-                            else
-                            {
-                                await certFile.WriteAsync(serverCertBytes, CancellationToken.None);
-                            }
-                        } // we'll be flushing the directory when we'll write the settings.json
-                    }
-                    
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
-                    if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
-                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
+                }
 
-                    foreach (var node in parameters.SetupInfo.NodeSetupInfos)
-                    {
-                        var currentNodeSettingsJson = settingsJson.Clone(context);
-                        currentNodeSettingsJson.Modifications ??= new DynamicJsonValue(currentNodeSettingsJson);
-                        
-                        parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
+                settingsJson.Modifications = new DynamicJsonValue(settingsJson);
 
-                        if (node.Value.Addresses.Count != 0)
-                        {
-                            currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
-                            currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
-                        }
-
-                        var httpUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort, out var tcpUrl, out var _);
-
-                        if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
-                            currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
-
-                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =
-                            string.IsNullOrEmpty(node.Value.PublicServerUrl)
-                                ? httpUrl
-                                : node.Value.PublicServerUrl;
-
-                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] =
-                            string.IsNullOrEmpty(node.Value.PublicTcpServerUrl)
-                                ? tcpUrl
-                                : node.Value.PublicTcpServerUrl;
-
-                        var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
-
-                        var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-                        if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ModifyLocalServer)
-                        {
-                            try
-                            {
-                                if (parameters.OnWriteSettingsJsonLocally != null)
-                                    await parameters.OnWriteSettingsJsonLocally(indentedJson);
-                            }
-                            catch (Exception e)
-                            {
-                                throw new InvalidOperationException("Failed to write settings file 'settings.json' for the local sever.", e);
-                            }
-                        }
-
-                        parameters.Progress?.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
-                        parameters.OnProgress?.Invoke(parameters.Progress);
-
-                        try
-                        {
-                            var entry = archive.CreateEntry($"{node.Key}/settings.json");
-                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
-
-                            await using (var entryStream = entry.Open())
-                            await using (var writer = new StreamWriter(entryStream))
-                            {
-                                await writer.WriteAsync(indentedJson);
-                            }
-
-                            // we save this multiple times on each node, to make it easier
-                            // to deploy by just copying the node
-                            entry = archive.CreateEntry($"{node.Key}/{certificateFileName}");
-                            entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
-
-                            await using (var entryStream = entry.Open())
-                            {
-                                await entryStream.WriteAsync(serverCertBytes);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException($"Failed to write settings.json for node '{node.Key}' in zip archive.", e);
-                        }
-                    }
-                    
-                    parameters.Progress?.AddInfo("Adding readme file to zip archive.");
-                    parameters.OnProgress?.Invoke(parameters.Progress);
-
-                    string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag, publicServerUrl, parameters.SetupInfo.NodeSetupInfos.Count > 1,
-                        parameters.SetupInfo.RegisterClientCert);
-
-                    if (parameters.Progress != null)
-                    {
-                        parameters.Progress.Readme = readmeString;
-                    }
+                if (parameters.SetupMode == SetupMode.LetsEncrypt)
+                {
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = parameters.SetupInfo.Email;
 
                     try
                     {
-                        var entry = archive.CreateEntry("readme.txt");
+                        var licenseString = JsonConvert.SerializeObject(parameters.SetupInfo.License, Formatting.Indented);
+
+                        var entry = archive.CreateEntry("license.json");
                         entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
                         await using (var entryStream = entry.Open())
                         await using (var writer = new StreamWriter(entryStream))
                         {
-                            await writer.WriteAsync(readmeString);
+                            await writer.WriteAsync(licenseString);
                         }
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
+                        throw new InvalidOperationException("Failed to write license.json in zip archive.", e);
                     }
-                    
-                    parameters.Progress.AddInfo("Adding setup.json file to zip archive.");
+                }
+
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString();
+
+                if (parameters.SetupInfo.EnableExperimentalFeatures)
+                {
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                }
+
+                if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                {
+                    if (parameters.OnPutServerWideStudioConfigurationValues != null)
+                        await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment);
+                }
+
+                var certificateFileName = $"cluster.server.certificate.{parameters.CompleteClusterConfigurationResult.Domain}.pfx";
+                
+                string certPath = parameters.OnGetCertificatePath?.Invoke(certificateFileName);
+
+                if (string.IsNullOrEmpty(certPath))
+                    certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
+
+                if (parameters.SetupInfo.ModifyLocalServer)
+                {
+                    await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
+                    {
+                        await certFile.WriteAsync(parameters.CompleteClusterConfigurationResult.ServerCertBytes, parameters.Token);
+                    } // we'll be flushing the directory when we'll write the settings.json
+                }
+
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
+                if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
+
+                foreach (var node in parameters.SetupInfo.NodeSetupInfos)
+                {
+                    var currentNodeSettingsJson = settingsJson.Clone(context);
+                    currentNodeSettingsJson.Modifications ??= new DynamicJsonValue(currentNodeSettingsJson);
+
+                    parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
+                    parameters.OnProgress?.Invoke(parameters.Progress);
+
+                    if (node.Value.Addresses.Count != 0)
+                    {
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] =
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] =
+                            string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
+                    }
+
+                    var httpUrl = CertificateUtils.GetServerUrlFromCertificate(parameters.CompleteClusterConfigurationResult.ServerCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort,
+                        out var tcpUrl,
+                        out var _);
+
+                    if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
+                        currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
+
+                    currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] =
+                        string.IsNullOrEmpty(node.Value.PublicServerUrl)
+                            ? httpUrl
+                            : node.Value.PublicServerUrl;
+
+                    currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] =
+                        string.IsNullOrEmpty(node.Value.PublicTcpServerUrl)
+                            ? tcpUrl
+                            : node.Value.PublicTcpServerUrl;
+
+                    var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
+
+                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+                    if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ModifyLocalServer)
+                    {
+                        try
+                        {
+                            parameters.OnWriteSettingsJsonLocally?.Invoke(indentedJson);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write settings file 'settings.json' for the local sever.", e);
+                        }
+                    }
+
+                    parameters.Progress?.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
                     parameters.OnProgress?.Invoke(parameters.Progress);
 
                     try
                     {
-                        var settings = new SetupSettings {Nodes = parameters.SetupInfo.NodeSetupInfos.Select(tag => new SetupSettings.Node {Tag = tag.Key}).ToArray()};
-
-                        var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
-
-                        var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
-
-                        var entry = archive.CreateEntry("setup.json");
+                        var entry = archive.CreateEntry($"{node.Key}/settings.json");
                         entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
                         await using (var entryStream = entry.Open())
                         await using (var writer = new StreamWriter(entryStream))
                         {
                             await writer.WriteAsync(indentedJson);
-                            await writer.FlushAsync();
-                            await entryStream.FlushAsync(parameters.Token);
+                        }
+
+                        // we save this multiple times on each node, to make it easier
+                        // to deploy by just copying the node
+                        entry = archive.CreateEntry($"{node.Key}/{certificateFileName}");
+                        entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
+
+                        await using (var entryStream = entry.Open())
+                        {
+                            await entryStream.WriteAsync(parameters.CompleteClusterConfigurationResult.ServerCertBytes);
                         }
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException("Failed to write setup.json to zip archive.", e);
+                        throw new InvalidOperationException($"Failed to write settings.json for node '{node.Key}' in zip archive.", e);
                     }
                 }
 
-                return ms.ToArray();
+                parameters.Progress?.AddInfo("Adding readme file to zip archive.");
+                parameters.OnProgress?.Invoke(parameters.Progress);
+
+                string readmeString = CreateReadmeText(parameters.SetupInfo.LocalNodeTag, parameters.CompleteClusterConfigurationResult.PublicServerUrl, parameters.SetupInfo.NodeSetupInfos.Count > 1,
+                    parameters.SetupInfo.RegisterClientCert);
+
+                if (parameters.Progress != null)
+                {
+                    parameters.Progress.Readme = readmeString;
+                }
+
+                try
+                {
+                    var entry = archive.CreateEntry("readme.txt");
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new StreamWriter(entryStream))
+                    {
+                        await writer.WriteAsync(readmeString);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
+                }
+
+                parameters.Progress.AddInfo("Adding setup.json file to zip archive.");
+                parameters.OnProgress?.Invoke(parameters.Progress);
+
+                try
+                {
+                    var settings = new SetupSettings {Nodes = parameters.SetupInfo.NodeSetupInfos.Select(tag => new SetupSettings.Node {Tag = tag.Key}).ToArray()};
+
+                    var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
+
+                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
+
+                    var entry = archive.CreateEntry("setup.json");
+                    entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+
+                    await using (var entryStream = entry.Open())
+                    await using (var writer = new StreamWriter(entryStream))
+                    {
+                        await writer.WriteAsync(indentedJson);
+                        await writer.FlushAsync();
+                        await entryStream.FlushAsync(parameters.Token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to write setup.json to zip archive.", e);
+                }
             }
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to create settings file(s).", e);
+            return ms.ToArray();
         }
     }
 
@@ -490,78 +395,6 @@ public static class SettingsZipFileHelper
         return str;
     }
     
-    private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
-    {
-        var certWithKey = certificate.CopyWithPrivateKey(privateKey);
-
-        Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-
-        var chain = new X509Chain();
-        chain.ChainPolicy.DisableCertificateDownloads = true;
-
-        chain.Build(certificate);
-
-        foreach (var item in chain.ChainElements)
-        {
-            var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
-
-            if (item.Certificate.Thumbprint == certificate.Thumbprint)
-            {
-                var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
-                store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
-                continue;
-            }
-
-            store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
-        }
-
-        var memoryStream = new MemoryStream();
-        store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
-        var certBytes = memoryStream.ToArray();
-
-        setupInfo.Certificate = Convert.ToBase64String(certBytes);
-
-        return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-    }
-
-    public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
-    {
-        if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
-        {
-            return BuildNewPfx(parameters.SetupInfo, parameters.ChallengeResult.Cache.Certificate, parameters.ChallengeResult.Cache.PrivateKey);
-        }
-
-        try
-        {
-            await parameters.Client.CompleteChallenges(parameters.Token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
-        }
-
-        parameters.OnValidationSuccessful();
-
-        (X509Certificate2 Cert, RSA PrivateKey) result;
-        try
-        {
-            result = await parameters.Client.GetCertificate(parameters.ExistingPrivateKey, parameters.Token);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
-        }
-
-        try
-        {
-            return BuildNewPfx(parameters.SetupInfo, result.Cert, result.PrivateKey);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
-        }
-    }
-
     private static string IpAddressToUrl(string address, int port)
     {
         var url = "https://" + address;

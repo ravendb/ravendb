@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
@@ -468,8 +469,79 @@ namespace Raven.Server.Utils
                 yield return certHost.Name.ToString();
             }
         }
-    }
 
+        public static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(CompleteAuthorizationAndGetCertificateParameters parameters)
+        {
+            if (parameters.ChallengeResult.Challange == null && parameters.ChallengeResult.Cache != null)
+            {
+                return BuildNewPfx(parameters.SetupInfo, parameters.ChallengeResult.Cache.Certificate, parameters.ChallengeResult.Cache.PrivateKey);
+            }
+
+            try
+            {
+                await parameters.Client.CompleteChallenges(parameters.Token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
+            }
+
+            parameters.OnValidationSuccessful();
+
+            (X509Certificate2 Cert, RSA PrivateKey) result;
+            try
+            {
+                result = await parameters.Client.GetCertificate(parameters.ExistingPrivateKey, parameters.Token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
+            }
+
+            try
+            {
+                return BuildNewPfx(parameters.SetupInfo, result.Cert, result.PrivateKey);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
+            }
+        }
+
+        private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
+        {
+            var certWithKey = certificate.CopyWithPrivateKey(privateKey);
+
+            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+
+            var chain = new X509Chain();
+            chain.ChainPolicy.DisableCertificateDownloads = true;
+
+            chain.Build(certificate);
+
+            foreach (var item in chain.ChainElements)
+            {
+                var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
+
+                if (item.Certificate.Thumbprint == certificate.Thumbprint)
+                {
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
+                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
+                    continue;
+                }
+
+                store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
+            }
+
+            var memoryStream = new MemoryStream();
+            store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
+            var certBytes = memoryStream.ToArray();
+
+            setupInfo.Certificate = Convert.ToBase64String(certBytes);
+
+            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+        }
+    }
     public static class PublicKeyPinningHashHelpers
     {
         public static string GetPublicKeyPinningHash(this X509Certificate2 cert)

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
+using Raven.Server.Utils;
 
 namespace rvn.Server.SetupWizard;
 
@@ -83,7 +84,7 @@ public class LetsEncryptSetupUtils
             progress?.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
             progress?.AddInfo("Completing Let's Encrypt challenge(s)...");
 
-            await SettingsZipFileHelper.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
+            await CertificateUtils.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
             {
                 OnValidationSuccessful = () =>
                 {
@@ -103,16 +104,25 @@ public class LetsEncryptSetupUtils
             
             try
             {
-                var zipFile = await SettingsZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new CompleteClusterConfigurationParameters
+                var completeClusterConfigurationResult = await SetupWizardUtils.CompleteClusterConfiguration(new CompleteClusterConfigurationParameters
                 {
                     Progress = progress,
                     SetupInfo = setupInfo,
                     SetupMode = SetupMode.None,
                     LicenseType = LicenseType.None,
-                    Token = CancellationToken.None,
+                    Token = token,
                     CertificateValidationKeyUsages = true
                 });
 
+                var zipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
+                {
+                    CompleteClusterConfigurationResult = completeClusterConfigurationResult,
+                    Progress = progress,
+                    SetupInfo = setupInfo,
+                    SetupMode = SetupMode.LetsEncrypt,
+                    Token = token,
+                });
+                
                 progress.Processed++;
                 progress.AddInfo("Configuration settings created.");
                 progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");

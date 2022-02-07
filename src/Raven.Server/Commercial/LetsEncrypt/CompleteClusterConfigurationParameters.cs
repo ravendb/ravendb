@@ -16,11 +16,10 @@ public class CompleteClusterConfigurationParameters
     public SetupInfo SetupInfo;
     public Func<string, string, Task> OnBeforeAddingNodesToCluster;
     public Func<string, Task> AddNodeToCluster;
-    public Func<Action<IOperationProgress>, SetupProgressAndResult, X509Certificate2, Task> RegisterClientCertInOs;
+    public Action<Action<IOperationProgress>, SetupProgressAndResult, X509Certificate2> RegisterClientCertInOs;
     public Func<StudioConfiguration.StudioEnvironment, Task> OnPutServerWideStudioConfigurationValues;
-    public Func<string, Task> OnWriteSettingsJsonLocally;
-    public Func<string, Task<string>> OnGetCertificatePath;
-    public Func<string, Task> RegisterClientCert;
+    public Action<string> OnWriteSettingsJsonLocally;
+    public Func<string, string> OnGetCertificatePath;
     public Func<CertificateDefinition, Task> PutCertificate;
     public SetupMode SetupMode;
     public bool CertificateValidationKeyUsages;
