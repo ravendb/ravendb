@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.IO.Pipelines;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -68,10 +64,12 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.OperateOnTypes), operateOnTypes);
 
-            using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
-            using (var exportOutputStream = new GZipStream(outputStream, CompressionMode.Compress))
+            await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
+            await using(var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
             {
-                await exportOutputStream.WriteAsync(Encoding.UTF8.GetBytes($"{{  \"BuildVersion\" : {ServerVersion.Build}"));
+                writer.WriteStartObject();
+                writer.WritePropertyName("BuildVersion");
+                writer.WriteInteger(ServerVersion.Build);
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
                     if (i == ShardedContext.ShardCount - 1) // Last shard need to bring all server wide information
@@ -81,18 +79,17 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     var cmd = new ShardedStreamCommand(this, async stream =>
                     {
-                        using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
+                        await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
-                            await gzipStream.CopyToAsync(exportOutputStream);
+                            writer.WriteStream(gzipStream);
                         }
 
                     }, blittableJson);
 
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 }
-                await exportOutputStream.WriteAsync(Encoding.UTF8.GetBytes("}"));
+                writer.WriteEndObject();
             }
-
             return null;
         }
 
