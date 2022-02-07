@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
-        private const int ServerCertificateUsageLimitation = 4;
+        private const int MaxDeveloperCertificateValidityDurationInMonths = 4;
 
         public SecretProtection(SecurityConfiguration config)
         {
@@ -730,22 +730,22 @@ namespace Raven.Server.ServerWide
 
             var certificateNotAfter = serverStore.Server.Certificate.Certificate.NotAfter;
             var certificateNotBefore = serverStore.Server.Certificate.Certificate.NotBefore;
-            var certificateMaxDuration = certificateNotBefore.AddMonths(ServerCertificateUsageLimitation);
+            var certificateMaxDuration = certificateNotBefore.AddMonths(MaxDeveloperCertificateValidityDurationInMonths);
             string msg;
             
             if (certificateNotAfter > certificateMaxDuration)
             {
-                msg = $"The server certificate total duration is greater than {ServerCertificateUsageLimitation} months." +
+                msg = $"The server certificate total duration is greater than {MaxDeveloperCertificateValidityDurationInMonths} months." +
                       $"This is not allowed when using {LicenseType.Developer} license." +
-                      $"Use short term certificate duration for up to {ServerCertificateUsageLimitation}";
+                      $"Use short term certificate duration for up to {MaxDeveloperCertificateValidityDurationInMonths}";
                     
                 throw new InvalidOperationException(msg);
             }
             
             // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
-            if (certificateNotAfter > DateTime.UtcNow.AddMonths(ServerCertificateUsageLimitation))
+            if (certificateNotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
             {
-                msg = $"The server certificate expiration date is more than {ServerCertificateUsageLimitation} months from now. " +
+                msg = $"The server certificate expiration date is more than {MaxDeveloperCertificateValidityDurationInMonths} months from now. " +
                       $"This is not allowed when trying to change the license form {currentLicenseType} the {LicenseType.Developer} license. " +
                       "Use short term certificate before changing the license";
                     
@@ -763,7 +763,7 @@ namespace Raven.Server.ServerWide
             if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
-                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
                 {
                     const string msg = "The server certificate expiration date is more than 4 months from now. " +
                                        "This is not allowed when using the developer license. " +
