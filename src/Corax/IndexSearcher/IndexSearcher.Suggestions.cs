@@ -8,8 +8,8 @@ public partial class IndexSearcher
     public IRawTermProvider Suggest(int fieldId, string term, bool sortByPopularity, StringDistanceAlgorithm algorithm, float accuracy,
         int take = Constants.IndexSearcher.TakeAll) => algorithm switch
     {
-        StringDistanceAlgorithm.None => Suggest<NoneStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
-        StringDistanceAlgorithm.NGram => Suggest<NoneStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.None => Suggest<NoStringDistance>(fieldId, term, sortByPopularity, accuracy, take),
+        StringDistanceAlgorithm.NGram => Suggest<NGramDistance>(fieldId, term, sortByPopularity, accuracy, take),
         StringDistanceAlgorithm.JaroWinkler => Suggest<JaroWinklerDistance>(fieldId, term, sortByPopularity, accuracy, take),
         StringDistanceAlgorithm.Levenshtein => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take),
         _ => Suggest<LevenshteinDistance>(fieldId, term, sortByPopularity, accuracy, take)

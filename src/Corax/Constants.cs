@@ -23,6 +23,7 @@ namespace Corax
         public static class Search
         {
             public const byte Wildcard = (byte)'*';
+
             [Flags]
             internal enum SearchMatchOptions
             {

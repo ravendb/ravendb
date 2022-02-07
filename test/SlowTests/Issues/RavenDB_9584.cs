@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -126,10 +127,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanUseSuggestionsWithAutoIndex()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanUseSuggestionsWithAutoIndex(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 Setup(store);
 
@@ -147,10 +149,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanExtendAutoIndexWithSuggestions()
+        [Theory]
+        [SearchEngineClassData]
+        public void CanExtendAutoIndexWithSuggestions(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 Setup(store);
 
