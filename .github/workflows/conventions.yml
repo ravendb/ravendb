@@ -13,7 +13,7 @@ jobs:
       - name: Parse Label
         run: |
           $label="${{ github.event.pull_request.base.ref }}".split("/")[-1]
-          echo "newLabel=$label" >> $GITHUB_ENV
+          echo "newLabel=$label" >> $env:GITHUB_ENV
       - name: Set Label
         env:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
