@@ -33,7 +33,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web
 {
-    public abstract class RequestHandler
+    public abstract partial class RequestHandler
     {
         public const string StartParameter = "start";
 
@@ -784,6 +784,5 @@ namespace Raven.Server.Web
         {
             return Task.CompletedTask;
         }
-
     }
 }

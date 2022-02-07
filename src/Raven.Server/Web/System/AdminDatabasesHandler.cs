@@ -1366,10 +1366,10 @@ namespace Raven.Server.Web.System
                                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                                 await using (var reader = File.OpenRead(configuration.OutputFilePath))
                                 await using (var stream = new GZipStream(reader, CompressionMode.Decompress))
-                                using (var source = new StreamSource(stream, context, database))
+                                using (var source = new StreamSource(stream, context, database.Name))
                                 {
                                     var destination = new DatabaseDestination(database);
-                                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
+                                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, context, result: result, onProgress: onProgress,
                                         token: token.Token);
 
                                     await smuggler.ExecuteAsync();

@@ -8,7 +8,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -16,7 +15,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client;
@@ -24,12 +22,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -37,6 +33,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
+
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -86,139 +83,48 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostExport()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var result = new SmugglerResult();
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
-                var startRaftIndex = GetLongQueryString("startRaftIndex", false) ?? 0;
-
-                var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
-
-                DatabaseSmugglerOptionsServerSide options;
-                using (context.GetMemoryBuffer(out var buffer))
-                {
-                    var firstRead = await stream.ReadAsync(buffer.Memory.Memory);
-                    buffer.Used = 0;
-                    buffer.Valid = firstRead;
-                    if (firstRead != 0)
-                    {
-                        var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
-                        options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-                    }
-                    else
-                    {
-                        // no content, we'll use defaults
-                        options = new DatabaseSmugglerOptionsServerSide();
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(options.EncryptionKey) == false)
-                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
-
-                var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-
-                if (feature == null)
-                    options.AuthorizationStatus = AuthorizationStatus.DatabaseAdmin;
-                else
-                    options.AuthorizationStatus = feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: false) ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser;
-
-                ApplyBackwardCompatibility(options);
-
-                var token = CreateOperationToken();
-
-                var fileName = options.FileName;
-                if (string.IsNullOrEmpty(fileName))
-                {
-                    fileName = $"Dump of {context.DocumentDatabase.Name} {SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
-                }
-
-                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.Headers["Content-Type"] = "application/octet-stream";
-
                 try
                 {
-                    await Database.Operations.AddOperation(
-                            Database,
-                            "Export database: " + Database.Name,
-                            Operations.OperationType.DatabaseExport,
-                            onProgress => ExportDatabaseInternalAsync(options, startDocumentEtag, startRaftIndex, onProgress, context, token), operationId, token: token);
+                    await Export(context, Database.Name, (options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, _, token) =>
+                        ExportDatabaseInternalAsync(options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, context, token), Database.Operations, operationId, Database);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Export failed .", e);
+
+                    result.AddError($"Error occurred during export. Exception: {e.Message}");
+                    await WriteResultAsync(context, result, ResponseBodyStream());
+
                     HttpContext.Abort();
                 }
             }
         }
 
-        private void ApplyBackwardCompatibility(DatabaseSmugglerOptionsServerSide options)
-        {
-            if (options == null)
-                return;
-
-            if (((options.OperateOnTypes & DatabaseItemType.DatabaseRecord) != 0)
-                && (options.OperateOnDatabaseRecordTypes == DatabaseRecordItemType.None))
-            {
-                options.OperateOnDatabaseRecordTypes = DatabaseSmugglerOptions.DefaultOperateOnDatabaseRecordTypes;
-            }
-
-            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false)
-                return;
-
-            if (version.Major != RavenVersionAttribute.Instance.MajorVersion)
-                return;
-
-#pragma warning disable 618
-            if (version.Minor < 2 && options.OperateOnTypes.HasFlag(DatabaseItemType.Counters))
-#pragma warning restore 618
-            {
-                options.OperateOnTypes |= DatabaseItemType.CounterGroups;
-            }
-
-            // only all 4.0 and 4.1 less or equal to 41006
-            if (version.Revision < 60 || version.Revision > 41006)
-                return;
-
-            if (options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
-                options.OperateOnTypes |= DatabaseItemType.Attachments;
-        }
-
-        private async Task<IOperationResult> ExportDatabaseInternalAsync(
+        public async Task<IOperationResult> ExportDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
+            BlittableJsonReaderObject blittableJson,
             long startDocumentEtag,
             long startRaftIndex,
             Action<IOperationProgress> onProgress,
-            DocumentsOperationContext context,
+            JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
             using (token)
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var source = new DatabaseSource(Database, startDocumentEtag, startRaftIndex, Logger);
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, onProgress: onProgress, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
             }
-        }
-
-        private Stream GetOutputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
-        {
-            if (options.EncryptionKey == null)
-                return fileStream;
-
-            var key = options?.EncryptionKey;
-            return new EncryptingXChaCha20Poly1305Stream(fileStream,
-                Convert.FromBase64String(key));
-        }
-
-        private Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
-        {
-            if (options.EncryptionKey != null)
-                return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
-
-            return fileStream;
         }
 
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
@@ -236,11 +142,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context, Database))
+                using (var source = new StreamSource(stream, context, Database.Name))
                 {
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
 
                     var result = await smuggler.ExecuteAsync();
 
@@ -312,11 +218,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         await using (var file = await getFile())
                         await using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                        using (var source = new StreamSource(stream, context, Database))
+                        using (var source = new StreamSource(stream, context, Database.Name))
                         {
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
+                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -639,94 +545,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PostImportAsync()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                if (HttpContext.Request.HasFormContentType == false)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; // Bad request
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["Type"] = "Error",
-                            ["Error"] = "This endpoint requires form content type"
-                        });
-                        return;
-                    }
-                }
-
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                var token = CreateOperationToken();
-
-                var result = new SmugglerResult();
-                await Database.Operations.AddOperation(Database, "Import to: " + Database.Name,
-                    Operations.OperationType.DatabaseImport,
-                    onProgress =>
-                    {
-                        return Task.Run(async () =>
-                        {
-                            try
-                            {
-                                var boundary = MultipartRequestHelper.GetBoundary(
-                                    MediaTypeHeaderValue.Parse(HttpContext.Request.ContentType),
-                                    MultipartRequestHelper.MultipartBoundaryLengthLimit);
-                                var reader = new MultipartReader(boundary, HttpContext.Request.Body);
-                                DatabaseSmugglerOptionsServerSide options = null;
-
-                                while (true)
-                                {
-                                    var section = await reader.ReadNextSectionAsync().ConfigureAwait(false);
-                                    if (section == null)
-                                        break;
-
-                                    if (ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out ContentDispositionHeaderValue contentDisposition) == false)
-                                        continue;
-
-                                    if (MultipartRequestHelper.HasFormDataContentDisposition(contentDisposition))
-                                    {
-                                        var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
-                                        if (key != Constants.Smuggler.ImportOptions)
-                                            continue;
-
-                                        BlittableJsonReaderObject blittableJson;
-                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
-                                        {
-                                            await using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
-                                            {
-                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, Constants.Smuggler.ImportOptions);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            blittableJson = await context.ReadForMemoryAsync(section.Body, Constants.Smuggler.ImportOptions);
-                                        }
-
-                                        options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-                                        continue;
-                                    }
-
-                                    if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition) == false)
-                                        continue;
-
-                                    ApplyBackwardCompatibility(options);
-
-                                    var inputStream = GetInputStream(section.Body, options);
-                                    var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                    await DoImportInternalAsync(context, stream, options, result, onProgress, token);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                result.AddError($"Error occurred during import. Exception: {e.Message}");
-                                onProgress.Invoke(result.Progress);
-                                throw;
-                            }
-
-                            return (IOperationResult)result;
-                        });
-                    }, operationId, token: token).ConfigureAwait(false);
-
-                await WriteImportResultAsync(context, result, ResponseBodyStream());
+                await Import(context, Database.Name, (_, stream, options, result, onProgress, token, _) =>
+                    DoImportInternalAsync(context, stream, options, result, onProgress, token), Database.Operations, operationId, Database);
             }
         }
 
@@ -864,20 +687,22 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
                 var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
         }
 
-        private async Task DoImportInternalAsync(DocumentsOperationContext context, Stream stream, DatabaseSmugglerOptionsServerSide options, SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options, 
+            SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token, BlittableJsonReaderObject optionsAsBlittable = null)
         {
+            ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             await using (stream)
             using (token)
-            using (var source = new StreamSource(stream, context, Database))
+            using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = new DatabaseDestination(Database, token.Token);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
+                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
@@ -915,15 +740,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             return HttpContext.Request.Body;
-        }
-
-        private static async ValueTask WriteImportResultAsync(JsonOperationContext context, SmugglerResult result, Stream stream)
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
-            {
-                var json = result.ToJson();
-                context.Write(writer, json);
-            }
         }
     }
 }

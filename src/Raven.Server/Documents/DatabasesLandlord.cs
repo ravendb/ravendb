@@ -989,7 +989,7 @@ namespace Raven.Server.Documents
             return CreateConfiguration(databaseRecord);
         }
 
-        protected RavenConfiguration CreateConfiguration(DatabaseRecord record)
+        public RavenConfiguration CreateConfiguration(DatabaseRecord record)
         {
             Debug.Assert(_serverStore.Disposed == false, "_serverStore.Disposed == false");
             var config = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, record.DatabaseName);

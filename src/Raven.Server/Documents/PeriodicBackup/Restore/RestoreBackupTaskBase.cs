@@ -815,10 +815,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             await using (var fileStream = await GetStream(filePath))
             await using (var inputStream = GetInputStream(fileStream, database.MasterKey))
             await using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
-            using (var source = new StreamSource(gzipStream, context, database))
+            using (var source = new StreamSource(gzipStream, context, database.Name))
             {
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                    database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
+                    database.Time, context, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
                     OnDatabaseRecordAction = onDatabaseRecordAction
@@ -857,9 +857,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         await using (var inputStream = GetSnapshotInputStream(input, database.Name))
                         await using (var uncompressed = new GZipStream(inputStream, CompressionMode.Decompress))
                         {
-                            var source = new StreamSource(uncompressed, context, database);
+                            var source = new StreamSource(uncompressed, context, database.Name);
                             var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                                database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
+                                database.Time, context, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
 
                             await smuggler.ExecuteAsync(ensureStepsProcessed: true, isLastFile: true);
                         }

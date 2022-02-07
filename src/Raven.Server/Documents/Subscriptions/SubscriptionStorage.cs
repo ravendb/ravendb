@@ -347,7 +347,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptions(TransactionOperationContext serverStoreContext, bool history, int start, int take)
         {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(_db.Name)))
+            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(ShardHelper.ToDatabaseName(_db.Name))))
             {
                 if (start > 0)
                 {

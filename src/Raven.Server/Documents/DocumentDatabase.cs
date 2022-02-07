@@ -1095,9 +1095,9 @@ namespace Raven.Server.Documents
                     using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
-                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
                         {
-                            var smugglerDestination = new StreamDestination(outputStream, documentsContext, smugglerSource);
+                            var smugglerDestination = new StreamDestination(outputStream, jsonOperationContext, smugglerSource);
                             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                             {
                                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
@@ -1107,6 +1107,7 @@ namespace Raven.Server.Documents
                                 smugglerSource,
                                 smugglerDestination,
                                 Time,
+                                jsonOperationContext,
                                 options: databaseSmugglerOptionsServerSide,
                                 token: cancellationToken);
 

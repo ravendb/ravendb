@@ -11,14 +11,13 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
     public interface ISmugglerDestination
     {
-        IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion);
+        IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion, bool sharded = false);
 
         IDatabaseRecordActions DatabaseRecord();
 
@@ -40,14 +39,20 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         ICounterActions Counters(SmugglerResult result);
 
+        ICounterActions LegacyCounters(SmugglerResult result);
+
         ISubscriptionActions Subscriptions();
 
         IReplicationHubCertificateActions ReplicationHubCertificates();
 
         ITimeSeriesActions TimeSeries();
+
+        ILegacyActions LegacyDocumentDeletions();
+
+        ILegacyActions LegacyAttachmentDeletions();
     }
 
-    public interface IDocumentActions : INewDocumentActions, IAsyncDisposable
+    public interface IDocumentActions : INewDocumentActions
     {
         ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress);
 
@@ -64,9 +69,9 @@ namespace Raven.Server.Smuggler.Documents.Data
         JsonOperationContext GetContextForNewCompareExchangeValue();
     }
 
-    public interface INewDocumentActions
+    public interface INewDocumentActions : IAsyncDisposable
     {
-        DocumentsOperationContext GetContextForNewDocument();
+        JsonOperationContext GetContextForNewDocument();
 
         Stream GetTempStream();
     }
@@ -78,7 +83,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         ValueTask WriteIndexAsync(IndexDefinition indexDefinition);
     }
 
-    public interface ICounterActions : IAsyncDisposable, INewDocumentActions
+    public interface ICounterActions : INewDocumentActions
     {
         ValueTask WriteCounterAsync(CounterGroupDetail counterDetail);
 
@@ -118,4 +123,11 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         ValueTask WriteTimeSeriesAsync(TimeSeriesItem ts);
     }
+
+    public interface ILegacyActions : IAsyncDisposable
+    {
+        ValueTask WriteLegacyDeletions(string id);
+    }
+
+
 }

@@ -218,7 +218,7 @@ namespace Raven.Server.Smuggler.Migration
             return await response.Content.ReadAsStreamAsync();
         }
 
-        private BlittableJsonReaderObject GetCleanMetadata(BlittableJsonReaderObject metadata, DocumentsOperationContext context)
+        private BlittableJsonReaderObject GetCleanMetadata(BlittableJsonReaderObject metadata, JsonOperationContext context)
         {
             using (var old = metadata)
                 metadata = metadata.Clone(context);
@@ -320,7 +320,7 @@ namespace Raven.Server.Smuggler.Migration
             await using (var responseStream = await response.Content.ReadAsStreamAsync())
             await using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
             using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Parameters.Database))
+            using (var source = new StreamSource(stream, context, Parameters.Database.Name))
             {
                 var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
@@ -333,7 +333,7 @@ namespace Raven.Server.Smuggler.Migration
                     OperateOnTypes = Options.OperateOnTypes
                 };
 
-                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 return await smuggler.ExecuteAsync();
             }

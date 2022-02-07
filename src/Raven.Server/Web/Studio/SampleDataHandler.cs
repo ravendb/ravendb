@@ -78,11 +78,11 @@ namespace Raven.Server.Web.Studio
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
                     await using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
-                    using (var source = new StreamSource(stream, context, Database))
+                    using (var source = new StreamSource(stream, context, Database.Name))
                     {
                         var destination = new DatabaseDestination(Database);
 
-                        var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time,
+                        var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context,
                             options: new DatabaseSmugglerOptionsServerSide
                             {
                                 OperateOnTypes = operateOnTypes,
