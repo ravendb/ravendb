@@ -274,8 +274,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             return (int)pageSize;
         }
+
+        protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,QueryTimingsScope queryTimings)
+        {
+            if (query.Metadata.FilterScript is null)
+                return null;
+
+            return new QueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings);
+        }
         
-        protected struct FilterDocument : IDisposable
+        protected enum FilterResult
+        {
+            Accepted,
+            Skipped,
+            LimitReached
+        }
+        protected class QueryFilter : IDisposable
         {
             private readonly IndexQueryServerSide _query;
             private readonly DocumentsOperationContext _documentsContext;
@@ -286,7 +300,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly ScriptRunner.SingleRun _filterScriptRun;
             private ScriptRunner.ReturnRun _filterSingleRun;
             
-            public FilterDocument(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,QueryTimingsScope queryTimings)
+            public QueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,QueryTimingsScope queryTimings)
             {
                 _query = query;
                 _documentsContext = documentsContext;
@@ -294,46 +308,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _scannedDocuments = scannedDocuments;
                 _retriever = retriever;
                 _queryTimings = queryTimings;
-                if (query.Metadata.FilterScript is not null)
-                {
-                    var key = new CollectionQueryEnumerable.FilterKey(query.Metadata);
-                    _filterSingleRun = index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
-                }
-                else
-                {
-                    _filterScriptRun = null;
-                    _filterSingleRun = default;
-                }
+                
+                var key = new CollectionQueryEnumerable.FilterKey(query.Metadata);
+                _filterSingleRun = index.DocumentDatabase.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
             }
 
-            public bool TryFilter(global::Lucene.Net.Documents.Document document, string key, IState state, out bool overLimit)
+            public FilterResult Apply(global::Lucene.Net.Documents.Document document, string key, IState state)
             {
-                overLimit = false;
-                if (_filterScriptRun == null) 
-                    return true;
-            
                 var doc = _retriever.DirectGet(document, key, DocumentFields.All, state);
                 if (doc == null)
                 {
                     _skippedResults.Value++;
+                    return FilterResult.Skipped;
                 }
 
                 if (_scannedDocuments.Value >= _query.FilterLimit)
                 {
-                    overLimit = true;
-                    return false;
+                    return FilterResult.LimitReached;
                 }
+                
                 _scannedDocuments.Value++;
-
                 object self = _filterScriptRun.Translate(_documentsContext, doc);
                 using(_queryTimings?.For(nameof(QueryTimingsScope.Names.Filter)))
                 using (var result = _filterScriptRun.Run(_documentsContext, _documentsContext, "execute", new[]{self, _query.QueryParameters}, _queryTimings))
                 {
-                    if (result.BooleanValue == true) 
-                        return true;
+                    if (result.BooleanValue == true)
+                    {
+                        return FilterResult.Accepted;
+                    }
                 
                     _skippedResults.Value++;
-                    return false;
+                    return FilterResult.Skipped;
                 }
             }
             
