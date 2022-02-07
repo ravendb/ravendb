@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             
-            using (var filter = new FilterDocument(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
+            using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -159,12 +159,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             continue;
                         }
                         
-                        if (filter.TryFilter(document, key, _state, out var overLimit) == false)
+                        var filterResult = queryFilter?.Apply(document, key, _state);
+                        if (filterResult is not null and not FilterResult.Accepted)
                         {
-                            if (overLimit)
+                            if (filterResult is FilterResult.Skipped)
+                                continue;
+                            if (filterResult is FilterResult.LimitReached)
                                 break;
-                            
-                            continue;
                         }
                         
                         bool markedAsSkipped = false;
@@ -393,7 +394,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var firstSubDocumentQuery = subQueries[0];
 
-            using (var filter = new FilterDocument(_index, query, documentsContext, skippedResults, scannedResults, retriever, null))
+            using (var queryFilter =  GetQueryFilter(_index, query, documentsContext, skippedResults, scannedResults, retriever, null))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -450,11 +451,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue;
                     }
                     
-                    if (filter.TryFilter(document, key, _state, out var overLimit) == false)
+                    var filterResult = queryFilter?.Apply(document, key, _state);
+                    if (filterResult is not null and not FilterResult.Accepted)
                     {
-                        if (overLimit)
+                        if (filterResult is FilterResult.Skipped)
+                            continue;
+                        if (filterResult is FilterResult.LimitReached)
                             break;
-                        continue;
                     }
                     
                     var result = retriever.Get(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state, token);
