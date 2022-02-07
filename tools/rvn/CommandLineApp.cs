@@ -79,11 +79,11 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
-
+                
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
                         SetupInfoPath = setupParamVal,
-                        PackageOutputPath = packageOutPathVal?.ToLower(),
+                        PackageOutputPath = packageOutPathVal,
                         Command = cmd,
                         Mode = modeVal,
                         CertificatePath = certPathVal,
@@ -115,8 +115,8 @@ namespace rvn
             {
                 return ExitWithError($"{nameof(parameters.SetupInfoPath)} does not exits", parameters.Command);
             }
-  
-            if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip") == false)
+            
+            if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
             {
                 return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extenstion", parameters.Command);
             }
@@ -167,22 +167,15 @@ namespace rvn
                     return ExitWithError("--mode and --setup-params-path options must be set.", parameters.Command);
             }
 
+            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
+
             try
             {
-                try
-                {
-                    await File.WriteAllBytesAsync(parameters.PackageOutputPath!, zipFile, parameters.CancellationToken);
-                    
-                }
-                catch (Exception e)
-                {
-                    return ExitWithError($"Failed to write ZIP file to this path: {nameof(parameters.PackageOutputPath)}\nError: {e}", parameters.Command);
-                }
-
+                await File.WriteAllBytesAsync(parameters.PackageOutputPath!, zipFile, parameters.CancellationToken);
             }
             catch (Exception e)
             {
-                return ExitWithError($"Failed to write ZIP file: {e}", parameters.Command);
+                return ExitWithError($"Failed to write ZIP file to this path: {parameters.PackageOutputPath}\nError: {e}", parameters.Command);
             }
 
             parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");

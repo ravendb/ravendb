@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -20,8 +17,7 @@ public class LetsEncryptCertificateUtil
     internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition) GenerateCertificate(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
         if (certificateHolder == null)
-            throw new InvalidOperationException(
-                $"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
+            throw new InvalidOperationException($"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
 
         // this creates a client certificate which is signed by the current server certificate
         var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificateName, certificateHolder, out var certBytes, setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));

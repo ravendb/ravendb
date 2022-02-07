@@ -13,16 +13,15 @@ public class ImportCertificateSetupUtils
         try
         {
             progress.Processed++;
-            progress?.AddInfo("Setting up RavenDB in 'Secured Mode'.");
-            progress?.AddInfo("Starting validation.");
+            progress.AddInfo("Setting up RavenDB in 'Secured Mode'.");
+            progress.AddInfo("Starting validation.");
 
             if (EmailValidator.IsValid(setupInfo.Email) == false)
                 throw new ArgumentException("Invalid e-mail format: " + setupInfo.Email);
 
-            byte[] zipFile;
             try
             {
-                zipFile = await SettingsZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new CompleteClusterConfigurationParameters
+                var completeClusterConfigurationResult = await SetupWizardUtils.CompleteClusterConfiguration(new CompleteClusterConfigurationParameters
                 {
                     Progress = progress,
                     SetupInfo = setupInfo,
@@ -31,17 +30,26 @@ public class ImportCertificateSetupUtils
                     Token = CancellationToken.None,
                     CertificateValidationKeyUsages = true
                 });
-                     
+
+                var zipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
+                {
+                    CompleteClusterConfigurationResult = completeClusterConfigurationResult,
+                    Progress = progress,
+                    SetupInfo = setupInfo,
+                    SetupMode = SetupMode.None,
+                    Token = CancellationToken.None,
+                });
+                    
                 progress.Processed++;
                 progress.AddInfo("Configuration settings created.");
                 progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
+
+                return zipFile;
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException("Failed to create the configuration settings.", e);
             }
-
-            return zipFile;
         }
         catch (Exception e)
         {
