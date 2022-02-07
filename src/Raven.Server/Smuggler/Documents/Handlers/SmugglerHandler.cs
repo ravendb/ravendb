@@ -121,7 +121,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
                 {
                     var destination = new StreamDestination(outputStream, context, source);
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, onProgress: onProgress, token: token.Token);
+                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, 
+                        jsonOperationContext, options, onProgress: onProgress, token: token.Token);
                     return await smuggler.ExecuteAsync();
                 }
             }
@@ -146,7 +147,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     var destination = new DatabaseDestination(Database);
 
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
+                    var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context, options, token: token.Token);
 
                     var result = await smuggler.ExecuteAsync();
 
@@ -222,7 +223,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         {
                             var destination = new DatabaseDestination(Database);
 
-                            var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context);
+                            var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context);
 
                             var result = await smuggler.ExecuteAsync();
                             results.Enqueue(result);
@@ -687,7 +688,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new CsvStreamSource(Database, stream, context, entity, csvConfig))
             {
                 var destination = new DatabaseDestination(Database);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
+                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }
@@ -702,7 +703,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (var source = new StreamSource(stream, context, Database.Name))
             {
                 var destination = new DatabaseDestination(Database, token.Token);
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, result, onProgress, token.Token);
+                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options, result, onProgress, token.Token);
 
                 await smuggler.ExecuteAsync();
             }

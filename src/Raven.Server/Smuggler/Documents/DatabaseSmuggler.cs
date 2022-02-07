@@ -7,18 +7,14 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
-using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -27,7 +23,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly ISmugglerDestination _destination;
         private readonly SmugglerPatcher _patcher;
-        private readonly TransactionContextPool _transactionContextPool;
+
         public Action<IndexDefinitionAndType> OnIndexAction;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
@@ -49,7 +45,6 @@ namespace Raven.Server.Smuggler.Documents
             CancellationToken token = default) : base(source, time, context, options, result, onProgress, token )
         {
             _destination = destination;
-            _transactionContextPool = database.ServerStore.ContextPool;
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
                 _patcher = new SmugglerPatcher(_options, database);
 
@@ -68,20 +63,9 @@ namespace Raven.Server.Smuggler.Documents
         public override async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
         {
             var result = _result ?? new SmugglerResult();
-            var sharded = false;
-            if (_source is DatabaseSource)
-            {
-                var record = await _source.GetDatabaseRecordAsync();
-
-                if (ShardHelper.IsShardedName(record.DatabaseName))
-                {
-                    sharded = true;
-                }
-            }
-
             using (_patcher?.Initialize())
             using (var initializeResult = await _source.InitializeAsync(_options, result))
-            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber, sharded))
+            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber))
             {
                 ModifyV41OperateOnTypes(initializeResult.BuildNumber, isLastFile);
 
@@ -512,81 +496,42 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
         {
-            bool isSharded = false;
-            int index = -1;
-            DatabaseRecord shardedRecord = null;
             result.CompareExchange.Start();
-
-            //Handle compare exchange for shard database export
-            if (_source is DatabaseSource)
-            {
-                var record = await _source.GetDatabaseRecordAsync();
-                if (ShardHelper.IsShardedName(record.DatabaseName))
-                {
-                    isSharded = true;
-                    shardedRecord = await _source.GetShardedDatabaseRecordAsync();
-                    index = ShardHelper.TryGetShardIndex(record.DatabaseName);
-                }
-            }
-
             await using (var actions = _destination.CompareExchange(_context))
             {
                 await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
-                    if (SkipCompareExchange(isSharded, kvp.Key, index, shardedRecord))
-                        continue;
-
-                    _token.ThrowIfCancellationRequested();
-                    result.CompareExchange.ReadCount++;
-                    if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
-
-                    if (kvp.Equals(default))
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        continue;
-                    }
-
-                    try
-                    {
-                        await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
-                        result.CompareExchange.LastEtag = kvp.Index;
-                    }
-                    catch (Exception e)
-                    {
-                        result.CompareExchange.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
-                    }
+                    await InternalProcessCompareExchangeAsync(result, kvp, actions);
                 }
             }
 
             return result.CompareExchange;
         }
 
-        private bool SkipCompareExchange(bool isSharded, CompareExchangeKey Key, int index, DatabaseRecord databaseRecord)
+        protected virtual async Task InternalProcessCompareExchangeAsync(SmugglerResult result, (CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value) kvp,
+            ICompareExchangeActions actions)
         {
-            if (isSharded)
+            _token.ThrowIfCancellationRequested();
+            result.CompareExchange.ReadCount++;
+            if (result.CompareExchange.ReadCount != 0 && result.CompareExchange.ReadCount % 1000 == 0)
+                AddInfoToSmugglerResult(result, $"Read {result.CompareExchange.ReadCount:#,#;;0} compare exchange values.");
+
+            if (kvp.Equals(default))
             {
-                if (ClusterTransactionCommand.IsAtomicGuardKey(Key.Key, out var docId))
-                {
-                    var id = docId.Split('/')[1];
-                    using (_transactionContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    {
-                        var docShardIndex = ShardHelper.GetShardIndexforDocument(context, databaseRecord.ShardAllocations, docId);
-                        if (docShardIndex != index)
-                        {
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    if (index != databaseRecord.ShardAllocations.Count - 1)
-                        return true;
-                }
+                result.CompareExchange.ErroredCount++;
+                return;
             }
 
-            return false;
+            try
+            {
+                await actions.WriteKeyValueAsync(kvp.Key.Key, kvp.Value);
+                result.CompareExchange.LastEtag = kvp.Index;
+            }
+            catch (Exception e)
+            {
+                result.CompareExchange.ErroredCount++;
+                result.AddError($"Could not write compare exchange '{kvp.Key.Key}->{kvp.Value}': {e.Message}");
+            }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCountersAsync(SmugglerResult result)
@@ -643,52 +588,39 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
         {
-            bool isSharded = false;
-            int index = -1;
-            DatabaseRecord shardedRecord = null;
-
-            if (_source is DatabaseSource)
-            {
-                var record = await _source.GetDatabaseRecordAsync();
-                if (ShardHelper.IsShardedName(record.DatabaseName))
-                {
-                    isSharded = true;
-                    shardedRecord = await _source.GetShardedDatabaseRecordAsync();
-                    index = ShardHelper.TryGetShardIndex(record.DatabaseName);
-                }
-            }
-
             result.CompareExchangeTombstones.Start();
 
             await using (var actions = _destination.CompareExchangeTombstones(_context))
             {
                 await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
                 {
-                    if (SkipCompareExchange(isSharded, key.Key, index, shardedRecord))
-                        continue;
-
-                    _token.ThrowIfCancellationRequested();
-                    result.CompareExchangeTombstones.ReadCount++;
-
-                    if (key.Equals(default))
-                    {
-                        result.CompareExchangeTombstones.ErroredCount++;
-                        continue;
-                    }
-
-                    try
-                    {
-                        await actions.WriteTombstoneKeyAsync(key.Key.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        result.CompareExchangeTombstones.ErroredCount++;
-                        result.AddError($"Could not write compare exchange '{key}: {e.Message}");
-                    }
+                    await InternalProcessCompareExchangeTombstonesAsync(result, key, actions);
                 }
             }
 
             return result.CompareExchangeTombstones;
+        }
+
+        protected virtual async Task InternalProcessCompareExchangeTombstonesAsync(SmugglerResult result, (CompareExchangeKey Key, long Index) key, ICompareExchangeActions actions)
+        {
+            _token.ThrowIfCancellationRequested();
+            result.CompareExchangeTombstones.ReadCount++;
+
+            if (key.Equals(default))
+            {
+                result.CompareExchangeTombstones.ErroredCount++;
+                return;
+            }
+
+            try
+            {
+                await actions.WriteTombstoneKeyAsync(key.Key.Key);
+            }
+            catch (Exception e)
+            {
+                result.CompareExchangeTombstones.ErroredCount++;
+                result.AddError($"Could not write compare exchange '{key}: {e.Message}");
+            }
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)

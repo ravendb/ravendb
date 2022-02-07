@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                 {
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, context, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = SmugglerBase.GetDatabaseSmuggler(database, source, destination, database.Time, context, new DatabaseSmugglerOptionsServerSide
                     {
                         TransformScript = "this['Test'] = 'NewValue';"
                     });

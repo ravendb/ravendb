@@ -56,14 +56,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            var oldOperateOnType = options.OperateOnTypes;
-
-            var operateOnTypes = options.OperateOnTypes &= ~DatabaseSmugglerOptions.OperateOnLastShardOnly;
-
-            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.OperateOnTypes), operateOnTypes);
-
+            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.IsShard), true);
             await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
             await using(var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
             {
@@ -72,11 +65,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                 writer.WriteInteger(ServerVersion.Build);
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
-                    if (i == ShardedContext.ShardCount - 1) // Last shard need to bring all server wide information
-                    {
-                        blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.OperateOnTypes), oldOperateOnType);
-                    }
-
                     var cmd = new ShardedStreamCommand(this, async stream =>
                     {
                         await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))

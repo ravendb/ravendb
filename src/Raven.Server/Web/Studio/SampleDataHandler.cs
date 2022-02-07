@@ -82,7 +82,7 @@ namespace Raven.Server.Web.Studio
                     {
                         var destination = new DatabaseDestination(Database);
 
-                        var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, context,
+                        var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, context,
                             options: new DatabaseSmugglerOptionsServerSide
                             {
                                 OperateOnTypes = operateOnTypes,

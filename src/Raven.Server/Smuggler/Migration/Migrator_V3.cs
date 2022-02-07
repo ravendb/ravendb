@@ -333,7 +333,7 @@ namespace Raven.Server.Smuggler.Migration
                     OperateOnTypes = Options.OperateOnTypes
                 };
 
-                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
+                var smuggler = SmugglerBase.GetDatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, context, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 return await smuggler.ExecuteAsync();
             }

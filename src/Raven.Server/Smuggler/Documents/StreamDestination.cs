@@ -60,14 +60,14 @@ namespace Raven.Server.Smuggler.Documents
             ToDispose ??= new List<IDisposable>();
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion, bool sharded = false)
+        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
             _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
             _options = options;
 
             SetupMetadataFilterMethod(_context);
-            if (sharded == false)
+            if (options.IsShard == false)
             {
                 _writer.WriteStartObject();
                 _writer.WritePropertyName("BuildVersion");
@@ -76,7 +76,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return new AsyncDisposableAction(async () =>
             {
-                if (sharded == false)
+                if (options.IsShard == false)
                 {
                     _writer.WriteEndObject();
                 }
