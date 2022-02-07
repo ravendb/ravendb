@@ -71,7 +71,7 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion, bool sharded = false)
+        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;

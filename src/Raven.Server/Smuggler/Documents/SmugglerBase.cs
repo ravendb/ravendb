@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -607,6 +604,15 @@ namespace Raven.Server.Smuggler.Documents
         protected static void ThrowInvalidData()
         {
             throw new InvalidDataException("Document does not contain an id.");
+        }
+
+        public static SmugglerBase GetDatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
+            CancellationToken token = default)
+        {
+            return options != null && options.IsShard ?
+                new SingleShardDatabaseSmuggler(database, source, destination, time, context, options , result , onProgress , token) :
+                new DatabaseSmuggler(database, source, destination, time, context, options, result, onProgress, token);
         }
     }
 }

@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Handlers
                     OperateOnTypes = DatabaseItemType.Documents
                 };
 
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
+                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
                 var result = await smuggler.ExecuteAsync();
 
                 var replicationSource = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out var documentId);

@@ -1369,7 +1369,7 @@ namespace Raven.Server.Web.System
                                 using (var source = new StreamSource(stream, context, database.Name))
                                 {
                                     var destination = new DatabaseDestination(database);
-                                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, context, result: result, onProgress: onProgress,
+                                    var smuggler = SmugglerBase.GetDatabaseSmuggler(database, source, destination, database.Time, context, result: result, onProgress: onProgress,
                                         token: token.Token);
 
                                     await smuggler.ExecuteAsync();

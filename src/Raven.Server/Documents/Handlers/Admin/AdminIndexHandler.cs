@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     OperateOnTypes = DatabaseItemType.Indexes
                 };
 
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
+                var smuggler = SmugglerBase.GetDatabaseSmuggler(Database, source, destination, Database.Time, jsonOperationContext, options);
                 await smuggler.ExecuteAsync();
             }
         }

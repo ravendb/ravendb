@@ -77,7 +77,6 @@ namespace Raven.Server.Smuggler.Documents
             _log = LoggingSource.Instance.GetLogger<StreamSource>(databaseName);
             _options = options ?? new DatabaseSmugglerOptionsServerSide();
             _byteStringContext = new ByteStringContext(SharedMultipleUseFlag.None);
-
         }
 
         public async Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
