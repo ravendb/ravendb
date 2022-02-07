@@ -61,7 +61,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
         {
-            throw new NotImplementedException();
+            if (_converter.GetKnownFields().TryGetByFieldName(field, out var binding) == false)
+                throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
+
+            return new CoraxSuggestionReader(_index, _logger, binding, readTransaction);
         }
 
         public override void Dispose()

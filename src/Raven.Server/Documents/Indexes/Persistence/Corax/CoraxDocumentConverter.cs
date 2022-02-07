@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             foreach (var field in index.Definition.IndexFields.Values)
             {
                 Slice.From(allocator, field.Name, ByteStringType.Immutable, out value);
-                knownFields = knownFields.AddBinding(field.Id, value, null);
+                knownFields = knownFields.AddBinding(field.Id, value, null, hasSuggestion: field.HasSuggestions);
             }
 
             if (index.Type.IsMapReduce())

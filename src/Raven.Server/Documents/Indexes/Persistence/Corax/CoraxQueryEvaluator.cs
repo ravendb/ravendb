@@ -15,7 +15,6 @@ using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Voron;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax

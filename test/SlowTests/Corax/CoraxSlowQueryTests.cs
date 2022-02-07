@@ -5,11 +5,16 @@ using System.Linq;
 using System.Text;
 using FastTests;
 using FastTests.Server.Documents.Indexing;
+using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Server.Config;
+using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -146,7 +151,64 @@ namespace SlowTests.Corax
                     Assert.Equal(luceneResult[i].Age, coraxResult[i].Age);
             }
         }
+        
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Corax)]
+        public void NgramSuggestionTest(string searchEngine)
+        {
+            using (var documentStore = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            {
 
+                using (var s = documentStore.OpenSession())
+                {
+                    s.Store(new User { Name = "Maciej" });
+                    s.Store(new User { Name = "Matt" });
+                    s.SaveChanges();
+                }
+
+                using (var session = documentStore.OpenSession())
+                {
+                    var suggestionQueryResult = session.Query<User>()
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Mett").WithOptions(new SuggestionOptions
+                        {
+                            PageSize = 10,
+                            Accuracy = 0.1f,
+                            Distance = StringDistanceTypes.NGram
+                        }))
+                        .Execute();
+
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("matt", suggestionQueryResult["Name"].Suggestions[0]);
+                }
+            }
+        }
+
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Corax)]
+        public void MaxSuggestionsShouldWork(string searchEngine)
+        {
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session
+                        .Query<Product>()
+                        .SuggestUsing(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
+                        {
+                            PageSize = 5,
+                            Distance = StringDistanceTypes.JaroWinkler,
+                            SortMode = SuggestionSortMode.Popularity,
+                            Accuracy = 0.4f
+                        }))
+                        .Execute();
+
+                    Assert.True(result["Name"].Suggestions.Count  is > 0 and <= 5);
+                }
+            }
+        }
+        
         private class Result
         {
             public int Age { get; set; }
