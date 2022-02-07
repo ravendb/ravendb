@@ -3587,8 +3587,9 @@ namespace Raven.Server.Documents.Indexes
                             foreach (var selectField in query.Metadata.SelectFields)
                             {
                                 var suggestField = (SuggestionField)selectField;
-                                using (var reader = (IndexPersistence as LuceneIndexPersistence)?.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
-                                    result.Results.Add(reader.Suggestions(query, suggestField, queryContext.Documents, token.Token));
+                                using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction,
+                                           suggestField.Name))
+                                        result.Results.Add(reader.Suggestions(query, suggestField, queryContext.Documents, token.Token));
                             }
 
                             result.TotalResults = result.Results.Count;
