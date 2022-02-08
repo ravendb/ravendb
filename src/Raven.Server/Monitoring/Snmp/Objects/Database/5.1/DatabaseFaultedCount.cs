@@ -1,4 +1,7 @@
+using System;
 using Lextm.SharpSnmpLib;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
@@ -25,8 +28,14 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 if (databaseTask == null)
                     continue;
 
-                if (databaseTask.IsFaulted)
-                    count++;
+                if (databaseTask.IsFaulted == false) 
+                    continue;
+                
+                var e = databaseTask.Exception?.ExtractSingleInnerException();
+                if (e is DatabaseDisabledException)
+                    continue;
+
+                count++;
             }
 
             return count;

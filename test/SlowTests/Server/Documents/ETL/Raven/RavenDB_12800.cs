@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 using (var session = src.OpenSession())
                 {
 
-                    for (int i = 0; i < 10; i++)
+                    for (int i = 0; i < 6; i++)
                     {
                         var user = new User();
                         session.Store(user);
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 AddEtl(src, dest, "Users", script: script);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 5);
 
                 etlDone.Wait(TimeSpan.FromMinutes(1));
 
@@ -67,6 +67,10 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 var stats = etlProcess.GetPerformanceStats();
 
                 Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
+
+                etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 6);
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
             }
         }
     }
