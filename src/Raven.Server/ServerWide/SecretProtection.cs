@@ -581,14 +581,17 @@ namespace Raven.Server.ServerWide
         public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, string password, ServerStore serverStore)
         {
             // make sure that we are using supported encryption format by bouncy castle
-            var rawData = loadedCertificate.Export(X509ContentType.Pfx, password);
+            var rawData = loadedCertificate.Export(X509ContentType.Pfx);
 
             ValidateExpiration(source, loadedCertificate, serverStore);
 
-            ValidatePrivateKey(source, password, rawData, out var privateKey);
+            ValidatePrivateKey(source, certificatePassword: null, rawData, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
             
+            if (string.IsNullOrEmpty(password) == false)
+                rawData = loadedCertificate.Export(X509ContentType.Pfx, password);
+
             AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawData, password);
 
             return new RavenServer.CertificateHolder
@@ -678,11 +681,11 @@ namespace Raven.Server.ServerWide
                 var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                 // make sure that we are using supported encryption format by bouncy castle
-                rawData = loadedCertificate.Export(X509ContentType.Pfx, password);
+                rawData = loadedCertificate.Export(X509ContentType.Pfx);
 
                 ValidateExpiration(path, loadedCertificate, serverStore);
 
-                ValidatePrivateKey(path, password, rawData, out var privateKey);
+                ValidatePrivateKey(path, certificatePassword: null, rawData, out var privateKey);
 
                 ValidateKeyUsages(path, loadedCertificate);
 
