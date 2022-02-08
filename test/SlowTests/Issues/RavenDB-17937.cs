@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(index1.IndexName, record.Indexes.First().Key);
-                Assert.Equal("docs.Orders.Select(order => new {\r\n    order = order,\r\n    x = 0\r\n}).Select(this0 => new {\r\n    Count = 1 / this0.x\r\n})", record.Indexes.First().Value.Maps.First());
+                Assert.Contains("Count = 1 / this0.x", record.Indexes.First().Value.Maps.First());
 
                 indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
                 Assert.Equal(2, indexStats.Length);
