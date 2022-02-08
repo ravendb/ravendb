@@ -3910,7 +3910,9 @@ namespace Raven.Server.Documents.Indexes
                     result.AddMessage($"Starting data optimization of index '{Name}'.");
                     onProgress?.Invoke(result.Progress);
 
+                    using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                    using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                     using (var txw = indexContext.OpenWriteTransaction())
                     using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                     {
