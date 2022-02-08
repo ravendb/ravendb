@@ -34,6 +34,7 @@ namespace Raven.Server.ServerWide
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
+        private const int MaxDeveloperCertificateValidityDurationInMonths = 4;
 
         public SecretProtection(SecurityConfiguration config)
         {
@@ -732,6 +733,38 @@ namespace Raven.Server.ServerWide
 
 #if !RVN
 
+        internal static void ValidateExpiration(string source, ServerStore serverStore, LicenseStatus newLicenseStatus)
+        {
+            
+            var currentLicenseType = serverStore.LicenseManager.LicenseStatus.Type;
+
+            if (newLicenseStatus.Type != LicenseType.Developer) return;
+
+            var certificateNotAfter = serverStore.Server.Certificate.Certificate.NotAfter;
+            var certificateNotBefore = serverStore.Server.Certificate.Certificate.NotBefore;
+            var certificateMaxDuration = certificateNotBefore.AddMonths(MaxDeveloperCertificateValidityDurationInMonths);
+            string msg;
+            
+            if (certificateNotAfter > certificateMaxDuration)
+            {
+                msg = $"The server certificate total duration is greater than {MaxDeveloperCertificateValidityDurationInMonths} months." +
+                      $"This is not allowed when using {LicenseType.Developer} license." +
+                      $"Use short term certificate duration for up to {MaxDeveloperCertificateValidityDurationInMonths}";
+                    
+                throw new InvalidOperationException(msg);
+            }
+            
+            // Do not allow long range certificates in developer mode if the certificate uploaded from another license type.
+            if (certificateNotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
+            {
+                msg = $"The server certificate expiration date is more than {MaxDeveloperCertificateValidityDurationInMonths} months from now. " +
+                      $"This is not allowed when trying to change the license from {currentLicenseType} the {LicenseType.Developer} license. " +
+                      "Use short term certificate before changing the license";
+                    
+                throw new InvalidOperationException(msg);
+            }
+        }
+        
         private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
@@ -741,7 +774,7 @@ namespace Raven.Server.ServerWide
             if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
-                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
                 {
                     const string msg = "The server certificate expiration date is more than 4 months from now. " +
                                        "This is not allowed when using the developer license. " +

@@ -60,6 +60,8 @@ namespace Raven.Server.Commercial
 
         public DateTime? Expiration => GetValue<DateTime?>("expiration");
 
+        public string FormattedExpiration => Expiration?.ToString("dddd, dd MMMM yyyy");
+
         public bool Expired
         {
             get
