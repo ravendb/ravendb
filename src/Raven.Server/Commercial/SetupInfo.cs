@@ -290,6 +290,8 @@ namespace Raven.Server.Commercial
 
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
+        private readonly Action<(string Message, Exception Exception)> _onMessage;
+        
         public long Processed { get; set; }
         public long Total { get; set; }
         public string Certificate { get; set; }
@@ -297,15 +299,13 @@ namespace Raven.Server.Commercial
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
-        public Logger Logger { get; set; }
-
-        public SetupProgressAndResult(Logger logger)
+        public SetupProgressAndResult(Action<(string Message, Exception Exception)> onMessage)
         {
-            Logger = logger;
+            _onMessage = onMessage;
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
         }
-
+        
         public string Message { get; private set; }
 
         public DynamicJsonValue ToJson()
@@ -343,8 +343,7 @@ namespace Raven.Server.Commercial
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
             Messages.Enqueue(Message);
-            if (Logger is {IsInfoEnabled: true})
-                Logger.Info(Message, ex);
+            _onMessage.Invoke((Message, ex));
         }
 
         public bool ShouldPersist => false;

@@ -16,16 +16,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 public class RavenDnsRecordHelper
 {
         private const string GoogleDnsApi = "https://dns.google.com";
-
-        public class UpdateDnsRecordParameters
-        {
-            public Action<IOperationProgress> OnProgress;
-            public SetupProgressAndResult Progress;
-            public string Challenge;
-            public SetupInfo SetupInfo;
-            public CancellationToken Token;
-        }
-
+        
         public static async Task UpdateDnsRecordsTask(UpdateDnsRecordParameters parameters)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(parameters.Token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
@@ -51,7 +42,7 @@ public class RavenDnsRecordHelper
 
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
-
+                
                 parameters.Progress?.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", parameters.SetupInfo.NodeSetupInfos.Keys)}.");
                 parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -72,7 +63,7 @@ public class RavenDnsRecordHelper
 
                     response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), parameters.Token).ConfigureAwait(false);
-
+                    
                     parameters.Progress?.AddInfo("Waiting for DNS records to update...");
                 }
                 catch (Exception e)
@@ -121,8 +112,7 @@ public class RavenDnsRecordHelper
 
                         if (response.IsSuccessStatusCode == false)
                         {
-                            throw new InvalidOperationException(
-                                $"Got unsuccessful response from registration-result request: {response.StatusCode}.{Environment.NewLine}{responseString}");
+                            throw new InvalidOperationException($"Got unsuccessful response from registration-result request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                         }
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
@@ -136,7 +126,7 @@ public class RavenDnsRecordHelper
                             parameters.Progress?.AddInfo("Please be patient, updating DNS records takes time...");
                         else if (i % 5 == 0)
                             parameters.Progress?.AddInfo("Waiting...");
-
+                        
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
                         i++;

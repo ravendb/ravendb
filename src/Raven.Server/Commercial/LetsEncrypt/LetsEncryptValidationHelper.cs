@@ -13,8 +13,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public class LetsEncryptValidationApiHelper
+public class LetsEncryptValidationHelper
 {
+    internal const string AnyIp = "0.0.0.0";
+
     private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
     {
         var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
@@ -23,7 +25,7 @@ public class LetsEncryptValidationApiHelper
         // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to
         foreach (var hostnameOrIp in localNode.Addresses)
         {
-            if (hostnameOrIp.Equals("0.0.0.0"))
+            if (hostnameOrIp.Equals(AnyIp))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
@@ -66,6 +68,8 @@ public class LetsEncryptValidationApiHelper
         }
     }
 
+
+    
     internal static async Task ValidateServerCanRunOnThisNode(BlittableJsonReaderObject settingsJsonObject, X509Certificate2 cert, ServerStore serverStore,
         string nodeTag, CancellationToken token)
     {
@@ -82,7 +86,7 @@ public class LetsEncryptValidationApiHelper
 
         foreach (var hostnameOrIp in hostnamesOrIps)
         {
-            if (hostnameOrIp.Equals("0.0.0.0"))
+            if (hostnameOrIp.Equals(AnyIp))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), port));
                 continue;
@@ -141,7 +145,7 @@ public class LetsEncryptValidationApiHelper
         {
             case SetupMode.LetsEncrypt when setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false:
                 throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'. Nodes: " + setupInfo.NodeSetupInfos.Keys);
-            case SetupMode.LetsEncrypt when ZipFileHelper.IsValidEmail(setupInfo.Email) == false:
+            case SetupMode.LetsEncrypt when EmailValidator.IsValidEmail(setupInfo.Email) == false:
                 throw new ArgumentException("Invalid email address: " + setupInfo.Email);
             case SetupMode.LetsEncrypt when IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false:
                 throw new ArgumentException("Invalid domain name: " + setupInfo.Domain);
@@ -162,10 +166,10 @@ public class LetsEncryptValidationApiHelper
                 setupInfo.NodeSetupInfos[key].TcpPort = 38888;
 
             if (setupMode == SetupMode.LetsEncrypt &&
-                setupInfo.NodeSetupInfos[key].Addresses.Any(ip => ip.Equals("0.0.0.0")) &&
+                setupInfo.NodeSetupInfos[key].Addresses.Any(ip => ip.Equals(AnyIp)) &&
                 string.IsNullOrWhiteSpace(setupInfo.NodeSetupInfos[key].ExternalIpAddress))
             {
-                throw new ArgumentException("When choosing 0.0.0.0 as the ip address, you must provide an external ip to update in the DNS records.");
+                throw new ArgumentException($"When choosing {AnyIp} as the ip address, you must provide an external ip to update in the DNS records.");
             }
         }
 

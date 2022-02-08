@@ -56,14 +56,19 @@
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\WelcomeMessage.cs" Link="Server\Utils\Cli\WelcomeMessage.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\ConsoleMessage.cs" Link="Server\Utils\Cli\ConsoleMessage.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
-    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\LetsEncryptRvnUtils.cs" Link="Server\Commercial\LetsEncrypt\LetsEncryptRvnUtils.cs"/>
-    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\ZipFileHelper.cs" Link="Server\Commercial\LetsEncrypt\ZipFileHelper.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\LetsEncryptUtils.cs" Link="Server\Commercial\LetsEncrypt\LetsEncryptUtils.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" Link="Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" Link="Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\JsonStringHelper.cs" Link="Server\Commercial\LetsEncrypt\JsonStringHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\LetsEncryptCertificateUtil.cs" Link="Server\Commercial\LetsEncrypt\LetsEncryptCertificateUtil.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\UpdateDnsRecordParameters.cs" Link="Server\Commercial\LetsEncrypt\UpdateDnsRecordParameters.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\CompleteClusterConfigurationParameters.cs" Link="Server\Commercial\LetsEncrypt\CompleteClusterConfigurationParameters.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\CompleteAuthorizationAndGetCertificateParameters.cs" Link="Server\Commercial\LetsEncrypt\CompleteAuthorizationAndGetCertificateParameters.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\SetupInfo.cs" Link="Server\Commercial\SetupInfo.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\License.cs" Link="Server\Commercial\License.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LicenseType.cs" Link="Server\Commercial\LicenseType.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncryptClient.cs" Link="Server\Commercial\LetsEncryptClient.cs" />
+    <Compile Include="..\..\src\Raven.Server\Commercial\EmailValidator.cs" Link="Server\Commercial\EmailValidator.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\ApiHttpClient.cs" Link="Server\Commercial\ApiHttpClient.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\ServerVersion.cs" Link="Server\ServerWide\ServerVersion.cs" />
     <Compile Include="..\..\src\Raven.Server\Smuggler\Documents\Processors\BuildVersion.cs" Link="Server\Smuggler\Documents\Processors\BuildVersion.cs" />
