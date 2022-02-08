@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
