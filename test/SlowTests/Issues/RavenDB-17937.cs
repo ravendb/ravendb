@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
@@ -70,6 +71,27 @@ namespace SlowTests.Issues
 
                 indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
                 Assert.Equal(2, indexStats.Length);
+
+                // replacing with another index with another index with an error
+                await new Index3(indexName).ExecuteAsync(store);
+                WaitForIndexing(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
+
+                indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
+                Assert.Equal(2, indexStats.Length);
+                var database = await GetDatabase(store.Database);
+                var index = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
+                Assert.Contains("Count = 5 / this0.x", index.GetIndexDefinition().Maps.First());
+                
+                // an index with no errors will replace both the original and the replacement
+                await new Index4(indexName).ExecuteAsync(store);
+                WaitForIndexing(store);
+
+                indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
+                Assert.Equal(1, indexStats.Length);
+                Assert.Equal(1, indexStats[0].MapSuccesses);
+                Assert.Equal(0, indexStats[0].ErrorsCount);
+                index = database.IndexStore.GetIndex(indexName);
+                Assert.Contains("New_Count = 5", index.GetIndexDefinition().Maps.First());
             }
         }
 
@@ -100,7 +122,7 @@ namespace SlowTests.Issues
                     }));
                 });
 
-                Assert.Contains("Index name cannot start with ReplacementOf/", error.Message);
+                Assert.Contains($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix}", error.Message);
             }
         }
 
@@ -135,6 +157,41 @@ namespace SlowTests.Issues
                     select new
                     {
                         Count = 1 / x
+                    };
+            }
+        }
+
+        private class Index3 : AbstractIndexCreationTask<Query.Order>
+        {
+            public override string IndexName { get; }
+
+            public Index3(string indexName)
+            {
+                IndexName = indexName;
+
+                Map = orders =>
+                    from order in orders
+                    let x = 0
+                    select new
+                    {
+                        Count = 5 / x
+                    };
+            }
+        }
+
+        private class Index4 : AbstractIndexCreationTask<Query.Order>
+        {
+            public override string IndexName { get; }
+
+            public Index4(string indexName)
+            {
+                IndexName = indexName;
+
+                Map = orders =>
+                    from order in orders
+                    select new
+                    {
+                        New_Count = 5
                     };
             }
         }
