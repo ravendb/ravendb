@@ -746,7 +746,7 @@ namespace Raven.Server.ServerWide
             if (certificateNotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
             {
                 msg = $"The server certificate expiration date is more than {MaxDeveloperCertificateValidityDurationInMonths} months from now. " +
-                      $"This is not allowed when trying to change the license form {currentLicenseType} the {LicenseType.Developer} license. " +
+                      $"This is not allowed when trying to change the license from {currentLicenseType} the {LicenseType.Developer} license. " +
                       "Use short term certificate before changing the license";
                     
                 throw new InvalidOperationException(msg);
