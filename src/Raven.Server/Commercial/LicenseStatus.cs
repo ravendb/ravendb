@@ -35,6 +35,8 @@ namespace Raven.Server.Commercial
             return (T)value;
         }
 
+        public string FormattedExpiration => Expiration?.ToString("dddd, dd MMMM yyyy");
+
         public bool Expired
         {
             get

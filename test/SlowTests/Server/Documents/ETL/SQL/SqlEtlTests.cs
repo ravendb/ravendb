@@ -696,7 +696,9 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                     var result1 = store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                     {
-                        Name = "simulate", ConnectionString = connectionString, FactoryName = "System.Data.SqlClient",
+                        Name = "simulate",
+                        ConnectionString = connectionString,
+                        FactoryName = "System.Data.SqlClient",
                     }));
                     Assert.NotNull(result1.RaftCommandIndex);
 
@@ -1254,7 +1256,7 @@ CREATE TABLE [dbo].[Orders]
                                 session.SaveChanges();
                             }
 
-                            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
 
                             SetupSqlEtl(store, connectionString, @"
 
@@ -1275,6 +1277,10 @@ loadToOrders(orderData);
                             var stats = etlProcess.GetPerformanceStats();
 
                             Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
+
+                    etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
+
+                    etlDone.Wait(TimeSpan.FromMinutes(1));
                         }
                     }
                 }

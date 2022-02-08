@@ -12,7 +12,7 @@ namespace Tests.Infrastructure
 
         private static readonly S3Settings _s3Settings;
 
-        public static S3Settings S3Settings => new S3Settings(_s3Settings);
+        public static S3Settings S3Settings => _s3Settings == null ? null : new S3Settings(_s3Settings);
 
         private static readonly string ParsingError;
 
