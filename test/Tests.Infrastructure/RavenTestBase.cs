@@ -1304,6 +1304,22 @@ namespace FastTests
                 _frozen = frozen;
             }
 
+            public static Options WithSharding()
+            {
+                return new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.Shards = new[]
+                        {
+                            new DatabaseTopology(), 
+                            new DatabaseTopology(), 
+                            new DatabaseTopology(),
+                        };
+                    }
+                };
+            }
+
             public string Path
             {
                 get => _path;
@@ -1452,6 +1468,27 @@ namespace FastTests
             {
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
+            }
+
+            public Options Clone()
+            {
+                return new Options
+                {
+                    AdminCertificate = AdminCertificate,
+                    ClientCertificate = ClientCertificate,
+                    CreateDatabase = CreateDatabase,
+                    DeleteDatabaseOnDispose = DeleteDatabaseOnDispose,
+                    DeleteTimeout = DeleteTimeout,
+                    Encrypted = Encrypted,
+                    IgnoreDisabledDatabase = IgnoreDisabledDatabase,
+                    ModifyDatabaseName = ModifyDatabaseName,
+                    ModifyDatabaseRecord = ModifyDatabaseRecord,
+                    ModifyDocumentStore = ModifyDocumentStore,
+                    Path = Path,
+                    ReplicationFactor = ReplicationFactor,
+                    RunInMemory = RunInMemory,
+                    Server = Server
+                };
             }
         }
 
