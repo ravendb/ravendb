@@ -255,8 +255,8 @@ namespace Raven.Server.Commercial
 
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                var indentedJson = ZipFileHelper.IndentJsonString(modifiedJsonObj.ToString());
-                ZipFileHelper.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
+                SettingsZipFileHelper.WriteSettingsJsonLocally(_serverStore.Configuration.ConfigPath, indentedJson);
 
                 return true;
             }

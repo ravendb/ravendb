@@ -2,7 +2,6 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -30,28 +29,8 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 
 namespace Raven.Server.Commercial.LetsEncrypt;
 
-public static class ZipFileHelper
+public static class SettingsZipFileHelper
 {
-    public class CompleteClusterConfigurationParameters
-    {
-        public SetupProgressAndResult Progress;
-        public Action<IOperationProgress> OnProgress;
-        public SetupInfo SetupInfo;
-        public Func<string, string, Task> OnBeforeAddingNodesToCluster;
-        public Func<string, Task> AddNodeToCluster;
-        public Func<Action<IOperationProgress>, SetupProgressAndResult, X509Certificate2, Task> RegisterClientCertInOs;
-        public Func<StudioConfiguration.StudioEnvironment, Task> OnPutServerWideStudioConfigurationValues;
-        public Func<string, Task> OnWriteSettingsJsonLocally;
-        public Func<string, Task<string>> OnGetCertificatePath;
-        public Func<string, Task> RegisterClientCert;
-        public Func<CertificateDefinition, Task> PutCertificate;
-        public SetupMode SetupMode;
-        public string SettingsPath;
-        public bool CertificateValidationKeyUsages;
-        public LicenseType LicenseType;
-        public CancellationToken Token = CancellationToken.None;
-    }
-
     public static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(CompleteClusterConfigurationParameters parameters)
     {
         try
@@ -92,7 +71,7 @@ public static class ZipFileHelper
                         {
                             if (node.Key == parameters.SetupInfo.LocalNodeTag)
                                 continue;
-
+                            
                             parameters.Progress?.AddInfo($"Adding node '{node.Key}' to the cluster.");
                             parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -107,7 +86,7 @@ public static class ZipFileHelper
                         }
 
                         serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
-                            parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages);
+                            parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
                     }
                     catch (Exception e)
                     {
@@ -173,11 +152,25 @@ public static class ZipFileHelper
                     }
 
                     BlittableJsonReaderObject settingsJson;
-                    await using (var fs = SafeFileStream.Create(parameters.SettingsPath, FileMode.Open, FileAccess.Read))
+                    if (parameters.OnSettingsPath != null)
                     {
-                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
+                        string settingsPath = parameters.OnSettingsPath.Invoke();
+                        await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                        {
+                            settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
+                        }
                     }
-
+                    else
+                    {
+                        await using (var ms2 = new MemoryStream())
+                        {
+                            ms2.WriteByte((byte)'{');
+                            ms2.WriteByte((byte)'}');
+                            ms2.Position = 0;
+                            settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json");
+                        }
+                    }
+        
                     settingsJson.Modifications = new DynamicJsonValue(settingsJson);
 
                     if (parameters.SetupMode == SetupMode.LetsEncrypt)
@@ -204,25 +197,25 @@ public static class ZipFileHelper
                     }
 
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString();
-
+                    
                     if (parameters.SetupInfo.EnableExperimentalFeatures)
                     {
                         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                     }
-
+                    
                     if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                     {
                         if (parameters.OnPutServerWideStudioConfigurationValues != null)
                             await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment);
                     }
-
+                    
                     var certificateFileName = $"cluster.server.certificate.{name}.pfx";
                     string certPath;
                     if (parameters.OnGetCertificatePath != null)
                         certPath = await parameters.OnGetCertificatePath(certificateFileName);
                     else
                         certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
-
+                    
                     if (parameters.SetupInfo.ModifyLocalServer)
                     {
                         await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
@@ -237,7 +230,7 @@ public static class ZipFileHelper
                             }
                         } // we'll be flushing the directory when we'll write the settings.json
                     }
-
+                    
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certPath;
                     if (string.IsNullOrEmpty(parameters.SetupInfo.Password) == false)
                         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = parameters.SetupInfo.Password;
@@ -246,7 +239,7 @@ public static class ZipFileHelper
                     {
                         var currentNodeSettingsJson = settingsJson.Clone(context);
                         currentNodeSettingsJson.Modifications ??= new DynamicJsonValue(currentNodeSettingsJson);
-
+                        
                         parameters.Progress?.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
                         parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -273,15 +266,13 @@ public static class ZipFileHelper
 
                         var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
-                        var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                        var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
                         if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ModifyLocalServer)
                         {
                             try
                             {
                                 if (parameters.OnWriteSettingsJsonLocally != null)
                                     await parameters.OnWriteSettingsJsonLocally(indentedJson);
-                                else
-                                    WriteSettingsJsonLocally(parameters.SettingsPath, indentedJson);
                             }
                             catch (Exception e)
                             {
@@ -318,7 +309,7 @@ public static class ZipFileHelper
                             throw new InvalidOperationException($"Failed to write settings.json for node '{node.Key}' in zip archive.", e);
                         }
                     }
-
+                    
                     parameters.Progress?.AddInfo("Adding readme file to zip archive.");
                     parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -345,7 +336,7 @@ public static class ZipFileHelper
                     {
                         throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
                     }
-
+                    
                     parameters.Progress.AddInfo("Adding setup.json file to zip archive.");
                     parameters.OnProgress?.Invoke(parameters.Progress);
 
@@ -355,7 +346,7 @@ public static class ZipFileHelper
 
                         var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
 
-                        var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                        var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
 
                         var entry = archive.CreateEntry("setup.json");
                         entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -380,18 +371,6 @@ public static class ZipFileHelper
         catch (Exception e)
         {
             throw new InvalidOperationException("Failed to create settings file(s).", e);
-        }
-    }
-    
-    public static string IndentJsonString(string json)
-    {
-        using (var stringReader = new StringReader(json))
-        using (var stringWriter = new StringWriter())
-        {
-            var jsonReader = new JsonTextReader(stringReader);
-            var jsonWriter = new JsonTextWriter(stringWriter) {Formatting = Formatting.Indented};
-            jsonWriter.WriteToken(jsonReader);
-            return stringWriter.ToString();
         }
     }
 
@@ -513,31 +492,6 @@ public static class ZipFileHelper
         return str;
     }
     
-    public class CompleteAuthorizationAndGetCertificateParameters
-    {
-        public Action OnValidationSuccessful;
-        public SetupInfo SetupInfo;
-        public LetsEncryptClient Client;
-        public (string Challange, LetsEncryptClient.CachedCertificateResult Cache) ChallengeResult;
-        public CancellationToken Token;
-        public RSA ExistingPrivateKey;
-    }
-    
-    public static bool IsValidEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-        try
-        {
-            var address = new MailAddress(email);
-            return address.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    
     private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
     {
         var certWithKey = certificate.CopyWithPrivateKey(privateKey);
@@ -610,7 +564,7 @@ public static class ZipFileHelper
         }
     }
 
-    public static string IpAddressToUrl(string address, int port)
+    private static string IpAddressToUrl(string address, int port)
     {
         var url = "https://" + address;
         if (port != 443)
@@ -618,7 +572,7 @@ public static class ZipFileHelper
         return url;
     }
 
-    public  static string IpAddressToTcpUrl(string address, int port)
+    private static string IpAddressToTcpUrl(string address, int port)
     {
         var url = "tcp://" + address;
         if (port != 0)

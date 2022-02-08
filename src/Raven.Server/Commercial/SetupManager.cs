@@ -42,7 +42,7 @@ namespace Raven.Server.Commercial
 
         public static async Task<string> LetsEncryptAgreement(string email, ServerStore serverStore)
         {
-            if (ZipFileHelper.IsValidEmail(email) == false)
+            if (EmailValidator.IsValidEmail(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
 
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
@@ -53,7 +53,11 @@ namespace Raven.Server.Commercial
         public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
             CancellationToken token)
         {
-            var progress = new SetupProgressAndResult(Logger);
+            var progress = new SetupProgressAndResult(tuple =>
+            {
+                if (Logger is {IsInfoEnabled: true})
+                    Logger.Info(tuple.Message, tuple.Exception);
+            });
 
             try
             {
@@ -63,7 +67,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Starting validation.");
                 onProgress(progress);
 
-                await LetsEncryptValidationApiHelper.ValidateSetupInfo(SetupMode.Secured, setupInfo, serverStore);
+                await LetsEncryptValidationHelper.ValidateSetupInfo(SetupMode.Secured, setupInfo, serverStore);
 
                 try
                 {
@@ -114,7 +118,7 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await LetsEncryptRvnUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -133,8 +137,8 @@ namespace Raven.Server.Commercial
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
 
-            var cert = await ZipFileHelper.CompleteAuthorizationAndGetCertificate(
-                new ZipFileHelper.CompleteAuthorizationAndGetCertificateParameters
+            var cert = await SettingsZipFileHelper.CompleteAuthorizationAndGetCertificate(
+                new CompleteAuthorizationAndGetCertificateParameters
                 {
                     OnValidationSuccessful = () =>
                     {
@@ -157,12 +161,16 @@ namespace Raven.Server.Commercial
         public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo,
             ServerStore serverStore, CancellationToken token)
         {
-            var progress = new SetupProgressAndResult(Logger)
+            var progress = new SetupProgressAndResult(tuple =>
+            {
+                if (Logger is {IsInfoEnabled: true})
+                    Logger.Info(tuple.Message, tuple.Exception);
+            })
             {
                 Processed = 0,
                 Total = 4
             };
-
+            
             try
             {
                 AssertNoClusterDefined(serverStore);
@@ -210,7 +218,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await LetsEncryptValidationApiHelper.ValidateServerCanRunOnThisNode(settingsJsonObject, serverCert, serverStore, continueSetupInfo.NodeTag, token);
+                        await LetsEncryptValidationHelper.ValidateServerCanRunOnThisNode(settingsJsonObject, serverCert, serverStore, continueSetupInfo.NodeTag, token);
                     }
                     catch (Exception e)
                     {
@@ -293,7 +301,7 @@ namespace Raven.Server.Commercial
 
         foreach (var hostnameOrIp in localNode.Addresses)
         {
-            if (hostnameOrIp.Equals("0.0.0.0"))
+            if (hostnameOrIp.Equals(LetsEncryptValidationHelper.AnyIp))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
                 continue;
@@ -346,12 +354,16 @@ namespace Raven.Server.Commercial
     public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore,
         CancellationToken token)
     {
-        var progress = new SetupProgressAndResult(Logger)
+        var progress = new SetupProgressAndResult(tuple =>
+        {
+            if (Logger is {IsInfoEnabled: true})
+                Logger.Info(tuple.Message, tuple.Exception);
+        })
         {
             Processed = 0,
             Total = 4
         };
-
+        
         try
         {
             var updatedLicense = new Reference<License>();
@@ -363,7 +375,7 @@ namespace Raven.Server.Commercial
             onProgress(progress);
             try
             {
-                await LetsEncryptValidationApiHelper.ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
+                await LetsEncryptValidationHelper.ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
             }
             catch (Exception e)
             {
@@ -376,7 +388,7 @@ namespace Raven.Server.Commercial
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(setupInfo.Email, token);
 
-            var challengeResult = await LetsEncryptRvnUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             progress.Processed++;
             progress.AddInfo(challengeResult.Challenge != null ? "Successfully received challenge(s) information from Let's Encrypt." : "Using cached Let's Encrypt certificate.");
@@ -387,7 +399,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                await RavenDnsRecordHelper.UpdateDnsRecordsTask(new RavenDnsRecordHelper.UpdateDnsRecordParameters
+                await RavenDnsRecordHelper.UpdateDnsRecordsTask(new UpdateDnsRecordParameters
                 {
                     OnProgress = onProgress,
                     Progress = progress,
@@ -406,7 +418,7 @@ namespace Raven.Server.Commercial
             progress.AddInfo("Completing Let's Encrypt challenge(s)...");
             onProgress(progress);
 
-            await ZipFileHelper.CompleteAuthorizationAndGetCertificate(new ZipFileHelper.CompleteAuthorizationAndGetCertificateParameters
+            await SettingsZipFileHelper.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
             {
                 OnValidationSuccessful = () =>
                 {
@@ -625,8 +637,8 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
                 onProgress(progress);
 
-                var indentedJson = ZipFileHelper.IndentJsonString(settingsJsonObject.ToString());
-                ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
+                var indentedJson = JsonStringHelper.IndentJsonString(settingsJsonObject.ToString());
+                SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
             }
             catch (Exception e)
             {
@@ -635,7 +647,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.Readme = ZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
+                progress.Readme = SettingsZipFileHelper.CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert);
             }
             catch (Exception e)
             {
@@ -650,16 +662,16 @@ namespace Raven.Server.Commercial
             ServerStore serverStore,
             CancellationToken token)
         {
-            return await ZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new ZipFileHelper.CompleteClusterConfigurationParameters
+            return await SettingsZipFileHelper.CompleteClusterConfigurationAndGetSettingsZip(new CompleteClusterConfigurationParameters
             {
                 OnProgress = onProgress,
                 Progress = progress,
                 SetupInfo = setupInfo,
-                SettingsPath = serverStore.Configuration.ConfigPath,
+                OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                 SetupMode = setupMode,
                 OnWriteSettingsJsonLocally = indentedJson =>
                 {
-                    return Task.Run(() => ZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
+                    return Task.Run(() => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
                 },
                 OnGetCertificatePath = certificateFileName =>
                 {

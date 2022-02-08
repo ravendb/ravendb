@@ -16,7 +16,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -42,18 +41,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         Debug.Assert(license != null, nameof(license) + " != null");
         var licenseObj = JsonConvert.DeserializeObject<License>(license);
 
-        var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
-        var defaultSettingsPath = new PathSetting("settings.default.json").FullPath;
-        File.Copy(defaultSettingsPath, settingPath, true);
-        
-        string settingsJson = JsonConvert.SerializeObject(new Settings
-        {
-            ServerUrl = "https://127.0.0.1:8080",
-            SetupMode = "None",
-            Eula = true
-        },Formatting.Indented);
-        await File.WriteAllTextAsync(settingPath, settingsJson);
-
         byte[] selfSignedTestCertificate = CertificateUtils.CreateSelfSignedTestCertificate("localhost", "RavenTestsServer");
 
         var setupInfo = new SetupInfo
@@ -77,7 +64,17 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         };
 
 
-        var zipBytes = await LetsEncryptRvnUtils.ImportCertificateSetup(setupInfo, settingPath, new SetupProgressAndResult(null), CancellationToken.None);
+        var zipBytes = await LetsEncryptUtils.ImportCertificateSetup(setupInfo, new SetupProgressAndResult(tuple =>
+        {
+            if (tuple.Message != null)
+            {
+                Output.WriteLine(tuple.Message);
+            }
+            if (tuple.Exception != null)
+            {
+                Output.WriteLine(tuple.Exception.Message);
+            }
+        }), CancellationToken.None);
 
 
         var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
@@ -249,17 +246,23 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             }
         };
 
-        var tempPath = NewDataPath(nameof(SetupSecuredClusterUsingRvn),null,true);
-        var settingsPath = Path.Combine(tempPath, "settings.json");
-        string settingsJson = JsonConvert.SerializeObject(new Settings
+        var zipBytes = await LetsEncryptUtils.SetupLetsEncrypt(setupInfo, new SetupProgressAndResult(tuple =>
             {
-                ServerUrl = "https://127.0.0.1:0",
-                SetupMode = "None",
-                Eula = true
-            },Formatting.Indented);
-        await File.WriteAllTextAsync(settingsPath, settingsJson);
-        
-        var zipBytes = await LetsEncryptRvnUtils.SetupLetsEncrypt(setupInfo, settingsPath, new SetupProgressAndResult(null), tempPath, CancellationToken.None);
+                if (tuple.Message != null)
+                {
+                    Output.WriteLine(tuple.Message);
+                }
+
+                if (tuple.Exception != null)
+                {
+                    Output.WriteLine(tuple.Exception.Message);
+                }
+            })
+            {
+                Processed = 0,
+                Total = 4
+            },
+            CancellationToken.None);
 
         X509Certificate2 serverCert;
         X509Certificate2 clientCert;
@@ -416,16 +419,4 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
         Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
-    
-    private class Settings
-    {
-        [JsonProperty(PropertyName = "ServerUrl")]
-        public string ServerUrl { get; set; }
-        
-        [JsonProperty(PropertyName = "Setup.Mode")]
-        public string SetupMode { get; set; }  
-        
-        [JsonProperty(PropertyName = "License.Eula.Accepted")] 
-        public bool Eula { get; set; }
-    }  
 }
