@@ -58,10 +58,10 @@ namespace Tests.Infrastructure
         private readonly Random _random = new Random();
 
         // workaround until RavenDB-16760 resolved
-        protected DocumentStore GetDocumentStoreForRollingIndexes(Options options = null,  [CallerMemberName]string caller = null)
+        protected DocumentStore GetDocumentStoreForRollingIndexes(Options options = null, [CallerMemberName] string caller = null)
         {
             Assert.NotNull(options?.Server);
-            options.RunInMemory = false; 
+            options.RunInMemory = false;
 
             return base.GetDocumentStore(options, caller);
         }
@@ -87,7 +87,7 @@ namespace Tests.Infrastructure
             return store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), replicationFactor));
         }
 
-        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded)
+        protected static async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded)
         {
             var requestExecutor = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -135,7 +135,7 @@ namespace Tests.Infrastructure
             Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
         }
 
-        protected async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeout)
+        protected static async Task<T> WaitForDocumentToReplicateAsync<T>(IDocumentStore store, string id, int timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
@@ -154,7 +154,7 @@ namespace Tests.Infrastructure
             return null;
         }
 
-        protected T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
+        protected static T WaitForDocumentToReplicate<T>(IDocumentStore store, string id, int timeout)
             where T : class
         {
             var sw = Stopwatch.StartNew();
@@ -172,7 +172,7 @@ namespace Tests.Infrastructure
             return null;
         }
 
-        protected bool WaitForDocumentDeletion(IDocumentStore store, string id, int timeout = 10000)
+        protected static bool WaitForDocumentDeletion(IDocumentStore store, string id, int timeout = 10000)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds <= timeout)
@@ -188,7 +188,7 @@ namespace Tests.Infrastructure
             return false;
         }
 
-        public async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
+        public static async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
         {
             var deleted = cluster.Single(n => n.ServerStore.NodeTag == toDeleteTag);
             var nonDeleted = cluster.Where(n => n != deleted).ToArray();
@@ -239,8 +239,7 @@ namespace Tests.Infrastructure
             }
         }
 
-
-        public async Task EnsureNoReplicationLoop(RavenServer server, string database)
+        protected static async Task EnsureNoReplicationLoop(RavenServer server, string database)
         {
             var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
             using (var collector = new LiveReplicationPulsesCollector(storage))
@@ -263,7 +262,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
+        private class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -283,7 +282,7 @@ namespace Tests.Infrastructure
             public override bool IsReadRequest => true;
         }
 
-        protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, Func<DatabaseRecord, bool> predicate)
+        protected static async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, Func<DatabaseRecord, bool> predicate)
         {
             var requestExecutor = store.GetRequestExecutor();
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -552,11 +551,11 @@ namespace Tests.Infrastructure
         }
 
         public async Task<T[]> ClusterWaitFor<T>(
-            List<RavenServer> nodes, 
-            string database, 
+            List<RavenServer> nodes,
+            string database,
             Func<IDocumentStore, Task<T>> waitFunc)
         {
-            var stores = nodes.Select(n => new DocumentStore {Database = database, Urls = new[] {n.WebUrl}}.Initialize()).ToArray();
+            var stores = nodes.Select(n => new DocumentStore { Database = database, Urls = new[] { n.WebUrl } }.Initialize()).ToArray();
 
             using (new DisposableAction(Action))
             {
