@@ -1,5 +1,4 @@
 ﻿import router = require("plugins/router");
-import EVENTS = require("common/constants/events");
 import database = require("models/resources/database");
 import changesContext = require("common/changesContext");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
@@ -12,6 +11,9 @@ import starredDocumentsStorage = require("common/storage/starredDocumentsStorage
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import generalUtils = require("common/generalUtils");
+import shardedDatabase from "models/resources/shardedDatabase";
+import nonShardedDatabase from "models/resources/nonShardedDatabase";
+import databaseShard from "models/resources/databaseShard";
 
 class databasesManager {
 
@@ -36,9 +38,24 @@ class databasesManager {
         if (!name) {
             return null;
         }
-        return this
-            .databases()
-            .find(x => name.toLowerCase() === x.name.toLowerCase());
+        
+        const singleShard = name.includes("$");
+        if (singleShard) {
+            const groupName = databasesManager.shardGroupKey(name);
+            const dbByName = this
+                .databases()
+                .find(x => groupName === x.name.toLowerCase()) as shardedDatabase;
+            
+            if (dbByName) {
+                return dbByName.shards().find(x => x.name.toLowerCase() === name.toLowerCase());
+            } else {
+                return null;
+            }
+        } else {
+            return this
+                .databases()
+                .find(x => name.toLowerCase() === x.name.toLowerCase());
+        }
     }
 
     init(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
@@ -125,11 +142,37 @@ class databasesManager {
         }
     }
 
+    private static isSharded(data: Raven.Client.ServerWide.Operations.DatabaseInfo) {
+        return data.Name.includes("$");
+    }
+    
+    private static shardGroupKey(dbName: string) {
+        return dbName.split("$")[0];
+    }
+    
     private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
         this.deleteRemovedDatabases(incomingData);
 
-        incomingData.Databases.forEach(dbInfo => {
-            this.updateDatabase(dbInfo, name => this.getDatabaseByName(name));
+        const nonSharded = incomingData.Databases.filter(x => !databasesManager.isSharded(x));
+        nonSharded.forEach(dbInfo => {
+            const existingDb = this.getDatabaseByName(dbInfo.Name);
+            this.updateDatabase(dbInfo, existingDb);
+        });
+        
+        const sharded = new Map<string, Raven.Client.ServerWide.Operations.DatabaseInfo[]>();
+        incomingData.Databases.forEach(db => {
+            if (databasesManager.isSharded(db)) {
+                const shardKey = databasesManager.shardGroupKey(db.Name);
+
+                const items = sharded.get(shardKey) || [];
+                items.push(db);
+                sharded.set(shardKey, items);
+            }
+        });
+
+        sharded.forEach((shardGroup, shardName) => {
+            const existingDb = this.getDatabaseByName(shardName);
+            this.updateDatabaseGroup(shardGroup, existingDb);
         });
     }
 
@@ -151,24 +194,40 @@ class databasesManager {
         toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
 
-    private updateDatabase(incomingDatabase: Raven.Client.ServerWide.Operations.DatabaseInfo, existingDatabaseFinder: (name: string) => database): database {
-        const matchedExistingRs = existingDatabaseFinder(incomingDatabase.Name);
+    private updateDatabaseGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[], existingDb: database): shardedDatabase {
+        if (existingDb) {
+            //TODO: existingDb.updateUsingGroup(dbs);
+            
+            return existingDb as shardedDatabase;
+        } else {
+            const nodeTag = clusterTopologyManager.default.localNodeTag;
+            const group = new shardedDatabase(dbs[0], nodeTag);
+            group.name = databasesManager.shardGroupKey(dbs[0].Name); //TODO: update other props!
+            group.shards(dbs.map(db => {
+                const shard = new databaseShard(db, nodeTag);
+                shard.parent = group;
+                return shard;
+            }));
 
+            this.databases.push(group);
+            this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
+            
+            return group;
+        }
+    }
+    
+    private updateDatabase(incomingDatabase: Raven.Client.ServerWide.Operations.DatabaseInfo, matchedExistingRs: database): database {
         if (matchedExistingRs) {
             matchedExistingRs.updateUsing(incomingDatabase);
             return matchedExistingRs;
         } else {
-            const newDatabase = this.createDatabase(incomingDatabase);
+            const newDatabase = new nonShardedDatabase(incomingDatabase, clusterTopologyManager.default.localNodeTag);
             this.databases.push(newDatabase);
             this.databases.sort((a, b) => generalUtils.sortAlphaNumeric(a.name, b.name));
             return newDatabase;
         }
     }
-
-    private createDatabase(databaseInfo: Raven.Client.ServerWide.Operations.DatabaseInfo): database {
-        return new database(databaseInfo, clusterTopologyManager.default.localNodeTag);
-    }
-
+    
     // Please remember those notifications are setup before connection to websocket
     setupGlobalNotifications(): void {
         const serverWideClient = changesContext.default.serverNotifications();
@@ -225,7 +284,7 @@ class databasesManager {
                     changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");
                 }
 
-                const updatedDatabase = this.updateDatabase(rsInfo, name => this.getDatabaseByName(name));
+                const updatedDatabase = this.updateDatabase(rsInfo, this.getDatabaseByName(rsInfo.Name));
 
                 const toActivate = this.databaseToActivate();
 

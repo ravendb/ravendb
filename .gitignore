@@ -102,6 +102,7 @@ src/Raven.Studio/typings/modules
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
+/src/Raven.Studio/coverage/
 # web woker is bundled using webpack
 /src/Raven.Studio/wwwroot/rql_worker.js 
 

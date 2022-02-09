@@ -11,12 +11,12 @@ class activeDatabaseTracker {
     static default: activeDatabaseTracker = new activeDatabaseTracker();
 
     database: KnockoutObservable<database> = ko.observable<database>();
-
+    
     settings: KnockoutObservable<databaseSettings> = ko.observable<databaseSettings>();
 
     constructor() {
         ko.postbox.subscribe(EVENTS.Database.Disconnect, (e: databaseDisconnectedEventArgs) => {
-            if (e.database === this.database()) {
+            if (e.databaseName === this.database().name) {
                 this.database(null);
             }
 
@@ -24,14 +24,14 @@ class activeDatabaseTracker {
             // but don't do this on databases page
             if (!this.onDatabasesPage()) {
                 if (e.cause === "DatabaseDeleted") {
-                    messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " was deleted");
-                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
+                    messagePublisher.reportWarning("Database " + e.databaseName + " was deleted");
+                    router.navigate("#databases"); // don't use appUrl since it will create dependency cycle
                 } else if (e.cause === "DatabaseDisabled") {
-                    messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " was disabled");
-                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
+                    messagePublisher.reportWarning("Database " + e.databaseName + " was disabled");
+                    router.navigate("#databases"); // don't use appUrl since it will create dependency cycle
                 } else if (e.cause === "DatabaseIsNotRelevant") {
-                    messagePublisher.reportWarning(e.database.fullTypeName + " " + e.database.name + " is not longer relevant on this node");
-                    router.navigate("#databases"); // don't use appUrl since it will create dependecy cycle
+                    messagePublisher.reportWarning("Database " + e.databaseName + " is not longer relevant on this node");
+                    router.navigate("#databases"); // don't use appUrl since it will create dependency cycle
                 }
             }
         });
