@@ -831,6 +831,7 @@ body {
         }
 
         .database-switcher-container,
+        .shard-switcher-container,
         .search-container {
             position: relative;
 
@@ -952,11 +953,12 @@ body {
             &.active {
                 z-index: 23;
 
+                .shard-switcher,
                 .database-switcher {
                     background-color: @dropdown-bg;
                     border-color: @dropdown-bg;
                 }
-
+                
                 .box-container {
                     .slidein-style;
 
@@ -974,6 +976,7 @@ body {
             }
         }
 
+        .shard-switcher-container,
         .database-switcher-container {
             .resources-link {
                 .slidein-style;
@@ -989,6 +992,7 @@ body {
                 }
             }
 
+            .shard-switcher,
             .database-switcher {
                 .label {
                     opacity: 1;
@@ -996,6 +1000,7 @@ body {
             }
 
             &.active {
+                .shard-switcher,
                 .database-switcher {
                     padding-right: 80px;
 
@@ -1097,13 +1102,19 @@ body {
             .database-switcher-container {
                 position: absolute;
                 left: 0;
-                right: 51%;
+                right: 67%;
+            }
+
+            .shard-switcher-container {
+                position: absolute;
+                left: 34%;
+                right: 34%;
             }
 
             .search-container {
                 position: absolute;
                 right: 0;
-                left: 51%;
+                left: 67%;
 
                 input:focus {
                     & + .search-autocomplete {
@@ -1139,6 +1150,7 @@ body {
             }
         }
 
+        .shard-switcher,
         .database-switcher {
             position: relative;
             z-index: 20;

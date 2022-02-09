@@ -125,7 +125,7 @@ class changesContext {
             this.databaseChangesApi(null);
 
             const args: databaseDisconnectedEventArgs = {
-                database: currentChanges.getDatabase(), 
+                databaseName: currentChanges.getDatabase().name, 
                 cause
             };
             ko.postbox.publish(EVENTS.Database.Disconnect, args);

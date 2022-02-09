@@ -1,7 +1,5 @@
-﻿import database = require("models/resources/database");
-
-interface databaseDisconnectedEventArgs {
-    database: database;
+﻿interface databaseDisconnectedEventArgs {
+    databaseName: string;
     cause: databaseDisconnectionCause;
 }
 

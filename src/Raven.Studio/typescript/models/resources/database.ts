@@ -2,7 +2,7 @@
 
 import accessManager = require("common/shell/accessManager");
 
-class database {
+abstract class database {
     static readonly type = "database";
     static readonly qualifier = "db";
 
@@ -26,6 +26,8 @@ class database {
     databaseAccessColor = ko.observable<string>();
     
     private clusterNodeTag: KnockoutObservable<string>;
+    
+    abstract get group(): database;
 
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;

@@ -32,7 +32,7 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
 
     protected onOpen() {
         super.onOpen();
-        ko.postbox.publish(EVENTS.ChangesApi.Reconnected, this.db);
+        ko.postbox.publish(EVENTS.ChangesApi.Reconnected);
     }
 
     protected onMessage(eventsDto: changesApiEventDto[]) {
