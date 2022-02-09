@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -81,15 +82,9 @@ namespace Raven.Server.Web.Operations
                 return;
             }
 
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, state.ToJson());
-                    // writes Patch response
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
-                }
+                InternalGetState(state, context);
             }
         }
     }

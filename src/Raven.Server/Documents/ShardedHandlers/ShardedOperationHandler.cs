@@ -1,5 +1,5 @@
-﻿using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
+﻿using System.Net;
+using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -20,6 +20,25 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     writer.WriteNextOperationIdAndNodeTag(nextId, Server.ServerStore.NodeTag);
                 }
+            }
+        }
+
+        [RavenShardedAction("/databases/*/operations/state", "GET")]
+        public async Task State()
+        {
+            var id = GetLongQueryString("id");
+
+            var state = ServerStore.Operations.GetOperation(id)?.State;
+
+            if (state == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                InternalGetState(state, context);
             }
         }
     }

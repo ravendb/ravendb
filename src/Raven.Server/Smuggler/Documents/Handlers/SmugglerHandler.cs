@@ -236,39 +236,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
             while (results.TryDequeue(out SmugglerResult importResult))
             {
-                finalResult.Documents.SkippedCount += importResult.Documents.SkippedCount;
-                finalResult.Documents.ReadCount += importResult.Documents.ReadCount;
-                finalResult.Documents.ErroredCount += importResult.Documents.ErroredCount;
-                finalResult.Documents.LastEtag = Math.Max(finalResult.Documents.LastEtag, importResult.Documents.LastEtag);
-                finalResult.Documents.Attachments = importResult.Documents.Attachments;
-
-                finalResult.RevisionDocuments.ReadCount += importResult.RevisionDocuments.ReadCount;
-                finalResult.RevisionDocuments.ErroredCount += importResult.RevisionDocuments.ErroredCount;
-                finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, importResult.RevisionDocuments.LastEtag);
-                finalResult.RevisionDocuments.Attachments = importResult.RevisionDocuments.Attachments;
-
-                finalResult.Counters.ReadCount += importResult.Counters.ReadCount;
-                finalResult.Counters.ErroredCount += importResult.Counters.ErroredCount;
-                finalResult.Counters.LastEtag = Math.Max(finalResult.Counters.LastEtag, importResult.Counters.LastEtag);
-
-                finalResult.TimeSeries.ReadCount += importResult.TimeSeries.ReadCount;
-                finalResult.TimeSeries.ErroredCount += importResult.TimeSeries.ErroredCount;
-                finalResult.TimeSeries.LastEtag = Math.Max(finalResult.TimeSeries.LastEtag, importResult.TimeSeries.LastEtag);
-
-                finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
-                finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
-
-                finalResult.CompareExchange.ReadCount += importResult.CompareExchange.ReadCount;
-                finalResult.CompareExchange.ErroredCount += importResult.CompareExchange.ErroredCount;
-
-                finalResult.Subscriptions.ReadCount += importResult.Subscriptions.ReadCount;
-                finalResult.Subscriptions.ErroredCount += importResult.Subscriptions.ErroredCount;
-
-                finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
-                finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;
-
-                foreach (var message in importResult.Messages)
-                    finalResult.AddMessage(message);
+                CombineSmugglerResults(finalResult, importResult);
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))

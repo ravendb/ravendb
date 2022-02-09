@@ -993,6 +993,119 @@ namespace SlowTests.Sharding
             }
         }
 
+        [Fact]
+        public async Task ShardExportReturnState()
+        {
+            var file = GetTempFileName();
+            var file2 = Path.GetTempFileName();
+            var names = new[]
+            {
+                "background-photo.jpg",
+                "fileNAME_#$1^%_בעברית.txt",
+                "profile.png",
+            };
+            try
+            {
+                using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
+                {
+                    await InsertData(store1, names, Server);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents
+                                         | DatabaseItemType.TimeSeries
+                                         | DatabaseItemType.CounterGroups
+                                         | DatabaseItemType.Attachments
+                                         | DatabaseItemType.Tombstones
+                                         | DatabaseItemType.DatabaseRecord
+                                         | DatabaseItemType.Subscriptions
+                                         | DatabaseItemType.Identities
+                                         | DatabaseItemType.CompareExchange
+                                         | DatabaseItemType.CompareExchangeTombstones
+                                         | DatabaseItemType.RevisionDocuments
+                                         | DatabaseItemType.Indexes
+                                         | DatabaseItemType.LegacyAttachments
+                                         | DatabaseItemType.LegacyAttachmentDeletions
+                                         | DatabaseItemType.LegacyDocumentDeletions
+
+
+                    }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
+
+                    using (var store2 = GetShardedDocumentStore())
+                    {
+                        operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
+                        {
+                            OperateOnTypes = DatabaseItemType.Documents
+                                             | DatabaseItemType.TimeSeries
+                                             | DatabaseItemType.CounterGroups
+                                             | DatabaseItemType.Attachments
+                                             | DatabaseItemType.Tombstones
+                                             | DatabaseItemType.DatabaseRecord
+                                             | DatabaseItemType.Subscriptions
+                                             | DatabaseItemType.Identities
+                                             | DatabaseItemType.CompareExchange
+                                             | DatabaseItemType.CompareExchangeTombstones
+                                             | DatabaseItemType.RevisionDocuments
+                                             | DatabaseItemType.Indexes
+                                             | DatabaseItemType.LegacyAttachments
+                                             | DatabaseItemType.LegacyAttachmentDeletions
+                                             | DatabaseItemType.LegacyDocumentDeletions
+
+
+                        }, file);
+                        //WaitForUserToContinueTheTest(store1);
+                        //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
+                        await Task.Delay(TimeSpan.FromSeconds(50));
+                        operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
+                        {
+                            OperateOnTypes = DatabaseItemType.Documents
+                                             | DatabaseItemType.TimeSeries
+                                             | DatabaseItemType.CounterGroups
+                                             | DatabaseItemType.Attachments
+                                             | DatabaseItemType.Tombstones
+                                             | DatabaseItemType.DatabaseRecord
+                                             | DatabaseItemType.Subscriptions
+                                             | DatabaseItemType.Identities
+                                             | DatabaseItemType.CompareExchange
+                                             | DatabaseItemType.CompareExchangeTombstones
+                                             | DatabaseItemType.RevisionDocuments
+                                             | DatabaseItemType.Indexes
+                                             | DatabaseItemType.LegacyAttachments
+                                             | DatabaseItemType.LegacyAttachmentDeletions
+                                             | DatabaseItemType.LegacyDocumentDeletions
+                        }, file2);
+
+                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        WaitForUserToContinueTheTest(store1);
+                        OperationState op = null;
+                        WaitForValue(() =>
+                        {
+                             op = store2.Maintenance.Send(new GetOperationStateOperation(operation.Id));
+                            return op.Status == OperationStatus.Completed;
+                        }, true);
+                        var res = (SmugglerResult)op.Result;
+                        Assert.Equal(3, res.Documents.ReadCount);
+                        Assert.Equal(1, res.Tombstones.ReadCount);
+                        Assert.Equal(2, res.TimeSeries.ReadCount);
+                        Assert.Equal(1, res.Counters.ReadCount);
+                        Assert.Equal(3, res.Documents.Attachments.ReadCount);
+                        Assert.Equal(15, res.RevisionDocuments.ReadCount);
+                        Assert.Equal(1, res.Subscriptions.ReadCount);
+                        Assert.Equal(1, res.Identities.ReadCount);
+                        Assert.Equal(1, res.CompareExchange.ReadCount);
+                        //Assert.Equal(0, res.CompareExchangeTombstones.ReadCount);
+                        Assert.Equal(1, res.Indexes.ReadCount);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+                File.Delete(file2);
+            }
+        }
+
+
 
     }
 }
