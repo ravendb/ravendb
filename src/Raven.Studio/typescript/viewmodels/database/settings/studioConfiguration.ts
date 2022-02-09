@@ -6,6 +6,7 @@ import saveStudioConfigurationCommand = require("commands/resources/saveStudioCo
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import accessManager = require("common/shell/accessManager");
+import shardedDatabase from "models/resources/shardedDatabase";
 
 class studioConfiguration extends viewModelBase {
 
@@ -25,8 +26,11 @@ class studioConfiguration extends viewModelBase {
         super.activate(args);
      
         this.canNavigateToServerSettings = accessManager.default.isClusterAdminOrClusterNode;
+
+        const db = this.activeDatabase();
+        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
         
-        return new getStudioConfigurationCommand(this.activeDatabase())
+        return new getStudioConfigurationCommand(dbToUse)
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
                 this.model = settings ? new databaseStudioConfigurationModel(settings) : databaseStudioConfigurationModel.empty();
