@@ -563,7 +563,7 @@ namespace Voron.Data.BTrees
             {
                 var p = stack.Pop();
 
-                using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, skipCache: true)) : null)
+                using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, DecompressionUsage.Read, skipCache: true)) : null)
                 {
                     if (p.NumberOfEntries == 0 && p != root)
                     {
@@ -1125,7 +1125,7 @@ namespace Voron.Data.BTrees
                                 $"Could not find a page containing '{key}' when looking for a parent of {page}. Page {p} was found, last match: {p.LastMatch}.");
                         }
 #if DEBUG
-                        using (var decompressed = DecompressPage(p, skipCache: true))
+                        using (var decompressed = DecompressPage(p, DecompressionUsage.Read, skipCache: true))
                         {
                             decompressed.Search(_llt, key);
                             Debug.Assert(decompressed.LastMatch == 0);
@@ -1478,7 +1478,7 @@ namespace Voron.Data.BTrees
 
                         if (refPage.IsCompressed)
                         {
-                            using (var decompressedRefPage = DecompressPage(refPage, skipCache: true))
+                            using (var decompressedRefPage = DecompressPage(refPage, DecompressionUsage.Read, skipCache: true))
                             {
                                 Validate(decompressedRefPage, referenceKey);
                             }

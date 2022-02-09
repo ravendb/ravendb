@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (compressed)
                     stats.RecordCompressedLeafPage();
 
-                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage, skipCache: true)) : null)
+                using (compressed ? (DecompressedLeafPage)(leafPage = tree.DecompressPage(leafPage, DecompressionUsage.Read, skipCache: true)) : null)
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     page.Base = lowLevelTransaction.GetPage(pageNumber).Pointer;
 
-                    using (var emptyPage = tree.DecompressPage(page, skipCache: true))
+                    using (var emptyPage = tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true))
                     {
                         if (emptyPage.NumberOfEntries > 0) // could be changed meanwhile
                             continue;
@@ -580,7 +580,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 // let's try to decompress it and check if it's empty
                 // we decompress it for validation purposes only although it's very rare case
 
-                using (var decompressed = tree.DecompressPage(relatedTreePage, skipCache: true))
+                using (var decompressed = tree.DecompressPage(relatedTreePage, DecompressionUsage.Read, skipCache: true))
                 {
                     if (decompressed.NumberOfEntries == 0)
                     {
