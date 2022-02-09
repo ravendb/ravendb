@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -56,6 +57,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
+            var operationIdList = new List<long>();
             blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.IsShard), true);
             await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
             await using(var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
@@ -74,11 +76,22 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     }, blittableJson);
 
+                    operationIdList.Add(ServerStore.Operations.GetNextOperationId());
+                    cmd.Url = cmd.Url.Split("operationId")[0] + "operationId=" + operationIdList[i];
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 }
                 writer.WriteEndObject();
             }
-            return null;
+            var finalResult = new SmugglerResult();
+            for (int i = 0; i < ShardedContext.ShardCount; i++)
+            {
+                var cmd = new GetOperationStateOperation.GetOperationStateCommand(operationIdList[i]);
+                await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
+                var smugglerResult = (SmugglerResult)cmd.Result.Result;
+
+                CombineSmugglerResults(finalResult, smugglerResult);
+            }
+            return finalResult;
         }
 
         private static BlittableJsonReaderObject CreateNewOptionBlittableJsonReaderObject(BlittableJsonReaderObject blittableJson, JsonOperationContext context,
