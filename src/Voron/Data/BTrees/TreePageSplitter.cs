@@ -74,7 +74,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsCompressed)
                 {
-                    _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage);
+                    _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
                     _pageDecompressed.Search(_tx, _newKey);
 
                     if (_pageDecompressed.LastMatch == 0)
