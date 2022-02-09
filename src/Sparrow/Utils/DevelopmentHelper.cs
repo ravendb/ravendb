@@ -7,6 +7,8 @@ internal static class DevelopmentHelper
         // nothing to do here
     }
 
+    internal static void ShardingToDo(TeamMember member, Severity severity, string message) => ToDo(Feature.Sharding, member, severity, message);
+
     internal enum Feature
     {
         Sharding

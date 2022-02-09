@@ -9,6 +9,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Sharding
 
         public ShardedContext(ServerStore server, RawDatabaseRecord record)
         {
-            //TODO: reduce the record to the needed fields
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
 

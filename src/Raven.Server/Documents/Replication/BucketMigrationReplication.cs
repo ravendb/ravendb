@@ -1,25 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.ServerWide;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.Replication
+namespace Raven.Server.Documents.Replication
 {
     public class BucketMigrationReplication : ReplicationNode
     {
-        public int Bucket;
-        public int Shard;
+        public readonly int Bucket;
+        public readonly int Shard;
         public readonly string Node;
         public readonly long MigrationIndex;
 
-        public BucketMigrationReplication(string node, long migrationIndex)
+        public BucketMigrationReplication(int bucket, int destShard, string destResponsibleNode, long migrationIndex)
         {
-            Node = node ?? throw new ArgumentNullException(nameof(node));
+            Node = destResponsibleNode ?? throw new ArgumentNullException(nameof(destResponsibleNode));
+            Bucket = bucket;
+            Shard = destShard;
             MigrationIndex = migrationIndex;
         }
 
@@ -39,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override int GetHashCode() => (int)(CalculateStringHash(Node) ^ (ulong)Hashing.Mix(MigrationIndex));
 
-        public override string FromString() => $"Migrating bucket '{Bucket}' to shard '{Shard}' @ {MigrationIndex}";
+        public override string FromString() => $"Migrating bucket '{Bucket}' to shard '{Shard}' on node '{Node}' @ {MigrationIndex}";
 
         public override DynamicJsonValue ToJson()
         {

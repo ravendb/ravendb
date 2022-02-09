@@ -1013,10 +1013,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         var destTopology = GetTopologyForShard(process.DestinationShard);
                         var destNode = destTopology.WhoseTaskIsIt(RachisState.Follower, process, getLastResponsibleNode: null);
-                        var migrationDestination = new BucketMigrationReplication(destNode, process.MigrationIndex)
+                        var migrationDestination = new BucketMigrationReplication(process.Bucket, process.DestinationShard, destNode, process.MigrationIndex)
                         {
-                            Bucket = process.Bucket,
-                            Shard = process.DestinationShard,
                             Database = ShardHelper.ToShardName(newRecord.DatabaseName, process.DestinationShard),
                             Url = _clusterTopology.GetUrlFromTag(destNode)
                         };

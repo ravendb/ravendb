@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Sharding;
 
 namespace Raven.Server.ServerWide
 {
@@ -16,48 +17,28 @@ namespace Raven.Server.ServerWide
         
         public Task<(long Index, object Result)> StartBucketMigration(string database, int bucket, int fromShard, int toShard)
         {
-            var cmd = new StartBucketMigrationCommand(database, RaftIdGenerator.NewId())
-            {
-                Bucket = bucket,
-                SourceShard = fromShard,
-                DestinationShard = toShard
-            };
+            var cmd = new StartBucketMigrationCommand(bucket, fromShard, toShard, database, RaftIdGenerator.NewId());
 
             return _server.SendToLeaderAsync(cmd);
         }
 
         public Task<(long Index, object Result)> SourceMigrationCompleted(string database, int bucket, long migrationIndex, string lastChangeVector)
         {
-            var cmd = new SourceMigrationSendCompletedCommand(database, RaftIdGenerator.NewId())
-            {
-                Bucket = bucket,
-                MigrationIndex = migrationIndex,
-                LastSentChangeVector = lastChangeVector
-            };
+            var cmd = new SourceMigrationSendCompletedCommand(bucket, migrationIndex, lastChangeVector, database, RaftIdGenerator.NewId());
 
             return _server.SendToLeaderAsync(cmd);
         }
 
         public Task<(long Index, object Result)> DestinationMigrationConfirm(string database, int bucket, long migrationIndex)
         {
-            var cmd = new DestinationMigrationConfirmCommand(database, RaftIdGenerator.NewId())
-            {
-                Bucket = bucket,
-                MigrationIndex = migrationIndex,
-                Node = _server.NodeTag
-            };
+            var cmd = new DestinationMigrationConfirmCommand(bucket, migrationIndex, _server.NodeTag, database, RaftIdGenerator.NewId());
 
             return _server.SendToLeaderAsync(cmd);
         }
 
         public Task<(long Index, object Result)> SourceMigrationCleanup(string database, int bucket, long migrationIndex)
         {
-            var cmd = new SourceMigrationCleanupCommand(database, RaftIdGenerator.NewId())
-            {
-                Bucket = bucket,
-                MigrationIndex = migrationIndex,
-                Node = _server.NodeTag
-            };
+            var cmd = new SourceMigrationCleanupCommand(bucket, migrationIndex, _server.NodeTag, database, RaftIdGenerator.NewId());
 
             return _server.SendToLeaderAsync(cmd);
         }
