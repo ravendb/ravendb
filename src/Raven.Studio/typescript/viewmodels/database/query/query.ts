@@ -45,6 +45,7 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
+import shardedDatabase from "models/resources/shardedDatabase";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -886,7 +887,9 @@ class query extends viewModelBase {
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
-        return new getDatabaseStatsCommand(db)
+        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix!
+        
+        return new getDatabaseStatsCommand(dbToUse)
             .execute()
             .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
                 this.indexes(results.Indexes);

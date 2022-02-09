@@ -4,6 +4,7 @@ import database = require("models/resources/database");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
 import generalUtils = require("common/generalUtils");
+import shardedDatabase from "models/resources/shardedDatabase";
 
 class collectionsTracker {
 
@@ -28,9 +29,12 @@ class collectionsTracker {
 
     onDatabaseChanged(db: database) {
         this.db = db;
-        this.loadStatsTask = new getCollectionsStatsCommand(db)
+        
+        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
+        
+        this.loadStatsTask = new getCollectionsStatsCommand(dbToUse)
             .execute()
-            .done(stats => this.collectionsLoaded(stats, db));
+            .done(stats => this.collectionsLoaded(stats, dbToUse));
 
         this.configureRevisions(db);
 

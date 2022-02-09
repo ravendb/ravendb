@@ -56,6 +56,7 @@ import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
+import shardedDatabase from "models/resources/shardedDatabase";
 
 class shell extends viewModelBase {
 
@@ -147,7 +148,10 @@ class shell extends viewModelBase {
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
 
         studioSettings.default.configureLoaders(() => new getGlobalStudioConfigurationCommand().execute(),
-            (db) => new getStudioConfigurationCommand(db).execute(),
+            (db) => {
+                const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
+                return new getStudioConfigurationCommand(dbToUse).execute();
+            },
             settings => new saveGlobalStudioConfigurationCommand(settings).execute(),
             (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
         );
