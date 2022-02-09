@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Xunit;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance

@@ -194,17 +194,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void SetIds(RawDatabaseRecord record)
+        public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
+        public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
+
+        private void SetIds(DatabaseTopology topology, string shardedDatabaseId)
         {
-            DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-            ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
-            ShardedDatabaseId = record.ShardedDatabaseId;
-        }
-        public void SetIds(DatabaseRecord record)
-        {
-            DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
-            ClusterTransactionId = record.Topology.ClusterTransactionIdBase64;
-            ShardedDatabaseId = record.ShardedDatabaseId;
+            DatabaseGroupId = topology.DatabaseTopologyIdBase64;
+            ClusterTransactionId = topology.ClusterTransactionIdBase64;
+            ShardedDatabaseId = shardedDatabaseId;
         }
 
         public ServerStore ServerStore => _serverStore;
