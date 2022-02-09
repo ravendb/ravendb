@@ -1,5 +1,7 @@
 ﻿using System;
 using Raven.Client.ServerWide;
+using Raven.Server.Rachis;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -8,6 +10,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public DatabaseTopology Topology;
         public DateTime At;
+        public int? Shard;
 
         public UpdateTopologyCommand()
         {
@@ -17,20 +20,30 @@ namespace Raven.Server.ServerWide.Commands
         public UpdateTopologyCommand(string databaseName, DateTime at, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
             At = at;
+
+            var shard = ShardHelper.TryGetShardIndexAndDatabaseName(ref DatabaseName);
+            if (shard != -1)
+                Shard = shard;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            record.Topology = Topology;
-            record.Topology.NodesModifiedAt = At;
-            SetLeaderStampForTopology(record.Topology, etag);
-            if (record.IsSharded == false) 
-                return;
-            
-            foreach (var shardTopology in record.Shards)
+            Topology.NodesModifiedAt = At;
+            SetLeaderStampForTopology(Topology, etag);
+
+            if (Shard == null)
             {
-                SetLeaderStampForTopology(shardTopology, etag);
+                if (record.IsSharded)
+                    throw new RachisApplyException($"The request database '{record.DatabaseName}' is sharded, Shard number must be provided");
+
+                record.Topology = Topology;
+                return;
             }
+
+            if (record.Shards.Length <= Shard)
+                throw new RachisApplyException($"The request shard '{Shard}' doesn't exists in '{record.DatabaseName}'");
+
+            record.Shards[Shard.Value] = Topology;
         }
         
         private static void SetLeaderStampForTopology(DatabaseTopology topology, long etag)
@@ -45,6 +58,7 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Topology)] = Topology.ToJson();
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
+            json[nameof(Shard)] = Shard;
         }
     }
 }

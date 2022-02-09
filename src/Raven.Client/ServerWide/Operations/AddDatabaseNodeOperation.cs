@@ -20,6 +20,11 @@ namespace Raven.Client.ServerWide.Operations
             _node = node;
         }
 
+        internal AddDatabaseNodeOperation(string databaseName, int shard, string node = null) : this(databaseName, node)
+        {
+            _databaseName = $"{_databaseName}${shard}";
+        }
+
         public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new AddDatabaseNodeCommand(_databaseName, _node);
