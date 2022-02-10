@@ -15,6 +15,25 @@ namespace Raven.Client.Documents.Operations
         public int CountOfConflicts { get; set; }
 
         public Dictionary<string, long> Collections { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            DynamicJsonValue collections = new DynamicJsonValue();
+
+            DynamicJsonValue stats = new DynamicJsonValue()
+            {
+                [nameof(CollectionStatistics.CountOfDocuments)] = CountOfDocuments,
+                [nameof(CollectionStatistics.CountOfConflicts)] = CountOfConflicts,
+                [nameof(CollectionStatistics.Collections)] = collections
+            };
+
+            foreach (var collection in Collections)
+            {
+                collections[collection.Key] = collection.Value;
+            }
+
+            return stats;
+        }
     }
 
     public class DetailedCollectionStatistics
@@ -28,6 +47,26 @@ namespace Raven.Client.Documents.Operations
         public long CountOfConflicts { get; set; }
 
         public Dictionary<string, CollectionDetails> Collections { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            DynamicJsonValue collections = new DynamicJsonValue();
+
+            DynamicJsonValue stats = new DynamicJsonValue()
+            {
+                [nameof(CollectionStatistics.CountOfDocuments)] = CountOfDocuments,
+                [nameof(CollectionStatistics.CountOfConflicts)] = CountOfConflicts,
+                [nameof(CollectionStatistics.Collections)] = collections
+            };
+
+            foreach (var collection in Collections)
+            {
+                collections[collection.Key] = collection.Value.ToJson();
+            }
+
+            return stats;
+
+        }
     }
 
     public class CollectionDetails : IDynamicJson
