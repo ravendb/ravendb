@@ -6,6 +6,7 @@ import changesContext = require("common/changesContext");
 import changeSubscription = require("common/changeSubscription");
 import appUrl = require("common/appUrl");
 import license = require("models/auth/licenseModel");
+import shardedDatabase from "models/resources/shardedDatabase";
 
 class footerStats {
     countOfDocuments = ko.observable<number>();
@@ -65,7 +66,9 @@ class footer {
     }
 
     private fetchStats(): JQueryPromise<Raven.Server.Documents.Studio.FooterStatistics> {
-        return new getDatabaseFooterStatsCommand(this.db())
+        const db = this.db();
+        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix!
+        return new getDatabaseFooterStatsCommand(dbToUse)
             .execute();
     }
 
