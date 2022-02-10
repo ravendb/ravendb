@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public CoraxIndexReadOperation(Index index, Logger logger, Transaction readTransaction) : base(index, logger)
         {
-            _fieldMappings = CoraxDocumentConverter.GetKnownFields(readTransaction.Allocator, index);
+            _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(readTransaction.Allocator, index);
             _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
             _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             {
                 for (int i = 0; i < read && docsToLoad != 0; --docsToLoad, ++i)
                 {
-                    RetrieverInput retrieverInput = new(_indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
+                    RetrieverInput retrieverInput = new(_fieldMappings, _indexSearcher.GetReaderFor(ids[i]), _indexSearcher.GetIdentityFor(ids[i]));
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
 
                     if (fetchedDocument.Document != null)
