@@ -4,7 +4,7 @@ import shardedDatabase from "models/resources/shardedDatabase";
 class databaseShard extends database {
     parent: shardedDatabase;
 
-    get group(): database {
+    get root(): database {
         return this.parent;
     }
 }

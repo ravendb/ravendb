@@ -1,7 +1,6 @@
 import database from "models/resources/database";
 import databaseShard from "models/resources/databaseShard";
 
-
 class shardedDatabase extends database {
     
     shards = ko.observableArray<databaseShard>([]);
@@ -10,7 +9,7 @@ class shardedDatabase extends database {
         return db instanceof shardedDatabase;
     }
 
-    get group(): database {
+    get root(): database {
         return this;
     }
 }
