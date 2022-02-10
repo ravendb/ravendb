@@ -24,6 +24,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -167,21 +168,40 @@ namespace Raven.Server.Documents.Queries.Results
                             .Distinct(UniqueFieldNames.Instance)
                             .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false, isTimeSeries: false));
                     }
-
-                    if (fields == null)
-                        fields = FieldsToFetch.Fields;
-                    else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
-                    {
-                        foreach (var kvp in FieldsToFetch.Fields)
-                        {
-                            if (fields.ContainsKey(kvp.Key))
-                                continue;
-
-                            fields[kvp.Key] = kvp.Value;
-                        }
-                    }
                 }
 
+                if (fields == null)
+                {
+                    fields = FieldsToFetch.Fields;
+                }
+                else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
+                {
+                    foreach (var kvp in FieldsToFetch.Fields)
+                    {
+                        if (fields.ContainsKey(kvp.Key))
+                            continue;
+
+                        fields[kvp.Key] = kvp.Value;
+                    }
+                }
+              
+                // else if (SearchEngineType is SearchEngineType.Corax)
+                // {
+                //     ref var reader = ref retrieverInput.CoraxEntry;
+                //     if (FieldsToFetch.ExtractAllFromIndex)
+                //     {
+                //         foreach (var field in retrieverInput.KnownFields.GetEnumerator())
+                //         {
+                //             switch (reader.GetFieldType(field.FieldId))
+                //             {
+                //                 case IndexEntryFieldType.None:
+                //                     reader.Read(field.FieldId, out object value);           
+                //             }
+                //         }
+                //     }
+                // }
+                
+                
                 if (fields is not null)
                 {
                     foreach (var fieldToFetch in fields?.Values)
@@ -529,18 +549,18 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 case IndexEntryFieldType.Tuple:
                     retrieverInput.CoraxEntry.Read(id, out var data);
-                    toFill[name] = data.ToString();
+                    toFill[name] = Encodings.Utf8.GetString(data);
                     break;
                 case IndexEntryFieldType.List:
                     var iterator = retrieverInput.CoraxEntry.ReadMany(id);
                     var array = new DynamicJsonArray();
                     while (iterator.ReadNext())
-                        array.Add(iterator.Sequence.ToString());
+                        array.Add(Encodings.Utf8.GetString(iterator.Sequence));
                     toFill[name] = array;
                     break;
                 case IndexEntryFieldType.None:
                     retrieverInput.CoraxEntry.Read(id, out data);
-                    toFill[name] = data.ToString();
+                    toFill[name] = Encodings.Utf8.GetString(data);
                     break;
                 case IndexEntryFieldType.Invalid:
                     return false;

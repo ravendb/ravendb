@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Queries.Results
 
     public ref struct RetrieverInput
     {
+        public IndexFieldsMapping KnownFields;
+        
         public IndexEntryReader CoraxEntry;
 
         public IState State;
@@ -35,11 +37,13 @@ namespace Raven.Server.Documents.Queries.Results
             State = state;
             Score = score;
             DocumentId = string.Empty;
+            KnownFields = null;
         }
 
-        public RetrieverInput(IndexEntryReader coraxEntry, string id)
+        public RetrieverInput(IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id)
         {
             CoraxEntry = coraxEntry;
+            KnownFields = knownFields;
             LuceneDocument = null;
             State = null;
             Score = null;

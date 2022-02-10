@@ -38,13 +38,18 @@ namespace Raven.Server.Documents.Indexes.Static
             var result = definition.Fields
                 .Where(x => x.Key != Constants.Documents.Indexing.Fields.AllFields)
                 .Select(x => IndexField.Create(x.Key, x.Value, allFields)).ToList();
+            int idX = 1;
 
+            foreach (var it in result)
+            {
+                it.Id = idX++;
+            }
             foreach (var outputField in outputFields)
             {
                 if (definition.Fields.ContainsKey(outputField))
                     continue;
 
-                result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields));
+                result.Add(IndexField.Create(outputField, new IndexFieldOptions(), allFields, idX++));
             }
 
             return result.ToArray();
