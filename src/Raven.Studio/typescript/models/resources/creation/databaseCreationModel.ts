@@ -40,18 +40,18 @@ class databaseCreationModel {
             enabled: ko.observable<boolean>(false)
         },
         {
-            name: "Replication",
-            id: "replication",
-            alwaysEnabled: true,
-            disableToggle: ko.observable<boolean>(false),
-            enabled: ko.observable<boolean>(true)
-        },
-        {
             name: "Sharding",
             id: "sharding",
             alwaysEnabled: false,
             disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(false)
+        },
+        {
+            name: "Replication",
+            id: "replication",
+            alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
+            enabled: ko.observable<boolean>(true)
         },
         {
             name: "Path",
@@ -163,7 +163,7 @@ class databaseCreationModel {
     };
     
     sharding = {
-        numberOfShards: ko.observable<number>(0), // TODO what should be the default ? 0/1/2/3 ?
+        numberOfShards: ko.observable<number>(1),
     }
 
     replicationValidationGroup = ko.validatedObservable({
@@ -522,6 +522,12 @@ class databaseCreationModel {
     private setupShardingValidation() {
         this.sharding.numberOfShards.extend({
             required: true,
+            validation: [
+                {
+                    validator: (val: number) => val >= 1,
+                    message: `Number of shards must be at least 1.`
+                }
+            ],
             digit: true
         });
     }
