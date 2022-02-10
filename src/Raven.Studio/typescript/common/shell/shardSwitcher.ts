@@ -33,8 +33,8 @@ class shardSwitcher {
                 return [];
             }
             
-            if (currentDb.group instanceof shardedDatabase) {
-                return currentDb.group.shards();
+            if (currentDb.root instanceof shardedDatabase) {
+                return currentDb.root.shards();
             }
             
             return [];
@@ -45,8 +45,8 @@ class shardSwitcher {
             if (!currentDb) {
                 return null;
             }
-            if (currentDb.group instanceof shardedDatabase) {
-                return currentDb.group;
+            if (currentDb.root instanceof shardedDatabase) {
+                return currentDb.root;
             }
             
             return null;

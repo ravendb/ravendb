@@ -27,7 +27,7 @@ abstract class database {
     
     private clusterNodeTag: KnockoutObservable<string>;
     
-    abstract get group(): database;
+    abstract get root(): database;
 
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
