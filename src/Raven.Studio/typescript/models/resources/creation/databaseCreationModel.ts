@@ -49,9 +49,9 @@ class databaseCreationModel {
         {
             name: "Sharding",
             id: "sharding",
-            alwaysEnabled: true,
+            alwaysEnabled: false,
             disableToggle: ko.observable<boolean>(false),
-            enabled: ko.observable<boolean>(true)
+            enabled: ko.observable<boolean>(false)
         },
         {
             name: "Path",
@@ -416,6 +416,10 @@ class databaseCreationModel {
         return this.configurationSections.find(x => x.id === "encryption");
     }
 
+    getShardingConfigSection() {
+        return this.configurationSections.find(x => x.id === "sharding");
+    }
+
     protected setupPathValidation(observable: KnockoutObservable<string>, name: string) {
         const maxLength = 248;
 
@@ -686,7 +690,7 @@ class databaseCreationModel {
 
         const shards: Raven.Client.ServerWide.DatabaseTopology[] = [];
         const numberOfShards = this.sharding.numberOfShards();
-        if (numberOfShards) {
+        if (numberOfShards && this.getShardingConfigSection().enabled()) {
             for (let i = 0; i < numberOfShards; i++) {
                 shards.push({} as Raven.Client.ServerWide.DatabaseTopology);
             }
