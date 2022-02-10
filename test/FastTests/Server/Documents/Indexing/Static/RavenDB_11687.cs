@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanIndexDictionaryDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -58,7 +58,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanMapReduceIndexDictionaryDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -200,7 +200,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -274,7 +274,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(Options options)
         {
             using (var store = GetDocumentStore(options))

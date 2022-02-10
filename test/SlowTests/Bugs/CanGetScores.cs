@@ -20,7 +20,7 @@ namespace SlowTests.Bugs
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQuery(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -57,7 +57,7 @@ namespace SlowTests.Bugs
 
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByScoreThenName(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByScoreThenNameDescending(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -153,7 +153,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByNameThenByScore(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -212,7 +212,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByNameThenByScoreDescending(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -271,7 +271,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByNameThenByScoreThenByAge(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -332,7 +332,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(Options options)
         {
             using (var store = GetDocumentStore(options))

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -13,10 +14,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void DynamicQueryingDateTimeShouldWork()
+        [Theory]
+        [SearchEngineClassData]
+        public void DynamicQueryingDateTimeShouldWork(string searchEngine)
         {
-            using (var store = SetupStoreAndPushSomeEntities())
+            using (var store = SetupStoreAndPushSomeEntities(searchEngine))
             {
                 using (var session = store.OpenSession())
                 {
@@ -48,10 +50,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void StaticQueryingDateTimeShouldWork()
+        [Theory]
+        [SearchEngineClassData]
+        public void StaticQueryingDateTimeShouldWork(string searchEngine)
         {
-            using (var store = SetupStoreAndPushSomeEntities())
+            using (var store = SetupStoreAndPushSomeEntities(searchEngine))
             {
                 var index = new PersonByDate();
                 store.ExecuteIndex(index);
@@ -107,9 +110,9 @@ namespace FastTests.Client
                     };
             }
         }
-        private DocumentStore SetupStoreAndPushSomeEntities()
+        private DocumentStore SetupStoreAndPushSomeEntities(string searchEngine)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
             using (var session = store.OpenSession())
             {       
                 session.Store(new PersonAndDate

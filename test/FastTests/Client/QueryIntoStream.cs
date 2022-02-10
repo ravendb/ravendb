@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
@@ -17,10 +18,11 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
-        public void QueryWithToStream()
+        [Theory]
+        [SearchEngineClassData]
+        public void QueryWithToStream(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 InsertData(store);
             
@@ -43,10 +45,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void DocumentQueryWithToStream()
+        [Theory]
+        [SearchEngineClassData]
+        public void DocumentQueryWithToStream(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 InsertData(store);
 
@@ -69,10 +72,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task QueryWithToStreamAsync()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task QueryWithToStreamAsync(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 InsertData(store);
 
@@ -95,10 +99,11 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public async Task DocumentQueryWithToStreamAsync()
+        [Theory]
+        [SearchEngineClassData]
+        public async Task DocumentQueryWithToStreamAsync(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 InsertData(store);
 

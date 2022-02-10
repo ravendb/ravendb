@@ -29,7 +29,7 @@ namespace SlowTests.Bugs
         };
         
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanQueryForDistinctItems(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -62,7 +62,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanQueryForDistinctItemsUsingLinq(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -94,7 +94,7 @@ namespace SlowTests.Bugs
         }
         
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanQueryForDistinctItemsUsingLinq_WithPaging(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -126,7 +126,7 @@ namespace SlowTests.Bugs
             }
         }
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanQueryForDistinctItemsAndProperlyPage(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -159,7 +159,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void IncludeWithDistinct(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -196,7 +196,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void DistinctWithMapReduce(Options options)
         {
             using (var store = GetDocumentStore(options))

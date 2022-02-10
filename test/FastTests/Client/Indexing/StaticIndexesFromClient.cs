@@ -56,7 +56,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public async Task Can_Put_And_Replace(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -177,7 +177,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public async Task Can_start_and_stop_index(Options options)
         {
             using (var store = GetDocumentStore(options))

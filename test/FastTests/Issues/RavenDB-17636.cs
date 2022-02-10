@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -21,10 +22,11 @@ public class FilterTests : RavenTestBase
     {
     }
 
-    [Fact]
-    public void CanUseFilterAsContextualKeywordForBackwardCompatability()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CanUseFilterAsContextualKeywordForBackwardCompatability(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
         // raw
@@ -48,10 +50,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanUseFilterWithCollectionQuery()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CanUseFilterWithCollectionQuery(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
         Employee result;
@@ -167,10 +170,11 @@ select filter(a)").Count();
         // with load
     }
 
-    [Fact]
-    public async Task AsyncCanUseFilterWithCollectionQuery()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public async Task AsyncCanUseFilterWithCollectionQuery(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -229,10 +233,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanFilterWithLoad()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CanFilterWithLoad(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -279,10 +284,11 @@ select filter(a)").Count();
         }
     }
 
-    [Fact]
-    public void CanUseFilterQueryOnMapIndexes()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CanUseFilterQueryOnMapIndexes(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
 
 
@@ -502,10 +508,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void InvalidFilterQueriesInLinq()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void InvalidFilterQueriesInLinq(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         Insert(store, GetDatabaseItems());
         {
             using var session = store.OpenSession();
@@ -516,10 +523,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void CanUseFilterQueryOnMapReduce()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CanUseFilterQueryOnMapReduce(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -566,10 +574,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public async Task AsyncCanUseFilterQueryOnMapReduce()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public async Task AsyncCanUseFilterQueryOnMapReduce(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -598,10 +607,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void ExtendedLinqTest()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void ExtendedLinqTest(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -641,10 +651,11 @@ filter Name = 'Frank'")
         }
     }
 
-    [Fact]
-    public void CannotUseFacetWithFilter()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void CannotUseFacetWithFilter(string searchEngine)
     {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
         {
             new BlogIndex().Execute(store);
             var facets = new List<Facet> { new Facet { FieldName = "Tags", Options = new FacetOptions { TermSortMode = FacetTermSortMode.CountDesc } } };
@@ -680,10 +691,11 @@ filter Name = 'Frank'")
         };
     }
 
-    [Fact]
-    public void Timings()
+    [Theory]
+    [SearchEngineClassData(SearchEngineType.Lucene)]
+    public void Timings(string searchEngine)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
         var data = GetDatabaseItems();
         Insert(store, data);
 

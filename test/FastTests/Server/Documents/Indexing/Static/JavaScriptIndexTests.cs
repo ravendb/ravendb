@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -61,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]        
+        [RavenData]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
