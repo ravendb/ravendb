@@ -16,7 +16,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexDictionaryDirectly(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -58,7 +58,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanMapReduceIndexDictionaryDirectly(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -200,7 +200,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -274,7 +274,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

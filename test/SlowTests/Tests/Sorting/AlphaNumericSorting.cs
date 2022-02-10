@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void basic_alphanumeric_sort(string searchEngineType)
         {
             var titles = new List<string>
@@ -95,7 +95,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void number_and_decimal_alphanumeric_sort(string searchEngineType)
         {
             var titles = new List<string>
@@ -148,7 +148,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void basic_sequence_of_characters(string searchEngineType)
         {
             var titles = new List<string>
@@ -205,7 +205,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void order_by_two_parameters_alphanumeric(string searchEngineType)
         {
             var localTracks = new List<Track>();
@@ -256,7 +256,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void order_by_two_parameters_first_alphanumeric_than_long(string searchEngineType)
         {
             var localTracks = new List<Track>();
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void order_by_two_parameters_first_long_than_alphanumeric(string searchEngineType)
         {
             var localTracks = new List<Track>();
@@ -579,7 +579,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void dynamic_query_should_work(string searchEngineType)
         {
             var titles = new List<string>
@@ -641,7 +641,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void OrderByPrefixes(string searchEngineType)
         {
             var localTracks = new List<Track>();
@@ -704,7 +704,7 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void NumbersTests(string searchEngineType)
         {
             var localTracks = new List<Track>();

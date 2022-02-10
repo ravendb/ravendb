@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUseExactInAutoIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(new Options
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task ShouldExtendMappingOfTheSameField(string searchEngineType)
         {
             using (var store = GetDocumentStore(new Options
@@ -215,7 +215,7 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(new Options

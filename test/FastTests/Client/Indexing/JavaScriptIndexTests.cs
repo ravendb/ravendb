@@ -19,7 +19,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -42,7 +42,7 @@ namespace FastTests.Client.Indexing
 
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexTimeSpan(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -70,7 +70,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptIndexWithAdditionalSources(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -92,7 +92,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexArrayProperties(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -123,7 +123,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexMapWithFanout(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -154,7 +154,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -187,7 +187,7 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexMapReduceWithFanout(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -218,7 +218,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptIndexWithDynamicFields(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -242,7 +242,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptMultiMapIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -269,14 +269,14 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptIndexWithLoadDocument(string searchEngineType)
         {
             CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(searchEngineType);
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptIndexWithExternalLoadDocument(string searchEngineType)
         {
             CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(searchEngineType);
@@ -310,7 +310,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanElivateSimpleFunctions(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -333,7 +333,7 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJavaScriptMapReduceIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -359,7 +359,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseSpatialFields(string searchEngineType)
         {
             var kalab = 10;
@@ -371,7 +371,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseDynamicSpatialFields(string searchEngineType)
         {
             var kalab = 10;
@@ -408,7 +408,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanReduceNullValues(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -436,7 +436,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanReduceWithReturnSyntax(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -460,7 +460,7 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanUseJsIndexWithArrowObjectFunctionInMap(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -486,7 +486,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -498,7 +498,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void OutputReduceToCollection(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -524,7 +524,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void DateCheckMapReduce(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -574,7 +574,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanQueryBySubObjectAsString(string searchEngineType)
         {
             var address = new Address
@@ -603,7 +603,7 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanIndexSwitchCases(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

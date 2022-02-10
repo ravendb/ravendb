@@ -17,7 +17,7 @@ namespace SlowTests.Bugs.Queries
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanFetchMultiplePropertiesFromCollection(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

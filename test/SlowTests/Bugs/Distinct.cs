@@ -29,7 +29,7 @@ namespace SlowTests.Bugs
         };
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanQueryForDistinctItems(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
@@ -62,7 +62,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanQueryForDistinctItemsUsingLinq(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
@@ -94,7 +94,7 @@ namespace SlowTests.Bugs
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanQueryForDistinctItemsUsingLinq_WithPaging(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
@@ -126,7 +126,7 @@ namespace SlowTests.Bugs
             }
         }
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void CanQueryForDistinctItemsAndProperlyPage(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
@@ -159,7 +159,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void IncludeWithDistinct(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
@@ -196,7 +196,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void DistinctWithMapReduce(string searchEngine)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))

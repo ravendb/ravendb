@@ -21,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanUseIdMethodInJavascriptIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -61,7 +61,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]        
+        [SearchEngineClassData]        
         public async Task CanUseGetMetadataMethodInJavascriptIndex(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

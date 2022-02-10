@@ -44,7 +44,7 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -263,7 +263,7 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(string searchEngineType)
         {
             using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));

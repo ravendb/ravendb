@@ -20,7 +20,7 @@ namespace SlowTests.Bugs
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQuery(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -57,7 +57,7 @@ namespace SlowTests.Bugs
 
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByScoreThenName(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -105,7 +105,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByScoreThenNameDescending(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -153,7 +153,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByNameThenByScore(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -212,7 +212,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByNameThenByScoreDescending(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -271,7 +271,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByNameThenByScoreThenByAge(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
@@ -332,7 +332,7 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(string searchEngineType)
         {
             using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))

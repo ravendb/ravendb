@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task The_simpliest_static_map_reduce_index(string searchEngineType)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType))
@@ -117,7 +117,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
+        [SearchEngineClassData]
         public async Task CanPersist(string searchEngineType)
         {
             IndexDefinition defOne, defTwo;
