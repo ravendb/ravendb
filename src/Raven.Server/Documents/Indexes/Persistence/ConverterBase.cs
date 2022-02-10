@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes.Persistence
 {
@@ -24,26 +28,28 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected readonly string _storeValueFieldName;
         protected readonly int _numberOfBaseFields;
 
-        public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName, string storeValueFieldName, ICollection<IndexField> fields = null)
+        public ConverterBase(Index index, bool storeValue, bool indexImplicitNull, bool indexEmptyEntries, int numberOfBaseFields, string keyFieldName,
+            string storeValueFieldName, ICollection<IndexField> fields = null)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
             _blittableTraverser = storeValue ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
             _indexImplicitNull = indexImplicitNull;
             _indexEmptyEntries = indexEmptyEntries;
-            _keyFieldName = keyFieldName ?? (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+            _keyFieldName = keyFieldName ??
+                            (storeValue ? Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName : Constants.Documents.Indexing.Fields.DocumentIdFieldName);
             _storeValueFieldName = storeValueFieldName;
             _storeValue = storeValue;
             _numberOfBaseFields = numberOfBaseFields;
-            
+
             if (fields == null)
                 fields = index.Definition.IndexFields.Values;
-            
+
             var dictionary = new Dictionary<string, IndexField>(fields.Count, OrdinalStringStructComparer.Instance);
             foreach (var field in fields)
                 dictionary[field.Name] = field;
             _fields = dictionary;
         }
-        
+
         protected static bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
         {
             foreach (var propertyName in val.GetPropertyNames())
@@ -138,16 +144,16 @@ namespace Raven.Server.Documents.Indexes.Persistence
         protected static bool IsNumber(object value)
         {
             return value is long
-                    || value is decimal
-                    || value is int
-                    || value is byte
-                    || value is short
-                    || value is ushort
-                    || value is uint
-                    || value is sbyte
-                    || value is ulong
-                    || value is float
-                    || value is double;
+                   || value is decimal
+                   || value is int
+                   || value is byte
+                   || value is short
+                   || value is ushort
+                   || value is uint
+                   || value is sbyte
+                   || value is ulong
+                   || value is float
+                   || value is double;
         }
 
         internal static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)

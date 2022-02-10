@@ -44,12 +44,13 @@ namespace Raven.Server.Documents.Indexes
             Storage = FieldStorage.No;
         }
 
-        public static IndexField Create(string name, IndexFieldOptions options, IndexFieldOptions allFields)
+        public static IndexField Create(string name, IndexFieldOptions options, IndexFieldOptions allFields, int id = 0)
         {
             var field = new IndexField
             {
                 Name = name,
-                Analyzer = options.Analyzer ?? allFields?.Analyzer
+                Analyzer = options.Analyzer ?? allFields?.Analyzer,
+                Id = id
             };
 
             if (options.Indexing.HasValue)

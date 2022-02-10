@@ -18,12 +18,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
         private readonly IndexWriter _indexWriter;
-        private readonly CoraxDocumentConverter _converter;
+        private readonly CoraxDocumentConverterBase _converter;
         private readonly IndexFieldsMapping _knownFields;                
 
         private int _entriesCount = 0;
 
-        public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverter converter, Logger logger) : base(index, logger)
+        public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, Logger logger) : base(index, logger)
         {
             _converter = converter;
             _knownFields = _converter.GetKnownFields();
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             LazyStringValue lowerId;
 
             using (Stats.ConvertStats.Start())
-                data = _converter.InsertDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
+                data = _converter.SetDocumentFields(key, sourceDocumentId, document, indexContext, out lowerId);
 
             using (Stats.AddStats.Start())
                 _indexWriter.Index(lowerId, data, _knownFields);
