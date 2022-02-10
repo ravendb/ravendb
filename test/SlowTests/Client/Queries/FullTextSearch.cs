@@ -25,7 +25,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanSearchUsingPhrase(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -57,7 +57,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanSearchUsingPhraseAndOrderBy(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -99,7 +99,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanSearchUsingPhrase_MultipleSearches(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void StandardSearchWillProduceExpectedResult(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -161,7 +161,7 @@ namespace SlowTests.Client.Queries
 
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchCanUseAnd2(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -183,7 +183,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchCanUseAnd(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -205,7 +205,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchCanUseOr(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -227,7 +227,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchWillUseGuessByDefault(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -252,7 +252,7 @@ namespace SlowTests.Client.Queries
 
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void ActuallySearchWithAndAndNot(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -292,7 +292,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchCanUseNot(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -314,7 +314,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void SearchCanUseNotAndAnd(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -336,7 +336,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void BoostingSearches(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -391,7 +391,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void MultipleSearches(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -429,7 +429,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void UsingSuggest(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -471,7 +471,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void Can_search_inner_words(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -506,7 +506,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void CanSearchFullyAnalyzedTerm(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -533,7 +533,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void Can_search_inner_words_with_extra_condition(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -571,7 +571,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void Can_have_special_characters_in_search_text(Options options)
         {
             const string specialCharacters = "+-!(){}:[]^\"~*";
@@ -597,7 +597,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void Can_have_special_characters_in_search_text_string(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -619,7 +619,7 @@ namespace SlowTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public void Can_search_on_array_of_strings(Options options)
         {
             using (var store = GetDocumentStore(options))

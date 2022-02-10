@@ -44,7 +44,7 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -263,7 +263,7 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)
         {
             using var store = GetDocumentStore(options);

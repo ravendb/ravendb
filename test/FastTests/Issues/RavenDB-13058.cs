@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
@@ -213,10 +214,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_custom_method_in_index()
+        [Theory]
+        [SearchEngineClassData]
+        public void Can_use_custom_method_in_index(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 new IndexWithCustomMethod().Execute(store);
                 using (var session = store.OpenSession())
@@ -234,10 +236,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Will_throw_on_invalid_return_type()
+        [Theory]
+        [SearchEngineClassData]        
+        public void Will_throw_on_invalid_return_type(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 new IndexWithInvalidReturnType().Execute(store);
                 using (var session = store.OpenSession())
@@ -251,19 +254,21 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Will_throw_on_invalid_parameter_count()
+        [Theory]
+        [SearchEngineClassData]        
+        public void Will_throw_on_invalid_parameter_count(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 Assert.Throws<IndexCompilationException>(() => new IndexWithInvalidParameterCount().Execute(store));
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_static_parameter_in_index()
+        [Theory]
+        [SearchEngineClassData]        
+        public void Can_use_arrow_function_with_static_parameter_in_index(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 new IndexWithArrowFunctionStaticParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -281,10 +286,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_dynamic_parameter_in_index()
+        [Theory]
+        [SearchEngineClassData]        
+        public void Can_use_arrow_function_with_dynamic_parameter_in_index(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 new IndexWithArrowFunctionDynamicParameter().Execute(store);
                 using (var session = store.OpenSession())
@@ -302,10 +308,11 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_use_arrow_function_with_dynamic_and_static_parameter_in_index()
+        [Theory]
+        [SearchEngineClassData]        
+        public void Can_use_arrow_function_with_dynamic_and_static_parameter_in_index(string searchEngine)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
             {
                 new IndexWithArrowFunctionDynamicAndStaticParameter().Execute(store);
                 using (var session = store.OpenSession())

@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        [RavenExplicitData]
         public async Task The_easiest_static_index(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
@@ -100,8 +100,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public async Task CanInheritConfiguration(RavenTestParameters config)
+        [RavenExplicitData]
+        public async Task CanInheritConfiguration(RavenDataExplicitConfiguration config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -124,8 +124,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public async Task CanPersist(RavenTestParameters config)
+        [RavenExplicitData]
+        public async Task CanPersist(RavenDataExplicitConfiguration config)
         {
 
             IndexDefinition indexDefinition1, indexDefinition2;
@@ -264,8 +264,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public void StalenessCalculationShouldWorkForAllDocsIndexes(RavenTestParameters config)
+        [RavenExplicitData]
+        public void StalenessCalculationShouldWorkForAllDocsIndexes(RavenDataExplicitConfiguration config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -357,8 +357,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly(RavenTestParameters config)
+        [RavenExplicitData]
+        public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly(RavenDataExplicitConfiguration config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {

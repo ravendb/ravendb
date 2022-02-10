@@ -1006,7 +1006,6 @@ namespace FastTests.Client.Indexing.Counters
                     session.Store(company, "companies/1");
                     session.CountersFor(company).Increment("HeartRate", 7);
                     session.CountersFor(company).Increment("Likes", 3);
-
                     session.SaveChanges();
                 }
 

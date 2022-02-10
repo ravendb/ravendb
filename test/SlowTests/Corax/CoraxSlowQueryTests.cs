@@ -245,6 +245,30 @@ namespace SlowTests.Corax
             }
         }
 
+        [Theory]
+        [SearchEngineClassData(SearchEngineType.Corax)]
+        public void CanSearchOnLists(string searchEngine)
+        {
+            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+            {
+                using var s = store.OpenSession();
+                s.Store(new ListOfNames(new []{"Maciej", "Gracjan", "Marcin", "Arek", "Tomek", "Pawel"}));
+                s.Store(new ListOfNames(new []{"Lukasz", "Damian", "Grzesiu", "Bartek", "Oliwia"}));
+                s.Store(new ListOfNames(new []{"Krzysiu", "Rafal", "Mateusz"}));
+
+                s.SaveChanges();
+            }
+            {
+                using var s = store.OpenSession();
+                var r = s.Query<ListOfNames>().Search(p => p.Names, "maciej").ToList();
+                Assert.Equal(1, r.Count);
+                
+            }
+        }
+
+        private record ListOfNames(string[] Names);
+        
+        
         private class Result
         {
             public int Age { get; set; }
