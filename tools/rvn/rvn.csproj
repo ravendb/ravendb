@@ -23,7 +23,6 @@
     <Compile Include="..\..\src\Raven.Client\Documents\Operations\OperationState.cs" Link="Client\Documents\Operations\OperationState.cs" />
     <Compile Include="..\..\src\Raven.Client\Documents\Operations\IOperationProgress.cs" Link="Client\Documents\Operations\IOperationProgress.cs" />
     <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
-    <Compile Include="..\..\src\Raven.Client\Util\SystemTime.cs" Link="Client\Util\SystemTime.cs" />
     <Compile Include="..\..\src\Raven.Client\Constants.cs" Link="Client\Constants.cs" />
     <Compile Include="..\..\src\Raven.Client\Properties\VersionInfo.cs" Link="Client\Properties\VersionInfo.cs" />
     <Compile Include="..\..\src\Raven.Client\Exceptions\Security\SecurityException.cs" Link="Client\Exceptions\Security\SecurityException.cs" />
