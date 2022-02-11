@@ -27,7 +27,7 @@ namespace Voron.Data.BTrees
             var pageToCompress = page;
 
             if (alreadyCompressed) 
-                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write); // no need to dispose, it's going to be cached anyway
+                pageToCompress = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
 
             using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
             {
@@ -58,7 +58,7 @@ namespace Voron.Data.BTrees
             }
         }
 
-        public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage = DecompressionUsage.Read, bool skipCache = false)
+        public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage, bool skipCache)
         {
             var input = new DecompressionInput(p.CompressionHeader, p);
 
@@ -272,7 +272,7 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            var decompressed = DecompressPage(page, usage: DecompressionUsage.Write);
+            var decompressed = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false);
 
             try
             {
@@ -322,7 +322,7 @@ namespace Voron.Data.BTrees
 
                 if (page.IsCompressed)
                 {
-                    page = decompressed = DecompressPage(page);
+                    page = decompressed = DecompressPage(page, DecompressionUsage.Read, skipCache: false);
                     node = page.Search(_llt, key);
                 }
 

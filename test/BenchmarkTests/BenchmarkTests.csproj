@@ -26,6 +26,7 @@
     <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="JunitXml.TestLogger" Version="3.0.110" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
     <PackageReference Include="NodaTime" Version="3.0.9" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
