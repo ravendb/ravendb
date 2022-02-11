@@ -13,6 +13,8 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
+import shardedDatabase from "models/resources/shardedDatabase";
+import databasesManager from "common/shell/databasesManager";
 
 type rTreeLeaf = {
     minX: number;
@@ -324,11 +326,17 @@ class indexPerformance extends viewModelBase {
             const client = this.liveViewClient();
             return client ? client.loading() : true;
         });
+        
+        this.viewNotSupportedInAllShardsContext();
     }
 
     activate(args: { indexName: string, database: string}) {
         super.activate(args);
-
+        
+        if (!this.supportsShardContext()) {
+            return true;
+        }
+        
         if (args.indexName) {
             this.expandedTracks.push(args.indexName);
         }
@@ -350,6 +358,10 @@ class indexPerformance extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        if (!this.supportsShardContext()) {
+            return;
+        }
 
         colorsManager.setup("#indexingPerformance", this.colors);
         

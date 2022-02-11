@@ -18,7 +18,7 @@
             <div class="inputs-container">
                 <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                     <div class="form-control btn-toggle database-switcher">
-                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().group.name : ''"></span>
+                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().root.name : ''"></span>
                         <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, 
                                          text: $root.activeDatabase() ? $root.activeDatabase().environment(): '',
                                          attr: { class: 'margin-right label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
@@ -75,7 +75,7 @@
                 </div>
                 <div class="shard-switcher-container" data-bind="with: shardSwitcher, visible: shardSwitcher.shardedDatabaseGroup">
                     <div class="form-control btn-toggle shard-switcher">
-                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name : ''"></span>
+                        <span class="database on-base-background" data-bind="text: activeItemName"></span>
                     </div>
                     <div class="box-container">
                         <div class="scroller">
@@ -83,13 +83,13 @@
                                 <ul class="database-list">
                                     <li data-bind="visible: shardedDatabaseGroup() && !shardedDatabaseGroup().disabled() && shardedDatabaseGroup().relevant(), with: shardedDatabaseGroup">
                                         <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem(), database: true }">
-                                            <div class="name" data-bind="text: 'All shards of: ' + name"></div>
+                                            <div class="name" data-bind="text: $parent.constructor.allShards"></div>
                                         </a>
                                     </li>
                                     <!-- ko foreach: shards-->
                                     <li data-bind="visible: !disabled() && relevant()">
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
-                                            <div class="name" data-bind="text: name"></div>
+                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: shardName}, css: { active: name === $parent.highlightedItem(), database: true }">
+                                            <div class="name" data-bind="text: shardName"></div>
                                         </a>
                                     </li>
                                     <!-- /ko -->

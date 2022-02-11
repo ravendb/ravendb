@@ -5,7 +5,7 @@
 import databasesManager from "common/shell/databasesManager";
 import endpointConstants from "endpoints";
 import shardedDatabase from "models/resources/shardedDatabase";
-import databaseShard from "models/resources/databaseShard";
+import shard from "models/resources/shard";
 import { ajaxMock } from "../../test/mocks";
 import { DatabaseStubs } from "../../test/DatabaseStubs";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
@@ -72,12 +72,12 @@ describe("databasesManager", () => {
         expect(shards[0].name)
             .toEqual(response.Databases[0].Name);
         expect(shards[0])
-            .toBeInstanceOf(databaseShard);
+            .toBeInstanceOf(shard);
 
         expect(shards[1].name)
             .toEqual(response.Databases[1].Name);
         expect(shards[1])
-            .toBeInstanceOf(databaseShard);
+            .toBeInstanceOf(shard);
     });
     
     it("can get single shard by name", async () => {
@@ -94,12 +94,12 @@ describe("databasesManager", () => {
         
         const firstShardName = response.Databases[0].Name;
         
-        const shard = manager.getDatabaseByName(firstShardName) as databaseShard;
+        const shard = manager.getDatabaseByName(firstShardName) as shard;
         
         expect(shard)
             .not.toBeNull();
         expect(shard)
-            .toBeInstanceOf(databaseShard);
+            .toBeInstanceOf(shard);
         
         const shardGroup = shard.parent;
         expect(shardGroup)

@@ -48,6 +48,8 @@ class visualizer extends viewModelBase {
         this.bindToCurrentInstance("setSelectedIndex", "selectDocumentId", "addCurrentDocumentId");
 
         this.initObservables();
+        
+        this.viewNotSupportedInAllShardsContext();
     }
 
     private initObservables() {
@@ -69,6 +71,10 @@ class visualizer extends viewModelBase {
     }
 
     activate(args: { index: string }) {
+        if (!this.supportsShardContext()) {
+            return true;
+        }
+        
         return new getIndexesStatsCommand(this.activeDatabase())
             .execute()
             .done(result => {
@@ -81,6 +87,10 @@ class visualizer extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        if (!this.supportsShardContext()) {
+            return;
+        }
 
         this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName), doc => this.removeDocument(doc.name));
         this.detailsGraph.init(() => this.globalGraph.restoreView(), this.trees);

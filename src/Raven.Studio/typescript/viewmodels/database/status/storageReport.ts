@@ -54,10 +54,16 @@ class storageReport extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("onClick");
+        
+        this.viewNotSupportedInAllShardsContext();
     }
 
     activate(args: any) {
         super.activate(args);
+
+        if (!this.supportsShardContext()) {
+            return true;
+        }
 
         this.initObservables();
 
@@ -71,6 +77,11 @@ class storageReport extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+
+        if (!this.supportsShardContext()) {
+            return;
+        }
+        
         this.processData();
         this.initGraph();
         this.draw(undefined);
