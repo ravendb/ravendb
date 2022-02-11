@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
@@ -146,12 +147,17 @@ namespace rvn
                 setupInfo.Password = parameters.CertPassword;
             }
 
+            try
+            {
+                ValidateSetupOptions(parameters);
+            }
+            catch (InvalidOperationException e)
+            {
+                return ExitWithError(e.Message, parameters.Command);
+            }
+
             switch (parameters.Mode)
             {
-                case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
-                {
-                    return ExitWithError("--path option must be set", parameters.Command);
-                }
                 case OwnCertificate:
                 {
                     var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
@@ -160,13 +166,13 @@ namespace rvn
                     zipFile = await OwnCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
                 }
-                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupInfoPath) == false:
+                case LetsEncrypt:
                 {
                     zipFile = await LetsEncryptSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
                 }
                 default:
-                    return ExitWithError("--mode and --setup-params-path options must be set.", parameters.Command);
+                    return ExitWithError($"Invalid mode provided.", parameters.Command);
             }
 
             parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
@@ -554,6 +560,19 @@ namespace rvn
             }
         }
 
+        private static void ValidateSetupOptions(CreateSetupPackageParameters parameters)
+        {
+            switch (parameters.Mode)
+            {
+                case null: throw new InvalidOperationException("-m|--mode cannot be null.");
+                
+                case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
+                    throw new InvalidOperationException($"--path option must be set when using {OwnCertificate} mode.");
+                
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupInfoPath):
+                    throw new InvalidOperationException($"-s|--setup-params-path option must be set when using {LetsEncrypt} mode.");
+            }
+        }
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
         {
             try
