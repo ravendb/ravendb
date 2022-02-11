@@ -8,10 +8,10 @@ using Voron.Impl;
 
 namespace Raven.Server.Storage.Schema.Updates.Server
 {
-    internal class From50000 : ISchemaUpdate
+    internal class From53000 : ISchemaUpdate
     {
-        public int From => 50_000;
-        public int To => 52_000;
+        public int From => 53_000;
+        public int To => 53_001;
         public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
         public bool Update(UpdateStep step)
         {
