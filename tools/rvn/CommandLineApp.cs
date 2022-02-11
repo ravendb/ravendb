@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
 
@@ -154,7 +155,7 @@ namespace rvn
                             serviceUserNameOpt.Value(),
                             serviceUserPasswordOpt.Value(),
                             serverDirOpt.Value(),
-                            subcmd.RemainingArguments);
+                            subcmd.RemainingArguments.ToList());
 
                         return 0;
                     });
