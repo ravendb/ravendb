@@ -94,14 +94,14 @@ describe("databasesManager", () => {
         
         const firstShardName = response.Databases[0].Name;
         
-        const shard = manager.getDatabaseByName(firstShardName) as shard;
+        const singleShard = manager.getDatabaseByName(firstShardName) as shard;
         
-        expect(shard)
+        expect(singleShard)
             .not.toBeNull();
-        expect(shard)
+        expect(singleShard)
             .toBeInstanceOf(shard);
         
-        const shardGroup = shard.parent;
+        const shardGroup = singleShard.parent;
         expect(shardGroup)
             .not.toBeNull();
         expect(shardGroup)
