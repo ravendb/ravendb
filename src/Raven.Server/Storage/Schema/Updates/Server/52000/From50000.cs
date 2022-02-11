@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
@@ -16,14 +11,14 @@ namespace Raven.Server.Storage.Schema.Updates.Server
     internal class From50000 : ISchemaUpdate
     {
         public int From => 50_000;
-        public int To => 52_101;
+        public int To => 52_000;
         public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Server;
         public bool Update(UpdateStep step)
         {
             step.WriteTx.DeleteTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
             step.WriteTx.CreateTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
 
-            foreach (var (key,value) in GetAllCompareExchange(step.ReadTx))
+            foreach (var (key, value) in GetAllCompareExchange(step.ReadTx))
             {
                 if (CompareExchangeExpirationStorage.TryGetExpires(value, out var ticks))
                 {
@@ -33,7 +28,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
             return true;
         }
-        
+
         public static IEnumerable<(Slice Key, BlittableJsonReaderObject Value)> GetAllCompareExchange(Transaction tx)
         {
             var table = tx.OpenTable(ClusterStateMachine.CompareExchangeSchema, ClusterStateMachine.CompareExchange);
@@ -52,7 +47,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
                 }
             }
         }
-        
+
         private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(JsonOperationContext context, TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size), size, context);
