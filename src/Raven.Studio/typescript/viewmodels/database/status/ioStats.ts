@@ -7,11 +7,13 @@ class ioStats extends viewModelBase {
     view = require("views/database/status/ioStats.html");
     graphView = require("views/partial/ioStatsGraph.html");
     
-    private graph: ioStatsGraph;
+    private readonly graph: ioStatsGraph;
     
     constructor() {
         super();
         
+        this.viewNotSupportedInAllShardsContext();
+
         this.graph = new ioStatsGraph(
             () => `database-${this.activeDatabase().name}`,
             ["Documents", "Index", "Configuration"],
@@ -22,6 +24,10 @@ class ioStats extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        if (!this.supportsShardContext()) {
+            return;
+        }
+
         const [width, height] = this.getPageHostDimenensions();
         this.graph.init(width, height);
     }
@@ -29,7 +35,9 @@ class ioStats extends viewModelBase {
     deactivate() {
         super.deactivate();
 
-        this.graph.dispose();
+        if (this.graph) {
+            this.graph.dispose();
+        }
     }
 }
 

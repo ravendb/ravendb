@@ -13,7 +13,7 @@ import savedPatchesStorage = require("common/storage/savedPatchesStorage");
 import generalUtils = require("common/generalUtils");
 import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
-import databaseShard from "models/resources/databaseShard";
+import shard from "models/resources/shard";
 
 class databasesManager {
 
@@ -204,9 +204,9 @@ class databasesManager {
             const group = new shardedDatabase(dbs[0], nodeTag);
             group.name = databasesManager.shardGroupKey(dbs[0].Name); //TODO: update other props!
             group.shards(dbs.map(db => {
-                const shard = new databaseShard(db, nodeTag);
-                shard.parent = group;
-                return shard;
+                const singleShard = new shard(db, nodeTag);
+                singleShard.parent = group;
+                return singleShard;
             }));
 
             this.databases.push(group);

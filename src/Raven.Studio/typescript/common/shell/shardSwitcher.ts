@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import appUrl = require("common/appUrl");
 import shardedDatabase from "models/resources/shardedDatabase";
-import databaseShard from "models/resources/databaseShard";
+import shard from "models/resources/shard";
 
 /*
     Events emitted through ko.postbox
@@ -13,15 +13,19 @@ import databaseShard from "models/resources/databaseShard";
         * ShardSwitcher.ItemSelected - item selected from database switcher pane
 */
 class shardSwitcher {
+    
+    public static allShards = "All shards";
 
     private $selectShardContainer: JQuery;
     private $selectShard: JQuery;
 
     private databasesManager = databasesManager.default;
+    
+    activeItemName: KnockoutComputed<string>;
 
     highlightedItem = ko.observable<string>(null);
 
-    shards: KnockoutComputed<databaseShard[]>;
+    shards: KnockoutComputed<shard[]>;
 
     shardedDatabaseGroup: KnockoutComputed<shardedDatabase>;
 
@@ -47,6 +51,23 @@ class shardSwitcher {
             }
             if (currentDb.root instanceof shardedDatabase) {
                 return currentDb.root;
+            }
+            
+            return null;
+        });
+        
+        this.activeItemName = ko.pureComputed(() => {
+            const currentDb = this.databasesManager.activeDatabaseTracker.database();
+            if (!currentDb) {
+                return null;
+            }
+
+            if (currentDb instanceof shardedDatabase) {
+                return shardSwitcher.allShards;
+            }
+
+            if (currentDb instanceof shard) {
+                return currentDb.shardName;
             }
             
             return null;
