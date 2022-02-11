@@ -8,16 +8,20 @@ using System.Threading.Tasks;
 using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -124,6 +128,107 @@ namespace SlowTests.Cluster
                 Assert.Equal(0, val);
             }
         }
+
+        [Fact]
+        public async Task CanSnapshotManyCompareExchangeWithExpiration()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var count = 1024;
+            using var leader = GetNewServer();
+            using var follower = GetNewServer();
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = leader
+                   }))
+            {
+                var expiry = DateTime.Now.AddMinutes(2);
+                var compareExchanges = new Dictionary<string, User>();
+                await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
+                await AssertCompareExchanges(compareExchanges, store, expiry);
+                
+                using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                {
+                    await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(follower.WebUrl, watcher: true), ctx);
+                    var cmd = new AddDatabaseNodeOperation(store.Database).GetCommand(store.Conventions, ctx);
+                    await requestExecutor.ExecuteAsync(cmd, ctx);
+                    await follower.ServerStore.Cluster.WaitForIndexNotification(cmd.Result.RaftCommandIndex);
+                }
+
+
+                using (var fStore = GetDocumentStore(new Options
+                       {
+                           Server = follower,
+                           CreateDatabase = false,
+                           ModifyDatabaseName = _ => store.Database,
+                           ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                       }))
+                {
+                    await AssertCompareExchanges(compareExchanges, store, expiry);
+
+                    leader.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
+
+                    var val = await WaitForValueAsync(async () =>
+                    {
+                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        return stats.CountOfCompareExchange;
+                    }, 0);
+
+                    Assert.Equal(0, val);
+
+                    val = await WaitForValueAsync(async () =>
+                    {
+                        var stats = await fStore.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                        return stats.CountOfCompareExchange;
+                    }, 0);
+
+                    Assert.Equal(0, val);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanSnapshotManyCompareExchangeWithExpirationToManyNodes()
+        {
+            var count = 3 * 1024;
+            var nodesCount = 7;
+            using var leader = GetNewServer();
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = leader
+                   }))
+            {
+                var now = DateTime.UtcNow;
+                var expiry = now.AddMinutes(2);
+                var compareExchanges = new Dictionary<string, User>();
+                await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
+
+                for (int i = 0; i < nodesCount; i++)
+                {
+                    var follower = GetNewServer();
+                    ServersForDisposal.Add(follower);
+
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
+                    using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
+                    {
+                        await requestExecutor.ExecuteAsync(new AddClusterNodeCommand(follower.WebUrl, watcher: true), ctx);
+                    }
+
+                    await follower.ServerStore.Engine.WaitForTopology(Leader.TopologyModification.NonVoter);
+                }
+
+                leader.ServerStore.Observer.Time.UtcDateTime = () => now.AddMinutes(3);
+
+                var val = await WaitForValueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchange;
+                }, 0);
+
+                Assert.Equal(0, val);
+            }
+        }
+
 
         [Theory]
         [InlineData(15)]
