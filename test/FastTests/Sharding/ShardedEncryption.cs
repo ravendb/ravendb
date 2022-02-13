@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Sharding
         {
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public void Can_Setup_Sharded_Encrypted_Database()
         {
             EncryptedServer(out var certificates, out var dbName);
@@ -49,7 +50,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [LicenseRequiredFact]
         public async Task CRUD_Operations_Encrypted()
         {
             EncryptedServer(out var certificates, out var dbName);
