@@ -91,23 +91,50 @@
                     <input type="text" class="form-control" placeholder="Filter" accesskey="/" title="Filter databases (Alt+/)" data-bind="textInput: filters.searchText">
                 </div>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Filter visible databases">
-                        <span data-bind="visible: !filters.localOnly()">Show all</span>
-                        <span data-bind="visible: filters.localOnly">Show local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
-                        &nbsp;&nbsp;
+                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"
+                            data-bind="css: { 'active': filters.requestedState() !== 'all' }" title="Filter visible databases">
+                        <span data-bind="visible: filters.requestedState() === 'all'">Show all</span>
+                        <span data-bind="visible: filters.requestedState() === 'local'">Local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
+                        <span data-bind="visible: filters.requestedState() === 'online'">Online</span>
+                        <span data-bind="visible: filters.requestedState() === 'offline'">Offline</span>
+                        <span data-bind="visible: filters.requestedState() === 'disabled'">Disabled</span>
+                        <span data-bind="visible: filters.requestedState() === 'errored'">Errored</span>
+                        <span data-bind="visible: filters.requestedState() === 'remote'">Remote</span>
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li data-bind="click: _.partial(filters.localOnly, false)">
-                            <a href="#" title="Show all databases available in cluster">
-                                <span>Show all</span>
-                            </a>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'all')">
+                            <a class="flex-grow" href="#" title="Show all databases available in cluster"><span>Show all</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databases().sortedDatabases().length"></span>
                         </li>
-                        <li data-bind="click: _.partial(filters.localOnly, true)">
-                            <a href="#" title="Show only databases which are relevant for current node">
-                                <span>Show local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
+                        <li class="divider"></li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'online')">
+                            <a class="flex-grow" href="#" title="Show only online databases"><span>Online</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databasesByState().online"></span>
+                        </li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'offline')">
+                            <a class="flex-grow" href="#" title="Show only offline databases"><span>Offline</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databasesByState().offline"></span>
+                        </li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'disabled')">
+                            <a class="flex-grow" href="#" title="Show only disabled databases"><span>Disabled</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databasesByState().disabled"></span>
+                        </li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'errored')">
+                            <a class="flex-grow" href="#" title="Show only errored databases"><span>Errored</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databasesByState().errored"></span>
+                        </li>
+                        <li class="divider"></li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'local')">
+                            <a class="flex-grow" href="#" title="Show only databases which are relevant for current node">
+                                <span>Local (Node <span data-bind="text: clusterManager.localNodeTag"></span>)</span>
                             </a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databases().sortedDatabases().length - $root.databasesByState().remote"></span>
+                        </li>
+                        <li class="flex-horizontal" data-bind="click: _.partial(filters.requestedState, 'remote')">
+                            <a class="flex-grow" href="#" title="Show only remote databases"><span>Remote</span></a>
+                            <span class="badge margin-right-sm margin-left-lg" data-bind="text: $root.databasesByState().remote"></span>
                         </li>
                     </ul>
                 </div>

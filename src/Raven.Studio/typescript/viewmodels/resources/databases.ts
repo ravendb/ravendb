@@ -30,6 +30,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import saveDatabaseLockModeCommand = require("commands/resources/saveDatabaseLockModeCommand");
 
 type databaseState = "errored" | "disabled" | "online" | "offline" | "remote";
+type filterState = databaseState | 'local' | 'all';
 
 class databases extends viewModelBase {
     
@@ -49,7 +50,7 @@ class databases extends viewModelBase {
 
     filters = {
         searchText: ko.observable<string>(),
-        localOnly: ko.observable<string>()
+        requestedState: ko.observable<filterState>('all')
     };
 
     selectionState: KnockoutComputed<checkbox>;
@@ -97,7 +98,7 @@ class databases extends viewModelBase {
         const filters = this.filters;
 
         filters.searchText.throttle(200).subscribe(() => this.filterDatabases());
-        filters.localOnly.subscribe(() => this.filterDatabases());
+        filters.requestedState.subscribe(() => this.filterDatabases());
 
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
@@ -399,18 +400,28 @@ class databases extends viewModelBase {
         const filters = this.filters;
         let searchText = filters.searchText();
         const hasSearchText = !!searchText;
-        const localOnly = filters.localOnly();
-        const nodeTag = this.clusterManager.localNodeTag();
 
         if (hasSearchText) {
             searchText = searchText.toLowerCase();
         }
 
-        const matchesFilters = (db: databaseInfo) => {
+        const matchesFilters = (db: databaseInfo): boolean => {
+            const state = filters.requestedState();
+            const nodeTag = this.clusterManager.localNodeTag();
+            
+            const matchesOnline = state === 'online' && db.online();
+            const matchesDisabled = state === 'disabled' && db.disabled();
+            const matchesErrored = state === 'errored' && db.hasLoadError();
+            const matchesOffline = state === 'offline' && (!db.online() && !db.disabled() && !db.hasLoadError() && db.isLocal(nodeTag));
+            
+            const matchesLocal = state === 'local' && db.isLocal(nodeTag);
+            const matchesRemote = state === 'remote' && !db.isLocal(nodeTag);
+            const matchesAll = state === 'all';
+            
             const matchesText = !hasSearchText || db.name.toLowerCase().indexOf(searchText) >= 0;
-            const matchesLocal = !localOnly || db.isLocal(nodeTag);
-
-            return matchesText && matchesLocal;
+            
+            return matchesText &&
+                (matchesOnline || matchesDisabled || matchesErrored || matchesOffline || matchesLocal || matchesRemote || matchesAll);
         };
 
         const databases = this.databases();
