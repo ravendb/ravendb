@@ -1,13 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
@@ -70,7 +67,7 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task State()
+        public Task State()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
@@ -79,13 +76,14 @@ namespace Raven.Server.Web.Operations
             if (state == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return;
+                return Task.CompletedTask;
             }
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 InternalGetState(state, context);
             }
+            return Task.CompletedTask;
         }
     }
 }

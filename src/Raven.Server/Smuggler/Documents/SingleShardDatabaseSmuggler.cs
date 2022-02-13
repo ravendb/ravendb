@@ -53,7 +53,7 @@ namespace Raven.Server.Smuggler.Documents
             await base.InternalProcessCompareExchangeTombstonesAsync(result, key, actions);
         }
 
-        private  bool SkipCompareExchange(CompareExchangeKey key)
+        private bool SkipCompareExchange(CompareExchangeKey key)
         {
             if (ClusterTransactionCommand.IsAtomicGuardKey(key.Key, out var docId))
             {

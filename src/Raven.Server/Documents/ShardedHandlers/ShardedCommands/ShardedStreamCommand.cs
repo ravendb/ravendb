@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding;
 using Sparrow.Json;

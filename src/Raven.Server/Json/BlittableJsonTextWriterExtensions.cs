@@ -2144,5 +2144,16 @@ namespace Raven.Server.Json
                 m1[item.Name] = item.Value;
             }
         }
+
+        public static void WriteNextOperationIdAndNodeTag(this AbstractBlittableJsonTextWriter writer, long operationId, string nodeTag)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Id");
+            writer.WriteInteger(operationId);
+            writer.WriteComma();
+            writer.WritePropertyName("NodeTag");
+            writer.WriteString(nodeTag);
+            writer.WriteEndObject();
+        }
     }
 }

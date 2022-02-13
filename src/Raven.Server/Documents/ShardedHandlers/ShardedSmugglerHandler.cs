@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 writer.WriteInteger(ServerVersion.Build);
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
-                    var cmd = new ShardedStreamCommand(this, async stream =>
+                    var cmd = new ShardedExportCommand(this, ServerStore.Operations, async stream =>
                     {
                         await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
@@ -76,8 +76,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                     }, blittableJson);
 
-                    operationIdList.Add(ServerStore.Operations.GetNextOperationId());
-                    cmd.Url = cmd.Url.Split("operationId")[0] + "operationId=" + operationIdList[i];
+                    operationIdList.Add(cmd.OperationID);
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 }
                 writer.WriteEndObject();
