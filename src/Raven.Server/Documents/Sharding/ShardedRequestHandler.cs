@@ -5,10 +5,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Sharding
@@ -81,6 +83,22 @@ namespace Raven.Server.Documents.Sharding
                 }
                 await tasks.WhenAll();
             }
+        }
+
+        internal async Task GetShardsResults<T>(List<RavenCommand<T>> res, List<IMaintenanceOperation<T>> commands)
+        {
+            var tasks = new List<Task>();
+
+            for (int i = 0; i < ShardedContext.ShardCount; i++)
+            {
+                var co = ContextPool.AllocateOperationContext(out JsonOperationContext context);
+                res.Add(commands[i].GetCommand(ShardedContext.RequestExecutors[i].Conventions, context));
+                var task = ShardedContext.RequestExecutors[i].ExecuteAsync(res[i], context);
+                task.ContinueWith(_ => co.Dispose());
+                tasks.Add(task);
+            }
+
+            await tasks.WhenAll();
         }
     }
 }

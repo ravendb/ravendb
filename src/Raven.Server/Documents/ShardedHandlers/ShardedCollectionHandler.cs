@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Sharding;
@@ -16,20 +15,15 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task GetCollectionStats()
         {
             var stats = new CollectionStatistics();
-            var tasks = new List<Task>();
             var res = new List<RavenCommand<CollectionStatistics>>();
+            var maintenanceOperations = new List<IMaintenanceOperation<CollectionStatistics>>();
 
             for (int i = 0; i < ShardedContext.ShardCount; i++)
             {
-                var co = ContextPool.AllocateOperationContext(out JsonOperationContext context);
-                res.Add(new GetCollectionStatisticsOperation().GetCommand(ShardedContext.RequestExecutors[i].Conventions, context));
-                var task = ShardedContext.RequestExecutors[i].ExecuteAsync(res[i], context);
-                task.ContinueWith(_ => co.Dispose());
-                tasks.Add(task );
-
+                maintenanceOperations.Add(new GetCollectionStatisticsOperation());
             }
 
-            await tasks.WhenAll();
+            await GetShardsResults(res, maintenanceOperations);
 
             for (int i = 0; i < ShardedContext.ShardCount; i++)
             {
@@ -53,19 +47,14 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task GetDetailedCollectionStats()
         {
             var stats = new DetailedCollectionStatistics();
-            var tasks = new List<Task>();
             var res = new List<RavenCommand<DetailedCollectionStatistics>>();
-
+            var maintenanceOperations = new List<IMaintenanceOperation<DetailedCollectionStatistics>>();
             for (int i = 0; i < ShardedContext.ShardCount; i++)
             {
-                var co = ContextPool.AllocateOperationContext(out JsonOperationContext context);
-                res.Add(new GetDetailedCollectionStatisticsOperation().GetCommand(ShardedContext.RequestExecutors[i].Conventions, context));
-                var task = ShardedContext.RequestExecutors[i].ExecuteAsync(res[i], context);
-                task.ContinueWith(_ => co.Dispose());
-                tasks.Add(task);
+                maintenanceOperations.Add(new GetDetailedCollectionStatisticsOperation());
             }
 
-            await tasks.WhenAll();
+            await GetShardsResults(res, maintenanceOperations);
 
             for (int i = 0; i < ShardedContext.ShardCount; i++)
             {
