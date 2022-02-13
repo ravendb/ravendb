@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -108,6 +109,7 @@ namespace Raven.Server.Rachis
                     {
                         Stream stream;
                         Action disconnect;
+                        TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures features;
                         try
                         {
                             var connectTask = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate);
@@ -119,6 +121,7 @@ namespace Raven.Server.Rachis
 
                             stream = connection.Stream;
                             disconnect = connection.Disconnect;
+                            features = connection.SupportedFeatures.Cluster;
                         }
                         catch (Exception e)
                         {
@@ -139,7 +142,7 @@ namespace Raven.Server.Rachis
 
                         Stopwatch sp;
                         _connection?.Dispose();
-                        _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, disconnect);
+                        _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, features, disconnect);
 
                         using (_engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                         {

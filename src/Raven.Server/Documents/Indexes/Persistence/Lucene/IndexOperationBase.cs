@@ -6,15 +6,21 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
+using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
 using Query = Lucene.Net.Search.Query;
 using Version = Lucene.Net.Util.Version;
 
@@ -266,6 +272,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return int.MaxValue;
 
             return (int)pageSize;
+        }
+
+        protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever,QueryTimingsScope queryTimings)
+        {
+            if (query.Metadata.FilterScript is null)
+                return null;
+
+            return new QueryFilter(index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings);
         }
     }
 }

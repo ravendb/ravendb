@@ -672,36 +672,76 @@ namespace Raven.Server.Rachis
                         return true;
                     case RootObjectType.VariableSizeTree:
                         size = reader.ReadInt32();
-                        reader.ReadExactly(size);
+                        reader.ReadExactly(size); 
 
                         Tree tree = null;
+                        Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice treeName); // The Slice will be freed on context close
+
+                        entries = reader.ReadInt64();
+                        var flags = TreeFlags.FixedSizeTrees;
+
                         if (dryRun == false)
                         {
-                            Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice treeName); // The Slice will be freed on context close
                             txw.DeleteTree(treeName);
                             tree = txw.CreateTree(treeName);
                         }
 
-                        entries = reader.ReadInt64();
+                        if (_connection.Features.MultiTree)
+                            flags = (TreeFlags)reader.ReadInt32();
+
                         for (long i = 0; i < entries; i++)
                         {
                             token.ThrowIfCancellationRequested();
+                            // read key
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
+
                             using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice valKey))
                             {
-                                size = reader.ReadInt32();
-                                reader.ReadExactly(size);
-
-                                if (dryRun == false)
+                                switch (flags)
                                 {
-                                    using (tree.DirectAdd(valKey, size, out byte* ptr))
-                                    {
-                                        fixed (byte* pBuffer = reader.Buffer)
+                                    case TreeFlags.None:
+
+                                        // this is a very specific code to block receiving 'CompareExchangeByExpiration' which is a multi-value tree
+                                        // while here we expect a normal tree
+                                        if (SliceComparer.Equals(valKey, CompareExchangeExpirationStorage.CompareExchangeByExpiration))
+                                            throw new InvalidOperationException($"{valKey} is a multi-tree, please upgrade the leader node.");
+
+                                        // read value
+                                        size = reader.ReadInt32();
+                                        reader.ReadExactly(size);
+
+                                        if (dryRun == false)
                                         {
-                                            Memory.Copy(ptr, pBuffer, size);
+                                            using (tree.DirectAdd(valKey, size, out byte* ptr))
+                                            {
+                                                fixed (byte* pBuffer = reader.Buffer)
+                                                {
+                                                    Memory.Copy(ptr, pBuffer, size);
+                                                }
+                                            }
                                         }
-                                    }
+                                        break;
+                                    case TreeFlags.MultiValueTrees:
+                                        var multiEntries = reader.ReadInt64();
+                                        for (int j = 0; j < multiEntries; j++)
+                                        {
+                                            token.ThrowIfCancellationRequested();
+
+                                            size = reader.ReadInt32();
+                                            reader.ReadExactly(size);
+
+                                            if (dryRun == false)
+                                            {
+                                                using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice multiVal))
+                                                {
+                                                    tree.MultiAdd(valKey, multiVal);
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException($"Got unkonwn type '{type}'");
                                 }
                             }
                         }

@@ -292,22 +292,38 @@ namespace Raven.Server.Documents.TimeSeries
                 (changeVector, etag) = GenerateChangeVector(context);
             }
 
-            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithEtag(etag))
-            using (table.Allocate(out var tvb))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
+            var hash = (long)Hashing.XXHash64.Calculate(changeVector, Encoding.UTF8);
+
+            using (var sliceHolder = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name).WithChangeVectorHash(hash))
             {
-                tvb.Add(sliceHolder.TimeSeriesKeySlice);
-                tvb.Add(Bits.SwapBytes(etag));
-                tvb.Add(cv);
-                tvb.Add(sliceHolder.CollectionSlice);
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add(from.Ticks);
-                tvb.Add(to.Ticks);
+                if (table.ReadByKey(sliceHolder.TimeSeriesKeySlice, out var tableValueReader))
+                {
+                    var existingChangeVector = ExtractDeletedRangeChangeVector(context, ref tableValueReader);
 
-                table.Set(tvb);
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                    {
+                        return null;
+                    }
+
+                    // in case of a hash collision (Conflict) we overwrite the existing entry
+                }
+
+                using (table.Allocate(out var tvb))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                {
+                    tvb.Add(sliceHolder.TimeSeriesKeySlice);
+                    tvb.Add(Bits.SwapBytes(etag));
+                    tvb.Add(cv);
+                    tvb.Add(sliceHolder.CollectionSlice);
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add(from.Ticks);
+                    tvb.Add(to.Ticks);
+
+                    table.Set(tvb);
+                }
+
+                return changeVector;
             }
-
-            return changeVector;
         }
 
         public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null, bool updateMetadata = true)
@@ -315,7 +331,8 @@ namespace Raven.Server.Documents.TimeSeries
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
 
-            InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector);
+            if (InsertDeletedRange(context, deletionRangeRequest, remoteChangeVector) == null)
+                return null;
 
             var collection = deletionRangeRequest.Collection;
             var documentId = deletionRangeRequest.DocumentId;
@@ -2364,6 +2381,12 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        private static string ExtractDeletedRangeChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        {
+            var changeVectorPtr = reader.Read((int)DeletedRangeTable.ChangeVector, out int changeVectorSize);
+            return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
+        }
+
         private static TimeSeriesDeletedRangeItem CreateDeletedRangeItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)DeletedRangeTable.Etag, out _);
@@ -2778,7 +2801,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private enum DeletedRangeTable
         {
-            // lower document id, record separator, lower time series name, record separator, local etag
+            // lower document id, record separator, lower time series name, record separator, change vector hash
             RangeKey = 0,
 
             Etag = 1,
