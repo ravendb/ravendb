@@ -220,86 +220,38 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         foreach (var topology in rawRecord.Topologies)
                         {
-                            var databaseTopology = topology.Topology;
-                            var databaseName = topology.Name;
-
-                            if (databaseTopology == null)
-                            {
-                                LogMessage($"Can't analyze the stats of database the {databaseName}, because the database topology is null.", database: databaseName);
-                                continue;
-                            }
-
-                            if (databaseTopology.Count == 0)
-                            {
-                                // database being deleted
-                                LogMessage($"Skip analyze the stats of database the {databaseName}, because it being deleted", database: databaseName);
-                                continue;
-                            }
-
-                            // handle legacy commands
-                            if (databaseTopology.NodesModifiedAt == null ||
-                                databaseTopology.NodesModifiedAt == DateTime.MinValue)
-                            {
-                                AddToDecisionLog(topology.Name, $"Updating ModifiedAt");
-
-                                var cmd = new UpdateTopologyCommand(databaseName, now, RaftIdGenerator.NewId())
-                                {
-                                    Topology = databaseTopology, 
-                                    RaftCommandIndex = etag,
-                                };
-
-                                updateCommands.Add((cmd, "Updating ModifiedAt"));
-                                continue;
-                            }
-
-                            var topologyStamp = databaseTopology.Stamp;
-                            var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTimeMs;
-                            var letStatsBecomeStable = _term == topologyStamp.Term &&
-                                                       ((now - databaseTopology.NodesModifiedAt.Value).TotalMilliseconds < _stabilizationTimeMs);
-                            if (graceIfLeaderChanged || letStatsBecomeStable)
-                            {
-                                LogMessage($"We give more time for the '{databaseName}' stats to become stable, so we skip analyzing it for now.", database: databaseName);
-                                continue;
-                            }
-
                             var state = new DatabaseObservationState
                             {
-                                Name = databaseName,
-                                DatabaseTopology = databaseTopology,
+                                Name = topology.Name,
+                                DatabaseTopology = topology.Topology,
                                 ClusterTopology = clusterTopology,
                                 Current = newStats,
                                 Previous = prevStats,
                                 RawDatabase = rawRecord,
+                                LastIndexModification = etag
                             };
 
-                            if (state.ReadDatabaseDisabled() == true)
+                            mergedState.AddState(state);
+
+                            if (SkipAnalyzingDatabaseGroup(state, currentLeader, now)) 
                                 continue;
 
-                            var shard = ShardHelper.TryGetShardIndex(databaseName);
-                            if (shard == -1)
-                                shard = 0;
-
-                            mergedState.MergedState[shard] = state;
-                            
                             var updateReason = UpdateDatabaseTopology(state, ref deletions);
                             if (updateReason != null)
                             {
-                                AddToDecisionLog(databaseName, updateReason);
+                                AddToDecisionLog(state.Name, updateReason);
 
-                                var cmd = new UpdateTopologyCommand(databaseName, now, RaftIdGenerator.NewId())
+                                var cmd = new UpdateTopologyCommand(state.Name, now, RaftIdGenerator.NewId())
                                 {
-                                    Topology = databaseTopology, 
-                                    RaftCommandIndex = etag,
+                                    Topology = state.DatabaseTopology, 
+                                    RaftCommandIndex = state.LastIndexModification,
                                 };
 
                                 updateCommands.Add((cmd, updateReason));
                             }
                         }
 
-                        if (mergedState.MergedState.Length == 0)
-                            continue;
-
-                        var cleanUp = mergedState.MergedState.Min(s => CleanUpDatabaseValues(s) ?? -1);
+                        var cleanUp = mergedState.States.Min(s => CleanUpDatabaseValues(s) ?? -1);
                         if (cleanUp > 0)
                         {
                             if (cleanUpState == null)
@@ -407,6 +359,41 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
+        private bool SkipAnalyzingDatabaseGroup(DatabaseObservationState state, Leader currentLeader, DateTime now)
+        {
+            var databaseTopology = state.DatabaseTopology;
+            var databaseName = state.Name;
+
+            if (databaseTopology == null)
+            {
+                LogMessage($"Can't analyze the stats of database the {databaseName}, because the database topology is null.", database: databaseName);
+                return true;
+            }
+
+            if (databaseTopology.Count == 0)
+            {
+                // database being deleted
+                LogMessage($"Skip analyze the stats of database the {databaseName}, because it being deleted", database: databaseName);
+                return true;
+            }
+
+            var topologyStamp = databaseTopology.Stamp;
+            var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTimeMs;
+            var letStatsBecomeStable = _term == topologyStamp.Term &&
+                                       ((now - (databaseTopology.NodesModifiedAt ?? DateTime.MinValue)).TotalMilliseconds < _stabilizationTimeMs);
+
+            if (graceIfLeaderChanged || letStatsBecomeStable)
+            {
+                LogMessage($"We give more time for the '{databaseName}' stats to become stable, so we skip analyzing it for now.", database: databaseName);
+                return true;
+            }
+
+            if (state.ReadDatabaseDisabled())
+                return true;
+
+            return false;
+        }
+
         private static string GetCommandId(Dictionary<string, long> dic)
         {
             if (dic == null)
@@ -428,7 +415,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var lowestDatabaseUptime = TimeSpan.MaxValue;
             var newestIndexQueryTime = TimeSpan.MaxValue;
 
-            foreach (var state in databaseState.MergedState)
+            foreach (var state in databaseState.States)
             {
                 if (state == null)
                     return;
@@ -537,7 +524,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 
                 mergedState ??= MergedDatabaseObservationState.Empty;
 
-                foreach (var state in mergedState.MergedState)
+                foreach (var state in mergedState.States)
                 {
                     var cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, state, out maxEtag);
                     switch (cleanupState)
@@ -781,6 +768,13 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var someNodesRequireMoreTime = false;
             var rotatePreferredNode = false;
+
+            // handle legacy commands
+            if (databaseTopology.NodesModifiedAt == null ||
+                databaseTopology.NodesModifiedAt == DateTime.MinValue)
+            {
+                return "Adding last modification to legacy database";
+            }
 
             foreach (var member in databaseTopology.Members)
             {
@@ -1727,25 +1721,47 @@ namespace Raven.Server.ServerWide.Maintenance
         internal class MergedDatabaseObservationState
         {
             public static MergedDatabaseObservationState Empty = new MergedDatabaseObservationState();
+            private readonly bool _isShardedState;
 
             public MergedDatabaseObservationState(RawDatabaseRecord record)
             {
                 RawDatabase = record;
-                if (RawDatabase.IsSharded() == false)
-                {
-                    MergedState = new DatabaseObservationState[1];
-                    return;
-                }
+                _isShardedState = RawDatabase.IsSharded();
 
-                MergedState = new DatabaseObservationState[RawDatabase.Shards.Length];
+                var length = _isShardedState ? RawDatabase.Shards.Length : 1;
+                States = new DatabaseObservationState[length];
+            }
+
+            public MergedDatabaseObservationState(RawDatabaseRecord record, DatabaseObservationState state) : this(record)
+            {
+                AddState(state);
             }
 
             private MergedDatabaseObservationState()
             {
-                MergedState = new DatabaseObservationState[1];
+                States = new DatabaseObservationState[1];
             }
 
-            public readonly DatabaseObservationState[] MergedState;
+            public void AddState(DatabaseObservationState state)
+            {
+                var shard = ShardHelper.TryGetShardIndex(state.Name);
+                if (shard == -1)
+                {
+                    // handle not sharded database
+                    if (_isShardedState)
+                        throw new InvalidOperationException($"The database {state.Name} isn't sharded, but was initialized as one.");
+
+                    States[0] = state;
+                    return;
+                }
+
+                if (_isShardedState == false)
+                    throw new InvalidOperationException($"The database {state.Name} is sharded (shard: {shard}), but was initialized as a regular one.");
+
+                States[shard] = state;
+            }
+
+            public readonly DatabaseObservationState[] States;
             public readonly RawDatabaseRecord RawDatabase;
         }
 
@@ -1758,6 +1774,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public ClusterTopology ClusterTopology;
 
             public RawDatabaseRecord RawDatabase;
+            public long LastIndexModification;
 
             public long ReadTruncatedClusterTransactionCommandsCount()
             {
@@ -1821,10 +1838,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             public static implicit operator MergedDatabaseObservationState(DatabaseObservationState state)
             {
-                return new MergedDatabaseObservationState(state.RawDatabase)
-                {
-                    MergedState = { [0] = state }
-                };
+                return new MergedDatabaseObservationState(state.RawDatabase, state);
             }
         }
     }

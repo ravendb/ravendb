@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -101,25 +102,9 @@ namespace Raven.Server.Utils
             return shardIndex;
         }
 
-        public static string ToDatabaseName(string shardName)
-        {
-            int shardIndex = shardName.IndexOf('$');
-            if (shardIndex == -1)
-                return shardName;
+        public static string ToDatabaseName(string shardName) => ClientShardHelper.ToDatabaseName(shardName);
 
-            return shardName.Substring(0, shardIndex);
-        }
-
-        public static string ToShardName(string database, int shard)
-        {
-            var name = ToDatabaseName(database);
-
-            int shardIndex = name.IndexOf('$');
-            if (shardIndex == -1)
-                return $"{name}${shard}";
-
-            return name;
-        }
+        public static string ToShardName(string database, int shard) => ClientShardHelper.ToShardName(database, shard);
 
         public static bool IsShardedName(string name)
         {
