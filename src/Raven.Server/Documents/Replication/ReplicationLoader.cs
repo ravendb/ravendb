@@ -1844,6 +1844,9 @@ namespace Raven.Server.Documents.Replication
                 case ITombstoneAware.TombstoneType.TimeSeries:
                     result.Add(Constants.TimeSeries.All, minEtag);
                     break;
+                case ITombstoneAware.TombstoneType.Counters:
+                    result.Add(Constants.Counters.All, minEtag);
+                    break;
                 default:
                     throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
             }
