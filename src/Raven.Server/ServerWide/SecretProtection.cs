@@ -727,7 +727,8 @@ namespace Raven.Server.ServerWide
             var currentLicenseType = serverStore.LicenseManager.LicenseStatus.Type;
 
             if (newLicenseStatus.Type != LicenseType.Developer) return;
-
+            if (serverStore.Server.Certificate.Certificate == null) return;
+            
             var certificateNotAfter = serverStore.Server.Certificate.Certificate.NotAfter;
             var certificateNotBefore = serverStore.Server.Certificate.Certificate.NotBefore;
             var certificateMaxDuration = certificateNotBefore.AddMonths(MaxDeveloperCertificateValidityDurationInMonths);
