@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Sparrow.Binary;
 using Sparrow.Platform;
 using Voron.Data;
 using Voron.Data.BTrees;
+using Voron.Data.Compression;
 using Voron.Data.Fixed;
 using Voron.Global;
 using Voron.Impl;
@@ -191,11 +193,23 @@ namespace Voron.Debugging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
+                string pathToChromeX86 = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
+                string pathToChromeX64 = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+
+                string pathToChrome;
+
+                if (File.Exists(pathToChromeX64))
+                    pathToChrome = pathToChromeX64;
+                else if (File.Exists(pathToChromeX86))
+                    pathToChrome = pathToChromeX86;
+                else
+                    throw new InvalidOperationException("Make sure path to chrome.exe is valid");
+
                 var process = new Process
                 {
                     StartInfo =
                     {
-                        FileName = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                        FileName = pathToChrome,
                         Arguments = output,
                         UseShellExecute = false,
                         CreateNoWindow = true,
@@ -255,14 +269,14 @@ namespace Voron.Debugging
         }
 
         [Conditional("DEBUG")]
-        public static void RenderAndShow(Tree tree)
+        public static void RenderAndShow(Tree tree, bool decompress = false)
         {
             var headerData = string.Format("<p>{0}</p>", tree.State);
-            RenderAndShowTree(tree, tree.State.RootPageNumber, headerData);
+            RenderAndShowTree(tree, tree.State.RootPageNumber, headerData, decompress);
         }
 
         [Conditional("DEBUG")]
-        public static void RenderAndShowTree(Tree tree, long startPageNumber, string headerData = null)
+        public static void RenderAndShowTree(Tree tree, long startPageNumber, string headerData = null, bool decompress = false)
         {
             RenderHtmlTreeView(writer =>
             {
@@ -270,7 +284,7 @@ namespace Voron.Debugging
                     writer.WriteLine(headerData);
                 writer.WriteLine("<div class='css-treeview'><ul>");
 
-                RenderPage(tree, tree.GetReadOnlyTreePage(startPageNumber), writer, "Root", true);
+                RenderPage(tree, tree.GetReadOnlyTreePage(startPageNumber), writer, "Root", true, decompress);
 
                 writer.WriteLine("</ul></div>");
             });
@@ -286,7 +300,7 @@ namespace Voron.Debugging
                 writer.WriteLine(headerData);
                 writer.WriteLine("<div class='css-treeview'><ul>");
 
-                RenderPage(tree, tree.GetReadOnlyTreePage(tree.State.RootPageNumber), writer, "Root", true);
+                RenderPage(tree, tree.GetReadOnlyTreePage(tree.State.RootPageNumber), writer, "Root", true, false);
 
                 writer.WriteLine("</ul></div>");
             });
@@ -316,38 +330,63 @@ namespace Voron.Debugging
             sw.Flush();
         }
 
-        private static unsafe void RenderPage(Tree tree, TreePage page, TextWriter sw, string text, bool open)
+        private static unsafe void RenderPage(Tree tree, TreePage page, TextWriter sw, string text, bool open, bool decompress)
         {
             sw.WriteLine(
                "<ul><li><input type='checkbox' id='page-{0}' {3} /><label for='page-{0}'>{4}: Page {0:#,#;;0} - {1} - {2:#,#;;0} entries {5}</label><ul>",
                page.PageNumber, page.IsLeaf ? "Leaf" : "Branch", page.NumberOfEntries, open ? "checked" : "", text, 
                page.IsCompressed? $"(Compressed ({page.CompressionHeader->NumberOfCompressedEntries} entries [uncompressed/compressed: {page.CompressionHeader->UncompressedSize}/{page.CompressionHeader->CompressedSize}])" : string.Empty);
 
-            for (int i = 0; i < page.NumberOfEntries; i++)
+            DecompressedLeafPage decompressedPage = null;
+
+            if (page.IsCompressed && decompress)
             {
-                var nodeHeader = page.GetNode(i);
-                
-                string key;
-                Slice keySlice;
-                using (TreeNodeHeader.ToSlicePtr(tree.Llt.Allocator, nodeHeader, out keySlice))
+                decompressedPage = tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true);
+
+                page = decompressedPage;
+            }
+
+            try
+            {
+                for (int i = 0; i < page.NumberOfEntries; i++)
                 {
-                    key = keySlice.ToString();
-                }
+                    var nodeHeader = page.GetNode(i);
 
-                if (page.IsLeaf)
-                {               
-                    sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, tree.GetDataSize(nodeHeader));
-                }
-                else
-                {
-                    var pageNum = nodeHeader->PageNumber;
+                    string key;
+                    Slice keySlice;
+                    using (TreeNodeHeader.ToSlicePtr(tree.Llt.Allocator, nodeHeader, out keySlice))
+                    {
+                        // uncomment to convert the slice to long
+                        //if (keySlice.Size == sizeof(long))
+                        //{
+                        //    var idPtr = (long*)keySlice.Content.Ptr;
+                        //    var id = Bits.SwapBytes(*idPtr);
+                        //    key = id.ToString();
+                        //}
+                        //else
+                            key = keySlice.ToString();
+                    }
 
-                    if (i == 0)
-                        key = "[smallest]";
+                    if (page.IsLeaf)
+                    {
+                        sw.Write("<li>{0} {1} - size: {2:#,#}</li>", key, nodeHeader->Flags, tree.GetDataSize(nodeHeader));
+                    }
+                    else
+                    {
+                        var pageNum = nodeHeader->PageNumber;
 
-                    RenderPage(tree, tree.GetReadOnlyTreePage(pageNum), sw, key, false);
+                        if (i == 0)
+                            key = "[smallest]";
+
+                        RenderPage(tree, tree.GetReadOnlyTreePage(pageNum), sw, key, false, decompress);
+                    }
                 }
             }
+            finally
+            {
+                decompressedPage?.Dispose();
+            }
+            
             sw.WriteLine("</ul></li></ul>");
         }
     }
