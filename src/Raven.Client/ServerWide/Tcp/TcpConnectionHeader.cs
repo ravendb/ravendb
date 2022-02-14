@@ -65,6 +65,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int NoneBaseLine = -1;
         public static readonly int DropBaseLine = -2;
         public static readonly int ClusterBaseLine = 10;
+        public static readonly int ClusterWithMultiTree = 52_000;
         public static readonly int HeartbeatsBaseLine = 20;
         public static readonly int Heartbeats41200 = 41_200;
         public static readonly int Heartbeats42000 = 42_000;
@@ -80,7 +81,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int SubscriptionTimeSeriesIncludes = 51_000;
         public static readonly int TestConnectionBaseLine = 50;
 
-        public static readonly int ClusterTcpVersion = ClusterBaseLine;
+        public static readonly int ClusterTcpVersion = ClusterWithMultiTree;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
         public static readonly int ReplicationTcpVersion = TcpConnectionsWithCompression;
         public static readonly int SubscriptionTcpVersion = TcpConnectionsWithCompression; 
@@ -229,6 +230,7 @@ namespace Raven.Client.ServerWide.Tcp
             public class ClusterFeatures
             {
                 public bool BaseLine = true;
+                public bool MultiTree;
             }
 
             public class HeartbeatsFeatures
@@ -291,7 +293,8 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new List<int>
                 {
-                    ClusterBaseLine
+                    ClusterWithMultiTree,
+                    ClusterBaseLine,
                 },
                 [OperationTypes.Heartbeats] = new List<int>
                 {
@@ -438,6 +441,13 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Cluster] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ClusterWithMultiTree] = new SupportedFeatures(ClusterWithMultiTree)
+                    {
+                        Cluster = new SupportedFeatures.ClusterFeatures
+                        {
+                            MultiTree = true
+                        }
+                    },
                     [ClusterBaseLine] = new SupportedFeatures(ClusterBaseLine)
                     {
                         Cluster = new SupportedFeatures.ClusterFeatures()

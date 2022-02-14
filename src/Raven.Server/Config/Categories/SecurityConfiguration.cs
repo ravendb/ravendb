@@ -31,8 +31,8 @@ namespace Raven.Server.Config.Categories
         [Description("How far back we should retain audit log entries")]
         [DefaultValue(365 * 24)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         [ConfigurationEntry("Security.AuditLog.RetentionTimeInHours", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.AuditLog.RetentionTimeInHrs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AuditLogRetentionTime { get; set; }
 
         [Description("The maximum size of the audit log after which the old files will be deleted")]

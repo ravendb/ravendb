@@ -47,12 +47,12 @@ namespace Raven.Server.Documents.TimeSeries
             Memory.Set(SegmentBuffer.Ptr, 0, TimeSeriesStorage.MaxSegmentSize);
         }
 
-        public TimeSeriesSliceHolder WithEtag(long etag)
+        public TimeSeriesSliceHolder WithChangeVectorHash(long hash)
         {
             if (TimeSeriesKeySlice.Content.HasValue == false)
                 _externalScopesToDispose.Add(Slice.External(_context.Allocator, TimeSeriesKeyBuffer.Ptr, TimeSeriesKeyBuffer.Length, out TimeSeriesKeySlice));
 
-            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(etag);
+            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesKeyBuffer.Length - sizeof(long)) = Bits.SwapBytes(hash);
             return this;
         }
 

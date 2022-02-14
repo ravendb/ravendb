@@ -11,6 +11,7 @@ namespace Voron.Data.BTrees
 {
     public unsafe class TreePageSplitter
     {
+        private const DecompressionUsage WriteDecompressionUsage = DecompressionUsage.Write;
         private readonly TreeCursor _cursor;
         private readonly bool _splittingOnDecompressed;
         private readonly int _len;
@@ -73,7 +74,7 @@ namespace Voron.Data.BTrees
 
                 if (_page.IsCompressed)
                 {
-                    _pageDecompressed = _tree.DecompressPage(_page);
+                    _pageDecompressed = _tree.DecompressPage(_page, WriteDecompressionUsage, skipCache: false);
                     _pageDecompressed.Search(_tx, _newKey);
 
                     if (_pageDecompressed.LastMatch == 0)
@@ -143,7 +144,7 @@ namespace Voron.Data.BTrees
             if (_pageDecompressed == null)
                 return;
             _pageDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: wasModified, _tree);
-            _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, DecompressionUsage.Read);
+            _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, WriteDecompressionUsage);
             _page = _pageDecompressed.Original;
         }
 

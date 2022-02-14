@@ -16,6 +16,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
+using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -27,6 +28,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
@@ -221,7 +223,12 @@ namespace Tests.Infrastructure
                     try
                     {
                         var stream = tcpClient.GetStream();
-                        rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
+                        var remoteConnection = new RemoteConnection(rachis.Tag, rachis.CurrentTerm, stream, features: new TcpConnectionHeaderMessage.SupportedFeatures.ClusterFeatures
+                        {
+                            MultiTree = true
+                        }, () => tcpClient.Client.Disconnect(false));
+
+                        rachis.AcceptNewConnection(remoteConnection, tcpClient.Client.RemoteEndPoint, hello =>
                         {
                             if (rachis.Url == null)
                                 return;
@@ -435,7 +442,8 @@ namespace Tests.Infrastructure
                     var conn = new RachisConnection
                     {
                         Stream = stream,
-                        SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine),
+                        SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(
+                            TcpConnectionHeaderMessage.OperationTypes.Cluster, TcpConnectionHeaderMessage.ClusterWithMultiTree),
                         Disconnect = () =>
                         {
                             using (tcpClient)

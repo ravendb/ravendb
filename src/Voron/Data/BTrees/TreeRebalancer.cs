@@ -385,7 +385,7 @@ namespace Voron.Data.BTrees
                 else
                 {
                     decompressedLeafPage?.Dispose();
-                    decompressedLeafPage = _tree.DecompressPage(page, skipCache: true);
+                    decompressedLeafPage = _tree.DecompressPage(page, DecompressionUsage.Read, skipCache: true);
 
                     if (decompressedLeafPage.NumberOfEntries > 0)
                     {
