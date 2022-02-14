@@ -1,14 +1,5 @@
-using Sparrow;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using Sparrow.Binary;
 using Sparrow.Server;
-using Voron.Data.BTrees;
-using Voron.Data.RawData;
-using Voron.Impl;
 
 namespace Voron.Data.Tables
 {
@@ -22,7 +13,7 @@ namespace Voron.Data.Tables
 
     public abstract class AbstractSchemaIndexDefinition
     {
-        public abstract TableIndexType Type { get;}
+        public abstract TableIndexType Type { get; }
 
         public bool IsGlobal;
 
@@ -38,6 +29,11 @@ namespace Voron.Data.Tables
 
         public abstract void Validate(AbstractSchemaIndexDefinition actual);
 
-    }
+        public virtual void Validate()
+        {
+            if (Name.HasValue == false || SliceComparer.Equals(Slices.Empty, Name))
+                throw new ArgumentException("Index name must be non-empty", nameof(Name));
+        }
 
+    }
 }

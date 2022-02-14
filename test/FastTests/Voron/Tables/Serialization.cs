@@ -1,9 +1,12 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Sparrow.Server;
+using Sparrow.Threading;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using static FastTests.Voron.Tables.CustomIndex;
 
 namespace FastTests.Voron.Tables
 {
@@ -13,8 +16,8 @@ namespace FastTests.Voron.Tables
         {
         }
 
-        private void SchemaIndexDefEqual(TableSchema.SchemaIndexDef expectedIndex,
-            TableSchema.SchemaIndexDef actualIndex)
+        private static void SchemaIndexDefEqual(AbstractSchemaIndexDefinition expectedIndex,
+            AbstractSchemaIndexDefinition actualIndex)
         {
             if (expectedIndex == null)
             {
@@ -23,14 +26,44 @@ namespace FastTests.Voron.Tables
             else
             {
                 Assert.Equal(expectedIndex.IsGlobal, actualIndex.IsGlobal);
-                Assert.Equal(expectedIndex.Count, actualIndex.Count);
                 Assert.True(SliceComparer.Equals(expectedIndex.Name, actualIndex.Name));
-                Assert.Equal(expectedIndex.StartIndex, actualIndex.StartIndex);
                 Assert.Equal(expectedIndex.Type, actualIndex.Type);
+
+                switch (expectedIndex.Type)
+                {
+                    case TableIndexType.Default:
+                    {
+                        Assert.IsType<TableSchema.SchemaIndexDef>(expectedIndex);
+                        Assert.IsType<TableSchema.SchemaIndexDef>(actualIndex);
+
+                        var expected = (TableSchema.SchemaIndexDef)expectedIndex;
+                        var actual = (TableSchema.SchemaIndexDef)actualIndex;
+
+                        Assert.Equal(expected.StartIndex, actual.StartIndex);
+                        Assert.Equal(expected.Count, actual.Count);
+
+                        break;
+                    }
+                    case TableIndexType.Custom:
+                    {
+                        Assert.IsType<TableSchema.CustomSchemaIndexDef>(expectedIndex);
+                        Assert.IsType<TableSchema.CustomSchemaIndexDef>(actualIndex);
+
+                        var expected = (TableSchema.CustomSchemaIndexDef)expectedIndex;
+                        var actual = (TableSchema.CustomSchemaIndexDef)actualIndex;
+
+                        Assert.Equal(expected.Transform.Method.Name, actual.Transform.Method.Name);
+                        Assert.Equal(expected.Transform.Method.DeclaringType, actual.Transform.Method.DeclaringType);
+
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
         }
 
-        private void FixedSchemaIndexDefEqual(TableSchema.FixedSizeSchemaIndexDef expectedIndex,
+        private static void FixedSchemaIndexDefEqual(TableSchema.FixedSizeSchemaIndexDef expectedIndex,
             TableSchema.FixedSizeSchemaIndexDef actualIndex)
         {
             if (expectedIndex == null)
@@ -208,7 +241,81 @@ namespace FastTests.Voron.Tables
                 }
             }
         }
-        
+
+        [Fact]
+        public void CanSerializeCustomIndex()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var expectedIndex = new TableSchema.CustomSchemaIndexDef()
+                {
+                    Transform = TransformAction
+                };
+                Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
+
+                byte[] serialized = expectedIndex.Serialize();
+
+                fixed (byte* serializedPtr = serialized)
+                {
+                    var actualIndex = TableSchema.CustomSchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
+                    tx.Allocator.Allocate(100, out var b);
+                    var tvr = new TableValueReader(b.Ptr, 32);
+                    actualIndex.Transform(new ByteStringContext(new SharedMultipleUseFlag()), ref tvr, out var s);
+                    Assert.Equal(serialized, actualIndex.Serialize());
+                    SchemaIndexDefEqual(expectedIndex, actualIndex);
+                    expectedIndex.Validate(actualIndex);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanSerializeSchemaWithCustomIndex()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var def1 = new TableSchema.SchemaIndexDef
+                {
+                    StartIndex = 5,
+                    Count = 2,
+                };
+                Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def1.Name);
+
+                var def2 = new TableSchema.FixedSizeSchemaIndexDef
+                {
+                    StartIndex = 2,
+                    IsGlobal = true
+                };
+                Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def2.Name);
+
+                var def3 = new TableSchema.CustomSchemaIndexDef
+                {
+                    Transform = TransformAction
+                };
+                Slice.From(tx.Allocator, "Test Name 3", ByteStringType.Immutable, out def3.Name);
+
+                var tableSchema = new TableSchema()
+                    .DefineIndex(def1)
+                    .DefineFixedSizeIndex(def2)
+                    .DefineIndex(def3)
+                    .DefineKey(new TableSchema.SchemaIndexDef
+                    {
+                        StartIndex = 3,
+                        Count = 1
+                    });
+
+                byte[] serialized = tableSchema.SerializeSchema();
+
+                fixed (byte* ptr = serialized)
+                {
+                    var actualTableSchema = TableSchema.ReadFrom(tx.Allocator, ptr, serialized.Length);
+                    // This checks that reserializing is the same
+                    Assert.Equal(serialized, actualTableSchema.SerializeSchema());
+                    // This checks that what was deserialized is correct
+                    SchemaDefEqual(tableSchema, actualTableSchema);
+                    tableSchema.Validate(actualTableSchema);
+                }
+            }
+        }
     }
 }
 

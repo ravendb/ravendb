@@ -73,7 +73,6 @@ namespace Voron.Data.Tables
 
         public class SchemaIndexDef : AbstractSchemaIndexDefinition
         {
-
             public override TableIndexType Type => TableIndexType.Default;
 
             /// <summary>
@@ -88,8 +87,7 @@ namespace Voron.Data.Tables
             public override ByteStringContext.Scope GetSlice(ByteStringContext context, ref TableValueReader value,
                 out Slice slice)
             {
-                int totalSize;
-                var ptr = value.Read(StartIndex, out totalSize);
+                var ptr = value.Read(StartIndex, out int totalSize);
 #if DEBUG
                 if (totalSize < 0)
                     throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
@@ -129,8 +127,7 @@ namespace Voron.Data.Tables
                 if (totalSize < 0)
                     throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
 #endif
-                ByteString ret;
-                var scope = context.Allocate(totalSize, out ret);
+                var scope = context.Allocate(totalSize, out ByteString ret);
                 try
                 {
                     var ptr = ret.Ptr;
@@ -197,7 +194,6 @@ namespace Voron.Data.Tables
                         $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
                         nameof(actual));
 
-
                 if (Type != actual.Type || actual is not SchemaIndexDef schemaIndexDef)
                     throw new ArgumentException(
                         $"Expected index {Name} to have Type='{Type}', got Type='{actual.Type}' instead",
@@ -212,6 +208,14 @@ namespace Voron.Data.Tables
                     throw new ArgumentException(
                         $"Expected index {Name} to have Count='{Count}', got Count='{schemaIndexDef.Count}' instead",
                         nameof(actual));
+            }
+
+            public override void Validate()
+            {
+                base.Validate();
+
+                if (StartIndex < 0)
+                    throw new ArgumentOutOfRangeException(nameof(StartIndex), "StartIndex cannot be negative");
             }
 
             public static SchemaIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
@@ -319,10 +323,8 @@ namespace Voron.Data.Tables
         {
             public override TableIndexType Type => TableIndexType.Custom;
 
-            /// <summary>
-            /// todo
-            /// </summary>
-            public delegate ByteStringContext.Scope TransformAction(ByteStringContext context, ref TableValueReader reader, out Slice slice);
+            public delegate ByteStringContext.Scope TransformAction(ByteStringContext context, ref TableValueReader value, out Slice slice);
+
             public TransformAction Transform;
 
             public override ByteStringContext.Scope GetSlice(ByteStringContext context, ref TableValueReader value,
@@ -360,7 +362,6 @@ namespace Voron.Data.Tables
                     serializer.Add(ptr, methodNameBytes.Length);
                 }
 
-
                 Debug.Assert(Transform.Method.DeclaringType?.AssemblyQualifiedName != null, 
                     $"Invalid {nameof(TransformAction)} '{Transform.Method.Name}'");
 
@@ -393,25 +394,21 @@ namespace Voron.Data.Tables
 
                 // read TransformAction method name
                 currentPtr = input.Read(3, out currentSize);
-                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out var methodNameSlice);
+                var methodName = Encodings.Utf8.GetString(currentPtr, currentSize);
 
                 // read TransformAction Declaring Type name
                 currentPtr = input.Read(4, out currentSize);
-                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out var declaringTypeSlice);
+                var declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
 
-                var type = System.Type.GetType(declaringTypeSlice.ToString());
-                Debug.Assert(type != null, "Invalid data, TransformAction Declaring Type is null");
+                var type = System.Type.GetType(declaringType);
+                Debug.Assert(type != null, $"Invalid data, failed to get Transform.Method.DeclaringType from serialized value : {declaringType}");
 
-                var method = type.GetMethod(methodNameSlice.ToString(), BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static );
-                
-                Debug.Assert(method != null, nameof(method) + "Invalid data, TransformAction method name is null");
+                var method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                Debug.Assert(method != null, $"Invalid data, failed to get method-info from type : {type}, method name : {methodName}");
+                Debug.Assert(method.IsStatic, $"Invalid data, Transform must be a static method. method name : {methodName}");
 
-                if (method.IsStatic)
-                {
-                    var @delegate = Delegate.CreateDelegate(typeof(TransformAction), method);
-                    indexDef.Transform = (TransformAction)@delegate;
-                }
-
+                var @delegate = Delegate.CreateDelegate(typeof(TransformAction), method);
+                indexDef.Transform = (TransformAction)@delegate;
 
                 return indexDef;
             }
@@ -446,6 +443,20 @@ namespace Voron.Data.Tables
                         $"Expected index {Name} to have Transform.Method.DeclaringType='{Transform.Method.DeclaringType}', got Transform.Method.DeclaringType='{actualCustomSchemaIndexDef.Transform.Method.DeclaringType}' instead",
                         nameof(actual));
             }
+
+            public override void Validate()
+            {
+                base.Validate();
+
+                if (Transform == null)
+                    throw new ArgumentOutOfRangeException(nameof(Transform), "Transform delegate cannot be null");
+
+                if (Transform.Method.DeclaringType == null)
+                    throw new ArgumentOutOfRangeException(nameof(Transform), "Transform.Method.DeclaringType cannot be null");
+
+                if (Transform.Method.IsStatic == false)
+                    throw new ArgumentOutOfRangeException(nameof(Transform), "Transform must be a static method");
+            }
         }
 
         public TableSchema CompressValues(FixedSizeSchemaIndexDef etagSource, bool compress)
@@ -463,8 +474,7 @@ namespace Voron.Data.Tables
 
         public TableSchema DefineIndex(AbstractSchemaIndexDefinition index)
         {
-            if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
-                throw new ArgumentException("Index name must be non-empty", nameof(index));
+            index.Validate();
 
             _indexes[index.Name] = index;
 
@@ -529,8 +539,7 @@ namespace Voron.Data.Tables
                 _indexes.All(x => x.Value.IsGlobal) &&
                 _fixedSizeIndexes.All(x => x.Value.IsGlobal))
                 throw new InvalidOperationException($"Cannot create table {name} with a global primary key and without at least a single local index, " +
-                                                    $"otherwise we can't compact it, this is a bug in the table schema.");
-
+                                                    "otherwise we can't compact it, this is a bug in the table schema.");
 
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
             if (tableTree.State.NumberOfEntries > 0)
@@ -548,7 +557,6 @@ namespace Voron.Data.Tables
                 {
                     tableTree.Add(ActiveSectionSlice, pageNumber);
                 }
-
 
                 byte* ptr;
                 using (tableTree.DirectAdd(StatsSlice, sizeof(TableSchemaStats), out ptr))
@@ -568,13 +576,10 @@ namespace Voron.Data.Tables
                 {
                     if (_primaryKey.IsGlobal == false)
                     {
-
                         using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                        using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out ptr))
                         {
-                            using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader), out ptr))
-                            {
-                                indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                            }
+                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
                         }
                     }
                     else
@@ -588,11 +593,9 @@ namespace Voron.Data.Tables
                     if (indexDef.IsGlobal == false)
                     {
                         using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                        using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out ptr))
                         {
-                            using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader), out ptr))
-                            {
-                                indexTree.State.CopyTo((TreeRootHeader*)ptr);
-                            }
+                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
                         }
                     }
                     else
@@ -717,9 +720,9 @@ namespace Voron.Data.Tables
             while (indexCount > 0)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var absSchemaDef = ReadAbstractSchemaIndexDefinition(context, currentPtr, currentSize);
+                var indexDef = ReadAbstractSchemaIndexDefinition(context, currentPtr, currentSize);
 
-                schema.DefineIndex(absSchemaDef);
+                schema.DefineIndex(indexDef);
 
                 indexCount--;
             }
@@ -753,6 +756,7 @@ namespace Voron.Data.Tables
         private static AbstractSchemaIndexDefinition ReadAbstractSchemaIndexDefinition(ByteStringContext context, byte* currentPtr, int currentSize)
         {
             AbstractSchemaIndexDefinition absSchemaDef;
+
             var reader = new TableValueReader(currentPtr, currentSize);
             byte* typePtr = reader.Read(0, out _);
             var type = (TableIndexType)(*(ulong*)typePtr);
