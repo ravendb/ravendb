@@ -386,17 +386,17 @@ namespace Raven.Server.Documents.ShardedHandlers
                     sb.Append("&metadataOnly=true");
                 }
 
+                var idsForShard = new List<string>();
                 var matches = new List<int>();
                 foreach (var idIdx in shard.Value)
                 {
-                    sb.Append("&id=").Append(Uri.EscapeUriString(ids[idIdx]));
+                    idsForShard.Add(ids[idIdx]);
                     matches.Add(idIdx);
                 }
 
-                var cmd = new FetchDocumentsFromShardsCommand(this)
+                var cmd = new FetchDocumentsFromShardsCommand(this, idsForShard, sb)
                 {
                     PositionMatches = matches, 
-                    Url = sb.ToString()
                 };
 
                 cmds.Add(cmd);
