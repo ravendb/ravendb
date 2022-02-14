@@ -63,8 +63,7 @@ namespace Voron.Benchmark.Table
                     StartIndex = 0,
                     Count = 0,
                     IsGlobal = false,
-                    Name = SchemaPKNameSlice,
-                    Type = TableIndexType.BTree
+                    Name = SchemaPKNameSlice
                 });
         }
 
