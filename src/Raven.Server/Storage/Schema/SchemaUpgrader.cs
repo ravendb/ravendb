@@ -12,7 +12,7 @@ namespace Raven.Server.Storage.Schema
     {
         internal class CurrentVersion
         {
-            public const int ServerVersion = 53_000;
+            public const int ServerVersion = 53_001;
 
             public const int ConfigurationVersion = 50_000;
 

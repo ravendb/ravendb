@@ -16,7 +16,10 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using KeywordTokenizer = Corax.Pipeline.KeywordTokenizer;
@@ -133,6 +136,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 return (int)size;
 
             return bufferSize;
+        }
+
+        protected QueryFilter GetQueryFilter(Index index, IndexQueryServerSide query, DocumentsOperationContext documentsContext, Reference<int> skippedResults, Reference<int> scannedDocuments, IQueryResultRetriever retriever, QueryTimingsScope queryTimings)
+        {
+            if (query.Metadata.FilterScript is null)
+                return null;
+
+            return new QueryFilter(index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings);
         }
     }
 }
