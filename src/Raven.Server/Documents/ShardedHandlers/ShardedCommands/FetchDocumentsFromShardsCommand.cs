@@ -25,13 +25,13 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
                     ["Ids"] = new DynamicJsonArray(ids)
                 };
 
-                Content = Context.ReadObject(body, "post-body");
+                Content = Context.ReadObject(body, nameof(FetchDocumentsFromShardsCommand));
                 return;
             }
 
             foreach (var id in ids)
             {
-                query.Append("&id=").Append(Uri.EscapeUriString(id));
+                query.Append("&id=").Append(Uri.EscapeDataString(id));
             }
 
             Url = query.ToString();

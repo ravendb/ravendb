@@ -8,6 +8,7 @@ using System;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -16,6 +17,8 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/changes", "GET")]
         public async Task GetChanges()
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Marcin, DevelopmentHelper.Severity.Normal, "handle this");
+
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 //TODO:
