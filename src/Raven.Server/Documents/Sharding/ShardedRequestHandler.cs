@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Sharding
 
         public HttpMethod Method;
         public string RelativeShardUrl;
+        public string BaseShardUrl;
 
         public override void Init(RequestHandlerContext context)
         {
@@ -42,7 +43,8 @@ namespace Raven.Server.Documents.Sharding
             var url = request.Path.Value;
             var relativeIndex = url.IndexOf('/', 11); //start after "/databases/" and skip the database name
 
-            RelativeShardUrl = url.Substring(relativeIndex) + request.QueryString;
+            BaseShardUrl = url.Substring(relativeIndex);
+            RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
         }
 

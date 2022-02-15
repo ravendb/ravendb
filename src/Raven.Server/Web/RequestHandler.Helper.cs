@@ -29,7 +29,6 @@ namespace Raven.Server.Web
     public abstract partial class RequestHandler
     {
         public delegate Task<IOperationResult> ExportDelegate(DatabaseSmugglerOptionsServerSide options,
-            BlittableJsonReaderObject blittableJson,
             long startDocumentEtag,
             long startRaftIndex,
             Action<IOperationProgress> onProgress,
@@ -42,7 +41,6 @@ namespace Raven.Server.Web
             var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
             var startRaftIndex = GetLongQueryString("startRaftIndex", false) ?? 0;
             var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
-            BlittableJsonReaderObject blittableJson = null;
             DatabaseSmugglerOptionsServerSide options;
             using (context.GetMemoryBuffer(out var buffer))
             {
@@ -51,7 +49,7 @@ namespace Raven.Server.Web
                 buffer.Valid = firstRead;
                 if (firstRead != 0)
                 {
-                    blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                    var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                     options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                 }
                 else
@@ -89,7 +87,7 @@ namespace Raven.Server.Web
                 documentDatabase,
                 "Export database: " + databaseName,
                 Documents.Operations.Operations.OperationType.DatabaseExport,
-                onProgress => onExport(options, blittableJson, startDocumentEtag, startRaftIndex, onProgress, context, token), operationId, token: token);
+                onProgress => onExport(options, startDocumentEtag, startRaftIndex, onProgress, context, token), operationId, token: token);
 
         }
 

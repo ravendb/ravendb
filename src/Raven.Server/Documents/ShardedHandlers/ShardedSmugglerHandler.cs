@@ -31,9 +31,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 try
                 {
-                    await Export(context, ShardedContext.DatabaseName, (options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, _, token) =>
-                            ExportShardedDatabaseInternalAsync(options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, context, token),
-                        ServerStore.Operations, operationId);
+                    await Export(context, ShardedContext.DatabaseName, ExportShardedDatabaseInternalAsync, ServerStore.Operations, operationId);
                 }
                 catch (Exception e)
                 {
@@ -50,33 +48,33 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         public async Task<IOperationResult> ExportShardedDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
-            BlittableJsonReaderObject blittableJson,
             long startDocumentEtag,
             long startRaftIndex,
             Action<IOperationProgress> onProgress,
             JsonOperationContext jsonOperationContext,
             OperationCancelToken token)
         {
-            var operationIdList = new List<long>();
-            blittableJson = CreateNewOptionBlittableJsonReaderObject(blittableJson, jsonOperationContext, nameof(options.IsShard), true);
+            // we use here a negative number to avoid possible collision between the server and database ids
+            var operationId = -ServerStore.Operations.GetNextOperationId();
+            options.IsShard = true;
+
             await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
             await using(var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
+
                 for (int i = 0; i < ShardedContext.ShardCount; i++)
                 {
-                    var cmd = new ShardedExportCommand(this, ServerStore.Operations, async stream =>
+                    var cmd = new ShardedExportCommand(this, operationId, options, async stream =>
                     {
                         await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
                         {
                             writer.WriteStream(gzipStream);
                         }
+                    });
 
-                    }, blittableJson);
-
-                    operationIdList.Add(cmd.OperationID);
                     await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 }
                 writer.WriteEndObject();
@@ -84,25 +82,13 @@ namespace Raven.Server.Documents.ShardedHandlers
             var finalResult = new SmugglerResult();
             for (int i = 0; i < ShardedContext.ShardCount; i++)
             {
-                var cmd = new GetOperationStateOperation.GetOperationStateCommand(operationIdList[i]);
+                var cmd = new GetOperationStateOperation.GetOperationStateCommand(operationId);
                 await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
                 var smugglerResult = (SmugglerResult)cmd.Result.Result;
 
                 CombineSmugglerResults(finalResult, smugglerResult);
             }
             return finalResult;
-        }
-
-        private static BlittableJsonReaderObject CreateNewOptionBlittableJsonReaderObject(BlittableJsonReaderObject blittableJson, JsonOperationContext context,
-            string key, object value)
-        {
-            blittableJson.Modifications = new DynamicJsonValue(blittableJson) {[key] = value};
-            using (var old = blittableJson)
-            {
-                blittableJson = context.ReadObject(blittableJson, "convert/entityToBlittable");
-            }
-
-            return blittableJson;
         }
 
         [RavenShardedAction("/databases/*/smuggler/import", "POST")]
@@ -112,8 +98,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Server.ServerStore.Operations.GetNextOperationId();
 
-                await Import(context, ShardedContext.DatabaseName, (_, stream, options, result, onProgress, token, blittableJson) =>
-                    DoImportInternalAsync(context, stream, options, result, onProgress, token, blittableJson), Server.ServerStore.Operations, operationId);
+                await Import(context, ShardedContext.DatabaseName, DoImportInternalAsync, Server.ServerStore.Operations, operationId);
             }
         }
 
