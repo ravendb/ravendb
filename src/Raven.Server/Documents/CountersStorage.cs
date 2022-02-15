@@ -1812,7 +1812,6 @@ namespace Raven.Server.Documents
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                CreateCounterTombstone(context, documentKeyPrefix, counterNameSlice, collectionName);
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
                     return null;
 
@@ -1826,6 +1825,8 @@ namespace Raven.Server.Documents
                     return null; // not found
                 if (counterToDelete is LazyStringValue) // already deleted
                     return null;
+
+                CreateCounterTombstone(context, documentKeyPrefix, counterNameSlice, collectionName);
 
                 var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
