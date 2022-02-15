@@ -359,7 +359,7 @@ namespace Raven.Server.Rachis
 
              */
             LogsTable = new TableSchema();
-            LogsTable.DefineKey(new TableSchema.SchemaIndexDef
+            LogsTable.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0
             });

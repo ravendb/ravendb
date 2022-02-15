@@ -32,7 +32,7 @@ namespace SlowTests.Issues
         public unsafe void CanDeleteTableWithLargeValues()
         {
             TableSchema schema = new TableSchema();
-            schema.DefineKey(new TableSchema.SchemaIndexDef
+            schema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 IsGlobal = true
             });
 
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1,

@@ -201,19 +201,19 @@ namespace Raven.Server.ServerWide
 
             // We use the follow format for the items data
             // { lowered key, key, data, etag }
-            ItemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            ItemsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1
             });
 
             IdentitiesSchema = new TableSchema();
-            IdentitiesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            IdentitiesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)IdentitiesTable.Key,
                 Count = 1
             });
-            IdentitiesSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            IdentitiesSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)IdentitiesTable.KeyIndex,
                 Count = 1,
@@ -222,12 +222,12 @@ namespace Raven.Server.ServerWide
             });
 
             CompareExchangeSchema = new TableSchema();
-            CompareExchangeSchema.DefineKey(new TableSchema.SchemaIndexDef
+            CompareExchangeSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CompareExchangeTable.Key,
                 Count = 1
             });
-            CompareExchangeSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            CompareExchangeSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CompareExchangeTable.PrefixIndex,
                 Count = 1,
@@ -235,12 +235,12 @@ namespace Raven.Server.ServerWide
             });
 
             CompareExchangeTombstoneSchema = new TableSchema();
-            CompareExchangeTombstoneSchema.DefineKey(new TableSchema.SchemaIndexDef
+            CompareExchangeTombstoneSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CompareExchangeTombstoneTable.Key,
                 Count = 1
             });
-            CompareExchangeTombstoneSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            CompareExchangeTombstoneSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CompareExchangeTombstoneTable.PrefixIndex,
                 Count = 1,
@@ -249,7 +249,7 @@ namespace Raven.Server.ServerWide
             });
 
             TransactionCommandsSchema = new TableSchema();
-            TransactionCommandsSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            TransactionCommandsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef()
             {
                 StartIndex = 0,
                 Count = 1, // Database, Separator, Commands count
@@ -258,14 +258,14 @@ namespace Raven.Server.ServerWide
             // We use the follow format for the certificates data
             // { thumbprint, public key hash, data }
             CertificatesSchema = new TableSchema();
-            CertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            CertificatesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef()
             {
                 StartIndex = (int)CertificatesTable.Thumbprint,
                 Count = 1,
                 IsGlobal = false,
                 Name = CertificatesSlice
             });
-            CertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            CertificatesSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CertificatesTable.PublicKeyHash,
                 Count = 1,
@@ -276,14 +276,14 @@ namespace Raven.Server.ServerWide
             // We use the follow format for the replication certificates data
             // { thumbprint, public key hash, data}
             ReplicationCertificatesSchema = new TableSchema();
-            ReplicationCertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            ReplicationCertificatesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef()
             {
                 StartIndex = (int)ReplicationCertificatesTable.Thumbprint,
                 Count = 1,
                 IsGlobal = false,
                 Name = ReplicationCertificatesSlice
             });
-            ReplicationCertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            ReplicationCertificatesSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)ReplicationCertificatesTable.PublicKeyHash,
                 Count = 1,
@@ -292,14 +292,14 @@ namespace Raven.Server.ServerWide
             });
 
             SubscriptionStateSchema = new TableSchema();
-            SubscriptionStateSchema.DefineKey(new TableSchema.SchemaIndexDef
+            SubscriptionStateSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)SubscriptionStateTable.Key,
                 Count =  1,
                 IsGlobal = false,
                 Name = SubscriptionStateKeySlice
             });
-            SubscriptionStateSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            SubscriptionStateSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)SubscriptionStateTable.BatchId,
                 Count = 1,

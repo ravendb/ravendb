@@ -6,12 +6,11 @@ namespace Voron.Data.Tables
     [Flags]
     public enum TableIndexType
     {
-        Default = 0x01,
         BTree = 0x01,
-        Custom = 0x2
+        Dynamic = 0x2
     }
 
-    public abstract class AbstractSchemaIndexDefinition
+    public abstract class AbstractBTreeIndexDef
     {
         public abstract TableIndexType Type { get; }
 
@@ -27,7 +26,7 @@ namespace Voron.Data.Tables
 
         public abstract byte[] Serialize();
 
-        public abstract void Validate(AbstractSchemaIndexDefinition actual);
+        public abstract void Validate(AbstractBTreeIndexDef actual);
 
         public virtual void Validate()
         {

@@ -78,19 +78,19 @@ namespace Raven.Server.Rachis
             }
             
             LogHistoryTable = new TableSchema();
-            LogHistoryTable.DefineKey(new TableSchema.SchemaIndexDef
+            LogHistoryTable.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)LogHistoryColumn.Guid,
             });
 
-            LogHistoryTable.DefineIndex(new TableSchema.SchemaIndexDef
+            LogHistoryTable.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 Name = LogHistoryIndexSlice,
                 StartIndex = (int)LogHistoryColumn.Index,
                 Count = 1
             });
 
-            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            LogHistoryTable.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 Name = LogHistoryDateTimeSlice,
                 StartIndex = (int)LogHistoryColumn.Ticks

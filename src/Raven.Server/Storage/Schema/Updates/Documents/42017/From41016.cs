@@ -70,7 +70,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
             }
 
-            LegacyCountersSchema.DefineKey(new TableSchema.SchemaIndexDef
+            LegacyCountersSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)LegacyCountersTable.CounterKey,
                 Count = 1,
@@ -78,14 +78,14 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 IsGlobal = true,
             });
 
-            LegacyCountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            LegacyCountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)LegacyCountersTable.Etag,
                 Name = AllCountersEtagSlice,
                 IsGlobal = true
             });
 
-            LegacyCountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            LegacyCountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)LegacyCountersTable.Etag,
                 Name = CollectionCountersEtagsSlice
@@ -681,7 +681,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return maxDbIdIndex;
         }
 
-        private void DeleteFromTable(DocumentsOperationContext context, Table table, TableSchema.SchemaIndexDef pk, Func<Table.TableValueHolder, bool> shouldSkip = null)
+        private void DeleteFromTable(DocumentsOperationContext context, Table table, TableSchema.StaticBTreeIndexDef pk, Func<Table.TableValueHolder, bool> shouldSkip = null)
         {
             Table.TableValueHolder tableValueHolder = null;
             var tree = table.GetTree(pk);

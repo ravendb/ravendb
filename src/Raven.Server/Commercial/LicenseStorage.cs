@@ -21,7 +21,7 @@ namespace Raven.Server.Commercial
 
         public LicenseStorage()
         {
-            _licenseStorageSchema.DefineKey(new TableSchema.SchemaIndexDef
+            _licenseStorageSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1

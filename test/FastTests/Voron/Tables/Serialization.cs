@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Linq;
 using Sparrow.Server;
-using Sparrow.Threading;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
-using static FastTests.Voron.Tables.CustomIndex;
+using static FastTests.Voron.Tables.DynamicBTreeIndex;
 
 namespace FastTests.Voron.Tables
 {
@@ -16,8 +15,8 @@ namespace FastTests.Voron.Tables
         {
         }
 
-        private static void SchemaIndexDefEqual(AbstractSchemaIndexDefinition expectedIndex,
-            AbstractSchemaIndexDefinition actualIndex)
+        private static void SchemaIndexDefEqual(AbstractBTreeIndexDef expectedIndex,
+            AbstractBTreeIndexDef actualIndex)
         {
             if (expectedIndex == null)
             {
@@ -31,29 +30,29 @@ namespace FastTests.Voron.Tables
 
                 switch (expectedIndex.Type)
                 {
-                    case TableIndexType.Default:
+                    case TableIndexType.BTree:
                     {
-                        Assert.IsType<TableSchema.SchemaIndexDef>(expectedIndex);
-                        Assert.IsType<TableSchema.SchemaIndexDef>(actualIndex);
+                        Assert.IsType<TableSchema.StaticBTreeIndexDef>(expectedIndex);
+                        Assert.IsType<TableSchema.StaticBTreeIndexDef>(actualIndex);
 
-                        var expected = (TableSchema.SchemaIndexDef)expectedIndex;
-                        var actual = (TableSchema.SchemaIndexDef)actualIndex;
+                        var expected = (TableSchema.StaticBTreeIndexDef)expectedIndex;
+                        var actual = (TableSchema.StaticBTreeIndexDef)actualIndex;
 
                         Assert.Equal(expected.StartIndex, actual.StartIndex);
                         Assert.Equal(expected.Count, actual.Count);
 
                         break;
                     }
-                    case TableIndexType.Custom:
+                    case TableIndexType.Dynamic:
                     {
-                        Assert.IsType<TableSchema.CustomSchemaIndexDef>(expectedIndex);
-                        Assert.IsType<TableSchema.CustomSchemaIndexDef>(actualIndex);
+                        Assert.IsType<TableSchema.DynamicBTreeIndexDef>(expectedIndex);
+                        Assert.IsType<TableSchema.DynamicBTreeIndexDef>(actualIndex);
 
-                        var expected = (TableSchema.CustomSchemaIndexDef)expectedIndex;
-                        var actual = (TableSchema.CustomSchemaIndexDef)actualIndex;
+                        var expected = (TableSchema.DynamicBTreeIndexDef)expectedIndex;
+                        var actual = (TableSchema.DynamicBTreeIndexDef)actualIndex;
 
-                        Assert.Equal(expected.Transform.Method.Name, actual.Transform.Method.Name);
-                        Assert.Equal(expected.Transform.Method.DeclaringType, actual.Transform.Method.DeclaringType);
+                        Assert.Equal(expected.IndexValueGenerator.Method.Name, actual.IndexValueGenerator.Method.Name);
+                        Assert.Equal(expected.IndexValueGenerator.Method.DeclaringType, actual.IndexValueGenerator.Method.DeclaringType);
 
                         break;
                     }
@@ -63,8 +62,8 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        private static void FixedSchemaIndexDefEqual(TableSchema.FixedSizeSchemaIndexDef expectedIndex,
-            TableSchema.FixedSizeSchemaIndexDef actualIndex)
+        private static void FixedSchemaIndexDefEqual(TableSchema.FixedSizeTreeIndexDef expectedIndex,
+            TableSchema.FixedSizeTreeIndexDef actualIndex)
         {
             if (expectedIndex == null)
             {
@@ -78,7 +77,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        private void SchemaDefEqual(TableSchema expected, TableSchema actual)
+        private static void SchemaDefEqual(TableSchema expected, TableSchema actual)
         {
             // Same primary keys
             SchemaIndexDefEqual(expected.Key, actual.Key);
@@ -107,7 +106,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.SchemaIndexDef
+                var expectedIndex = new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
@@ -118,7 +117,7 @@ namespace FastTests.Voron.Tables
 
                 fixed (byte* serializedPtr = serialized)
                 {
-                    var actualIndex = TableSchema.SchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
+                    var actualIndex = TableSchema.StaticBTreeIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.Validate(actualIndex);
@@ -131,7 +130,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var expectedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     StartIndex = 2,
                     IsGlobal = true,
@@ -142,7 +141,7 @@ namespace FastTests.Voron.Tables
 
                 fixed (byte* serializedPtr = serialized)
                 {
-                    var actualIndex = TableSchema.FixedSizeSchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
+                    var actualIndex = TableSchema.FixedSizeTreeIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     FixedSchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.Validate(actualIndex);
@@ -155,14 +154,14 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var def1 = new TableSchema.SchemaIndexDef
+                var def1 = new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
                 };
                 Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def1.Name);
 
-                var def2 = new TableSchema.FixedSizeSchemaIndexDef()
+                var def2 = new TableSchema.FixedSizeTreeIndexDef()
                 {
                     StartIndex = 2,
                     IsGlobal = true,
@@ -172,7 +171,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .DefineIndex(def1)
                     .DefineFixedSizeIndex(def2)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 3,
                         Count = 1,
@@ -197,21 +196,21 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var def1 = new TableSchema.SchemaIndexDef
+                var def1 = new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
                 };
                 Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def1.Name);
 
-                var def2 = new TableSchema.SchemaIndexDef
+                var def2 = new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 1,
                     Count = 1,
                 };
                 Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def2.Name);
 
-                var def3 = new TableSchema.FixedSizeSchemaIndexDef()
+                var def3 = new TableSchema.FixedSizeTreeIndexDef()
                 {
                     StartIndex = 2,
                     IsGlobal = true,
@@ -222,7 +221,7 @@ namespace FastTests.Voron.Tables
                     .DefineIndex(def1)
                     .DefineIndex(def2)
                     .DefineFixedSizeIndex(def3)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 3,
                         Count = 1,
@@ -247,9 +246,9 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.CustomSchemaIndexDef()
+                var expectedIndex = new TableSchema.DynamicBTreeIndexDef()
                 {
-                    Transform = TransformAction
+                    IndexValueGenerator = IndexValueAction
                 };
                 Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
 
@@ -257,10 +256,7 @@ namespace FastTests.Voron.Tables
 
                 fixed (byte* serializedPtr = serialized)
                 {
-                    var actualIndex = TableSchema.CustomSchemaIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
-                    tx.Allocator.Allocate(100, out var b);
-                    var tvr = new TableValueReader(b.Ptr, 32);
-                    actualIndex.Transform(new ByteStringContext(new SharedMultipleUseFlag()), ref tvr, out var s);
+                    var actualIndex = TableSchema.DynamicBTreeIndexDef.ReadFrom(tx.Allocator, serializedPtr, serialized.Length);
                     Assert.Equal(serialized, actualIndex.Serialize());
                     SchemaIndexDefEqual(expectedIndex, actualIndex);
                     expectedIndex.Validate(actualIndex);
@@ -269,27 +265,27 @@ namespace FastTests.Voron.Tables
         }
 
         [Fact]
-        public void CanSerializeSchemaWithCustomIndex()
+        public void CanSerializeSchemaWithDynamicIndex()
         {
             using (var tx = Env.WriteTransaction())
             {
-                var def1 = new TableSchema.SchemaIndexDef
+                var def1 = new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 5,
                     Count = 2,
                 };
                 Slice.From(tx.Allocator, "Test Name 1", ByteStringType.Immutable, out def1.Name);
 
-                var def2 = new TableSchema.FixedSizeSchemaIndexDef
+                var def2 = new TableSchema.FixedSizeTreeIndexDef
                 {
                     StartIndex = 2,
                     IsGlobal = true
                 };
                 Slice.From(tx.Allocator, "Test Name 2", ByteStringType.Immutable, out def2.Name);
 
-                var def3 = new TableSchema.CustomSchemaIndexDef
+                var def3 = new TableSchema.DynamicBTreeIndexDef
                 {
-                    Transform = TransformAction
+                    IndexValueGenerator = IndexValueAction
                 };
                 Slice.From(tx.Allocator, "Test Name 3", ByteStringType.Immutable, out def3.Name);
 
@@ -297,7 +293,7 @@ namespace FastTests.Voron.Tables
                     .DefineIndex(def1)
                     .DefineFixedSizeIndex(def2)
                     .DefineIndex(def3)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 3,
                         Count = 1

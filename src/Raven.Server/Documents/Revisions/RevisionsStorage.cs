@@ -163,39 +163,39 @@ namespace Raven.Server.Documents.Revisions
 
         private static void AddRevisionIndexes(TableSchema revisionsSchema, Slice changeVectorSlice)
         {
-            revisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            revisionsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.ChangeVector,
                 Count = 1,
                 Name = changeVectorSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.LowerId,
                 Count = 3,
                 Name = IdAndEtagSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.Etag,
                 Name = AllRevisionsEtagsSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.Etag,
                 Name = CollectionRevisionsEtagsSlice
             });
-            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.DeletedEtag,
                 Count = 1,
                 Name = DeleteRevisionEtagSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)RevisionsTable.Resolved,
                 Count = 2,

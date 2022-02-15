@@ -18,18 +18,18 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         public bool Update(UpdateStep step)
         {
             var oldCompareExchangeSchema = new TableSchema().
-                DefineKey(new TableSchema.SchemaIndexDef
+                DefineKey(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
                     Count = 1
                 });
 
             var newCompareExchangeSchema = new TableSchema()
-                .DefineKey(new TableSchema.SchemaIndexDef
+                .DefineKey(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = (int)ClusterStateMachine.CompareExchangeTable.Key,
                     Count = 1
-                }).DefineIndex(new TableSchema.SchemaIndexDef
+                }).DefineIndex(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = (int)ClusterStateMachine.CompareExchangeTable.PrefixIndex,
                     Count = 1,

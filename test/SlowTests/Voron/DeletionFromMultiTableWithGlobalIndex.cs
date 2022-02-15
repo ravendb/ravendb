@@ -33,7 +33,7 @@ namespace SlowTests.Voron
         public unsafe void ShouldNotError()
         {
             TableSchema schema = new TableSchema();
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1,
@@ -41,7 +41,7 @@ namespace SlowTests.Voron
                 IsGlobal = true
             });
 
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 1,
                 Count = 1,
@@ -49,7 +49,7 @@ namespace SlowTests.Voron
                 IsGlobal = true
             });
 
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 2,
                 Count = 1,
@@ -125,7 +125,7 @@ namespace SlowTests.Voron
         public unsafe void SameTransaction()
         {
             TableSchema schema = new TableSchema();
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 1,
                 Count = 1,
@@ -133,7 +133,7 @@ namespace SlowTests.Voron
                 IsGlobal = true
             });
 
-            schema.DefineIndex(new TableSchema.SchemaIndexDef
+            schema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 2,
                 Count = 1,

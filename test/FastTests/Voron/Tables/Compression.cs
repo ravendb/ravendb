@@ -22,7 +22,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -32,7 +32,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -88,7 +88,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -98,7 +98,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -146,7 +146,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -156,7 +156,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -203,7 +203,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -213,7 +213,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -272,7 +272,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -282,7 +282,7 @@ namespace FastTests.Voron.Tables
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
