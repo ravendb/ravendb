@@ -487,7 +487,7 @@ namespace SlowTests.Cluster
             var folder = NewDataPath(forceCreateDir: true);
             DoNotReuseServer();
 
-            var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/CompareExchange_Expiration_RavenData_v5.2_from50000.zip");
+            var zipPath = new PathSetting("SchemaUpgrade/Issues/SystemVersion/RavenDB_17999/CompareExchange_Expiration_RavenData_v5.2_from50000.zip");
             Assert.True(File.Exists(zipPath.FullPath));
 
             ZipFile.ExtractToDirectory(zipPath.FullPath, folder);
