@@ -986,6 +986,67 @@ namespace SlowTests.Server.Documents.Counters
             }
         }
 
+        [Fact]
+        public async Task ShouldCleanCounterTombstonesWhenBatchSizeSmallerThanCountersToDelete()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "EGR" }, "user/322");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var cf = session.CountersFor("user/322");
+                    for (var i = 0; i < 3000; i++)
+                    {
+                        cf.Increment($"Likes/{i}", i);
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var cf = session.CountersFor("user/322");
+                    for (var i = 0; i < 2024; i++)
+                    {
+                        cf.Delete($"Likes/{i}");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
+                    Assert.Equal(2024, c2);
+                }
+
+                var cleaner = storage.TombstoneCleaner;
+                await cleaner.ExecuteCleanup(1024);
+
+                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var cv = db.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, "user/322");
+                    Assert.Equal(976, cv);
+                }
+
+                long count1 = 0;
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    count1 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
+                }
+                Assert.Equal(0, count1);
+            }
+        }
+
         private class MyCounterIndex : AbstractCountersIndexCreationTask<Company>
         {
             public MyCounterIndex()

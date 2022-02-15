@@ -1961,13 +1961,10 @@ namespace Raven.Server.Documents
 
                 using (table.Allocate(out TableValueBuilder tvb))
                 using (Slice.From(context.Allocator, changeVector, out var cv))
-                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 {
                     tvb.Add(counterTombstoneKeySlice);
                     tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(cv);
-                    tvb.Add(collectionSlice);
-                    tvb.Add(context.GetTransactionMarker());
 
                     table.Set(tvb);
                 }
@@ -1978,18 +1975,6 @@ namespace Raven.Server.Documents
         {
             var changeVectorPtr = reader.Read((int)CounterTombstonesTable.ChangeVector, out int changeVectorSize);
             return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
-        }
-
-        public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesForDoc(DocumentsOperationContext context, string docId)
-        {
-            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
-            using var dispose = DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
-            {
-                var item = TableValueToCounterTombstoneDetail(context, ref tvh.Reader);
-                yield return item;
-            }
         }
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
@@ -2037,7 +2022,7 @@ namespace Raven.Server.Documents
                 // and remove the deleted counter (change the data)
                 // at the end, we'll write the new data to disk and update the document
 
-                if (item.Etag > upto)
+                if (item.Etag > upto || numberOfEntriesToDelete <= deleted)
                     return deleted;
 
                 using (DocumentIdWorker.GetSliceFromId(context, item.DocumentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
@@ -2131,10 +2116,10 @@ namespace Raven.Server.Documents
                         var newData = document.Data.Clone(context);
                         _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
                     }
-                    catch (Exception e)
+                    catch (InvalidOperationException e)
                     {
-                        throw new Exception($"Failed to get or update document '{item.DocumentId}'," +
-                                            $"Exception: {e.Message}");
+                        throw new InvalidOperationException($"Failed to get or update document '{item.DocumentId}'," +
+                                                            $"Exception: {e}");
                     }
                 }
             }
@@ -2819,5 +2804,20 @@ namespace Raven.Server.Documents
         public long Etag;
         public string DbId;
         public string Name;
+    }
+
+    public class CounterTombstoneDetail : IDisposable
+    {
+        public LazyStringValue DocumentId { get; set; }
+        public LazyStringValue ChangeVector { get; set; }
+        public LazyStringValue Name { get; set; }
+        public long Etag { get; set; }
+
+        public void Dispose()
+        {
+            DocumentId?.Dispose();
+            ChangeVector?.Dispose();
+            Name?.Dispose();
+        }
     }
 }
