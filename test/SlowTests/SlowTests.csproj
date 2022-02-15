@@ -197,9 +197,6 @@
     <None Update="SchemaUpgrade\Issues\SystemVersion\after_from14.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SchemaUpgrade\Issues\SystemVersion\CompareExchange_Expiration_RavenData_v5.2_new_from50000.zip">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -209,7 +206,7 @@
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from13.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="SchemaUpgrade\Issues\SystemVersion\CompareExchange_Expiration_RavenData_v5.2_from50000.zip">
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_17999\CompareExchange_Expiration_RavenData_v5.2_from50000.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\RavenData_rc1_plus_additions.zip">
