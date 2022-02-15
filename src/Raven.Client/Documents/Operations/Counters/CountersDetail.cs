@@ -77,33 +77,4 @@ namespace Raven.Client.Documents.Operations.Counters
             Values?.Dispose();
         }
     }
-
-    public class CounterTombstoneDetail : IDisposable
-    {
-        public LazyStringValue DocumentId { get; set; }
-
-        public LazyStringValue ChangeVector { get; set; }
-
-        public LazyStringValue Name { get; set; }
-
-        public long Etag { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(DocumentId)] = DocumentId,
-                [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Name)] = Name,
-                [nameof(Etag)] = Etag
-            };
-        }
-
-        public void Dispose()
-        {
-            DocumentId?.Dispose();
-            ChangeVector?.Dispose();
-            Name?.Dispose();
-        }
-    }
 }

@@ -125,8 +125,8 @@ for (var i = 0; i < counters.length; i++) {
                 {
                     await srcDatabase.TombstoneCleaner.ExecuteCleanup();
                     using var readTransaction = context.OpenReadTransaction();
-                    var array = srcDatabase.DocumentsStorage.CountersStorage.GetCounterTombstonesForDoc(context, entity.Id).ToArray();
-                    return array.Any() == false;
+                    var numOfCounters = srcDatabase.DocumentsStorage.CountersStorage.GetNumberOfCountersAndDeletedCountersForDocument(context, entity.Id);
+                    return numOfCounters == 0;
                 }, interval: _waitInterval);
             }
         }
