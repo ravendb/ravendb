@@ -34,6 +34,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using SlowTests.Smuggler;
+using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -132,7 +133,8 @@ namespace SlowTests.Sharding
             var operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/toli", user1, 0));
             operationResult = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("cat/mitzi", user2, 0));
             var result = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("cat/mitzi", operationResult.Index));
-            //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "need to wait for sharding cluster transaction issue - RavenDB-13111");
             //Cluster transaction
             // using var session2 = store1.OpenAsyncSession(new SessionOptions
             // {
@@ -238,6 +240,7 @@ namespace SlowTests.Sharding
             {
                 var user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("cat/toli"));
                 Assert.NotNull(user1);
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "need to wait for sharding cluster transaction issue - RavenDB-13111");
 
                 //TODO - need to wait for sharding cluster transaction issue - RavenDB-13111
                 // user1 = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("rvn-atomic/usernames/ayende"));
@@ -281,14 +284,13 @@ namespace SlowTests.Sharding
                         {
                             OperateOnTypes = DatabaseItemType.Documents
                         }, file);
-                        //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(50));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents
                         }, file2);
-                        await Task.Delay(TimeSpan.FromSeconds(50));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -373,9 +375,8 @@ namespace SlowTests.Sharding
                             
 
                         }, file);
-                        //WaitForUserToContinueTheTest(store1);
-                        //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(50));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents
@@ -394,8 +395,7 @@ namespace SlowTests.Sharding
                                              | DatabaseItemType.LegacyAttachmentDeletions
                                              | DatabaseItemType.LegacyDocumentDeletions
                         }, file2);
-
-                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -449,14 +449,11 @@ namespace SlowTests.Sharding
 #pragma warning restore 618
 
                 var operation = await store.Smuggler.ImportAsync(options, fs);
-                await Task.Delay(TimeSpan.FromSeconds(20));
-                
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions() {OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups}, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                
-                await Task.Delay(TimeSpan.FromSeconds(20));
-                
                 using (var store2 = GetDocumentStore())
                 {
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions() { OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.CounterGroups }, file);
@@ -537,7 +534,6 @@ namespace SlowTests.Sharding
 
                         }, file);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); 
-                        //await Task.Delay(TimeSpan.FromSeconds(20));
                         WaitForUserToContinueTheTest(store2);
                         await CheckData(store2, names);
 
@@ -713,11 +709,11 @@ namespace SlowTests.Sharding
 
                     operation = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                     , file);
-                    //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                    await Task.Delay(TimeSpan.FromSeconds(50));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
                     operation = await store3.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     , file2);
-                    await Task.Delay(TimeSpan.FromSeconds(50));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                     , file2);
@@ -843,13 +839,13 @@ namespace SlowTests.Sharding
 
                     }, file);
                    
-                    await Task.Delay(TimeSpan.FromSeconds(20));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     operation = await shardStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                     {
                         OperateOnTypes = DatabaseItemType.ReplicationHubCertificates | DatabaseItemType.DatabaseRecord
                     }, file2);
-                    await Task.Delay(TimeSpan.FromSeconds(20));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     using (var store2 = GetDocumentStore(new Options
                     {
@@ -889,6 +885,8 @@ namespace SlowTests.Sharding
         [Fact(Skip = "TODO")]
         public async Task RegularToShardToRegularEncrypted()
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Efrat, DevelopmentHelper.Severity.Normal, "Handle RegularToShardToRegularEncrypted");
+
             var file = GetTempFileName();
             var file2 = Path.GetTempFileName();
             var names = new[]
@@ -939,10 +937,7 @@ namespace SlowTests.Sharding
                             //| DatabaseItemType.RevisionDocuments 
 
                         }, file);
-                        //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(50));
-                        //WaitForUserToContinueTheTest(store1);
-                        //WaitForUserToContinueTheTest(store2);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
@@ -958,7 +953,7 @@ namespace SlowTests.Sharding
                                             // | DatabaseItemType.CompareExchange
                             //| DatabaseItemType.CompareExchangeTombstones
                         }, file2);
-                        await Task.Delay(TimeSpan.FromSeconds(20));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -1006,7 +1001,10 @@ namespace SlowTests.Sharding
             };
             try
             {
-                using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_2" }))
+                using (var store1 = GetDocumentStore(new Options
+                       {
+                           ModifyDatabaseName = s => $"{s}_2",
+                       }))
                 {
                     await InsertData(store1, names, Server);
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
@@ -1053,9 +1051,7 @@ namespace SlowTests.Sharding
 
 
                         }, file);
-                        //WaitForUserToContinueTheTest(store1);
-                        //await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); // TODO - Doesn't work with shard DB
-                        await Task.Delay(TimeSpan.FromSeconds(50));
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                         operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions()
                         {
                             OperateOnTypes = DatabaseItemType.Documents
@@ -1075,8 +1071,8 @@ namespace SlowTests.Sharding
                                              | DatabaseItemType.LegacyDocumentDeletions
                         }, file2);
 
-                        await Task.Delay(TimeSpan.FromSeconds(20));
-                        WaitForUserToContinueTheTest(store1);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); 
+
                         OperationState op = null;
                         WaitForValue(() =>
                         {

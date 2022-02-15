@@ -1,6 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
+using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,6 +27,8 @@ namespace FastTests.Sharding
                     new DatabaseTopology(),
                 };
             };
+            shardedOptions.ModifyDocumentStore = s => s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal,"remove above after changes api is working");
             //shardedOptions.RunInMemory = false;
             return GetDocumentStore(shardedOptions, caller);
         }

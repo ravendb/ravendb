@@ -89,8 +89,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 try
                 {
-                    await Export(context, Database.Name, (options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, _, token) =>
-                        ExportDatabaseInternalAsync(options, blittableOptions, startDocumentEtag, startRaftIndex, onProgress, context, token), Database.Operations, operationId, Database);
+                    await Export(context, Database.Name, ExportDatabaseInternalAsync, Database.Operations, operationId, Database);
                 }
                 catch (Exception e)
                 {
@@ -107,7 +106,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         public async Task<IOperationResult> ExportDatabaseInternalAsync(
             DatabaseSmugglerOptionsServerSide options,
-            BlittableJsonReaderObject blittableJson,
             long startDocumentEtag,
             long startRaftIndex,
             Action<IOperationProgress> onProgress,
@@ -517,8 +515,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
-                await Import(context, Database.Name, (_, stream, options, result, onProgress, token, _) =>
-                    DoImportInternalAsync(context, stream, options, result, onProgress, token), Database.Operations, operationId, Database);
+                await Import(context, Database.Name, DoImportInternalAsync, Database.Operations, operationId, Database);
             }
         }
 
