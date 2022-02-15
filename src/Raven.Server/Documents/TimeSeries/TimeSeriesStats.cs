@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, nameof(StartTimeIndex), ByteStringType.Immutable, out StartTimeIndex);
             }
 
-            TimeSeriesStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            TimeSeriesStatsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)StatsColumns.Key,
                 Count = 1, 
@@ -50,13 +50,13 @@ namespace Raven.Server.Documents.TimeSeries
                 IsGlobal = true
             });
 
-            TimeSeriesStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            TimeSeriesStatsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)StatsColumns.PolicyName,
                 Name = PolicyIndex
             });
 
-            TimeSeriesStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            TimeSeriesStatsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 // policy, separator, start
                 StartIndex = (int)StatsColumns.PolicyName,

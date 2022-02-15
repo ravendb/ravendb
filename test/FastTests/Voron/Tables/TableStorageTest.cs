@@ -35,19 +35,19 @@ namespace FastTests.Voron.Tables
             base.Configure(options);
 
             DocsSchema = new TableSchema()
-                .DefineIndex(new TableSchema.SchemaIndexDef
+                .DefineIndex(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
                     Name = EtagsSlice
                 })
-                .DefineIndex(new TableSchema.SchemaIndexDef
+                .DefineIndex(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 1,
                     Count = 2,
                     Name = EtagAndCollectionSlice
                 })
-                .DefineKey(new TableSchema.SchemaIndexDef
+                .DefineKey(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = 0,
                     Count = 1

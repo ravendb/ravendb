@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
             }
 
-            TimeSeriesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            TimeSeriesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)TimeSeriesTable.TimeSeriesKey,
                 Count = 1,
@@ -79,20 +79,20 @@ namespace Raven.Server.Documents.TimeSeries
                 IsGlobal = true
             });
 
-            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)TimeSeriesTable.Etag,
                 Name = AllTimeSeriesEtagSlice,
                 IsGlobal = true
             });
 
-            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            TimeSeriesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)TimeSeriesTable.Etag,
                 Name = CollectionTimeSeriesEtagsSlice
             });
 
-            DeleteRangesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            DeleteRangesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)DeletedRangeTable.RangeKey,
                 Count = 1,
@@ -100,14 +100,14 @@ namespace Raven.Server.Documents.TimeSeries
                 IsGlobal = true
             });
 
-            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)DeletedRangeTable.Etag,
                 Name = AllDeletedRangesEtagSlice,
                 IsGlobal = true
             });
 
-            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            DeleteRangesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)DeletedRangeTable.Etag,
                 Name = CollectionDeletedRangesEtagsSlice

@@ -9,19 +9,19 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class CustomIndex : TableStorageTest
+    public unsafe class DynamicBTreeIndex : TableStorageTest
     {
-        public static readonly Slice CustomSchemaIndex;
+        public static readonly Slice IndexName;
 
-        public CustomIndex(ITestOutputHelper output) : base(output)
+        public DynamicBTreeIndex(ITestOutputHelper output) : base(output)
         {
         }
 
-        static CustomIndex()
+        static DynamicBTreeIndex()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "CustomSchemaIndex", ByteStringType.Immutable, out CustomSchemaIndex);
+                Slice.From(ctx, "DynamicBTreeIndex", ByteStringType.Immutable, out IndexName);
             }
         }
 
@@ -29,11 +29,11 @@ namespace FastTests.Voron.Tables
         {
             base.Configure(options);
 
-            DocsSchema.DefineIndex(new TableSchema.CustomSchemaIndexDef
+            DocsSchema.DefineIndex(new TableSchema.DynamicBTreeIndexDef
             {
                 IsGlobal = true,
-                Transform = TransformAction,
-                Name = CustomSchemaIndex
+                IndexValueGenerator = IndexValueAction,
+                Name = IndexName
             });
         }
 
@@ -64,7 +64,7 @@ namespace FastTests.Voron.Tables
 
                 bool gotValues = false;
 
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[CustomSchemaIndex], Slices.BeforeAllKeys, 0))
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[IndexName], Slices.BeforeAllKeys, 0))
                 {
                     var key = reader.Key;
 
@@ -126,11 +126,10 @@ namespace FastTests.Voron.Tables
             {
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
-                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[CustomSchemaIndex], Slices.BeforeAllKeys, 0);
+                var reader = docs.SeekForwardFrom(DocsSchema.Indexes[IndexName], Slices.BeforeAllKeys, 0);
                 Assert.Empty(reader);
             }
         }
-
 
         [Fact]
         public void CanInsertThenUpdateByCustom()
@@ -165,7 +164,7 @@ namespace FastTests.Voron.Tables
                 var docs = tx.OpenTable(DocsSchema, "docs");
 
                 bool gotValues = false;
-                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[CustomSchemaIndex], Slices.BeforeAllKeys, 0))
+                foreach (var reader in docs.SeekForwardFrom(DocsSchema.Indexes[IndexName], Slices.BeforeAllKeys, 0))
                 {
                     var key = reader.Key;
 
@@ -194,7 +193,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        internal static ByteStringContext.Scope TransformAction(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        internal static ByteStringContext.Scope IndexValueAction(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
         {
             var scope = context.Allocate(sizeof(long) * 2, out var buffer);
 

@@ -64,17 +64,17 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
             }
 
-            AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            AttachmentsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
                 Count = 1
             });
-            AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)AttachmentsTable.Etag,
                 Name = AttachmentsEtagSlice
             });
-            AttachmentsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            AttachmentsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)AttachmentsTable.Hash,
                 Count = 1,

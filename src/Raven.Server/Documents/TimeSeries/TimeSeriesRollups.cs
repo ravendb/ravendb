@@ -66,14 +66,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             RollupSchema = new TableSchema();
-            RollupSchema.DefineKey(new TableSchema.SchemaIndexDef
+            RollupSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)RollupColumns.Key,
                 Count = 1, 
                 Name = RollupKey
             });
 
-            RollupSchema.DefineIndex(new TableSchema.SchemaIndexDef // this isn't fixed-size since we expect to have duplicates
+            RollupSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef // this isn't fixed-size since we expect to have duplicates
             {
                 StartIndex = (int)RollupColumns.NextRollup, 
                 Count = 1,

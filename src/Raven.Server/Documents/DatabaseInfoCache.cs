@@ -24,7 +24,7 @@ namespace Raven.Server.Documents
         public DatabaseInfoCache()
         {
             Logger = LoggingSource.Instance.GetLogger<DatabaseInfoCache>("Server");
-            _databaseInfoSchema.DefineKey(new TableSchema.SchemaIndexDef
+            _databaseInfoSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = 0,
                 Count = 1

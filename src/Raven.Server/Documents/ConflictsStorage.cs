@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
             We need a separator in order to delete all conflicts all "users/1" without deleting "users/11" conflicts.
              */
 
-            ConflictsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            ConflictsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)ConflictsTable.ChangeVector,
                 Count = 1,
@@ -89,27 +89,27 @@ namespace Raven.Server.Documents
                 Name = ChangeVectorSlice
             });
             // required to get conflicts by ID
-            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            ConflictsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)ConflictsTable.LowerId,
                 Count = 3,
                 IsGlobal = false,
                 Name = IdAndChangeVectorSlice
             });
-            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            ConflictsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)ConflictsTable.LowerId,
                 Count = 1,
                 IsGlobal = true,
                 Name = ConflictsIdSlice
             });
-            ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            ConflictsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)ConflictsTable.Etag,
                 IsGlobal = true,
                 Name = AllConflictedDocsEtagsSlice
             });
-            ConflictsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            ConflictsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)ConflictsTable.Collection,
                 Count = 1,

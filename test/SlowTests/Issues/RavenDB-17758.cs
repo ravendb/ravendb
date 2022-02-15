@@ -41,9 +41,9 @@ namespace SlowTests.Issues
             using var ___ = Slice.From(allocator, "Etags", out var etags);
             using var __ = Slice.From(allocator, "Table", out var tbl);
 
-            var idx = new TableSchema.FixedSizeSchemaIndexDef { Name = etags, IsGlobal = false, StartIndex = 0 };
+            var idx = new TableSchema.FixedSizeTreeIndexDef { Name = etags, IsGlobal = false, StartIndex = 0 };
             var schema = new TableSchema()
-                .DefineKey(new TableSchema.SchemaIndexDef
+                .DefineKey(new TableSchema.StaticBTreeIndexDef
                 {
                     Name = pk,
                     IsGlobal = false,

@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "CollectionCounterGroupsEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
                 Slice.From(ctx, "CounterGroupKeys", ByteStringType.Immutable, out CounterKeysSlice);
             }
-            CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
+            CountersSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
             {
                 StartIndex = (int)CountersTable.CounterKey,
                 Count = 1,
@@ -126,14 +126,14 @@ namespace Raven.Server.Documents
                 IsGlobal = true,
             });
 
-            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)CountersTable.Etag,
                 Name = AllCountersEtagSlice,
                 IsGlobal = true
             });
 
-            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            CountersSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
             {
                 StartIndex = (int)CountersTable.Etag,
                 Name = CollectionCountersEtagsSlice

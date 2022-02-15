@@ -26,11 +26,11 @@ namespace Raven.Server.Storage.Schema.Updates.Server
             const string dbKey = "db/";
 
             var newIdentitiesSchema = new TableSchema()
-                .DefineKey(new TableSchema.SchemaIndexDef
+                .DefineKey(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = (int)ClusterStateMachine.IdentitiesTable.Key,
                     Count = 1
-                }).DefineIndex(new TableSchema.SchemaIndexDef
+                }).DefineIndex(new TableSchema.StaticBTreeIndexDef
                 {
                     StartIndex = (int)ClusterStateMachine.IdentitiesTable.KeyIndex,
                     Count = 1,

@@ -19,7 +19,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -28,7 +28,7 @@ namespace FastTests.Voron.Tables
 
                 var tableSchema = new TableSchema()
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -64,7 +64,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -73,7 +73,7 @@ namespace FastTests.Voron.Tables
 
                 var tableSchema = new TableSchema()
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -127,7 +127,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
-                var index = new TableSchema.SchemaIndexDef
+                var index = new TableSchema.StaticBTreeIndexDef
                 {
                     Name = etagIndexName,
                     StartIndex = 0,
@@ -136,7 +136,7 @@ namespace FastTests.Voron.Tables
 
                 var tableSchema = new TableSchema()
                     .DefineIndex(index)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -172,7 +172,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
-                var index = new TableSchema.SchemaIndexDef
+                var index = new TableSchema.StaticBTreeIndexDef
                 {
                     Name = etagIndexName,
                     StartIndex = 0,
@@ -181,7 +181,7 @@ namespace FastTests.Voron.Tables
 
                 var tableSchema = new TableSchema()
                     .DefineIndex(index)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
@@ -233,7 +233,7 @@ namespace FastTests.Voron.Tables
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "EtagIndexName", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeSchemaIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -242,7 +242,7 @@ namespace FastTests.Voron.Tables
 
                 var tableSchema = new TableSchema()
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.SchemaIndexDef
+                    .DefineKey(new TableSchema.StaticBTreeIndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
