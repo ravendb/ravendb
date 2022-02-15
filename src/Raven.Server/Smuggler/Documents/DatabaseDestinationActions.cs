@@ -12,6 +12,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -354,6 +355,14 @@ namespace Raven.Server.Smuggler.Documents
 
                 tasks.Add(_server.SendToLeaderAsync(new EditDatabaseClientConfigurationCommand(databaseRecord.Client, _name, RaftIdGenerator.DontCareId)));
                 progress.ClientConfigurationUpdated = true;
+            }
+
+            if (databaseRecord.Integrations?.PostgreSql != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.PostgreSQLIntegration))
+            {
+                if (_log.IsInfoEnabled)
+                    _log.Info("Configuring PostgreSQL integration from smuggler");
+                tasks.Add(_server.SendToLeaderAsync(new EditPostgreSqlConfigurationCommand(databaseRecord.Integrations.PostgreSql, _name, RaftIdGenerator.DontCareId)));
+                progress.PostreSQLConfigurationUpdated = true;
             }
 
             if (databaseRecord.UnusedDatabaseIds != null && databaseRecord.UnusedDatabaseIds.Count > 0)
