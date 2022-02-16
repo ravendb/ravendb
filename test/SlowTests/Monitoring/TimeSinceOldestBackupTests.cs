@@ -68,7 +68,7 @@ namespace SlowTests.Monitoring
             var result = 
                 DatabaseOldestBackup.GetTimeSinceOldestBackupInternal(_backupDates.Keys.ToList(), GetLastBackupDate, _time);
             Assert.Equal(TimeSpan.Zero, result);
-            Assert.Equal(new TimeTicks(0),
+            Assert.Equal(SnmpValuesHelper.TimeTicksZero,
                 SnmpValuesHelper.TimeSpanToTimeTicks(result));
             Assert.Equal(SnmpValuesHelper.TimeTicksZero, SnmpValuesHelper.TimeSpanToTimeTicks(result));
         } 
