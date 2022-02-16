@@ -57,29 +57,26 @@ namespace Raven.Server.Documents.ShardedHandlers
             options.IsShard = true;
 
             await using (var outputStream = GetOutputStream(ResponseBodyStream(), options))
-            await using(var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
+            await using (var writer = new AsyncBlittableJsonTextWriter(jsonOperationContext, new GZipStream(outputStream, CompressionMode.Compress)))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
 
-                using (var exportExecutor = GetShardExecutor(() => new ShardedExportCommand(this, operationId, options, writer)))
+                using (var exportExecutor = GetShardExecutor(new ShardedExportOperation(this, operationId, options, writer)))
                 {
                     // we execute one by one so requests will not timeout since the export can take long
-                    await exportExecutor.ExecuteAsync(ExecutionMode.OneByOne, FailureMode.Throw);
+                    await exportExecutor.ExecuteForAllAsync(ExecutionMode.OneByOne, FailureMode.Throw);
                 }
 
                 writer.WriteEndObject();
             }
 
-            var finalResult = new SmugglerResult();
-            using (var results = GetShardExecutor(() => new GetOperationStateOperation.GetOperationStateCommand(operationId)))
+            using (var results = GetShardExecutor(new GetShardedOperationStateOperation(operationId)))
             {
-                await results.ExecuteAsync(ExecutionMode.Parallel, FailureMode.Throw);
-                results.CombineResults(result => CombineSmugglerResults(finalResult, (SmugglerResult)result.Result));
+                var result = await results.ExecuteForAllAsync(ExecutionMode.Parallel, FailureMode.Throw);
+                return result.Result;
             }
-
-            return finalResult;
         }
 
         [RavenShardedAction("/databases/*/smuggler/import", "POST")]

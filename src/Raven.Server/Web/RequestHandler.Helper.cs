@@ -256,47 +256,6 @@ namespace Raven.Server.Web
             }
         }
 
-        internal static void CombineSmugglerResults(SmugglerResult finalResult, SmugglerResult smugglerResualt)
-        {
-            finalResult.Documents.SkippedCount += smugglerResualt.Documents.SkippedCount;
-            finalResult.Documents.ReadCount += smugglerResualt.Documents.ReadCount;
-            finalResult.Documents.ErroredCount += smugglerResualt.Documents.ErroredCount;
-            finalResult.Documents.LastEtag = Math.Max(finalResult.Documents.LastEtag, smugglerResualt.Documents.LastEtag);
-            finalResult.Documents.Attachments.ReadCount += smugglerResualt.Documents.Attachments.ReadCount;
-
-            finalResult.Tombstones.ReadCount += smugglerResualt.Tombstones.ReadCount;
-            finalResult.Tombstones.ErroredCount += smugglerResualt.Tombstones.ErroredCount;
-            finalResult.Tombstones.LastEtag = Math.Max(finalResult.Tombstones.LastEtag, smugglerResualt.Tombstones.LastEtag);
-
-            finalResult.RevisionDocuments.ReadCount += smugglerResualt.RevisionDocuments.ReadCount;
-            finalResult.RevisionDocuments.ErroredCount += smugglerResualt.RevisionDocuments.ErroredCount;
-            finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, smugglerResualt.RevisionDocuments.LastEtag);
-            finalResult.RevisionDocuments.Attachments = smugglerResualt.RevisionDocuments.Attachments;
-
-            finalResult.Counters.ReadCount += smugglerResualt.Counters.ReadCount;
-            finalResult.Counters.ErroredCount += smugglerResualt.Counters.ErroredCount;
-            finalResult.Counters.LastEtag = Math.Max(finalResult.Counters.LastEtag, smugglerResualt.Counters.LastEtag);
-
-            finalResult.TimeSeries.ReadCount += smugglerResualt.TimeSeries.ReadCount;
-            finalResult.TimeSeries.ErroredCount += smugglerResualt.TimeSeries.ErroredCount;
-            finalResult.TimeSeries.LastEtag = Math.Max(finalResult.TimeSeries.LastEtag, smugglerResualt.TimeSeries.LastEtag);
-
-            finalResult.Identities.ReadCount += smugglerResualt.Identities.ReadCount;
-            finalResult.Identities.ErroredCount += smugglerResualt.Identities.ErroredCount;
-
-            finalResult.CompareExchange.ReadCount += smugglerResualt.CompareExchange.ReadCount;
-            finalResult.CompareExchange.ErroredCount += smugglerResualt.CompareExchange.ErroredCount;
-
-            finalResult.Subscriptions.ReadCount += smugglerResualt.Subscriptions.ReadCount;
-            finalResult.Subscriptions.ErroredCount += smugglerResualt.Subscriptions.ErroredCount;
-
-            finalResult.Indexes.ReadCount += smugglerResualt.Indexes.ReadCount;
-            finalResult.Indexes.ErroredCount += smugglerResualt.Indexes.ErroredCount;
-
-            foreach (var message in smugglerResualt.Messages)
-                finalResult.AddMessage(message);
-        }
-
         internal async void InternalGetState(OperationState state, JsonOperationContext context)
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

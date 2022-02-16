@@ -218,7 +218,12 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
     {
         private int _value = 0;
 
-        public static implicit operator ShardNumber(int value) => new ShardNumber { _value = value };
+        public ShardNumber(int value)
+        {
+            _value = value;
+        }
+
+        public static implicit operator ShardNumber(int value) => new ShardNumber(value: value);
 
         public static implicit operator int(ShardNumber value) => value._value;
         public override string ToString() => _value.ToString();
@@ -229,7 +234,12 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
     {
         private int _value = 0;
 
-        public static implicit operator BucketNumber(int value) => new BucketNumber { _value = value };
+        public BucketNumber(int value)
+        {
+            _value = value;
+        }
+
+        public static implicit operator BucketNumber(int value) => new BucketNumber(value: value);
 
         public static implicit operator int(BucketNumber value) => value._value;
 
