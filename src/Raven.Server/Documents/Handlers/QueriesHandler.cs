@@ -119,6 +119,9 @@ namespace Raven.Server.Documents.Handlers
             
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
+            
+            // TODO for: RavenDB-17617
+            var disableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
             queryContext.WithQuery(indexQuery.Metadata);
 
@@ -476,7 +479,10 @@ namespace Raven.Server.Documents.Handlers
         public async Task Patch()
         {
             var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
-
+            
+            // TODO for: RavenDB-17617
+            var disableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
+            
             try
             {
                 var reader = await queryContext.Documents.ReadForMemoryAsync(RequestBodyStream(), "queries/patch");

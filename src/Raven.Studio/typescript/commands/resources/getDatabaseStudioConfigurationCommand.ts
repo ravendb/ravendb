@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
-class getStudioConfigurationCommand extends commandBase {
+class getDatabaseStudioConfigurationCommand extends commandBase {
     
     constructor(private db: database) {
         super();
@@ -27,4 +27,4 @@ class getStudioConfigurationCommand extends commandBase {
     }
 }
 
-export = getStudioConfigurationCommand;
+export = getDatabaseStudioConfigurationCommand;

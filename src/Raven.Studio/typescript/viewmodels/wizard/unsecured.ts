@@ -2,13 +2,13 @@ import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
-import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
+import studioConfigurationDatabaseModel = require("models/database/settings/studioConfigurationDatabaseModel");
 
 class unsecured extends setupStep {
 
     view = require("views/wizard/unsecured.html");
 
-    static environments = databaseStudioConfigurationModel.environments;
+    static environments = studioConfigurationDatabaseModel.environments;
     
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();

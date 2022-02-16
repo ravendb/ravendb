@@ -7,14 +7,14 @@ interface globalStudioConfigurationOptions extends Raven.Client.ServerWide.Opera
     CollapseDocsWhenOpening: boolean;
 }
 
-class studioConfigurationModel {
+class studioConfigurationGlobalModel {
 
     static readonly environments: Array<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment> = ["None", "Development", "Testing", "Production"]; 
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     sendUsageStats = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>();
-    replicationFactor = ko.observable<number>(null);
+    replicationFactor = ko.observable<number>(1);
     collapseDocsWhenOpening = ko.observable<boolean>();
 
     dirtyFlag: () => DirtyFlag;
@@ -38,8 +38,13 @@ class studioConfigurationModel {
     }
     
     private initValidation() {
+        this.replicationFactor.extend({
+            digit: true,
+            min: 1
+        });
+        
         this.validationGroup = ko.validatedObservable({
-            environment: this.environment
+            replicationFactor: this.replicationFactor
         });
     }
     
@@ -47,9 +52,10 @@ class studioConfigurationModel {
         return {
             Environment: this.environment(),
             Disabled: this.disabled(),
-            ReplicationFactor: this.replicationFactor()
+            ReplicationFactor: this.replicationFactor(),
+            DisableAutoIndexCreation: false
         }
     }
 }
 
-export = studioConfigurationModel;
+export = studioConfigurationGlobalModel;
