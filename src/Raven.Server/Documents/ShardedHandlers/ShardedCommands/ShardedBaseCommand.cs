@@ -10,6 +10,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
     public abstract class ShardedBaseCommand<T> : RavenCommand<T>
     {
+        protected readonly ShardedRequestHandler Handler;
         public BlittableJsonReaderObject Content;
         public readonly Dictionary<string, string> Headers = new Dictionary<string, string>();
         public string Url;
@@ -22,6 +23,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 
         protected ShardedBaseCommand(ShardedRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null)
         {
+            Handler = handler;
             Method = handler.Method;
             Url = handler.RelativeShardUrl;
             Content = content;

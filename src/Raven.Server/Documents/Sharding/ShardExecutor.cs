@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Http;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding
@@ -10,34 +12,35 @@ namespace Raven.Server.Documents.Sharding
     public class ShardExecutor<T> : IDisposable
     {
         private readonly ShardedContext _shardedContext;
-        private readonly Func<RavenCommand<T>> _commandFactory;
+        private readonly CommandHolder[] _commands;
+        private readonly IShardedOperation<T> _operation;
 
-        private readonly Dictionary<int, Exception> _exceptions = new Dictionary<int, Exception>();
-        private readonly Dictionary<int, RavenCommand<T>> _commands = new Dictionary<int, RavenCommand<T>>();
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
+        private Dictionary<int, Exception> _exceptions;
 
-        public ShardExecutor(ShardedContext shardedContext, Func<RavenCommand<T>> commandFactory)
+        public ShardExecutor(ShardedContext shardedContext, IShardedOperation<T> operation) 
         {
             _shardedContext = shardedContext;
-            _commandFactory = commandFactory;
+            _operation = operation;
+            _commands = ArrayPool<CommandHolder>.Shared.Rent(_shardedContext.ShardCount);
         }
 
-        public Task ExecuteAsync(ExecutionMode executionMode, FailureMode failureMode) => ExecuteForShardsAsync(Enumerable.Range(0, _shardedContext.ShardCount), executionMode, failureMode);
+        public Task<T> ExecuteForAllAsync(ExecutionMode executionMode, FailureMode failureMode) => ExecuteForShardsAsync(Enumerable.Range(0, _shardedContext.ShardCount), executionMode, failureMode);
 
-        public async Task ExecuteForShardsAsync(IEnumerable<int> shards, ExecutionMode executionMode, FailureMode failureMode)
+        public async Task<T> ExecuteForShardsAsync(IEnumerable<int> shards, ExecutionMode executionMode, FailureMode failureMode)
         {
-            var tasks = new Dictionary<int, Task>();
+            var position = 0;
             foreach (int shard in shards)
             {
-                var cmd = _commandFactory();
-                _commands[shard] = cmd;
+                var cmd = _operation.CreateCommandForShard(shard);
+                _commands[position].Shard = shard;
+                _commands[position].Command = cmd;
 
                 var executor = _shardedContext.RequestExecutors[shard];
                 var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
-                _disposables.Add(release);
+                _commands[position].ContextReleaser = release;
 
                 var t = executor.ExecuteAsync(cmd, ctx);
-                tasks[shard] = t;
+                _commands[position].Task = t;
 
                 if (executionMode == ExecutionMode.OneByOne)
                 {
@@ -51,58 +54,74 @@ namespace Raven.Server.Documents.Sharding
                             throw;
                     }
                 }
+
+                position++;
             }
 
-            try
+            for (var i = 0; i < position; i++)
             {
-                await Task.WhenAll(tasks.Values);
-            }
-            catch
-            {
-                if (failureMode == FailureMode.Throw)
-                    throw;
-
-                foreach (var task in tasks)
+                var holder = _commands[i];
+                try
                 {
-                    try
-                    {
-                        await task.Value;
-                    }
-                    catch (Exception e)
-                    {
-                        _exceptions[task.Key] = e;
-                    }
+                    await holder.Task;
+                }
+                catch (Exception e)
+                {
+                    if (failureMode == FailureMode.Throw)
+                        throw;
+
+                    _exceptions ??= new Dictionary<int, Exception>();
+                    _exceptions[holder.Shard] = e;
                 }
             }
-        }
 
-        public void CombineResults(Action<T> combineResultsAction)
-        {
-            foreach (var shardedCommand in _commands)
+            var resultsArray = ArrayPool<T>.Shared.Rent(position);
+            try
             {
-                if (_exceptions.ContainsKey(shardedCommand.Key))
-                    continue; // ignore faulted commands
+                for (int i = 0; i < position; i++)
+                {
+                    resultsArray[i] = _commands[i].Command.Result;
+                }
 
-                combineResultsAction(shardedCommand.Value.Result);
+                return _operation.Combine(new Memory<T>(resultsArray, 0, position));
+            }
+            finally
+            {
+                ArrayPool<T>.Shared.Return(resultsArray);
             }
         }
 
         public void Dispose()
         {
-            foreach (var disposable in _disposables)
+            if (_commands != null)
             {
-                try
+                for (var index = 0; index < _commands.Length; index++)
                 {
-                    disposable.Dispose();
+                    var command = _commands[index];
+                    try
+                    {
+                        command.ContextReleaser?.Dispose();
+                        command.ContextReleaser = null; // we set it to null, since we pool it and might get old values if not cleared
+                    }
+                    catch
+                    {
+                        // ignore
+                    }
                 }
-                catch
-                {
-                    // ignore
-                }
+
+                ArrayPool<CommandHolder>.Shared.Return(_commands);
             }
         }
+
+        private struct CommandHolder
+        {
+            public int Shard;
+            public RavenCommand<T> Command;
+            public Task Task;
+            public IDisposable ContextReleaser;
+        }
     }
-    
+
     public enum ExecutionMode
     {
         Parallel,
