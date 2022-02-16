@@ -1,46 +1,42 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import jsonUtil = require("common/jsonUtil");
 
-class databaseStudioConfigurationModel {
+class studioConfigurationDatabaseModel {
 
     static readonly environments: Array<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment> = ["None", "Development", "Testing", "Production"];
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     disabled = ko.observable<boolean>();
+    disableAutoIndexCreation = ko.observable<boolean>();
 
     dirtyFlag: () => DirtyFlag;
-    validationGroup: KnockoutValidationGroup;
     
     constructor(dto: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) {
-        this.initValidation();
-        
         this.environment(dto ? dto.Environment : "None");
         this.disabled(dto ? dto.Disabled : false);
+        this.disableAutoIndexCreation(dto.DisableAutoIndexCreation);
 
         this.dirtyFlag = new ko.DirtyFlag([
-            this.environment
+            this.environment,
+            this.disableAutoIndexCreation
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
-    private initValidation() {
-        this.validationGroup = ko.validatedObservable({
-            environment: this.environment
-        });
-    }
-    
     static empty() {
-        return new databaseStudioConfigurationModel({
+        return new studioConfigurationDatabaseModel({
             Disabled: false,
-            Environment: "None"
+            Environment: "None",
+            DisableAutoIndexCreation: false
         });
     }
     
     toRemoteDto(): Raven.Client.Documents.Operations.Configuration.StudioConfiguration {
         return {
             Environment: this.environment(),
-            Disabled: this.disabled()
+            Disabled: this.disabled(),
+            DisableAutoIndexCreation: this.disableAutoIndexCreation()
         }
     }
 }
 
-export = databaseStudioConfigurationModel;
+export = studioConfigurationDatabaseModel;
