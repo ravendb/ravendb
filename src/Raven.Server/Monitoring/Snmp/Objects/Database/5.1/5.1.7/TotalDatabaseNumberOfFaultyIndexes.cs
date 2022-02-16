@@ -9,10 +9,10 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class TotalDatabaseNumberOfErrorIndexes : DatabaseBase<Integer32>
+    public class TotalDatabaseNumberOfFaultyIndexes : DatabaseBase<Integer32>
     {
-        public TotalDatabaseNumberOfErrorIndexes(ServerStore serverStore)
-            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfErrorIndexes)
+        public TotalDatabaseNumberOfFaultyIndexes(ServerStore serverStore)
+            : base(serverStore, SnmpOids.Databases.General.TotalNumberOfFaultyIndexes)
         {
         }
 
@@ -20,7 +20,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var count = 0;
             foreach (var database in GetLoadedDatabases())
-                count += GetCountSafely(database, DatabaseNumberOfErrorIndexes.GetCount);
+                count += GetCountSafely(database, DatabaseNumberOfFaultyIndexes.GetCount);
 
             return new Integer32(count);
         }
