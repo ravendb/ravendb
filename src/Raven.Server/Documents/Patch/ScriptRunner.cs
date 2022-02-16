@@ -540,10 +540,22 @@ namespace Raven.Server.Documents.Patch
                             
                             if (!jsMethod.IsFunction)
                                 throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify.StaticCall(method)}");
+
+#if DEBUG
+                            var argsStr = "";
+                            for (int i = 0; i < _args.Length; i++)
+                            {
+                                var argStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]).AsString;
+                                argsStr += argStr + "\n\n";
+                            }
+#endif
                             
                             using (var jsRes = jsMethod.StaticCall(_args))
                             {
                                 jsRes.ThrowOnError();
+#if DEBUG
+                                var resStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes).AsString;
+#endif
                                 return new ScriptRunnerResult(this, jsRes);
                             }
                         }
