@@ -47,7 +47,7 @@ class queryUtil {
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
         const escapedFieldName = queryUtil.wrapWithSingleQuotes(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
-        return `from index ${escapedIndexName} where ${escapedFieldName} = '${value}' `;
+        return `from index ${escapedIndexName} where ${escapedFieldName} == '${value}' `;
     }
     
     static wrapWithSingleQuotes(input: string) {
