@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
@@ -69,29 +70,30 @@ namespace SlowTests.Issues
                 Assert.Equal(index1.IndexName, record.Indexes.First().Key);
                 Assert.Contains("Count = 1 / this0.x", record.Indexes.First().Value.Maps.First());
 
-                indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
-                Assert.Equal(2, indexStats.Length);
-
                 // replacing with another index with another index with an error
                 await new Index3(indexName).ExecuteAsync(store);
                 WaitForIndexing(store, allowErrors: true, timeout: TimeSpan.FromSeconds(5));
 
-                indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
-                Assert.Equal(2, indexStats.Length);
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}");
                 Assert.Contains("Count = 5 / this0.x", index.GetIndexDefinition().Maps.First());
                 
                 // an index with no errors will replace both the original and the replacement
+                var index4 = new Index4(indexName);
                 await new Index4(indexName).ExecuteAsync(store);
                 WaitForIndexing(store);
 
-                indexStats = await store.Maintenance.SendAsync(new GetIndexesStatisticsOperation());
-                Assert.Equal(1, indexStats.Length);
-                Assert.Equal(1, indexStats[0].MapSuccesses);
-                Assert.Equal(0, indexStats[0].ErrorsCount);
                 index = database.IndexStore.GetIndex(indexName);
                 Assert.Contains("New_Count = 5", index.GetIndexDefinition().Maps.First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Query<Index4.Result>(index4.IndexName)
+                        .Where(x => x.New_Count == 5)
+                        .ToListAsync();
+
+                    Assert.Equal(1, results.Count);
+                }
             }
         }
 
@@ -181,6 +183,11 @@ namespace SlowTests.Issues
 
         private class Index4 : AbstractIndexCreationTask<Query.Order>
         {
+            public class Result
+            {
+                public int New_Count { get; set; }
+            }
+
             public override string IndexName { get; }
 
             public Index4(string indexName)
@@ -189,7 +196,7 @@ namespace SlowTests.Issues
 
                 Map = orders =>
                     from order in orders
-                    select new
+                    select new Result
                     {
                         New_Count = 5
                     };
