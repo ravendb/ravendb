@@ -1211,7 +1211,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteEndObject();
 
-                Writer.WriteStream(stream);
+                await Writer.WriteStreamAsync(stream);
 
                 await Writer.MaybeFlushAsync();
             }
