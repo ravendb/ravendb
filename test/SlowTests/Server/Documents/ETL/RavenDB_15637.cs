@@ -59,25 +59,23 @@ return deleted;
             }
         }
         
-        const string _scriptShouldDelete1 = @"{wrapper}
+        const string _scriptShouldDelete1 = @"
 if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
     return;
 loadToUsers(this);
-}
 
 function deleteDocumentsBehavior(docId, collection, deleted) {
 return !deleted;
 }";
 
-        const string _scriptShouldDelete2 = @"{wrapper}
+        const string _scriptShouldDelete2 = @"
 if(this.Age % 2 === 0)
     return;
 if(this.Name == 'Sus')
     return;
 loadToUsers(this);
-}
 
 function deleteDocumentsOfUsersBehavior(docId, deleted) {
 return !deleted;
@@ -90,10 +88,6 @@ return !deleted;
         [InlineData(_scriptShouldDelete2, "V8")]
         public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script, string jsEngineType)
         {
-            bool isJint = jsEngineType == "Jint";
-            var wrapper = isJint ? "{" : "const transformDocument = () => {"; 
-            script = script.Replace("{wrapper}", wrapper);
-            
             using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {

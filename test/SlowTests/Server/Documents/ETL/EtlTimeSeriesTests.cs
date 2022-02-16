@@ -521,11 +521,10 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
         public async Task RavenEtlWithTimeSeries_WhenUpdateTimeSeriesOfUnloadedDocument(string jsEngineType)
         {
             string[] collections = { "Users" };
-            string script = @"{wrapper}
+            string script = @"
 if(this.Name.startsWith('M') === false)
     return;
 loadToUsers(this);
-}
 
 function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 {
@@ -536,10 +535,6 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 }
 "; // the month is 0-indexed
 
-            bool isJint = jsEngineType == "Jint";
-            var wrapper = isJint ? "{" : "const transformDocument = () => {"; 
-            script = script.Replace("{wrapper}", wrapper);
-            
             var times = Enumerable.Range(0, 4)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))
                 .ToArray();
@@ -854,19 +849,14 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment(string jsEngineType)
         {
             const string collection = "Users";
-            string script = @"{wrapper}
+            string script = @"
     var user = loadToUsers(this);
     user.addAttachment(loadAttachment('photo'));
-}
 
 function loadTimeSeriesOfUsersBehavior(doc, ts)
 {
     return true;
 }";
-
-            bool isJint = jsEngineType == "Jint";
-            var wrapper = isJint ? "{" : "const transformDocument = () => {"; 
-            script = script.Replace("{wrapper}", wrapper);
 
             var time = new DateTime(2020, 04, 27);
             const string timeSeriesName = "Heartrate";
