@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             var stats = index.GetStats();
 
             if (stats.LastQueryingTime.HasValue)
-                return new TimeTicks(SystemTime.UtcNow - stats.LastQueryingTime.Value);
+                return SnmpValuesHelper.TimeSpanToTimeTicks(SystemTime.UtcNow - stats.LastQueryingTime.Value);
 
             return null;
         }

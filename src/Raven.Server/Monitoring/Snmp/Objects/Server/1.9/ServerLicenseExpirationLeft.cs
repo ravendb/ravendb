@@ -22,7 +22,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
                 return null;
 
             var timeLeft = status.Expiration.Value - SystemTime.UtcNow;
-            return new TimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
         }
     }
 }
