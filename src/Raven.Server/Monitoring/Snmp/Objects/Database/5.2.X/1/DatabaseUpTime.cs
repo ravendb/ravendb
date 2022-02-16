@@ -13,7 +13,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override TimeTicks GetData(DocumentDatabase database)
         {
-            return new TimeTicks(SystemTime.UtcNow - database.StartTime);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(SystemTime.UtcNow - database.StartTime);
         }
     }
 }
