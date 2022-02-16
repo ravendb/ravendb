@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch.V8
         // each engine requires at least 2 Mb of memory
         // the level of a pooled value (i.e. isolate, engine) usage is the number of active contexts on it
         // isolates can not share anything (including contexts)
-        // thus, a context (i.e. set of global variables) can be set to the engine on which it was created only (not any other) 
+        // thus, a context (i.e. global object, etc.) can be set to the engine on which it was created only (not any other) 
         // an isolate can have a single active (i.e. set) context at a time, so we use locks on engine to set a context to it and run it on the context
         // too many contexts on an engine may lead to concurrent tasks waiting for its turn
         // so on a need for a new context creation we should always choose the engine with the minimal active contexts (i.e. usage level)
