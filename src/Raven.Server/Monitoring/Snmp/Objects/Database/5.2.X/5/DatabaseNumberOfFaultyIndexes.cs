@@ -6,15 +6,15 @@
 
 using System.Linq;
 using Lextm.SharpSnmpLib;
-using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Errors;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
 {
-    public class DatabaseNumberOfErrorIndexes : DatabaseScalarObjectBase<Integer32>
+    public class DatabaseNumberOfFaultyIndexes : DatabaseScalarObjectBase<Integer32>
     {
-        public DatabaseNumberOfErrorIndexes(string databaseName, DatabasesLandlord landlord, int index)
-            : base(databaseName, landlord, SnmpOids.Databases.NumberOfErrorIndexes, index)
+        public DatabaseNumberOfFaultyIndexes(string databaseName, DatabasesLandlord landlord, int index)
+            : base(databaseName, landlord, SnmpOids.Databases.NumberOfFaultyIndexes, index)
         {
         }
 
@@ -28,7 +28,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             return database
                 .IndexStore
                 .GetIndexes()
-                .Count(x => x.State == IndexState.Error);
+                .Count(x => x is FaultyInMemoryIndex);
         }
     }
 }
