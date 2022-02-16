@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch.V8
     
         public class ContextEx : IDisposable
         {
-            private Context _contextNative;
+            private Context? _contextNative;
             public V8Engine Engine;
             public V8EngineEx EngineEx { get { return (V8EngineEx)Engine; } }
             
@@ -59,7 +59,11 @@ namespace Raven.Server.Documents.Patch.V8
 
             public void Dispose()
             {
-                // TODO
+                if (_contextNative != null)
+                {
+                    _contextNative.Dispose();
+                    _contextNative = null;
+                }
             }
 
             public Context ContextNative
@@ -165,8 +169,11 @@ var process = {
         
         public void SetContext(ContextEx ctx)
         {
-            _contextEx = ctx;
-            SetContext(ctx.ContextNative);
+            if (_contextEx == null || !ReferenceEquals(ctx, _contextEx))
+            {
+                _contextEx = ctx;
+                SetContext(ctx.ContextNative);
+            }
         }
 
         public static void DisposeJsObjectsIfNeeded(object value)
