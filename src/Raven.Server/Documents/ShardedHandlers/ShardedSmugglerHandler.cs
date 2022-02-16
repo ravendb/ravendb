@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
@@ -14,7 +13,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -65,29 +63,22 @@ namespace Raven.Server.Documents.ShardedHandlers
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
 
-                for (int i = 0; i < ShardedContext.ShardCount; i++)
+                using (var exportExecutor = GetShardExecutor(() => new ShardedExportCommand(this, operationId, options, writer)))
                 {
-                    var cmd = new ShardedExportCommand(this, operationId, options, async stream =>
-                    {
-                        await using (var gzipStream = new GZipStream(GetInputStream(stream, options), CompressionMode.Decompress))
-                        {
-                            writer.WriteStream(gzipStream);
-                        }
-                    });
-
-                    await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
+                    // we execute one by one so requests will not timeout since the export can take long
+                    await exportExecutor.ExecuteAsync(ExecutionMode.OneByOne, FailureMode.Throw);
                 }
+
                 writer.WriteEndObject();
             }
-            var finalResult = new SmugglerResult();
-            for (int i = 0; i < ShardedContext.ShardCount; i++)
-            {
-                var cmd = new GetOperationStateOperation.GetOperationStateCommand(operationId);
-                await ShardedContext.RequestExecutors[i].ExecuteAsync(cmd, jsonOperationContext);
-                var smugglerResult = (SmugglerResult)cmd.Result.Result;
 
-                CombineSmugglerResults(finalResult, smugglerResult);
+            var finalResult = new SmugglerResult();
+            using (var results = GetShardExecutor(() => new GetOperationStateOperation.GetOperationStateCommand(operationId)))
+            {
+                await results.ExecuteAsync(ExecutionMode.Parallel, FailureMode.Throw);
+                results.CombineResults(result => CombineSmugglerResults(finalResult, (SmugglerResult)result.Result));
             }
+
             return finalResult;
         }
 

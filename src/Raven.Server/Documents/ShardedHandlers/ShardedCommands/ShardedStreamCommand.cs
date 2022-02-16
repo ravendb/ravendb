@@ -8,20 +8,19 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
-    public class ShardedStreamCommand : ShardedCommand
+    public abstract class ShardedStreamCommand : ShardedCommand
     {
-        private readonly Func<Stream, Task> _handleStreamResponse;
-
-        public ShardedStreamCommand(ShardedRequestHandler handler, Func<Stream, Task> handleStreamResponse, BlittableJsonReaderObject content) : base(handler, ShardedCommands.Headers.IfMatch, content)
+        protected ShardedStreamCommand(ShardedRequestHandler handler, BlittableJsonReaderObject content) : base(handler, ShardedCommands.Headers.IfMatch, content)
         {
-            _handleStreamResponse = handleStreamResponse;
         }
+
+        public abstract Task HandleStreamResponse(Stream responseStream);
 
         public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             using (var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
             {
-                await _handleStreamResponse(stream).ConfigureAwait(false);
+                await HandleStreamResponse(stream).ConfigureAwait(false);
             }
 
             return ResponseDisposeHandling.Automatic;
