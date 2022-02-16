@@ -266,7 +266,7 @@ namespace Voron.Impl.FileHeaders
 
         public void CopyHeaders(CompressionLevel compressionLevel, ZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
         {
-            _locker.EnterWriteLock(); //race between reading the headers while modifying them
+            _locker.EnterReadLock(); //race between reading the headers while modifying them
             try
             {
                 var header = stackalloc FileHeader[1];
@@ -292,7 +292,7 @@ namespace Voron.Impl.FileHeaders
             }
             finally
             {
-                _locker.ExitWriteLock();
+                _locker.ExitReadLock();
             }
         }
         
