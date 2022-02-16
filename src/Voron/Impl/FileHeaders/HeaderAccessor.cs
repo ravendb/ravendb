@@ -6,13 +6,16 @@
 
 using Sparrow;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Schema;
+using Voron.Util;
 
 namespace Voron.Impl.FileHeaders
 {
@@ -261,6 +264,38 @@ namespace Voron.Impl.FileHeaders
             return header->Hash == CalculateFileHeaderHash(header);
         }
 
+        public void CopyHeaders(CompressionLevel compressionLevel, ZipArchive package, DataCopier copier, StorageEnvironmentOptions envOptions, string basePath)
+        {
+            _locker.EnterWriteLock(); //race between reading the headers while modifying them
+            try
+            {
+                var header = stackalloc FileHeader[1];
+                var success = false;
+                foreach (var headerFileName in HeaderFileNames)
+                {
+                    if (envOptions.ReadHeader(headerFileName, header) == false)
+                        continue;
+
+                    success = true;
+
+                    var headerPart = package.CreateEntry(Path.Combine(basePath, headerFileName), compressionLevel);
+                    Debug.Assert(headerPart != null);
+
+                    using (var headerStream = headerPart.Open())
+                    {
+                        copier.ToStream((byte*)header, sizeof(FileHeader), headerStream);
+                    }
+                }
+
+                if (!success)
+                    throw new InvalidDataException($"Failed to read both file headers (headers.one & headers.two) from path: {basePath}, possible corruption.");
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
+        }
+        
         public void Dispose()
         {
             _locker.EnterWriteLock();
