@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
+using Raven.Client.Http;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
@@ -47,6 +49,8 @@ namespace Raven.Server.Documents.Sharding
             RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
         }
+
+        public ShardExecutor<T> GetShardExecutor<T>(Func<RavenCommand<T>> cmdFunc) => new ShardExecutor<T>(ShardedContext, cmdFunc);
 
         public void AddHeaders<T>(ShardedBaseCommand<T> command, Headers header)
         {

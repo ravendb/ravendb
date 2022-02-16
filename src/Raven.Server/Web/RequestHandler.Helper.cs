@@ -142,7 +142,7 @@ namespace Raven.Server.Web
                 Convert.FromBase64String(key));
         }
 
-        internal Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
+        internal static Stream GetInputStream(Stream fileStream, DatabaseSmugglerOptionsServerSide options)
         {
             if (options.EncryptionKey != null)
                 return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(options.EncryptionKey));
