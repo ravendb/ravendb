@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public int EngineCount { get => _objectLevels.Count; }
+        public int ValueCount { get => _objectLevels.Count; }
         
         private readonly object _Lock = new();
         
@@ -36,12 +36,17 @@ namespace Raven.Server.Documents.Patch
         private SortedList<int, HashSet<TValue>> _listByLevel = new();
         private Dictionary<TValue, int> _objectLevels = new();
         
+        // maxCapacity is the maximum number of values to exist in the pool, it can not be exceeded
+        // targetLevel is the target usage level of a pooled value:
+        // first we try to use values up to this level before creating a new value
+        // targetLevel can be exceeded in case all the values are used up to or over the target level
         public PoolWithLevels(int targetLevel, int maxCapacity)
         {
             _targetLevel = targetLevel;
             _maxCapacity = maxCapacity;
         }
 
+        // for a new value request we always choose the value with the lowest fill (load) level 
         public PooledValue GetValue()
         {
             lock (_Lock)
@@ -54,7 +59,7 @@ namespace Raven.Server.Documents.Patch
                         var (level, set) = it.Current;
                         if (set.Count >= 1)
                         {
-                            obj = (level >= _targetLevel && EngineCount < _maxCapacity) ? new TValue() : set.First();
+                            obj = (level >= _targetLevel && ValueCount < _maxCapacity) ? new TValue() : set.First();
                         }
                     }
 
@@ -92,13 +97,13 @@ namespace Raven.Server.Documents.Patch
             {
                 setPrev.Remove(obj);
                 // we don't remove the empty set as it will be used later and it is one per level on the whole raven server
-                //if (setPrev.Count == 0)
-                //    Remove(level);
             }
 
             int levelNew = level + delta;
-            if (levelNew == 0)
+
+            if (levelNew == 0 && ValueCount > 1)
             {
+                // we remove the values that are not used any more, but keep at least one
                 _objectLevels.Remove(obj);
                 obj.Dispose();
             }
