@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Patch
             _maxCapacity = maxCapacity;
         }
 
-        // for a new value request we always choose the value with the lowest fill (load) level 
+        // for a new value request we always choose the value with the fill level that is the closest to the target one (below target are more preferrable)
         public PooledValue GetValue()
         {
             lock (_Lock)
@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Patch
                 TValue obj = default;
                 using (var it = _listByLevel.GetEnumerator())
                 {
+                    // TODO for now the value with the minimum level is selected, but the closest to the target from below should be selected
                     while (it.MoveNext())
                     {
                         var (level, set) = it.Current;

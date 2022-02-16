@@ -29,7 +29,8 @@ namespace Raven.Server.Documents.Patch.V8
         // thus, a context (i.e. global object, etc.) can be set to the engine on which it was created only (not any other) 
         // an isolate can have a single active (i.e. set) context at a time, so we use locks on engine to set a context to it and run it on the context
         // too many contexts on an engine may lead to concurrent tasks waiting for its turn
-        // so on a need for a new context creation we should always choose the engine with the minimal active contexts (i.e. usage level)
+        // so we try to keep the minimum number on engines having the number of contexts close to the target level
+        // thus, on a need for a new context creation we should always choose the engine with the actual number of contexts that is the closest one to the target one (below target are more preferrable)  
         // at the same time we avoid creating many contexts with low usage level, so before creating a new engine we first try to use the existing one to some configured reasonable level (targetLevel)
         // also we limit the maximum number of engines to avoid memory issues (maxCapacity)
         // PoolWithLevels<V8EngineEx>(targetLevel, maxCapacity) makes this job
