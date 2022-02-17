@@ -30,6 +30,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
