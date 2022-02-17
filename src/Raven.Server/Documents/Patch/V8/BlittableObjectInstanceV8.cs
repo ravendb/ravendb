@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Patch.V8
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstanceV8 boi, bool keepAlive = false)
         {
-            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.TypeBinderBlittableObjectInstance, keepAlive: keepAlive);
+            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance, keepAlive: keepAlive);
 
             return jsBinder;
         }
@@ -890,7 +890,7 @@ namespace Raven.Server.Documents.Patch.V8
                     switch (val)
                     {
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
-                            jsValue = _engineEx.ExplicitNullV8.Clone();
+                            jsValue = _engineEx.Context.ExplicitNullV8.Clone();
                             return true;
 
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
@@ -946,7 +946,7 @@ namespace Raven.Server.Documents.Patch.V8
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
-                        return _engineEx.ExplicitNullV8.Clone();
+                        return _engineEx.Context.ExplicitNullV8.Clone();
 
                     case BlittableJsonToken.Boolean:
                         return _engine.CreateValue((bool)value);

@@ -60,6 +60,8 @@ namespace Raven.Server.Documents.Patch.V8
 
             public void Dispose()
             {
+                JsonStringifyV8.Dispose();
+                
                 if (_contextNative != null)
                 {
                     _contextNative.Dispose();
@@ -82,7 +84,7 @@ namespace Raven.Server.Documents.Patch.V8
                 //.LocalTimeZone(TimeZoneInfo.Utc);  // TODO -> ??? maybe these V8 args: harmony_intl_locale_info, harmony_intl_more_timezone
             }
 
-            public void SetOptions(V8Engine engine, IJavaScriptOptions? jsOptions)
+            public void SetOptions(IJavaScriptOptions? jsOptions)
             {
                 _jsOptions = jsOptions;
                 SetBasicConfiguration();
@@ -90,7 +92,7 @@ namespace Raven.Server.Documents.Patch.V8
                     return;
                 string strictModeFlag = jsOptions.StrictMode ? "--use_strict" : "--no-use_strict";
                 string[] optionsCmd = {strictModeFlag}; //, "--max_old_space_size=1024"};
-                engine.SetFlagsFromCommandLine(optionsCmd);
+                Engine.SetFlagsFromCommandLine(optionsCmd);
                 MaxDuration = (int)jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
             }
             
@@ -100,7 +102,93 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 return timeout > 0 ? timeout : MaxDuration;
             }
+            
+            // -----------------------global object related-----------------------------
+            private ObjectTemplate _implicitNullTemplate;
+            private ObjectTemplate _explicitNullTemplate;
+            private DynamicJsNullV8? _implicitNull;
+            private DynamicJsNullV8? _explicitNull;
+
+            public InternalHandle ImplicitNullV8;
+            public InternalHandle ExplicitNullV8;
         
+            internal JsHandle _jsonStringify;
+        
+            public InternalHandle JsonStringifyV8;
+
+            public TypeBinder? TypeBinderBlittableObjectInstance;
+            public TypeBinder? TypeBinderTask;
+            public TypeBinder? TypeBinderTimeSeriesSegmentObjectInstance;
+            public TypeBinder? TypeBinderCounterEntryObjectInstance;
+            public TypeBinder? TypeBinderAttachmentNameObjectInstance;
+            public TypeBinder? TypeBinderAttachmentObjectInstance;
+            public TypeBinder? TypeBinderLazyNumberValue;
+            public TypeBinder? TypeBinderRavenServer;
+            public TypeBinder? TypeBinderDocumentDatabase;
+            
+            public void InitializeGlobal()
+            {
+                ImplicitNullV8 = Engine.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+                ExplicitNullV8 = Engine.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+
+                _implicitNullTemplate = Engine.CreateObjectTemplate();
+                _implicitNull = _implicitNullTemplate.CreateObject<DynamicJsNullV8>();
+                _implicitNull.SetKind(false);
+
+                _explicitNullTemplate = Engine.CreateObjectTemplate();
+                _explicitNull = _explicitNullTemplate.CreateObject<DynamicJsNullV8>();
+                _implicitNull.SetKind(true);
+
+                Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
+
+                TypeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, true);
+                TypeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8));
+
+                TypeBinderTask = Engine.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
+                TypeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(Task));
+                
+                TypeBinderTimeSeriesSegmentObjectInstance = Engine.RegisterType<TimeSeriesSegmentObjectInstanceV8>(null, false);
+                TypeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder, TimeSeriesSegmentObjectInstanceV8>((TimeSeriesSegmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8));
+
+                TypeBinderCounterEntryObjectInstance = Engine.RegisterType<CounterEntryObjectInstanceV8>(null, false);
+                TypeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder, CounterEntryObjectInstanceV8>((CounterEntryObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8));
+
+                TypeBinderAttachmentNameObjectInstance = Engine.RegisterType<AttachmentNameObjectInstanceV8>(null, false);
+                TypeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder, AttachmentNameObjectInstanceV8>((AttachmentNameObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8));
+
+                TypeBinderAttachmentObjectInstance = Engine.RegisterType<AttachmentObjectInstanceV8>(null, false);
+                TypeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder, AttachmentObjectInstanceV8>((AttachmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8));
+
+                TypeBinderLazyNumberValue = Engine.RegisterType<LazyNumberValue>(null, false);
+                TypeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(LazyNumberValue));
+
+                TypeBinderRavenServer = Engine.RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite);
+                TypeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, RavenServer>((RavenServer)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(RavenServer));
+                    
+                TypeBinderDocumentDatabase = Engine.RegisterType<DocumentDatabase>(null, true, ScriptMemberSecurity.ReadWrite);
+                TypeBinderDocumentDatabase.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, DocumentDatabase>((DocumentDatabase)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(DocumentDatabase));
+
+                JsonStringifyV8 = Engine.Execute("JSON.stringify", "JSON.stringify", true, 0);
+                _jsonStringify = new JsHandle(JsonStringifyV8);
+            }
         }
         
         
@@ -168,15 +256,20 @@ var process = {
 
         private ContextEx? _contextEx;
         
-        public void SetContext(ContextEx ctx)
+        public ContextEx Context
         {
-            if (_contextEx == null || !ReferenceEquals(ctx, _contextEx))
+            get => _contextEx;
+            set 
             {
-                _contextEx = ctx;
-                SetContext(ctx.ContextNative);
+                if (_contextEx == null || !ReferenceEquals(value, _contextEx))
+                {
+                    _contextEx = value;
+                    SetContext(value.ContextNative);
+                }
             }
+            
         }
-
+        
         public static void DisposeJsObjectsIfNeeded(object value)
         {
             if (value is InternalHandle jsValue)
@@ -196,12 +289,12 @@ var process = {
         // ------------------------------------------ IJavaScriptEngineHandle implementation
         public JavaScriptEngineType EngineType => JavaScriptEngineType.V8;
 
-        public IJavaScriptOptions? JsOptions => _contextEx?.JsOptions;
+        public IJavaScriptOptions? JsOptions => Context.JsOptions;
 
-        public void SetOptions(IJavaScriptOptions? jsOptions)
-        {
-            _contextEx?.SetOptions(this, jsOptions);
-        }
+        public JsHandle ImplicitNull => new(Context.ImplicitNullV8);
+        public JsHandle ExplicitNull => new(Context.ExplicitNullV8);
+
+        public JsHandle JsonStringify => Context._jsonStringify;
 
         public IDisposable DisableConstraints()
         {
@@ -218,7 +311,7 @@ var process = {
         {
             try
             {
-                using (var jsComiledScript = Compile(script, "script", true))
+                using (Compile(script, "script", true))
                 {}
             }
             catch (Exception e)
@@ -388,32 +481,6 @@ var process = {
         }
 
         // ------------------------------------------ internal implementation
-        private ObjectTemplate _implicitNullTemplate;
-        private ObjectTemplate _explicitNullTemplate;
-        private DynamicJsNullV8? _implicitNull;
-        private DynamicJsNullV8? _explicitNull;
-
-        public InternalHandle ImplicitNullV8 => base.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
-        public InternalHandle ExplicitNullV8 => base.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
-        
-        public JsHandle ImplicitNull => new(ImplicitNullV8);
-        public JsHandle ExplicitNull => new(ExplicitNullV8);
-
-        private JsHandle _jsonStringify;
-        public JsHandle JsonStringify => _jsonStringify;
-        
-        public InternalHandle JsonStringifyV8;
-
-        public TypeBinder? TypeBinderBlittableObjectInstance;
-        public TypeBinder? TypeBinderTask;
-        public TypeBinder? TypeBinderTimeSeriesSegmentObjectInstance;
-        public TypeBinder? TypeBinderCounterEntryObjectInstance;
-        public TypeBinder? TypeBinderAttachmentNameObjectInstance;
-        public TypeBinder? TypeBinderAttachmentObjectInstance;
-        public TypeBinder? TypeBinderLazyNumberValue;
-        public TypeBinder? TypeBinderRavenServer;
-        public TypeBinder? TypeBinderDocumentDatabase;
-
         public V8EngineEx() : base(false, jsConverter: JsConverter.Instance)
         {
         }
@@ -427,76 +494,15 @@ var process = {
         public ContextEx CreateAndSetContextEx(IJavaScriptOptions jsOptions, ObjectTemplate? globalTemplate = null)
         {
             var contextEx = new ContextEx(this, globalTemplate);
-            SetContext(contextEx);
-            SetOptions(jsOptions);
-            InitializeGlobal();
+            Context = contextEx;
+            contextEx.SetOptions(jsOptions);
+            contextEx.InitializeGlobal();
             return contextEx;
         }
         
-        public void InitializeGlobal()
-        {
-            _implicitNullTemplate = CreateObjectTemplate();
-            _implicitNull = _implicitNullTemplate.CreateObject<DynamicJsNullV8>();
-            _implicitNull.SetKind(false);
-
-            _explicitNullTemplate = CreateObjectTemplate();
-            _explicitNull = _explicitNullTemplate.CreateObject<DynamicJsNullV8>();
-            _implicitNull.SetKind(true);
-
-            ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
-
-            TypeBinderBlittableObjectInstance = RegisterType<BlittableObjectInstanceV8>(null, true);
-            TypeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8));
-
-            TypeBinderTask = RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
-            TypeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(Task));
-            
-            TypeBinderTimeSeriesSegmentObjectInstance = RegisterType<TimeSeriesSegmentObjectInstanceV8>(null, false);
-            TypeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder, TimeSeriesSegmentObjectInstanceV8>((TimeSeriesSegmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8));
-
-            TypeBinderCounterEntryObjectInstance = RegisterType<CounterEntryObjectInstanceV8>(null, false);
-            TypeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder, CounterEntryObjectInstanceV8>((CounterEntryObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8));
-
-            TypeBinderAttachmentNameObjectInstance = RegisterType<AttachmentNameObjectInstanceV8>(null, false);
-            TypeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder, AttachmentNameObjectInstanceV8>((AttachmentNameObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8));
-
-            TypeBinderAttachmentObjectInstance = RegisterType<AttachmentObjectInstanceV8>(null, false);
-            TypeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder, AttachmentObjectInstanceV8>((AttachmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8));
-
-            TypeBinderLazyNumberValue = RegisterType<LazyNumberValue>(null, false);
-            TypeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(LazyNumberValue));
-
-            TypeBinderRavenServer = RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite);
-            TypeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<ObjectBinder, RavenServer>((RavenServer)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(RavenServer));
-                
-            TypeBinderDocumentDatabase = RegisterType<DocumentDatabase>(null, true, ScriptMemberSecurity.ReadWrite);
-            TypeBinderDocumentDatabase.OnGetObjectBinder = (tb, obj, initializeBinder)
-                => tb.CreateObjectBinder<ObjectBinder, DocumentDatabase>((DocumentDatabase)obj, initializeBinder, keepAlive: true);
-            base.GlobalObject.SetProperty(typeof(DocumentDatabase));
-
-            JsonStringifyV8 = this.Execute("JSON.stringify", "JSON.stringify", true, 0);
-            _jsonStringify = new JsHandle(JsonStringifyV8);
-        }
-
         public override void Dispose() 
         {
-            JsonStringifyV8.Dispose();
+            Context?.Dispose();
             base.Dispose();
         }
 

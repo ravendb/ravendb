@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             }
 
             if (jsValue.IsEmpty)
-                return IsImplicitNull ? engineEx.ImplicitNullV8.Clone().Clone() : jsValue;
+                return IsImplicitNull ? engineEx.Context.ImplicitNullV8.Clone() : jsValue;
 
             return jsValue.Clone();
         }

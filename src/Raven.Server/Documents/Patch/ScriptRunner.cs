@@ -484,6 +484,9 @@ namespace Raven.Server.Documents.Patch
 
             private void DisposeArgs()
             {
+                if (_args.Length == 0)
+                        return;
+
                 switch (_jsEngineType)
                 {
                     case JavaScriptEngineType.Jint:

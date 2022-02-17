@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static
         
         public void SetContextV8()
         {
-            EngineExV8.SetContext(_index.ContextExV8);
+            EngineExV8.Context = _index.ContextExV8;
         }
     }
 }

@@ -88,9 +88,8 @@ namespace Raven.Server.Documents.Patch.V8
                 if (args.Length != 2)
                     throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
 
-                InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return engineEx.ImplicitNullV8.Clone();
+                    return engineEx.Context.ImplicitNullV8.Clone();
 
                 if (args[0].IsObject == false)
                     ThrowInvalidFirstParameter();
@@ -109,7 +108,7 @@ namespace Raven.Server.Documents.Patch.V8
 
                 var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
                 if (attachment is DynamicNullObject)
-                    return engineEx.ImplicitNullV8.Clone();
+                    return engineEx.Context.ImplicitNullV8.Clone();
 
                 var aoi = new AttachmentObjectInstanceV8(engineEx, (DynamicAttachment)attachment);
                 return aoi.CreateObjectBinder(keepAlive: true);
@@ -140,7 +139,7 @@ namespace Raven.Server.Documents.Patch.V8
                 var engineEx = (V8EngineEx)engine;
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull)
-                    return engineEx.ImplicitNullV8.Clone();
+                    return engineEx.Context.ImplicitNullV8.Clone();
 
                 if (!(args[0].BoundObject is BlittableObjectInstanceV8 doc))
                     ThrowInvalidParameter();
