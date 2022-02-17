@@ -13,33 +13,73 @@ import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryCriteria = require("models/database/query/queryCriteria");
 import databasesManager = require("common/shell/databasesManager");
+import TrafficWatchHttpChange = Raven.Client.Documents.Changes.TrafficWatchHttpChange;
+import trafficWatchQueriesDialog from "viewmodels/manage/trafficWatchQueriesDialog";
+import app = require("durandal/app");
 
 type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
 
 class runQueryFeature implements columnPreviewFeature {
-    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string) {
+    install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void {
         $tooltip.on("click", ".run-query", () => {
-            const value = valueProvider();
-
+            let value = valueProvider();
             const item: Raven.Client.Documents.Changes.TrafficWatchChangeBase = elementProvider();
-            
-            const query = queryCriteria.empty();
 
-            query.queryText(value);
-            query.name("Traffic watch query"); 
-            query.recentQuery(true);
+            if (item.TrafficWatchType !== "Http" || (item as TrafficWatchHttpChange).Type !== "MultiGet") {
+                runQueryFeature.executeQuery(value, item);
+                return;
+            }
 
-            const queryDto = query.toStorageDto();
-
-            const db = databasesManager.default.getDatabaseByName(item.DatabaseName);
-            
-            recentQueriesStorage.saveAndNavigate(db, queryDto, { newWindow: true });
+            const queryList = runQueryFeature.getQueryList(value);
+            if (queryList.length === 1) {
+                runQueryFeature.executeQuery(queryList[0], item);
+            } else {
+                app.showBootstrapDialog(new trafficWatchQueriesDialog(queryList))
+                    .done(queryToExecute => {
+                        if (queryToExecute) {
+                            runQueryFeature.executeQuery(queryToExecute, item);
+                        }
+                    });
+            }
         });
     }
+
+    private static getQueryList(value: any): string[] {
+        const queryList: string[] = [];
+
+        const lines = value.split('\r\n');
+        lines.forEach((line: string) => {
+            if (line) {
+                // parse & strip the "?query=" from beginning of text
+                const query = JSON.parse(line).Query.slice(7);
+                if (query) {
+                    queryList.push(query);
+                }
+            }
+        });
+
+        return queryList;
+    }
     
-    syntax(column: virtualColumn, escapedValue: any) {
+    private static executeQuery(value: any, item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): void {
+        const query = queryCriteria.empty();
+
+        query.queryText(value);
+        query.name("Traffic watch query");
+        query.recentQuery(true);
+
+        const queryDto = query.toStorageDto();
+
+        const db = databasesManager.default.getDatabaseByName(item.DatabaseName);
+
+        recentQueriesStorage.saveAndNavigate(db, queryDto, { newWindow: true });
+    }
+    
+    syntax(column: virtualColumn, escapedValue: any, element: any): string {
+        const buttonText = element.Type === 'MultiGet' ? "RunQuery..." : "RunQuery";
+        
         if (column.header === "Custom Info" && escapedValue !== generalUtils.escapeHtml("N/A")) {
-            return `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>Run Query</span></button>`;    
+            return `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>${buttonText}</span></button>`;
         } else {
             return "";
         }
