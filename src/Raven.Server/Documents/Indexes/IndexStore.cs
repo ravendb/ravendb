@@ -1798,47 +1798,44 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
 
-                if (newIndex.Configuration.RunInMemory == false)
+                while (true)
                 {
-                    while (true)
+                    try
                     {
-                        try
+                        using (newIndex.DrainRunningQueries())
                         {
-                            using (newIndex.DrainRunningQueries())
+                            var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                            var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                            using (newIndex.RestartEnvironment())
                             {
-                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
 
-                                using (newIndex.RestartEnvironment())
+                                if (newIndex.Configuration.TempPath != null)
                                 {
-                                    IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                        newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                                    if (newIndex.Configuration.TempPath != null)
-                                    {
-                                        IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                            newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
-                                    }
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
                                 }
                             }
+                        }
 
-                            break;
-                        }
-                        catch (TimeoutException)
-                        {
-                        }
-                        catch (IOException)
-                        {
-                            // we do not want to try again, letting index to continue running
-                            throw;
-                        }
-                        catch (Exception e)
-                        {
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations($"Failed to move directory of replacements index '{newIndex.Name}' during replacement. Retrying ... ", e);
+                        break;
+                    }
+                    catch (TimeoutException)
+                    {
+                    }
+                    catch (IOException)
+                    {
+                        // we do not want to try again, letting index to continue running
+                        throw;
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to move directory of replacements index '{newIndex.Name}' during replacement. Retrying ... ", e);
 
-                            Thread.Sleep(500);
-                        }
+                        Thread.Sleep(500);
                     }
                 }
 
