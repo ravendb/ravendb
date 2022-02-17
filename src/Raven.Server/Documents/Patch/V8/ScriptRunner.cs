@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Patch
             
             private void SetContextV8()
             {
-                ScriptEngineExV8.SetContext(_contextExV8);
+                ScriptEngineExV8.Context = _contextExV8;
             }
             
             public void DisposeV8()
