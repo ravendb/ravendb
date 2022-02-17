@@ -469,6 +469,8 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new TcpActiveConnections());
 
+            store.Add(new FeatureAnyExperimental(server.ServerStore));
+
             return store;
         }
 
