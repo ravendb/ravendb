@@ -63,20 +63,15 @@ namespace Raven.Server.Documents.ShardedHandlers
                 writer.WritePropertyName("BuildVersion");
                 writer.WriteInteger(ServerVersion.Build);
 
-                using (var exportExecutor = GetShardExecutor(new ShardedExportOperation(this, operationId, options, writer)))
-                {
-                    // we execute one by one so requests will not timeout since the export can take long
-                    await exportExecutor.ExecuteForAllAsync(ExecutionMode.OneByOne, FailureMode.Throw);
-                }
+                var exportOperation = new ShardedExportOperation(this, operationId, options, writer);
+                // we execute one by one so requests will not timeout since the export can take long
+                await ShardExecutor.ExecuteOneByOneForAllAsync(exportOperation);
 
                 writer.WriteEndObject();
             }
 
-            using (var results = GetShardExecutor(new GetShardedOperationStateOperation(operationId)))
-            {
-                var result = await results.ExecuteForAllAsync(ExecutionMode.Parallel, FailureMode.Throw);
-                return result.Result;
-            }
+            var getStateOperation = new GetShardedOperationStateOperation(operationId);
+            return (await ShardExecutor.ExecuteParallelForAllAsync(getStateOperation)).Result;
         }
 
         [RavenShardedAction("/databases/*/smuggler/import", "POST")]

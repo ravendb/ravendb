@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Sharding
             Method = new HttpMethod(request.Method);
         }
 
-        public ShardExecutor<T> GetShardExecutor<T>(IShardedOperation<T> operation) => new ShardExecutor<T>(ShardedContext, operation);
+        public ShardExecutor ShardExecutor => ShardedContext.ShardExecutor;
 
         public void AddHeaders<T>(ShardedBaseCommand<T> command, Headers header)
         {
