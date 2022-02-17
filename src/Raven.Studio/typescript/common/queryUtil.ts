@@ -16,18 +16,18 @@ class queryUtil {
     static readonly MaxDateUTC = "9999-01-01T00:00:00.000Z";
 
     static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, startDate?: moment.Moment, endDate?: moment.Moment) {
-        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
+        const escapedCollectionName = queryUtil.escapeName(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.escapeName(timeSeriesName);
         const dates = queryUtil.formatDates(startDate, endDate);
         
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates})`;
     }
 
     static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string, startDate?: moment.Moment, endDate?: moment.Moment) {
-        const escapedCollectionName = queryUtil.wrapWithSingleQuotes(collectionName || "@all_docs");
+        const escapedCollectionName = queryUtil.escapeName(collectionName || "@all_docs");
         const escapedDocumentId = queryUtil.escapeName(documentId);
-        const escapedTimeSeriesName = queryUtil.wrapWithSingleQuotes(timeSeriesName);
+        const escapedTimeSeriesName = queryUtil.escapeName(timeSeriesName);
         const dates = queryUtil.formatDates(startDate, endDate);
 
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName}${dates} group by ${group} select avg())`;
@@ -45,9 +45,10 @@ class queryUtil {
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
-        const escapedFieldName = queryUtil.wrapWithSingleQuotes(fieldName);
+        const escapedFieldName = queryUtil.escapeName(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
-        return `from index ${escapedIndexName} where ${escapedFieldName} == '${value}' `;
+        const escapedValueName = queryUtil.escapeName(value);
+        return `from index ${escapedIndexName} where ${escapedFieldName} == ${escapedValueName}`;
     }
     
     static wrapWithSingleQuotes(input: string) {
