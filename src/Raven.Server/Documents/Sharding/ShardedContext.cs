@@ -21,9 +21,16 @@ namespace Raven.Server.Documents.Sharding
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
 
+        private ShardExecutor _shardExecutor;
+        public ShardExecutor ShardExecutor => _shardExecutor;
+
+        public int[] FullRange;
+
         public ShardedContext(ServerStore server, RawDatabaseRecord record)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
+
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
 
@@ -39,6 +46,9 @@ namespace Raven.Server.Documents.Sharding
                     server.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
+
+            FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
+            _shardExecutor = new ShardExecutor(this);
         }
 
         public void UpdateDatabaseRecord(DatabaseRecord record)

@@ -24,9 +24,10 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
                 Result = new SmugglerResult()
             };
 
+            var span = results.Span;
             for (int i = 0; i < results.Length; i++)
             {
-                GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, results.Span[i].Result);
+                GetOperationStateOperation.GetOperationStateCommand.CombineSmugglerResults(combined.Result, span[i].Result);
             }
 
             return combined;
