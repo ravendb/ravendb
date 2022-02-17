@@ -23,6 +23,7 @@ import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
 import rqlLanguageService = require("common/rqlLanguageService");
 import getDatabaseStudioConfigurationCommand from "commands/resources/getDatabaseStudioConfigurationCommand";
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -208,16 +209,9 @@ class patch extends viewModelBase {
 
         this.loadLastQuery();
 
-        const studioDatabaseConfigTask = new getDatabaseStudioConfigurationCommand(this.activeDatabase())
-            .execute()
-            .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
-                const test = settings.DisableAutoIndexCreation;
-                this.disableAutoIndexCreation(test);
-            });
+        this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
         
-        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), 
-                           this.savedPatches.loadAll(this.activeDatabase()),
-                           studioDatabaseConfigTask);
+        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     private loadLastQuery() {

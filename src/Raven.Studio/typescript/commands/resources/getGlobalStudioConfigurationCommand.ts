@@ -11,7 +11,7 @@ class getGlobalStudioConfigurationCommand extends commandBase {
             .done(dto => loadTask.resolve(dto))
             .fail((response: JQueryXHR) => {
                 if (response.status !== 404) {
-                    this.reportError(`Failed to load studio configuration`, response.responseText, response.statusText);
+                    this.reportError(`Failed to load the studio global configuration`, response.responseText, response.statusText);
                     loadTask.reject(response);
                 } else {
                     loadTask.resolve(null);
