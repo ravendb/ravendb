@@ -3,12 +3,15 @@ import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import abstractSettings = require("common/settings/abstractSettings");
 import studioSetting = require("common/settings/studioSetting");
+import simpleStudioSetting = require("common/settings/simpleStudioSetting");
 
 class databaseSettings extends abstractSettings {
     private readonly db: database;
     private readonly remoteSettingsLoader: (db: database) => JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>;
     private readonly remoteSettingsSaver: (settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration, db: database) => JQueryPromise<void>;
 
+    disableAutoIndexCreation = new simpleStudioSetting<boolean>("remote", false, x => this.saveSetting(x));
+    
     constructor(removeSettingsLoader: (db: database) => JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>,
                 onSettingChanged: (key: string, value: studioSetting<any>) => void,
                 db: database) {

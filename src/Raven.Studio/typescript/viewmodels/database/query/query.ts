@@ -46,6 +46,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
+import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -578,19 +579,13 @@ class query extends viewModelBase {
         }
         
         this.updateHelpLink('KCIMJK');
+
+        this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
         
         const db = this.activeDatabase();
-
-        const studioDatabaseConfigTask = new getDatabaseStudioConfigurationCommand(this.activeDatabase())
-            .execute()
-            .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
-                this.disableAutoIndexCreation(settings.DisableAutoIndexCreation);
-            });
         
-        const selectInitialQueryTask = this.fetchAllIndexes(db)
+        return this.fetchAllIndexes(db)
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
-        
-        return $.when<any>(studioDatabaseConfigTask, selectInitialQueryTask);
     }
 
     deactivate(): void {
