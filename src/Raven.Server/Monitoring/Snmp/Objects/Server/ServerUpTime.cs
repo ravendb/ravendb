@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override TimeTicks GetData()
         {
-            return new TimeTicks(_statistics.UpTime);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
         }
     }
 
@@ -31,7 +31,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override TimeTicks GetData()
         {
-            return new TimeTicks(_statistics.UpTime);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(_statistics.UpTime);
         }
     }
 }

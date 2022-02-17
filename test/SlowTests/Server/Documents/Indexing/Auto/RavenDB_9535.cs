@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("RavenDB_9535"))
             using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
             {
-                var sut = new ReduceKeyProcessor(1, bufferPool, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                var sut = new ReduceKeyProcessor(1, bufferPool, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                 try
                 {

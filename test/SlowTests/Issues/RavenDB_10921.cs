@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
                 {
                     store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition()
                     {
-                        Name = "ReplacementOf/test",
+                        Name = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}test",
                         Maps =
                     {
                         "from u in docs.Users select new { u.Age }"
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
                     }));
                 });
 
-                Assert.Contains("Index name must not start with 'ReplacementOf/'. Provided index name: 'ReplacementOf/test'", ex.Message);
+                Assert.Contains($"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}test'", ex.Message);
             }
         }
     }

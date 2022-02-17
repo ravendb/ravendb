@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib.Pipeline;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
@@ -81,6 +80,7 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseNumberOfAutoIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfDisabledIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfErrorIndexes(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseNumberOfFaultyIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfIdleIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfIndexes(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseNumberOfStaticIndexes(_databaseName, _databaseLandlord, _databaseIndex));
