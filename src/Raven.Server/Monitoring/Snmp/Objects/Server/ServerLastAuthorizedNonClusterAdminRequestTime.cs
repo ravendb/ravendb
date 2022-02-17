@@ -17,9 +17,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override TimeTicks GetData()
         {
             if (_statistics.LastAuthorizedNonClusterAdminRequestTime.HasValue)
-                return new TimeTicks(SystemTime.UtcNow - _statistics.LastAuthorizedNonClusterAdminRequestTime.Value);
+                return SnmpValuesHelper.TimeSpanToTimeTicks(SystemTime.UtcNow - _statistics.LastAuthorizedNonClusterAdminRequestTime.Value);
 
-            return new TimeTicks(uint.MaxValue);
+            return SnmpValuesHelper.TimeTicksMax;
         }
     }
 }
