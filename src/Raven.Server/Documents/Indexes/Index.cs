@@ -3930,6 +3930,9 @@ namespace Raven.Server.Documents.Indexes
             if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
+            if (Configuration.RunInMemory)
+                throw new InvalidOperationException("Cannot restart the environment of an index running in-memory");
+
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
             // are handled using the DrainRunningQueries portion

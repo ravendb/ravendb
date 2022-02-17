@@ -1000,7 +1000,7 @@ namespace Raven.Server.Documents.Indexes
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
 
-        private void DeleteIndexInternal(Index index, bool raiseNotification = true)
+        internal void DeleteIndexInternal(Index index, bool raiseNotification = true)
         {
             _indexes.TryRemoveByName(index.Name, index);
 
@@ -1023,16 +1023,31 @@ namespace Raven.Server.Documents.Indexes
                 });
             }
 
-            // we always want to try to delete the directories
-            // because Voron and Periodic Backup are creating temp ones
-            //if (index.Configuration.RunInMemory)
-            //    return;
-
             var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 
             var indexPath = index.Configuration.StoragePath.Combine(name);
 
             var indexTempPath = index.Configuration.TempPath?.Combine(name);
+
+            if (index.Configuration.RunInMemory)
+            {
+                // when running in-memory all storage environment files are temporary so deleted on close but
+                // we want to delete the empty directories as well
+                
+                // but when running a replacement index we cannot stop environment and move its directory so we leave it as is
+                // we can have temp files of different environments in the same temp dir (when index is updated multiple times)
+                // so let's delete the directory only if there are no other files inside - last dispose will delete the dir
+
+                string replacementPrefix = Constants.Documents.Indexing.SideBySideIndexNamePrefix.Trim('/');
+
+                if (Directory.Exists(indexPath.FullPath) && indexPath.FullPath.Contains(replacementPrefix))
+                {
+                    var tempPath = index._environment.Options.TempPath.FullPath;
+
+                    if (Directory.Exists(tempPath) && Directory.EnumerateFiles(tempPath).Any())
+                        return;
+                }
+            }
 
             try
             {
