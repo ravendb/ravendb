@@ -74,7 +74,7 @@ namespace Raven.Server.Web.Studio
 
                     try
                     {
-                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
 
                         var outputFields = compiledIndex.OutputFields;
 

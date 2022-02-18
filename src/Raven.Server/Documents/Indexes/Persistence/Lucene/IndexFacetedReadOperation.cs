@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IState _state;
 
         public IndexFacetedReadOperation(Index index,
-            IndexDefinitionBase indexDefinition,
+            IndexDefinitionBaseServerSide indexDefinition,
             LuceneVoronDirectory directory,
             IndexSearcherHolder searcherHolder,
             QueryBuilderFactories queryBuilderFactories,

@@ -106,8 +106,7 @@ namespace Voron.Impl.Backup
 
                     Debug.Assert(HeaderAccessor.HeaderFileNames.Length == 2);
                     infoNotify(($"Voron copy headers for {basePath}", 2));
-                    VoronBackupUtil.CopyHeaders(compressionLevel, package, copier, env.Options, basePath);
-
+                    env.HeaderAccessor.CopyHeaders(compressionLevel, package, copier, env.Options, basePath);
                     // journal files snapshot
                     var files = env.Journal.Files; // thread safety copy
 

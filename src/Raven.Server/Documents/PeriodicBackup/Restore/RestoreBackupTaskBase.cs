@@ -667,7 +667,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         case IndexType.AutoMap:
                         case IndexType.AutoMapReduce:
-                            var autoIndexDefinition = (AutoIndexDefinitionBase)indexAndType.IndexDefinition;
+                            var autoIndexDefinition = (AutoIndexDefinitionBaseServerSide)indexAndType.IndexDefinition;
                             databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
                                 PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
                             break;
