@@ -538,7 +538,7 @@ namespace Raven.Server.Utils
                 return dto;
 
             if (LazyStringParser.TryParseTimeSpan(buffer, size, out TimeSpan ts))
-                return ts;
+                    return ts;
 
             return value; // ensure that the decompressed lazy string value is returned
         }
@@ -568,14 +568,20 @@ namespace Raven.Server.Utils
 
             fixed (char* str = value)
             {
-                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto,properlyParseThreeDigitsMilliseconds: true);
-                if (result == LazyStringParser.Result.DateTime)
-                    output = dt;
-                if (result == LazyStringParser.Result.DateTimeOffset)
-                    output = dto;
+                var result = LazyStringParser.TryParseDateTime(str, value.Length, out DateTime dt, out DateTimeOffset dto, properlyParseThreeDigitsMilliseconds: true);
+
+                output = result switch
+                {
+                    LazyStringParser.Result.DateTime => dt,
+                    LazyStringParser.Result.DateTimeOffset => dto,
+                    _ => null
+                };
+                
+                
 
                 if (LazyStringParser.TryParseTimeSpan(str, value.Length, out var ts))
                     output = ts;
+                
             }
 
             return output != null;

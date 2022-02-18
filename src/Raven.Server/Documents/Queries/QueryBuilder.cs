@@ -5,9 +5,9 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
-using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Spatial.Queries;
+using Nest;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -25,9 +25,14 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Spatial4n.Core.Shapes;
+using FuzzyQuery = Lucene.Net.Search.FuzzyQuery;
 using Index = Raven.Server.Documents.Indexes.Index;
+using KeywordAnalyzer = Lucene.Net.Analysis.KeywordAnalyzer;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
+using Term = Lucene.Net.Index.Term;
+using TermQuery = Lucene.Net.Search.TermQuery;
+using TermRangeQuery = Lucene.Net.Search.TermRangeQuery;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
@@ -614,21 +619,33 @@ namespace Raven.Server.Documents.Queries
             ticks = -1;
             DateTime dt = default;
             DateTimeOffset dto = default;
+            DateOnly @do = default;
+            TimeOnly to = default;
             LazyStringParser.Result result = LazyStringParser.Result.Failed;
 
             switch (value)
             {
                 case LazyStringValue lsv:
-                    result = LazyStringParser.TryParseDateTime(lsv.Buffer, lsv.Size, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                    result = LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to, 
+                        index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 case string valueAsString:
                     fixed (char* buffer = valueAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, valueAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                    {
+                        result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
+                            index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+
+                    }
+
                     break;
                 default:
                     var otherAsString = value.ToString();
                     fixed (char* buffer = otherAsString)
-                        result = LazyStringParser.TryParseDateTime(buffer, otherAsString.Length, out dt, out dto, index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                    {
+                        result = LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to,
+                            index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                    }
+
                     break;
             }
 
@@ -641,6 +658,12 @@ namespace Raven.Server.Documents.Queries
                     return true;
                 case LazyStringParser.Result.DateTimeOffset:
                     ticks = dto.UtcDateTime.Ticks;
+                    return true;
+                case LazyStringParser.Result.TimeOnly:
+                    ticks = to.Ticks;
+                    return true;
+                case LazyStringParser.Result.DateOnly:
+                    ticks = @do.DayNumber * TimeSpan.TicksPerDay;
                     return true;
                 default:
                     throw new InvalidOperationException("Should not happen!");
