@@ -11,6 +11,7 @@ on:
 
 env:
   DOTNET_VERSION: 3.1.416
+  DOTNET_VERSION_6: 6.0.200
 
 jobs:
   release:
@@ -22,10 +23,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup .NET Core
+    - name: Setup .NET Core 3
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Setup .NET 6
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION_6 }}
 
     - name: Install dependencies
       run: dotnet restore
@@ -46,10 +51,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup .NET Core
+    - name: Setup .NET Core 3
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Setup .NET 6
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION_6 }}
 
     - name: Install dependencies
       run: dotnet restore
