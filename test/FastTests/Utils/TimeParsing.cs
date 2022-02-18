@@ -110,5 +110,37 @@ namespace FastTests.Utils
                     LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto, properlyParseThreeDigitsMilliseconds: true));
             }
         }
+        
+        [Theory]
+        [InlineData("1998-02-09", 1998, 2, 9)]
+        [InlineData("0001-12-10", 1, 12, 10)]
+        [InlineData("2022-02-14", 2022, 2, 14)]
+        [InlineData("5999-01-01", 5999, 1, 1)]
+
+        public void DateOnly(string date, int yyyy, int mm, int dd)
+        {
+            var bytes = date.AsSpan();
+            fixed (char* buffer = bytes)
+            {
+                Assert.True(LazyStringParser.TryParseDateOnly(buffer, bytes.Length, out var result));
+                Assert.True(result.Equals(new DateOnly(yyyy,mm,dd)));
+            }
+        }
+
+        [Theory]
+        [InlineData("20:59:12.9990000", 20, 59, 12, 999)]
+        [InlineData("21:37:00.0000000", 21, 37, 0, 0)]
+        public void TimeOnly(string date, int hh, int mm, int ss, int ms)
+        {
+            var bytes = date.AsSpan();
+            fixed (char* buffer = bytes)
+            {
+                Assert.True(LazyStringParser.TryParseTimeOnly(buffer, bytes.Length, out var result));
+                Assert.True(result.Equals(new TimeOnly(hh, mm, ss, ms)));
+            }
+        }
+
+
+
     }
 }

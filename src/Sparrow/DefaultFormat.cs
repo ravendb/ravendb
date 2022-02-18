@@ -2,6 +2,7 @@ namespace Sparrow
 {
     internal static class DefaultFormat
     {
+        public static readonly string TimeOnlyAndDateOnlyFormatToWrite = "O";
         public static readonly string DateTimeOffsetFormatsToWrite = "o";
         public static readonly string DateTimeFormatsToWrite = "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff";
 

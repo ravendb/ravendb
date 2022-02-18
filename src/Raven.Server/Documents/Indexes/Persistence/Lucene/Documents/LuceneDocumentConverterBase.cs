@@ -205,6 +205,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
 
+                case ValueType.DateOnly:
+                case ValueType.TimeOnly:
                 case ValueType.DateTime:
                 case ValueType.DateTimeOffset:
                 case ValueType.TimeSpan:
@@ -357,6 +359,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 return newFields;
+            }
+
+            if (valueType == ValueType.DateOnly)
+            {
+                var dateOnly = (DateOnly)value;
+                var asString = dateOnly.ToString("O");
+                var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;
+
+                instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
+                newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, ticks, Field.Store.NO));
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+                return newFields;
+            }
+
+            if (valueType == ValueType.TimeOnly)
+            {
+                var timeOnly = (TimeOnly)value;
+                var asString = timeOnly.ToString("O");
+                instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
+                newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, timeOnly.Ticks, Field.Store.NO));
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+                return newFields;
+
             }
 
             if (valueType == ValueType.BoostedValue)
@@ -615,6 +648,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (value is Stream)
                 return ValueType.Stream;
+
+            if (value is DateOnly)
+                return ValueType.DateOnly;
+
+            if (value is TimeOnly)
+                return ValueType.TimeOnly;
 
             return ValueType.ConvertToJson;
         }
@@ -970,7 +1009,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             ConvertToJson,
 
-            Stream
+            Stream,
+
+            DateOnly,
+
+            TimeOnly
         }
 
         protected class ConversionScope : IDisposable

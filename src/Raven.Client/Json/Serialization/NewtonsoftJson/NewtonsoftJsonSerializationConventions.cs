@@ -196,6 +196,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
             jsonSerializer.Converters.Add(SizeConverter.Instance);
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            jsonSerializer.Converters.Add(DateOnlyConverter.Instance);
+            jsonSerializer.Converters.Add(TimeOnlyConverter.Instance);
+#endif
+
             jsonSerializer.Converters.Add(_jsonEnumerableConverter);
 
             var converters = canRead ? 
