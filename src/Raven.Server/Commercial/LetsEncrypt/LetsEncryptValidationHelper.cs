@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -15,8 +16,6 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptValidationHelper
 {
-    internal const string AnyIp = "0.0.0.0";
-
     private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
     {
         var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
@@ -25,7 +24,7 @@ public class LetsEncryptValidationHelper
         // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to
         foreach (var hostnameOrIp in localNode.Addresses)
         {
-            if (hostnameOrIp.Equals(AnyIp))
+            if (hostnameOrIp.Equals(Constants.Network.AnyIp))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.TcpPort));
@@ -86,7 +85,7 @@ public class LetsEncryptValidationHelper
 
         foreach (var hostnameOrIp in hostnamesOrIps)
         {
-            if (hostnameOrIp.Equals(AnyIp))
+            if (hostnameOrIp.Equals(Constants.Network.AnyIp))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), port));
                 continue;
@@ -159,17 +158,17 @@ public class LetsEncryptValidationHelper
         {
             RachisConsensus.ValidateNodeTag(key);
 
-            if (value.Port == 0)
-                setupInfo.NodeSetupInfos[key].Port = 443;
+            if (value.Port == Constants.Network.ZeroValue)
+                setupInfo.NodeSetupInfos[key].Port = Constants.Network.DefaultSecuredRavenDbHttpPort;
 
-            if (value.TcpPort == 0)
-                setupInfo.NodeSetupInfos[key].TcpPort = 38888;
+            if (value.TcpPort == Constants.Network.ZeroValue)
+                setupInfo.NodeSetupInfos[key].TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
 
             if (setupMode == SetupMode.LetsEncrypt &&
-                setupInfo.NodeSetupInfos[key].Addresses.Any(ip => ip.Equals(AnyIp)) &&
+                setupInfo.NodeSetupInfos[key].Addresses.Any(ip => ip.Equals(Constants.Network.AnyIp)) &&
                 string.IsNullOrWhiteSpace(setupInfo.NodeSetupInfos[key].ExternalIpAddress))
             {
-                throw new ArgumentException($"When choosing {AnyIp} as the ip address, you must provide an external ip to update in the DNS records.");
+                throw new ArgumentException($"When choosing {Constants.Network.AnyIp} as the ip address, you must provide an external ip to update in the DNS records.");
             }
         }
 

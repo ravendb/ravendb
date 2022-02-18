@@ -935,6 +935,8 @@ namespace Raven.Server.Commercial
 
         private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)
         {
+            var certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore; 
+            var certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter; 
             var clusterSize = GetClusterSize();
             var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
@@ -961,7 +963,7 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
             
-            SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore, newLicenseStatus);
+            SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore.GetLicenseType(), newLicenseStatus.Type, certificateNotBefore, certificateNotAfter);
             
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;

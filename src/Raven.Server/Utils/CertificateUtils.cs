@@ -17,8 +17,9 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Client;
 using Raven.Server.Commercial;
-using Raven.Server.Commercial.LetsEncrypt;
+using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config.Categories;
 using Sparrow;
 using Sparrow.Logging;
@@ -414,14 +415,14 @@ namespace Raven.Server.Utils
 
                 domain = parts[1];
 
-                publicTcpUrl = node.ExternalTcpPort != 0
+                publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
                     ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
                     : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
 
-                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
+                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != Constants.Network.ZeroValue)
                     return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
 
-                return port == 443
+                return port == Constants.Network.DefaultSecuredRavenDbHttpPort
                     ? $"https://{nodeTag.ToLower()}.{domain}"
                     : $"https://{nodeTag.ToLower()}.{domain}:{port}";
             }
@@ -439,12 +440,12 @@ namespace Raven.Server.Utils
 
             var url = $"https://{domain}";
 
-            if (node.ExternalPort != 0)
+            if (node.ExternalPort != Constants.Network.ZeroValue)
                 url += ":" + node.ExternalPort;
-            else if (port != 443)
+            else if (port != Constants.Network.DefaultSecuredRavenDbHttpPort)
                 url += ":" + port;
 
-            publicTcpUrl = node.ExternalTcpPort != 0
+            publicTcpUrl = node.ExternalTcpPort != Constants.Network.ZeroValue
                 ? $"tcp://{domain}:{node.ExternalTcpPort}"
                 : $"tcp://{domain}:{tcpPort}";
 

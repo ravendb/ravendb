@@ -2,12 +2,11 @@
 using System.IO;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Newtonsoft.Json;
 using Raven.Server.Commercial;
-using Sparrow.Platform;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
-using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Commercial.SetupWizard;
 using rvn.Parameters;
+using Sparrow.Platform;
 using Voron.Global;
 
 namespace rvn
@@ -21,7 +20,10 @@ namespace rvn
                                                       "The server MUST be offline for the duration of those operations";
 
         private static CommandLineApplication _app;
-        
+
+        private const string OwnCertificate = "own-certificate";
+        private const string LetsEncrypt = "lets-encrypt";
+
         public static int Run(string[] args)
         {
             if (args == null)
@@ -32,7 +34,7 @@ namespace rvn
                 Name = "rvn",
                 Description = "This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store. " +
                               "The server store which may contain sensitive information is not encrypted by default (even if it contains encrypted databases). " +
-                              "If you want it encrypted, you must do it manually using this tool."
+                              "If you want it encrypted, you must do it manually using this tool.",
             };
 
             _app.HelpOption(HelpOptionString);
@@ -63,9 +65,9 @@ namespace rvn
         {
             _app.Command("create-setup-package", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "This command creates RavenDB setup ZIP file";
+                cmd.Description = "This command creates RavenDB setup ZIP file";
                 cmd.HelpOption(HelpOptionString);
-                
+
                 var mode = ConfigureModeOption(cmd);
                 var setupParam = ConfigureSetupParameters(cmd);
                 var packageOutPath = ConfigurePackageOutputFile(cmd);
@@ -79,7 +81,7 @@ namespace rvn
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
-                
+
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
                         SetupInfoPath = setupParamVal,
@@ -105,7 +107,7 @@ namespace rvn
                 });
             });
         }
-        
+
         private static async Task<int> CreateSetupPackage(CreateSetupPackageParameters parameters)
         {
             byte[] zipFile;
@@ -115,12 +117,11 @@ namespace rvn
             {
                 return ExitWithError($"{nameof(parameters.SetupInfoPath)} does not exits", parameters.Command);
             }
-            
+
             if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
             {
-                return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extenstion", parameters.Command);
+                return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extension", parameters.Command);
             }
-
 
             try
             {
@@ -132,13 +133,14 @@ namespace rvn
             }
             catch (Exception e)
             {
-                return ExitWithError($"Failed to deserialize SetupInfo object form this file path {nameof(parameters.SetupInfoPath)}\nError: {e}", parameters.Command);            }
+                return ExitWithError($"Failed to load RavenDB Setup parameters from file: {parameters.SetupInfoPath}{Environment.NewLine}Error: {e}", parameters.Command);
+            }
 
             if (string.IsNullOrEmpty(setupInfo?.Domain))
-                return ExitWithError($"{nameof(setupInfo.Domain)} cannot be empty",parameters.Command);
-            
+                return ExitWithError($"{nameof(setupInfo.Domain)} cannot be empty", parameters.Command);
+
             parameters.PackageOutputPath ??= setupInfo.Domain;
-            
+
             if (string.IsNullOrEmpty(parameters.CertPassword) == false)
             {
                 setupInfo.Password = parameters.CertPassword;
@@ -146,19 +148,19 @@ namespace rvn
 
             switch (parameters.Mode)
             {
-                case "own-certificate" when string.IsNullOrEmpty(parameters.CertificatePath):
+                case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
                 {
                     return ExitWithError("--path option must be set", parameters.Command);
                 }
-                case "own-certificate":
+                case OwnCertificate:
                 {
                     var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
                     var certBase64 = Convert.ToBase64String(certBytes);
                     setupInfo.Certificate = certBase64;
-                    zipFile = await ImportCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
+                    zipFile = await OwnCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
                 }
-                case "lets-encrypt" when string.IsNullOrEmpty(parameters.SetupInfoPath) == false:
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupInfoPath) == false:
                 {
                     zipFile = await LetsEncryptSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
@@ -179,7 +181,7 @@ namespace rvn
             }
 
             parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");
-            
+
             return 0;
         }
 
@@ -473,36 +475,38 @@ namespace rvn
 
         private static int ExitWithError(string errMsg, CommandLineApplication cmd)
         {
-            cmd.Out.WriteLine();
+            cmd.Error.WriteLine();
             cmd.Error.WriteLine($"Error: {errMsg}");
-            cmd.Out.WriteLine();
+            cmd.Error.WriteLine();
             cmd.ShowHelp();
             return 1;
         }
-        
+
         private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
         {
             return cmd.Option("-m|--mode", "Option to choose setup from either lets encrypt or importing certificate", CommandOptionType.SingleValue);
         }
-        
+
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("-s|--setup-parameters-path", "Call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+            return cmd.Option("-s|--setup-parameters-path", "Path to JSON file including setup attributes", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
         {
             return cmd.Option("-o|--package-output-path", "Setup package output path", CommandOptionType.SingleValue);
-        } 
+        }
+
         private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
         {
             return cmd.Option("--cert-path", "Certificate path", CommandOptionType.SingleValue);
         }
-        
+
         private static CommandOption ConfigureCertPassword(CommandLineApplication cmd)
         {
-            return cmd.Option("--password", "Certificate password.\nPassword can be set from ENV:\nWindows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
+            return cmd.Option("--password", $"Certificate password.{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
         }
+
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
         {
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);

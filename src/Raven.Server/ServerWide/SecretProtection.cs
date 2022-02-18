@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Pkcs;
 using Org.BouncyCastle.Asn1.X509;
@@ -19,7 +18,6 @@ using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
-using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -331,7 +329,7 @@ namespace Raven.Server.ServerWide
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
             {
-                string msg = $"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}";
+                string msg = $"The provided certificate '{loadedCertificate.FriendlyName}' from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}";
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
                 progress?.AddError(msg);
@@ -341,11 +339,11 @@ namespace Raven.Server.ServerWide
             if (licenseType == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
-                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
+                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
                 {
                     const string msg = "The server certificate expiration date is more than 4 months from now. " +
-                                       "This is not allowed when using the developer license. " +
-                                       "The developer license is not allowed for production use. " +
+                                       "This is not allowed when using Developer license. " +
+                                       "Developer license is not allowed for production use. " +
                                        "Either switch the license or use a short term certificate.";
 
                     if (Logger.IsOperationsEnabled)
@@ -358,8 +356,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool validateCertKeyUsages, SetupProgressAndResult progress = null)
-        {
+        public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool validateCertKeyUsages, SetupProgressAndResult progress = null)        {
             ValidateExpiration(source, loadedCertificate, licenseType, progress);
 
             ValidatePrivateKey(source, password, rawBytes, out var privateKey, progress);
@@ -789,14 +786,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-#endif
-
-        public byte[] LoadMasterKeyFromPath()
+        internal static void ValidateExpiration(string source, LicenseType currentLicenseType, LicenseType newLicenseType, DateTime certificateNotBefore, DateTime certificateNotAfter)
         {
-            try
-            {
-                var key = File.ReadAllBytes(_config.MasterKeyPath);
-                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+            if (newLicenseType != LicenseType.Developer)
+                return;
 
                 // we require that the key will exists (so admin will generate proper permissions)
                 // but if the size is zero, we'll generate a random key and save it to the specified
@@ -858,31 +851,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
-        {
-            if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
-
-            //if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
-            if (licenseType == LicenseType.Developer)
-            {
-                // Do not allow long range certificates in developer mode.
-                if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(MaxDeveloperCertificateValidityDurationInMonths))
-                {
-                    const string msg = "The server certificate expiration date is more than 4 months from now. " +
-                                       "This is not allowed when using the developer license. " +
-                                       "The developer license is not allowed for production use. " +
-                                       "Either switch the license or use a short term certificate.";
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(msg);
-                    throw new InvalidOperationException(msg);
-                }
-            }
-        }
-
-        internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
+        internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk, SetupProgressAndResult progress = null)
         {
             pk = null;
             foreach (string alias in GetAliases(certificatePassword, rawData, out var getKey))
@@ -935,43 +904,6 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
-
-#if !RVN
-
-        public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
-        
-        {
-            try
-            {
-                path = Path.Combine(AppContext.BaseDirectory, path);
-                var rawData = File.ReadAllBytes(path);
-
-                // we need to load it as exportable because we might need to send it over the cluster
-                var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-
-                ValidateExpiration(path, loadedCertificate, licenseType);
-
-                ValidatePrivateKey(path, password, rawData, out var privateKey);
-
-                ValidateKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
-
-                return new CertificateUtils.CertificateHolder
-                {
-                    Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                    PrivateKey = privateKey
-                };
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Could not load certificate file {path}", e);
-            }
-        }
-
-
-
-#endif
 
         public byte[] LoadMasterKeyFromPath()
         {

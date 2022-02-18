@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
 
-namespace Raven.Server.Commercial.LetsEncrypt;
+namespace Raven.Server.Utils;
 
 public class JsonStringHelper
 {
