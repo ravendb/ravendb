@@ -134,7 +134,7 @@ namespace Raven.Server
             _externalCertificateValidator = new ExternalCertificateValidator(this, Logger);
             _tcpContextPool = new JsonContextPool(Configuration.Memory.MaxContextSizeToKeep);
         }
-
+        
         public TcpListenerStatus GetTcpServerStatus()
         {
             return _tcpListenerStatus;
@@ -1061,7 +1061,7 @@ namespace Raven.Server
                 var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(
                     Configuration.Security.CertificateRenewExec,
                     Configuration.Security.CertificateRenewExecArguments,
-                    ServerStore.LicenseManager.LicenseStatus.Type,
+                    ServerStore.GetLicenseType(),
                     ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 return certHolder.Certificate.Export(X509ContentType.Pfx); // With the private key
@@ -1348,7 +1348,7 @@ namespace Raven.Server
             var certBytes = Convert.FromBase64String(setupInfo.Certificate);
 
             SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, certBytes,
-                setupInfo.Password, ServerStore.LicenseManager.LicenseStatus.Type, true);
+                setupInfo.Password, ServerStore.GetLicenseType(), true);
 
             return certBytes;
         }
@@ -1417,13 +1417,13 @@ namespace Raven.Server
                     return ServerStore.Secrets.LoadCertificateFromPath(
                         Configuration.Security.CertificatePath,
                         Configuration.Security.CertificatePassword,
-                        ServerStore.LicenseManager.LicenseStatus.Type,
+                        ServerStore.GetLicenseType(),
                         ServerStore.Configuration.Security.CertificateValidationKeyUsages);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false)
                     return ServerStore.Secrets.LoadCertificateWithExecutable(
                         Configuration.Security.CertificateLoadExec,
                         Configuration.Security.CertificateLoadExecArguments,
-                        ServerStore.LicenseManager.LicenseStatus.Type,
+                        ServerStore.GetLicenseType(),
                         ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
                 return null;
@@ -2276,7 +2276,7 @@ namespace Raven.Server
         internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
         {
             var certificateHolder = Certificate;
-            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.LicenseManager.LicenseStatus.Type, true);
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore.GetLicenseType(), true);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 _httpsConnectionMiddleware.SetCertificate(certificate);

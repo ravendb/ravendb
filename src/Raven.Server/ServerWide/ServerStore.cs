@@ -276,6 +276,11 @@ namespace Raven.Server.ServerWide
                 throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
             return ClusterMaintenanceSupervisor?.GetStats();
         }
+        
+        internal LicenseType GetLicenseType()
+        {
+            return LicenseManager.LicenseStatus.Type;
+        }
 
         public void UpdateTopologyChangeNotification()
         {
@@ -1721,7 +1726,7 @@ namespace Raven.Server.ServerWide
             var tree = context.Transaction.InnerTransaction.CreateTree("SecretKeys");
             tree.Delete(name);
         }
-
+        
         public Task<(long Index, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes, string raftRequestId)
         {
             var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)

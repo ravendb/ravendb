@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
@@ -525,13 +526,13 @@ namespace Raven.Server.Web.System
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
                 };
 
-                if (setupInfo.Port == 0)
-                    setupInfo.Port = 8080;
+                if (setupInfo.Port == Constants.Network.ZeroValue)
+                    setupInfo.Port = Constants.Network.DefaultUnsecuredRavenDbHttpPort;
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
-                if (setupInfo.TcpPort == 0)
-                    setupInfo.TcpPort = 38888;
+                if (setupInfo.TcpPort == Constants.Network.ZeroValue)
+                    setupInfo.TcpPort = Constants.Network.DefaultSecuredRavenDbTcpPort;
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 

@@ -50,7 +50,7 @@ namespace SlowTests.Authentication
                 new SecurityConfiguration()).LoadCertificateFromPath(
                 serverCertPath,
                 null, 
-                Server.ServerStore.LicenseManager.LicenseStatus.Type,
+                Server.ServerStore.GetLicenseType(),
                 Server.ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
             var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);

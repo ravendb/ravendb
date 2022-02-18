@@ -119,6 +119,15 @@ namespace Raven.Client
             public const string Prefix = "certificates/";
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
+        
+        public class Network
+        {
+            public const string AnyIp = "0.0.0.0";
+            public const int ZeroValue = 0;
+            public const int DefaultSecuredRavenDbHttpPort = 443;
+            public const int DefaultUnsecuredRavenDbHttpPort = 8080;
+            public const int DefaultSecuredRavenDbTcpPort = 38888;
+        }
 
         internal class DatabaseSettings
         {
@@ -382,7 +391,7 @@ namespace Raven.Client
                 public const string Size = "@raven-blob-size";
             }
         }
-
+        
         internal static class Smuggler
         {
             public const string ImportOptions = "importOptions";

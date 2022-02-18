@@ -60,10 +60,11 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 ["C"] = new() {Port = 446, TcpPort = 38889, Addresses = new List<string> {"127.0.0.1"}}
             }
         };
+        
         Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
 
 
-        var zipBytes = await ImportCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
+        var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
         {
             if (tuple.Message != null)
             {

@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Threading;
 
-namespace Raven.Server.Commercial.LetsEncrypt;
+namespace Raven.Server.Commercial.SetupWizard;
 
 public class CompleteAuthorizationAndGetCertificateParameters
 {

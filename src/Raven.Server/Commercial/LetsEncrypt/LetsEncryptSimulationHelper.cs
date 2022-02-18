@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Raven.Client;
 using Raven.Server.Config;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
@@ -68,7 +69,7 @@ public class LetsEncryptSimulationHelper
 
                         if (addresses.Length == 0)
                         {
-                            var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);
+                            var defaultIp = new IPEndPoint(IPAddress.Parse(Constants.Network.AnyIp), port == 0 ? Constants.Network.DefaultSecuredRavenDbHttpPort : port);
 
                             options.Listen(defaultIp, listenOptions =>
                             {

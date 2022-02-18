@@ -5,7 +5,7 @@ using Raven.Server.Commercial.LetsEncrypt;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
-public class ImportCertificateSetupUtils
+public class OwnCertificateSetupUtils
 {
     public static async Task<byte[]> Setup(SetupInfo setupInfo, SetupProgressAndResult progress, CancellationToken token)
     {
