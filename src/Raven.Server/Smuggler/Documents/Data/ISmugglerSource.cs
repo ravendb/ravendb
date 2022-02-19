@@ -25,19 +25,19 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         Task<DatabaseRecord> GetShardedDatabaseRecordAsync();
 
-        IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
+        IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
 
-        IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
+        IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions);
 
-        IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions = null);
+        IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions);
 
         IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync();
 
         IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync();
 
-        IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
+        IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions);
 
-        IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions = null);
+        IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions);
 
         IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync();
 
@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync();
 
-        IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions = null);
+        IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions);
 
         IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync();
 

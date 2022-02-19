@@ -59,7 +59,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (_serverContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    var docShardIndex = ShardHelper.GetShardIndexforDocument(context, _shardedRecord.ShardAllocations, docId);
+                    var docShardIndex = ShardHelper.GetShardForId(context, _shardedRecord.ShardAllocations, docId);
                     return docShardIndex != _index;
                 }
             }

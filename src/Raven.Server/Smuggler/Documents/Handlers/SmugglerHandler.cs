@@ -660,7 +660,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream, DatabaseSmugglerOptionsServerSide options, 
-            SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token, BlittableJsonReaderObject optionsAsBlittable = null)
+            SmugglerResult result, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             await using (stream)

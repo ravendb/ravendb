@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         private async Task DoImportInternalAsync(JsonOperationContext jsonOperationContext, Stream stream,
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, Action<IOperationProgress> onProgress,
-            OperationCancelToken token, BlittableJsonReaderObject optionsAsBlittable)
+            OperationCancelToken token)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext tContext))
             using (var source = new StreamSource(stream, jsonOperationContext, ShardedContext.DatabaseName, options))
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
 
                 var smuggler = new ShardedDatabaseSmuggler(ContextPool, source, jsonOperationContext, tContext, record,
-                    Server.ServerStore, ShardedContext, this, optionsAsBlittable, options, result,
+                    Server.ServerStore, ShardedContext, this, options, result,
                     onProgress, token: token.Token);
 
                 await smuggler.ExecuteAsync();

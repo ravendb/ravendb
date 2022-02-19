@@ -21,9 +21,7 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseSmuggler : SmugglerBase
     {
-        private readonly ISmugglerDestination _destination;
-        private readonly SmugglerPatcher _patcher;
-
+        private readonly DocumentDatabase _database;
         public Action<IndexDefinitionAndType> OnIndexAction;
 
         public const string PreV4RevisionsDocumentId = "/revisions/";
@@ -40,276 +38,44 @@ namespace Raven.Server.Smuggler.Documents
             return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
         }
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context,
-            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
-            CancellationToken token = default) : base(source, time, context, options, result, onProgress, token )
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, JsonOperationContext context, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default) : 
+            base(source, destination, time, context, options, result, onProgress, token)
         {
-            _destination = destination;
-            if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
-                _patcher = new SmugglerPatcher(_options, database);
-
+            _database = database;
             Debug.Assert((source is DatabaseSource && destination is DatabaseDestination) == false,
                 "When both source and destination are database, we might get into a delayed write for the dest while the " +
                 "source already pulsed its' read transaction, resulting in bad memory read.");
-
         }
 
-        /// <summary>
-        /// isLastFile param true by default to correctly restore identities and compare exchange from V41 ravendbdump file.
-        /// </summary>
-        /// <param name="ensureStepsProcessed"></param>
-        /// <param name="isLastFile"></param>
-        /// <returns></returns>
-        public override async Task<SmugglerResult> ExecuteAsync(bool ensureStepsProcessed = true, bool isLastFile = true)
+        public override SmugglerPatcher CreatePatcher() => new DatabaseSmugglerPatcher(_options, _database);
+
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
         {
-            var result = _result ?? new SmugglerResult();
-            using (_patcher?.Initialize())
-            using (var initializeResult = await _source.InitializeAsync(_options, result))
-            await using (_destination.InitializeAsync(_options, result, initializeResult.BuildNumber))
+            result.CompareExchange.Start();
+            await using (var actions = _destination.CompareExchange(_context))
             {
-                ModifyV41OperateOnTypes(initializeResult.BuildNumber, isLastFile);
-
-                var buildType = BuildVersion.Type(initializeResult.BuildNumber);
-                var currentType = await _source.GetNextTypeAsync();
-                while (currentType != DatabaseItemType.None)
+                await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
                 {
-                    await ProcessTypeAsync(currentType, result, buildType, ensureStepsProcessed);
-
-                    currentType = await _source.GetNextTypeAsync();
-                }
-
-                if (ensureStepsProcessed)
-                {
-                    EnsureProcessed(result);
-                }
-
-                return result;
-            }
-        }
-
-        protected override async Task<SmugglerProgressBase.DatabaseRecordProgress> ProcessDatabaseRecordAsync(SmugglerResult result)
-        {
-            return await ProcessDatabaseRecordInternalAsync(result, _destination.DatabaseRecord());
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessDocumentsAsync(SmugglerResult result, BuildVersionType buildType)
-        {
-            result.Documents.Start();
-
-            var throwOnCollectionMismatchError = _options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) == false;
-
-            await using (var actions = _destination.Documents(throwOnCollectionMismatchError))
-            {
-                List<LazyStringValue> legacyIdsToDelete = null;
-
-                await foreach (DocumentItem item in _source.GetDocumentsAsync(_options.Collections, actions))
-                {
-                    _token.ThrowIfCancellationRequested();
-
-                    var isPreV4Revision = IsPreV4Revision(buildType, item.Document.Id, item.Document);
-                    if (isPreV4Revision)
-                    {
-                        result.RevisionDocuments.ReadCount++;
-                    }
-                    else
-                    {
-                        result.Documents.ReadCount++;
-                    }
-
-                    if (result.Documents.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
-                        if (result.Documents.Attachments.ReadCount > 0)
-                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
-                        AddInfoToSmugglerResult(result, message);
-                    }
-
-                    if (item.Document == null)
-                    {
-                        result.Documents.ErroredCount++;
-                        if (result.Documents.ErroredCount % 1000 == 0)
-                            AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
-                        continue;
-                    }
-
-                    if (item.Document.Id == null)
-                        ThrowInvalidData();
-
-                    result.Documents.LastEtag = item.Document.Etag;
-
-                    if (CanSkipDocument(item.Document, buildType))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_options.IncludeExpired == false &&
-                        ExpirationStorage.HasPassed(item.Document.Data, _time.GetUtcNow()))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_options.IncludeArtificial == false && item.Document.Flags.HasFlag(DocumentFlags.Artificial))
-                    {
-                        SkipDocument(item, result);
-                        continue;
-                    }
-
-                    if (_patcher != null)
-                    {
-                        item.Document = _patcher.Transform(item.Document);
-                        if (item.Document == null)
-                        {
-                            result.Documents.SkippedCount++;
-                            if (result.Documents.SkippedCount % 1000 == 0)
-                                AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
-                            continue;
-                        }
-                    }
-
-                    SetDocumentOrTombstoneFlags(ref item.Document.Flags, ref item.Document.NonPersistentFlags, buildType);
-
-                    if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
-                        continue;
-                    await actions.WriteDocumentAsync(item, result.Documents);
-                }
-
-                await TryHandleLegacyDocumentTombstonesAsync(legacyIdsToDelete, actions, result);
-            }
-
-            if (buildType == BuildVersionType.V3 && result.RevisionDocuments.ReadCount > 0)
-                result.RevisionDocuments.Processed = true;
-
-            return result.Documents;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessRevisionDocumentsAsync(SmugglerResult result)
-        {
-            result.RevisionDocuments.Start();
-
-            await using (var actions = _destination.RevisionDocuments())
-            {
-                await foreach (var item in _source.GetRevisionDocumentsAsync(_options.Collections, actions))
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.RevisionDocuments.ReadCount++;
-
-                    if (result.RevisionDocuments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} revision documents.");
-
-                    if (item.Document == null)
-                    {
-                        result.RevisionDocuments.ErroredCount++;
-                        continue;
-                    }
-
-                    Debug.Assert(item.Document.Id != null);
-
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
-
-                    await actions.WriteDocumentAsync(item, result.RevisionDocuments);
-
-                    result.RevisionDocuments.LastEtag = item.Document.Etag;
+                    await InternalProcessCompareExchangeAsync(result, kvp, actions);
                 }
             }
 
-            return result.RevisionDocuments;
+            return result.CompareExchange;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessTombstonesAsync(SmugglerResult result, BuildVersionType buildType)
+        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
         {
-            result.Tombstones.Start();
+            result.CompareExchangeTombstones.Start();
 
-            await using (var actions = _destination.Tombstones())
+            await using (var actions = _destination.CompareExchangeTombstones(_context))
             {
-                await foreach (var tombstone in _source.GetTombstonesAsync(_options.Collections, actions))
+                await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
                 {
-                    _token.ThrowIfCancellationRequested();
-                    result.Tombstones.ReadCount++;
-
-                    if (result.Tombstones.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.");
-
-                    if (tombstone == null)
-                    {
-                        result.Tombstones.ErroredCount++;
-                        continue;
-                    }
-
-                    if (tombstone.LowerId == null)
-                        ThrowInvalidData();
-
-
-                    if (_options.IncludeArtificial == false && tombstone.Flags.HasFlag(DocumentFlags.Artificial))
-                    {
-                        continue;
-                    }
-
-                    var _ = NonPersistentDocumentFlags.None;
-                    SetDocumentOrTombstoneFlags(ref tombstone.Flags, ref _, buildType);
-
-                    await actions.WriteTombstoneAsync(tombstone, result.Tombstones);
-
-                    result.Tombstones.LastEtag = tombstone.Etag;
+                    await InternalProcessCompareExchangeTombstonesAsync(result, key, actions);
                 }
             }
 
-            return result.Tombstones;
-        }
-
-        protected override async Task ProcessDocumentsWithDuplicateCollectionAsync(SmugglerResult result)
-        {
-            var didWork = false;
-            var count = 0;
-            await using (var actions = _destination.Documents())
-            {
-                foreach (var item in actions.GetDocumentsWithDuplicateCollection())
-                {
-                    if (didWork == false)
-                    {
-                        result.AddInfo("Starting to process documents with duplicate collection.");
-                        didWork = true;
-                    }
-                    await actions.WriteDocumentAsync(item, result.Documents);
-                    count++;
-                }
-            }
-
-            if (didWork)
-                result.AddInfo($"Finished processing '{count}' documents with duplicate collection.");
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessConflictsAsync(SmugglerResult result)
-        {
-            result.Conflicts.Start();
-
-            await using (var actions = _destination.Conflicts())
-            {
-                await foreach (var conflict in _source.GetConflictsAsync(_options.Collections, actions))
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Conflicts.ReadCount++;
-
-                    if (result.Conflicts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.");
-
-                    if (conflict == null)
-                    {
-                        result.Conflicts.ErroredCount++;
-                        continue;
-                    }
-
-                    if (conflict.Id == null)
-                        ThrowInvalidData();
-
-                    await actions.WriteConflictAsync(conflict, result.Conflicts);
-
-                    result.Conflicts.LastEtag = conflict.Etag;
-                }
-            }
-
-            return result.Conflicts;
+            return result.CompareExchangeTombstones;
         }
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessIndexesAsync(SmugglerResult result)
@@ -408,105 +174,6 @@ namespace Raven.Server.Smuggler.Documents
             return result.Indexes;
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessIdentitiesAsync(SmugglerResult result, BuildVersionType buildType)
-        {
-            return await ProcessIdentitiesInternalAsync(result, buildType, _destination.Identities());
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentsAsync(SmugglerResult result)
-        {
-            await using (var actions = _destination.Documents())
-            {
-                await foreach (var item in _source.GetLegacyAttachmentsAsync(actions))
-                {
-                    _token.ThrowIfCancellationRequested();
-
-                    result.Documents.ReadCount++;
-                    result.Documents.Attachments.ReadCount++;
-                    if (result.Documents.Attachments.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.");
-
-                    if (item.Document.Id == null)
-                        ThrowInvalidData();
-
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
-
-                    await actions.WriteDocumentAsync(item, result.Documents);
-
-                    result.Documents.LastEtag = item.Document.Etag;
-                }
-            }
-
-            return result.Documents;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyAttachmentDeletionsAsync(SmugglerResult result)
-        {
-            var counts = new SmugglerProgressBase.Counts();
-            await using (var actions = _destination.Documents())
-            {
-                await foreach (var id in _source.GetLegacyAttachmentDeletionsAsync())
-                {
-                    counts.ReadCount++;
-
-                    if (counts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.");
-
-                    try
-                    {
-                        await actions.DeleteDocumentAsync(id);
-                    }
-                    catch (Exception e)
-                    {
-                        counts.ErroredCount++;
-                        result.AddError($"Could not delete document (legacy attachment deletion) with id '{id}': {e.Message}");
-                    }
-                }
-            }
-
-            return counts;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyDocumentDeletionsAsync(SmugglerResult result)
-        {
-            var counts = new SmugglerProgressBase.Counts();
-            await using (var actions = _destination.Documents())
-            {
-                await foreach (var id in _source.GetLegacyDocumentDeletionsAsync())
-                {
-                    counts.ReadCount++;
-
-                    if (counts.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy document deletions.");
-
-                    try
-                    {
-                        await actions.DeleteDocumentAsync(id);
-                    }
-                    catch (Exception e)
-                    {
-                        counts.ErroredCount++;
-                        result.AddError($"Could not delete document (legacy document deletion) with id '{id}': {e.Message}");
-                    }
-                }
-            }
-
-            return counts;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeAsync(SmugglerResult result)
-        {
-            result.CompareExchange.Start();
-            await using (var actions = _destination.CompareExchange(_context))
-            {
-                await foreach (var kvp in _source.GetCompareExchangeValuesAsync())
-                {
-                    await InternalProcessCompareExchangeAsync(result, kvp, actions);
-                }
-            }
-
-            return result.CompareExchange;
-        }
 
         protected virtual async Task InternalProcessCompareExchangeAsync(SmugglerResult result, (CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value) kvp,
             ICompareExchangeActions actions)
@@ -534,73 +201,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCountersAsync(SmugglerResult result)
-        {
-            result.Counters.Start();
-
-            await using (var actions = _destination.Counters(result))
-            {
-                await foreach (var counterGroup in _source.GetCounterValuesAsync(_options.Collections, actions))
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount++;
-
-                    if (result.Counters.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
-
-                    if (_source is StreamSource streamSource)
-                    {
-                        foreach (var iDisposable in streamSource.ToDispose)
-                        {
-                            actions.RegisterForDisposal(iDisposable);
-                        }
-                    }
-
-                    await actions.WriteCounterAsync(counterGroup);
-
-                    result.Counters.LastEtag = counterGroup.Etag;
-                }
-            }
-
-            return result.Counters;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessLegacyCountersAsync(SmugglerResult result)
-        {
-            await using (var actions = _destination.Counters(result))
-            {
-                await foreach (var counterDetail in _source.GetLegacyCounterValuesAsync())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Counters.ReadCount++;
-
-                    if (result.Counters.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
-
-                    await actions.WriteLegacyCounterAsync(counterDetail);
-
-                    result.Counters.LastEtag = counterDetail.Etag;
-                }
-            }
-
-            return result.Counters;
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessCompareExchangeTombstonesAsync(SmugglerResult result)
-        {
-            result.CompareExchangeTombstones.Start();
-
-            await using (var actions = _destination.CompareExchangeTombstones(_context))
-            {
-                await foreach (var key in _source.GetCompareExchangeTombstonesAsync())
-                {
-                    await InternalProcessCompareExchangeTombstonesAsync(result, key, actions);
-                }
-            }
-
-            return result.CompareExchangeTombstones;
-        }
-
         protected virtual async Task InternalProcessCompareExchangeTombstonesAsync(SmugglerResult result, (CompareExchangeKey Key, long Index) key, ICompareExchangeActions actions)
         {
             _token.ThrowIfCancellationRequested();
@@ -622,43 +222,7 @@ namespace Raven.Server.Smuggler.Documents
                 result.AddError($"Could not write compare exchange '{key}: {e.Message}");
             }
         }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
-        {
-            return await ProcessSubscriptionsInternalAsync(result, _destination.Subscriptions());
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result)
-        {
-            return await ProcessReplicationHubCertificatesInternalAsync(result, _destination.ReplicationHubCertificates());
-        }
-
-        protected override async Task<SmugglerProgressBase.Counts> ProcessTimeSeriesAsync(SmugglerResult result)
-        {
-            result.TimeSeries.Start();
-
-            await using (var actions = _destination.TimeSeries())
-            {
-                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
-                await foreach (var ts in _source.GetTimeSeriesAsync(_options.Collections))
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
-
-                    if (result.TimeSeries.ReadCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
-
-                    result.TimeSeries.LastEtag = ts.Etag;
-
-                    var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
-                    if (shouldSkip == false)
-                        await actions.WriteTimeSeriesAsync(ts);
-                }
-            }
-
-            return result.TimeSeries;
-        }
-
+        
         protected async ValueTask WriteIndexAsync(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions)
         {
             try
@@ -712,6 +276,5 @@ namespace Raven.Server.Smuggler.Documents
                 result.AddError(errorMessage);
             }
         }
-
     }
 }

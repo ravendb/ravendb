@@ -66,7 +66,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
         private DatabaseItemType _operateOnTypes;
-        public List<IDisposable> ToDispose;
         private readonly DatabaseSmugglerOptionsServerSide _options;
         private readonly ByteStringContext _byteStringContext;
 
@@ -85,7 +84,6 @@ namespace Raven.Server.Smuggler.Documents
             _returnBuffer = _context.GetMemoryBuffer(out _buffer);
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
-            ToDispose = new List<IDisposable>();
 
             if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
@@ -849,7 +847,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 values = ConvertToBlob(values, actions);
-                ToDispose.Add(reader);
+                actions.RegisterForDisposal(reader);
 
                 yield return new CounterGroupDetail
                 {
@@ -865,12 +863,7 @@ namespace Raven.Server.Smuggler.Documents
             var scopes = new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
             try
             {
-                JsonOperationContext context;
-                if (actions != null)
-                    context = actions.GetContextForNewDocument();
-                else
-                    context = GetContextForNewDocument();
-
+                var context = actions.GetContextForNewDocument();
                 Debug.Assert(context == values._context);
                 values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counterValues);
 
@@ -1301,8 +1294,6 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                     };
-                    if (actions == null)
-                        ToDispose.Add(attachment);
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
                     if (ShouldSkip(attachmentInfo))
                         continue;
@@ -1435,8 +1426,6 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             Stream = actions != null ? actions.GetTempStream() : GetTempStream()
                         };
-                        if (actions == null)
-                            ToDispose.Add(attachment.Stream);
 
                         attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
                         attachments.Add(attachment);
@@ -1487,14 +1476,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public Stream GetTempStream()
-        {
-            var tempFileName = $"{Guid.NewGuid()}.smuggler";
-            if (_options.EncryptionKey != null)
-                return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(_options.EncryptionKey));
-
-            return new StreamsTempFile(tempFileName, false).StartNewStream();
-        }
+        public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
 
         private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(INewDocumentActions actions = null)
         {

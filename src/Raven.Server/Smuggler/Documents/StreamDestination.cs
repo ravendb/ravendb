@@ -26,7 +26,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
@@ -37,7 +36,6 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -50,17 +48,14 @@ namespace Raven.Server.Smuggler.Documents
         private AsyncBlittableJsonTextWriter _writer;
         private DatabaseSmugglerOptionsServerSide _options;
         private Func<LazyStringValue, bool> _filterMetadataProperty;
-        public List<IDisposable> ToDispose;
-
         public StreamDestination(Stream stream, JsonOperationContext context, ISmugglerSource source)
         {
             _stream = stream;
             _context = context;
             _source = source;
-            ToDispose ??= new List<IDisposable>();
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public virtual IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
             _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
@@ -891,7 +886,6 @@ namespace Raven.Server.Smuggler.Documents
         {
             private readonly JsonOperationContext _context;
             private readonly StreamDestination _destination;
-
             public async ValueTask WriteCounterAsync(CounterGroupDetail counterDetail)
             {
                 CountersStorage.ConvertFromBlobToNumbers(_context, counterDetail);
@@ -950,7 +944,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void RegisterForDisposal(IDisposable data)
             {
-                throw new NotSupportedException();
+                
             }
 
             public StreamCounterActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, StreamDestination destination, string propertyName) : base(writer, propertyName)
@@ -1187,14 +1181,7 @@ namespace Raven.Server.Smuggler.Documents
                 yield break;
             }
 
-            public Stream GetTempStream()
-            {
-                var tempFileName = $"{Guid.NewGuid()}.smuggler";
-                if (_options.EncryptionKey != null)
-                    return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(_options.EncryptionKey));
-
-                return new StreamsTempFile(tempFileName, false).StartNewStream();
-            }
+            public Stream GetTempStream() => StreamDestination.GetTempStream(_options);
 
             private async ValueTask WriteUniqueAttachmentStreamsAsync(Document document, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
@@ -1368,7 +1355,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStartArray();
             }
 
-            public ValueTask DisposeAsync()
+            public virtual ValueTask DisposeAsync()
             {
                 Writer.WriteEndArray();
                 return default;
@@ -1384,7 +1371,7 @@ namespace Raven.Server.Smuggler.Documents
                 
             }
 
-            public async ValueTask WriteLegacyDeletions(string id)
+            public ValueTask WriteLegacyDeletions(string id)
             {
                 if (First == false)
                     Writer.WriteComma();
@@ -1393,8 +1380,18 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteStartArray();
                 Writer.WritePropertyName("Key");
                 Writer.WriteString(id);
-            }
 
+                return ValueTask.CompletedTask;
+            }
+        }
+
+        public static Stream GetTempStream(DatabaseSmugglerOptionsServerSide options)
+        {
+            var tempFileName = $"{Guid.NewGuid()}.smuggler";
+            if (options.EncryptionKey != null)
+                return new DecryptingXChaCha20Oly1305Stream(new StreamsTempFile(tempFileName, true).StartNewStream(), Convert.FromBase64String(options.EncryptionKey));
+
+            return new StreamsTempFile(tempFileName, false).StartNewStream();
         }
     }
 }

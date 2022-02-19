@@ -64,7 +64,7 @@ namespace SlowTests.Sharding.BucketMigration
 
             for (int bucket = 0; bucket < ShardHelper.NumberOfBuckets; bucket++)
             {
-                var shardIndex = ShardHelper.GetShardIndex(record, bucket);
+                var shardIndex = ShardHelper.GetShardIndex(record.ShardAllocations, bucket);
                 shards[shardIndex] ??= new ShardReport
                 {
                     Shard = shardIndex,
