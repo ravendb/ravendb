@@ -1288,6 +1288,7 @@ namespace FastTests
             private string _path;
             private bool _runInMemory = true;
             private bool _encrypted;
+            private StringBuilder _descriptionBuilder;
 
             public static readonly Options Default = new Options(true);
 
@@ -1304,20 +1305,45 @@ namespace FastTests
                 _frozen = frozen;
             }
 
-            public static Options WithSharding()
+            public static Options ForMode(RavenDatabaseMode mode)
             {
-                return new Options
+                switch (mode)
                 {
-                    ModifyDatabaseRecord = record =>
-                    {
-                        record.Shards = new[]
+                    case RavenDatabaseMode.Single:
+                        var single = new Options();
+                        single.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
+
+                        return single;
+                    case RavenDatabaseMode.Sharded:
+                        var sharded = new Options
                         {
-                            new DatabaseTopology(), 
-                            new DatabaseTopology(), 
-                            new DatabaseTopology(),
+                            ModifyDatabaseRecord = record =>
+                            {
+                                record.Shards = new[]
+                                {
+                                    new DatabaseTopology(),
+                                    new DatabaseTopology(),
+                                    new DatabaseTopology(),
+                                };
+                            }
                         };
-                    }
-                };
+
+                        sharded.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
+
+                        return sharded;
+                    case RavenDatabaseMode.All:
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+                }
+            }
+
+            private void AddToDescription(string descriptionToAdd)
+            {
+                _descriptionBuilder ??= new StringBuilder();
+
+                _descriptionBuilder
+                    .Append(" ")
+                    .Append(descriptionToAdd);
             }
 
             public string Path
@@ -1470,6 +1496,13 @@ namespace FastTests
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
             }
 
+            public override string ToString()
+            {
+                return _descriptionBuilder == null 
+                    ? base.ToString() 
+                    : _descriptionBuilder.ToString();
+            }
+
             public Options Clone()
             {
                 return new Options
@@ -1487,7 +1520,8 @@ namespace FastTests
                     Path = Path,
                     ReplicationFactor = ReplicationFactor,
                     RunInMemory = RunInMemory,
-                    Server = Server
+                    Server = Server,
+                    _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
                 };
             }
         }

@@ -29,22 +29,45 @@ public class RavenDataAttribute : DataAttribute
 
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.Single;
 
+    public object[] Data { get; set; } = null;
+
+    public RavenDataAttribute()
+    {
+    }
+
+    public RavenDataAttribute(params object[] data)
+    {
+        Data = data;
+    }
+
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
         foreach (var options in GetOptions(DatabaseMode))
         {
             foreach (var o in FillOptions(options, SearchEngineMode))
-                yield return new object[] { o };
+            {
+                var length = 1;
+                if (Data is { Length: > 0 })
+                    length += Data.Length;
+
+                var array = new object[length];
+                array[0] = o;
+
+                for (var i = 1; i < array.Length; i++)
+                    array[i] = Data[i - 1];
+
+                yield return array;
+            }
         }
     }
 
     private static IEnumerable<RavenTestBase.Options> GetOptions(RavenDatabaseMode mode)
     {
         if (mode.HasFlag(RavenDatabaseMode.Single))
-            yield return new RavenTestBase.Options();
+            yield return RavenTestBase.Options.ForMode(RavenDatabaseMode.Single);
 
         if (mode.HasFlag(RavenDatabaseMode.Sharded))
-            yield return RavenTestBase.Options.WithSharding();
+            yield return RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded);
     }
 
     private static IEnumerable<RavenTestBase.Options> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
