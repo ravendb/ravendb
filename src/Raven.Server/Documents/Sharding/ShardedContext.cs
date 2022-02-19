@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Sharding
     {
         public const int NumberOfShards = 1024 * 1024;
 
+        private readonly ServerStore _server;
         private DatabaseRecord _record;
         public RequestExecutor[] RequestExecutors;
         private readonly long _lastClientConfigurationIndex;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents.Sharding
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
 
+            _server = server;
             _record = record;
             _lastClientConfigurationIndex = server.LastClientConfigurationIndex;
 
@@ -53,6 +55,8 @@ namespace Raven.Server.Documents.Sharding
             _shardExecutor = new ShardExecutor(this);
             Streaming = new ShardedStreaming(this);
         }
+
+        public IDisposable AllocateContext(out JsonOperationContext context) => _server.ContextPool.AllocateOperationContext(out context);
 
         public void UpdateDatabaseRecord(DatabaseRecord record)
         {

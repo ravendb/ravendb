@@ -130,9 +130,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public ICounterActions LegacyCounters(SmugglerResult result)
         {
-            // Used only in Stream Destination, needed when we writing from Stream Source to Stream Destination
-            throw new NotSupportedException("LegacyCounters is not supported in Database destination, " +
-                                            "it is only supported when writing to Stream destination. Shouldn't happen.");
+            return new CounterActions(_database, result);
         }
 
         public ISubscriptionActions Subscriptions()

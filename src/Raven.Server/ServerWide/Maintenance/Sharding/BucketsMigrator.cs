@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide.Maintenance.Sharding
                 var bucketToMove = biggest.ReportPerBucket.MinBy(b =>
                 {
                     // ensure this bucket belongs to this shard
-                    if (ShardHelper.GetShardIndex(record, b.Key) != biggest.Shard)
+                    if (ShardHelper.GetShardIndex(record.ShardAllocations, b.Key) != biggest.Shard)
                         return long.MaxValue;
 
                     if (record.BucketMigrations.ContainsKey(b.Key))

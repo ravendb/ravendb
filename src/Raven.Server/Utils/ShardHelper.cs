@@ -119,60 +119,27 @@ namespace Raven.Server.Utils
             }
         }
 
-        public const int NumberOfShards = 1024 * 1024;
-
-        /// <summary>
-        /// The shard id is a hash of the document id, lower case, reduced to
-        /// 20 bits. This gives us 0 .. 1M range of shard ids and means that assuming
-        /// perfect distribution of data, each shard is going to have about 1MB of data
-        /// per TB of overall db size. That means that even for *very* large databases, the
-        /// size of the shard is still going to be manageable.
-        /// </summary>
-        public static int GetShardId(TransactionOperationContext context, string key)
+        public static int GetShardForId(TransactionOperationContext context, List<DatabaseRecord.ShardRangeAssignment> shardAllocation, string docId)
         {
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
-            {
-                unsafe
-                {
-                    byte* buffer = lowerId.Content.Ptr;
-                    int size = lowerId.Size;
-
-                    AdjustAfterSeparator((byte)'$', ref buffer, ref size);
-
-                    if (size == 0)
-                        throw new ArgumentException("Key '" + key + "', has a shard id length of 0");
-
-                    var hash = Hashing.XXHash64.Calculate(buffer, (ulong)size);
-                    return (int)(hash % NumberOfShards);
-                }
-            }
+            var bucket = GetBucket(context, docId);
+            return GetShardIndex(shardAllocation, bucket);
         }
 
-        public static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> shardAllocation, int id)
+        public static int GetShardForId(TransactionOperationContext context, List<DatabaseRecord.ShardRangeAssignment> shardAllocation, LazyStringValue docId)
         {
-            for (int i = 0; i < shardAllocation.Count - 1; i++)
-            {
-                if (id < shardAllocation[i + 1].RangeStart)
-                {
-                    return i ;
-                }
-            }
-            return shardAllocation.Count - 1 ;
+            var bucket = GetBucket(context.Allocator, docId);
+            return GetShardIndex(shardAllocation, bucket);
         }
 
-        public static int GetShardIndexforDocument(TransactionOperationContext context, List<DatabaseRecord.ShardRangeAssignment> shardAllocation, string docId)
+        public static int GetShardIndex(List<DatabaseRecord.ShardRangeAssignment> ranges, int bucket)
         {
-            return GetShardIndex(shardAllocation, GetShardId(context, docId));
-        }
-        public static int GetShardIndex(DatabaseRecord record, int bucket)
-        {
-            for (int i = 0; i < record.ShardAllocations.Count - 1; i++)
+            for (int i = 0; i < ranges.Count - 1; i++)
             {
-                if (bucket < record.ShardAllocations[i + 1].RangeStart)
-                    return record.ShardAllocations[i].Shard;
+                if (bucket < ranges[i + 1].RangeStart)
+                    return ranges[i].Shard;
             }
 
-            return record.ShardAllocations[^1].Shard;
+            return ranges[^1].Shard;
         }
 
         public static void MoveBucket(this DatabaseRecord record, int bucket, int toShard)

@@ -155,8 +155,7 @@ namespace Raven.Server.Web
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result,
             Action<IOperationProgress> onProgress,
-            OperationCancelToken token,
-            BlittableJsonReaderObject optionsAsBlittable);
+            OperationCancelToken token);
 
         internal async Task Import(JsonOperationContext context, string databaseName, ImportDelegate onImport,
             Documents.Operations.Operations operations, long operationId, DocumentDatabase documentDatabase = null)
@@ -229,7 +228,7 @@ namespace Raven.Server.Web
 
                                 var inputStream = GetInputStream(section.Body, options);
                                 var stream = new GZipStream(inputStream, CompressionMode.Decompress);
-                                await onImport(context, stream, options, result, onProgress, token, blittableJson);
+                                await onImport(context, stream, options, result, onProgress, token);
 
                             }
                         }
