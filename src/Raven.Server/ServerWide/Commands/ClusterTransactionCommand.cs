@@ -422,9 +422,6 @@ namespace Raven.Server.ServerWide.Commands
 
                 for (int i = 0; i < commandsPreShard.Length; i++)
                 {
-                    if (commandsPreShard[i] == null)
-                        continue;
-
                     var toSave = context.ReadObject(new DynamicJsonValue
                     {
                         [nameof(DatabaseCommands)] = commandsPreShard[i],

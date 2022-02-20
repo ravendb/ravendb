@@ -56,8 +56,8 @@ namespace Raven.Server.Documents.Handlers
                 var raftRequestId = _handler.GetRaftRequestIdFromQuery();
                 ClusterTransactionCommand clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
 
-                (long index, object clusterTransactionCommandResult) = await _handler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
-                if (clusterTransactionCommandResult is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
+                var clusterTransactionCommandResult = await _handler.ServerStore.SendToLeaderAsync(clusterTransactionCommand);
+                if (clusterTransactionCommandResult.Result is List<ClusterTransactionCommand.ClusterTransactionErrorInfo> errors)
                 {
                     _handler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
                     throw new ClusterTransactionConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors.Select(e => e.Message))}")
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers
                         ConcurrencyViolations = errors.Select(e => e.Violation).ToArray()
                     };
                 }
-                await _handler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
+                await _handler.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, clusterTransactionCommandResult.Index);
 
                 DynamicJsonArray result;
                 if (clusterTransactionCommand.DatabaseCommands.Count > 0)
@@ -82,13 +82,13 @@ namespace Raven.Server.Documents.Handlers
 
                 if (clusterTransactionCommand.ClusterCommands.Count > 0)
                 {
-                    foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
+                    foreach (var clusterCommand in clusterTransactionCommand.ClusterCommands)
                     {
                         result.Add(new DynamicJsonValue
                         {
-                            [nameof(ICommandData.Type)] = clusterCommands.Type,
-                            [nameof(ICompareExchangeValue.Key)] = clusterCommands.Id,
-                            [nameof(ICompareExchangeValue.Index)] = index
+                            [nameof(ICommandData.Type)] = clusterCommand.Type,
+                            [nameof(ICompareExchangeValue.Key)] = clusterCommand.Id,
+                            [nameof(ICompareExchangeValue.Index)] = clusterTransactionCommandResult.Index
                         });
                     }
                 }
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers
                         new DynamicJsonValue
                         {
                             [nameof(BatchCommandResult.Results)] = result,
-                            [nameof(BatchCommandResult.TransactionIndex)] = index
+                            [nameof(BatchCommandResult.TransactionIndex)] = clusterTransactionCommandResult.Index
                         });
                 }
             }

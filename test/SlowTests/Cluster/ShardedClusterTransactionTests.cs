@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -295,6 +297,37 @@ namespace SlowTests.Cluster
         public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
         {
             await base.ClusterTransactionShouldBeRedirectedFromPromotableNode();
+        }
+
+        [Fact]
+        public async Task ShardedClusterTransaction_WhenStoreTwoDocsToTwoSahrdsInTwoTrxAndTryToGetTheFirst_ShouldNotStuck()
+        {
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+            
+            var firstDocId = "testObjs/0";
+            var secondDocId = "testObjs/1";
+            using (var store = GetDocumentStore(new Options
+                   {
+                       Server = nodes.Single(n => n.ServerStore.NodeTag != n.ServerStore.LeaderTag),
+                       ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                   }))
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    await session.StoreAsync(new TestObj(), firstDocId);
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(new TestObj(), secondDocId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var tokenSource = new CancellationTokenSource();
+                    tokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+                    _ = await session.LoadAsync<TestObj>(firstDocId, tokenSource.Token);
+                }
+            }
         }
     }
 }
