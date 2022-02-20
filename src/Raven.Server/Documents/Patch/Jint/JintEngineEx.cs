@@ -71,7 +71,7 @@ var process = {
 
             ExecuteWithReset(ExecEnvCodeJint, "ExecEnvCode");
 
-            _jsonStringify = new JsHandle(GetValue("JSON").AsObject().GetProperty("Stringify").Value);
+            _jsonStringify = new JsHandle(Evaluate("JSON.stringify"));
         }
 
         ~JintEngineEx() 
