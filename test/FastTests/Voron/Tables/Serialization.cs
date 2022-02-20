@@ -15,8 +15,8 @@ namespace FastTests.Voron.Tables
         {
         }
 
-        private static void SchemaIndexDefEqual(AbstractBTreeIndexDef expectedIndex,
-            AbstractBTreeIndexDef actualIndex)
+        private static void SchemaIndexDefEqual(TableSchema.AbstractBTreeIndexDef expectedIndex,
+            TableSchema.AbstractBTreeIndexDef actualIndex)
         {
             if (expectedIndex == null)
             {
@@ -30,7 +30,7 @@ namespace FastTests.Voron.Tables
 
                 switch (expectedIndex.Type)
                 {
-                    case TableIndexType.BTree:
+                    case TableSchema.TreeIndexType.Default:
                     {
                         Assert.IsType<TableSchema.StaticBTreeIndexDef>(expectedIndex);
                         Assert.IsType<TableSchema.StaticBTreeIndexDef>(actualIndex);
@@ -43,7 +43,7 @@ namespace FastTests.Voron.Tables
 
                         break;
                     }
-                    case TableIndexType.Dynamic:
+                    case TableSchema.TreeIndexType.DynamicKeyValues:
                     {
                         Assert.IsType<TableSchema.DynamicBTreeIndexDef>(expectedIndex);
                         Assert.IsType<TableSchema.DynamicBTreeIndexDef>(actualIndex);
@@ -242,11 +242,11 @@ namespace FastTests.Voron.Tables
         }
 
         [Fact]
-        public void CanSerializeCustomIndex()
+        public void CanSerializeDynamicIndex()
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.DynamicBTreeIndexDef()
+                var expectedIndex = new TableSchema.DynamicBTreeIndexDef
                 {
                     IndexValueGenerator = IndexValueAction
                 };
