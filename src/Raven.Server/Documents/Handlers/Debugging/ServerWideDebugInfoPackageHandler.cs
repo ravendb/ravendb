@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -301,6 +302,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             Dictionary<string, Microsoft.Extensions.Primitives.StringValues> endpointParameters = null,
             CancellationToken token = default)
         {
+            var debugInfoDict = new Dictionary<string, TimeSpan>();
             token.ThrowIfCancellationRequested();
 
             var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
@@ -308,9 +310,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
             foreach (var route in routes)
             {
                 token.ThrowIfCancellationRequested();
-                
+
+                var sw = Stopwatch.StartNew();
                 await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, token);
+                debugInfoDict[route.Path] = sw.Elapsed;
             }
+
+            await DebugInfoPackageUtils.WriteExtraDebugInfoAsZipEntryAsync(debugInfoDict, archive, databaseName);
         }
 
         internal static async Task InvokeAndWriteToArchive(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,
