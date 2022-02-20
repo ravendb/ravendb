@@ -45,8 +45,7 @@ import rqlLanguageService = require("common/rqlLanguageService");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
-import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 

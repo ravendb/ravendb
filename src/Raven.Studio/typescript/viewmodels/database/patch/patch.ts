@@ -22,8 +22,7 @@ import generalUtils = require("common/generalUtils");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
 import rqlLanguageService = require("common/rqlLanguageService");
-import getDatabaseStudioConfigurationCommand from "commands/resources/getDatabaseStudioConfigurationCommand";
-import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
