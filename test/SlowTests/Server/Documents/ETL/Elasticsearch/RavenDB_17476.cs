@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -42,10 +43,11 @@ for (var i = 0; i < this.Lines.length; i++) {
 loadTo" + OrdersIndexName + @"(orderData);
 ";
 
-        [RequiresElasticSearchFact]
-        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo()
+        [RequiresElasticSearchTheory]
+        [JavaScriptEngineClassData]
+        public void CanOmitDocumentIdPropertyInJsonPassedToLoadTo(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, DefaultIndexes, new List<string> { "Orders" });
@@ -98,10 +100,11 @@ loadTo" + OrdersIndexName + @"(orderData);
             }
         }
 
-        [Fact]
-        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

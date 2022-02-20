@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Client;
+using FastTests.Server.JavaScript;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Orders;
 using Raven.Client.Documents.Operations.ETL;
@@ -20,10 +21,11 @@ namespace SlowTests.Server.Documents.ETL.Olap
         {
         }
 
-        [Fact]
-        public async Task CanTestOlapEtlScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanTestOlapEtlScript(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var baseline = new DateTime(2020, 1, 1);
 

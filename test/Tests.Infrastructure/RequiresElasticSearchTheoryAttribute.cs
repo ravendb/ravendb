@@ -5,16 +5,16 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class RequiresElasticSearchFactAttribute : RetryFactAttribute
+    public class RequiresElasticSearchTheoryAttribute : RetryTheoryAttribute
     {
         private static readonly bool _canConnect;
 
-        static RequiresElasticSearchFactAttribute()
+        static RequiresElasticSearchTheoryAttribute()
         {
             _canConnect = ElasticSearchTestNodes.Instance.CanConnect();
         }
 
-        public RequiresElasticSearchFactAttribute(int maxRetries = 3,
+        public RequiresElasticSearchTheoryAttribute(int maxRetries = 3,
             int delayBetweenRetriesMs = 1000,
             params Type[] skipOnExceptions) : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
         {

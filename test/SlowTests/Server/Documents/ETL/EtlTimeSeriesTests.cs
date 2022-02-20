@@ -37,9 +37,12 @@ namespace SlowTests.Server.Documents.ETL
     {
         private const int _waitInterval = 1000;
 
-        private readonly Options _options = Debugger.IsAttached
-            ? new Options { ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Etl.ExtractAndTransformTimeout)] = "300" }
-            : null;
+        private Options GetOptions(string jsEngineType)
+        {
+            return Debugger.IsAttached
+                ? new Options { ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => record.Settings[RavenConfiguration.GetKey(x => x.Etl.ExtractAndTransformTimeout)] = "300") }
+                : null;
+        }
 
         private class TestDataType { }
 
@@ -69,7 +72,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
     return loadAllTimeSeries();
 }";
 
-            protected abstract (string[] Collection, string Script)[] Params { get; }
+            protected abstract (string[] Collection, string Script, string jsEngineType)[] Params { get; }
 
             private object[] ConvertToParams(int i)
             {
@@ -95,15 +98,35 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 
         private class TestDataForDocAndTimeSeriesChangeTracking<T> : CalculatorTestDataBase<T> where T : TestDataType
         {
-            protected override (string[] Collection, string Script)[] Params => new (string[] Collections, string Script)[] {
-                (new string[0], null),
-                (new [] {"Users"}, string.Format(_script, "true")),
-                (new [] {"Users"}, string.Format(_script, "{from : new Date(2020, 3, 26),to : new Date(2020, 3, 28)}")), // the month is 0-indexed
-                (new [] {"Users"}, string.Format(_script, "{from : new Date(2020, 3, 26)}")), // the month is 0-indexed
-                (new [] {"Users"}, string.Format(_script, "{to : new Date(2020, 3, 28)}")), // the month is 0-indexed
-                (new [] {"Users"}, string.Format(_script, "{}")),
-                (new [] {"Users"}, _script2),
-            };
+            protected override (string[] Collection, string Script, string jsEngineType)[] Params
+            {
+                get
+                {
+                    var scripts = new string[]
+                    {
+                        string.Format(_script, "true"), 
+                        string.Format(_script, "{from : new Date(2020, 3, 26),to : new Date(2020, 3, 28)}"), // the month is 0-indexed
+                        string.Format(_script, "{from : new Date(2020, 3, 26)}"), // the month is 0-indexed
+                        string.Format(_script, "{to : new Date(2020, 3, 28)}"), // the month is 0-indexed
+                        string.Format(_script, "{}")
+                    };
+                    return new (string[] Collections, string Script, string jsEngineType)[]
+                    {
+                        (new string[0], null, "Jint"), (new [] {"Users"}, scripts[0], "Jint"),
+                        (new [] {"Users"}, scripts[1], "Jint"), 
+                        (new [] {"Users"}, scripts[2], "Jint"), 
+                        (new [] {"Users"}, scripts[3], "Jint"), 
+                        (new [] {"Users"}, scripts[4], "Jint"), 
+                        (new [] {"Users"}, _script2, "Jint"),
+                        (new string[0], null, "Jint"), (new [] {"Users"}, scripts[0], "V8"),
+                        (new [] {"Users"}, scripts[1], "V8"),
+                        (new [] {"Users"}, scripts[2], "V8"),
+                        (new [] {"Users"}, scripts[3], "V8"),
+                        (new [] {"Users"}, scripts[4], "V8"), 
+                        (new [] {"Users"}, _script2, "V8"),
+                    };
+                }
+            }
 
             protected override string XUnitMark => "A";
         }
@@ -136,10 +159,13 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 };
 ";// the month is 0-indexed
 
-            protected override (string[] Collection, string Script)[] Params => new (string[] Collections, string Script)[]{
-                (new [] {"Users"}, _script3),
-                (new [] {"Users"}, _script4),
-                (new [] {"Users"}, _script5),
+            protected override (string[] Collection, string Script, string jsEngineType)[] Params => new (string[] Collections, string Script, string jsEngineType)[]{
+                (new [] {"Users"}, _script3, "Jint"),
+                (new [] {"Users"}, _script4, "Jint"),
+                (new [] {"Users"}, _script5, "Jint"),
+                (new [] {"Users"}, _script3, "V8"),
+                (new [] {"Users"}, _script4, "V8"),
+                (new [] {"Users"}, _script5, "V8"),
             };
 
             protected override string XUnitMark => "B";
@@ -147,12 +173,30 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
         private class FailedTestDataForDocAndTimeSeriesChangeTracking<T> : CalculatorTestDataBase<T> where T : TestDataType
         {
-            protected override (string[] Collection, string Script)[] Params => new (string[] Collections, string Script)[]{
-                (new [] {"Users"}, string.Format(_script, "false")),
-                (new [] {"Users"}, string.Format(_script, "{from : new Date(2020, 3, 28),to : new Date(2020, 3, 26)}")),// the month is 0-indexed
-                (new [] {"Users"}, string.Format(_script, "{from : new Date(2019, 3, 26),to : new Date(2019, 3, 28)}")),// the month is 0-indexed
-                (new [] {"Users"}, string.Format(_script, "null")),
-            };
+            protected override (string[] Collection, string Script, string jsEngineType)[] Params
+            {
+                get
+                {
+                    var scripts = new string[]
+                    {
+                        string.Format(_script, "false"),
+                        string.Format(_script, "{from : new Date(2020, 3, 28),to : new Date(2020, 3, 26)}"), // the month is 0-indexed
+                        string.Format(_script, "{from : new Date(2019, 3, 26),to : new Date(2019, 3, 28)}"), // the month is 0-indexed
+                        string.Format(_script, "null"),
+                    };
+                    return new (string[] Collections, string Script, string jsEngineType)[]
+                    {
+                        (new [] {"Users"}, scripts[0], "Jint"),
+                        (new [] {"Users"}, scripts[1], "Jint"),
+                        (new [] {"Users"}, scripts[2], "Jint"),
+                        (new [] {"Users"}, scripts[3], "Jint"),
+                        (new [] {"Users"}, scripts[0], "V8"),
+                        (new [] {"Users"}, scripts[1], "V8"),
+                        (new [] {"Users"}, scripts[2], "V8"),
+                        (new [] {"Users"}, scripts[3], "V8"),
+                    };
+                }
+            }
 
             protected override string XUnitMark => "C";
         }
@@ -161,8 +205,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         {
         }
 
-        [Fact]
-        public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void RavenEtlWithTimeSeries_WhenDefinedLoadBehaviorOfUnEtledCollection_ShouldThrow(string jsEngineType)
         {
             XunitLogging.EnableExceptionCapture();
             const string script = @"
@@ -172,7 +217,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 {
     return true;
 }";
-            Assert.Throws<RavenException>(() => CreateSrcDestAndAddEtl("People", script));
+            Assert.Throws<RavenException>(() => CreateSrcDestAndAddEtl(jsEngineType, "People", script));
         }
 
         [Theory]
@@ -183,7 +228,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             string justForXUint,
             bool shouldEtlTs,
             string[] collections,
-            string script
+            string script,
+            string jsEngineType
         )
         {
             var time = new DateTime(2020, 04, 27);
@@ -192,7 +238,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var src = GetDocumentStore(_options);
+            var src = GetDocumentStore(GetOptions(jsEngineType));
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -253,8 +299,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Fact(Skip = "RavenDB-17540")]
-        public async Task IncrementalEtlShouldWork()
+        [Theory(Skip = "RavenDB-17540")]
+        [JavaScriptEngineClassData]
+        public async Task IncrementalEtlShouldWork(string jsEngineType)
         {
             string[] collections = { "Users" };
             //The script clone because the same object can't be loaded twice - https://issues.hibernatingrhinos.com/issue/RavenDB-15065
@@ -272,7 +319,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             WaitForUserToContinueTheTest(src);
 
@@ -297,14 +344,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Equal(value, timeSeries.Value);
         }
 
-        [Fact(Skip = "RavenDB-17540")]
-        public async Task RavenEtlWithIncrementalTimeSeries()
+        [Theory(Skip = "RavenDB-17540")]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithIncrementalTimeSeries(string jsEngineType)
         {
             const string docId = "users/1";
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections: new []{ "Users" }, script : null);
 
             var etlDone = WaitForEtl(src, (s, statistics) => statistics.LastProcessedEtag > 21);
 
@@ -337,14 +385,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Fact]
-        public async Task BlockRavenEtlWithIncrementalTimeSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task BlockRavenEtlWithIncrementalTimeSeries(string jsEngineType)
         {
             const string docId = "users/1";
             const string tsName = Constants.Headers.IncrementalTimeSeriesPrefix + "HeartRate";
             var baseline = DateTime.UtcNow;
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections: new []{ "Users" }, script : null);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections: new []{ "Users" }, script : null);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -367,8 +416,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Contains("System.NotSupportedException: Load isn't support for incremental time series 'INC:HeartRate' at document 'users/1'", err!.Error);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndLoadToAnotherCollectionToo_ShouldSrcBeAsDest()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndLoadToAnotherCollectionToo_ShouldSrcBeAsDest(string jsEngineType)
         {
             string[] collections = { "Users" };
             //The script clone because the same object can't be loaded twice - https://issues.hibernatingrhinos.com/issue/RavenDB-15065
@@ -387,7 +437,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -410,8 +460,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Equal(value, timeSeries.Value);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenLoadToDifferentCollectionAndScriptCheckForTimeSeriesExistence()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenLoadToDifferentCollectionAndScriptCheckForTimeSeriesExistence(string jsEngineType)
         {
             const string collection = "Users";
             const string script = @"
@@ -429,7 +480,7 @@ if(timeSeries !== null){
             const double value = 58d;
             var users = Enumerable.Range(0, 3).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: GetOptions(jsEngineType));
             using (var session = src.OpenAsyncSession())
             {
                 foreach (var user in users)
@@ -467,8 +518,9 @@ if(timeSeries !== null){
             }
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenLoadTwoRangeAndAdd()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenLoadTwoRangeAndAdd(string jsEngineType)
         {
             string[] collections = { "Users" };
             const string script = @"
@@ -493,7 +545,7 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 20), new Date(2
             const double value = 58d;
             var user = new User();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
             using (var session = src.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
@@ -544,7 +596,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             const double value = 58d;
             var users = new[] { new User { Name = "Mar" }, new User { Name = "Nar" } };
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options, jsEngineType: jsEngineType);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -605,8 +657,9 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             }
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice(string jsEngineType)
         {
             const int batchSize = 3;
             string[] collections = { "Users" };
@@ -624,11 +677,11 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
-                }
+                })
             };
             var times = Enumerable.Range(0, 2)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))
@@ -639,7 +692,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             const double value = 58d;
             var users = Enumerable.Range(0, batchSize + 1).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
             using (var session = src.OpenAsyncSession())
             {
                 foreach (var user in users)
@@ -709,7 +762,8 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters_ShouldSrcBeAsDest(
             string justForXUint,
             string[] collections,
-            string script
+            string script,
+            string jsEngineType
         )
         {
             if (script != null)
@@ -725,7 +779,7 @@ function loadCountersOfUsersBehavior(docId, counter)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -751,8 +805,9 @@ function loadCountersOfUsersBehavior(docId, counter)
             }, 2);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2(string jsEngineType)
         {
             const string collection = "Users";
             const string script = @"
@@ -770,7 +825,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0);
             using (var session = src.OpenAsyncSession())
             {
                 var entity = new User { Name = "Joe Doe" };
@@ -797,8 +852,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, 2);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeries()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeries(string jsEngineType)
         {
             const string collection = "Users";
             const string script = @"
@@ -816,7 +872,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string documentId = "users/1";
             string attachmentSourceName = "photo";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -865,7 +921,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const string documentId = "users/1";
             string attachmentSourceName = "photo";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options, jsEngineType: jsEngineType);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -894,8 +950,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, 2);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether(string jsEngineType)
         {
             const string collection = "Users";
             const string script = @"
@@ -923,7 +980,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -963,8 +1020,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.DoesNotContain(ts, t => t.Timestamp == notInRange[1]);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange(string jsEngineType)
         {
             const string collection = "Users";
             const string script = @"
@@ -978,7 +1036,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             var time = new DateTime(2020, 04, 27);
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1012,7 +1070,8 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
         public async Task RavenEtlWithTimeSeries_WhenAppendMoreTimeSeriesInAnotherSession_ShouldSrcBeAsDest(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var time = new DateTime(2020, 04, 27);
             const string timeSeriesName = "Heartrate";
@@ -1020,7 +1079,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1060,7 +1119,8 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
         public async Task RavenEtlWithTimeSeries_WhenAppendWhileDocNotExistInDestination_ShouldNotFail(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var time = new DateTime(2020, 04, 27);
             const string timeSeriesName = "Heartrate";
@@ -1069,7 +1129,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             var users = Enumerable.Range(0, 2).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1112,7 +1172,8 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
         public async Task RavenEtlWithTimeSeries_WhenCommitProcessByMultipleEtlBatch_ShouldSrcBeAsDest(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var times = Enumerable.Range(0, 4).Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i)).ToArray();
             const string timeSeriesName = "Heartrate";
@@ -1122,15 +1183,15 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
-                }
+                })
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -1204,8 +1265,9 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             Assert.Equal(20, progress.TotalNumberOfTimeSeriesDeletedRanges);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFromTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFromTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
         {
             const string script = @"
 loadToUsers(this);
@@ -1222,15 +1284,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
-                }
+                })
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -1258,8 +1320,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeTo_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
         {
             const string script = @"
 loadToUsers(this);
@@ -1276,15 +1339,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
-                }
+                })
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -1312,8 +1375,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFrom_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenFilterByRangeFrom_ShouldLoadRelevantInRangeEntriesAndNotWhatOutOfTheRange(string jsEngineType)
         {
             const string script = @"
 loadToUsers(this);
@@ -1330,15 +1394,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
-                }
+                })
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collection, script, collection.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -1372,7 +1436,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesEtagLowerThanItsDocAndDidntEtlTheDocYet(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var times = Enumerable.Range(0, 4).Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i)).ToArray();
             const string timeSeriesName = "Heartrate";
@@ -1382,16 +1447,16 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
-                }
+                })
             };
 
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
 
             await using (OpenEtlOffArea(src, etlResult.TaskId))
             {
@@ -1437,7 +1502,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesHasLowerEtagThanTheCurrentLastProcessedDocumentEtagInTheBatch(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var times = Enumerable.Range(0, 4)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))
@@ -1451,16 +1517,16 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const int batchSize = 3;
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
-                }
+                })
             };
 
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1492,7 +1558,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesHasLowerEtagThanItsDocAndLastProcessedEtag(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var times = Enumerable.Range(0, 4)
                 .Select(i => new DateTime(2020, 04, 27) + TimeSpan.FromSeconds(i))
@@ -1506,15 +1573,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var options = new Options
             {
-                ModifyDatabaseRecord = record =>
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record =>
                 {
-                    _options?.ModifyDatabaseRecord(record);
+                    GetOptions(jsEngineType)?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
-                }
+                })
             };
             var users = Enumerable.Range(0, usersCount).Select(i => new User { Name = $"User{i}" }).ToArray();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: options);
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1570,7 +1637,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenInAnotherSessionChangDocAndAppendMoreTimeSeries_ShouldSrcBeAsDest(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var time = new DateTime(2020, 04, 27);
             const string timeSeriesName = "Heartrate";
@@ -1578,7 +1646,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1619,7 +1687,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndRemoveTimeSeriesInAnotherSession_ShouldRemoveFromDestination(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             var firstTime = new DateTime(2020, 04, 27);
             var secondTime = firstTime + TimeSpan.FromSeconds(1);
@@ -1628,7 +1697,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1676,7 +1745,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenChangeDocAndRemoveTimeSeriesInAnotherSession_ShouldRemoveFromDestination(
             string justForXUint,
             string[] collections,
-            string script
+            string script,
+            string jsEngineType
         )
         {
             var firstTime = new DateTime(2020, 04, 27);
@@ -1686,7 +1756,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1726,7 +1796,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInSameSession_ShouldDestBeAsSrc(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             const int toAppendCount = 4 * short.MaxValue;
             const string timeSeriesName = "Heartrate";
@@ -1743,7 +1814,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             random = new Random(0);
             var randomOrder = timeSeriesEntries.OrderBy(_ => random.Next()).ToList();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -1782,7 +1853,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndMultipleSegmentOfTimeSeriesInAnotherSession_ShouldDestBeAsSrc(
             string justForXUint,
             string[] collections,
-            string script)
+            string script,
+            string jsEngineType)
         {
             const int toAppendCount = 4 * short.MaxValue;
             const string timeSeriesName = "Heartrate";
@@ -1798,7 +1870,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
             var timeSeriesEntriesToAppend = timeSeriesEntries.ToList();
 
-            using (var src = GetDocumentStore(_options))
+            using (var src = GetDocumentStore(GetOptions(jsEngineType)))
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenAsyncSession())
@@ -1866,7 +1938,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenCreatTimeSeriesBeforeItsDoc1(
             string justForXUint,
             string[] collections,
-            string script
+            string script,
+            string jsEngineType
         )
         {
             var time = new DateTime(2020, 04, 27);
@@ -1875,7 +1948,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             const string documentId = "users/1";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             var database = GetDatabase(src.Database).Result;
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -1924,7 +1997,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenCreatTimeSeriesBeforeItsDoc2(
             string justForXUint,
             string[] collections,
-            string script
+            string script,
+            string jsEngineType
         )
         {
             var time = new DateTime(2020, 04, 27);
@@ -1933,7 +2007,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             const double value = 58d;
             var users = new[] { new User { Id = "users/1" }, new User { Id = "users/2" }, };
 
-            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, etlResult) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             var srcDatabase = await GetDatabase(src.Database);
             await using (OpenEtlOffArea(src, etlResult.TaskId))
@@ -1991,8 +2065,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitForTimeSeriesEntry(dest, users[0].Id, timeSeriesName, time);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenConditionallyLoadOneDocumentAndOneNot()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenConditionallyLoadOneDocumentAndOneNot(string jsEngineType)
         {
             const string script = @"
 if (this.Age >= 18)
@@ -2014,7 +2089,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             var users = new[] { yang, old };
             var time = new DateTime(2020, 04, 27);
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, collections.Length == 0, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, collections.Length == 0, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -2065,8 +2140,9 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             }, true, interval: 1000);
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenLoadDocWithoutTimeSeries_ShouldNotSendCountersMetadata()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenLoadDocWithoutTimeSeries_ShouldNotSendCountersMetadata(string jsEngineType)
         {
             const string timeSeriesName = "Heartrate";
             const string tag = "fitbit";
@@ -2077,7 +2153,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
 this.Name = 'James Doe';
 loadToUsers(this);";
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl("Users", script, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, "Users", script, srcOptions: GetOptions(jsEngineType));
 
             WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -2106,8 +2182,9 @@ loadToUsers(this);";
             }
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenDefineTwoLoadBehaviorFunctions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenDefineTwoLoadBehaviorFunctions(string jsEngineType)
         {
             string[] collections = { "Users", "Employees" };
             const string script = @"
@@ -2135,7 +2212,7 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
             var user = new User();
             var employee = new Employee();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {
@@ -2172,8 +2249,9 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
             public string[] TimeSeriesNames { get; set; }
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript(string jsEngineType)
         {
             string[] collections = { "Users", "Employees" };
             const string script = @"
@@ -2194,7 +2272,7 @@ loadToUsers({
 
             var user = new User();
 
-            var (src, dest, _) = CreateSrcDestAndAddEtl(collections, script, srcOptions: _options);
+            var (src, dest, _) = CreateSrcDestAndAddEtl(jsEngineType, collections, script, srcOptions: GetOptions(jsEngineType));
 
             using (var session = src.OpenAsyncSession())
             {

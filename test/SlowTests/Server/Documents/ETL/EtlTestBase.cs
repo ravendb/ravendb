@@ -91,12 +91,12 @@ namespace SlowTests.Server.Documents.ETL
             );
         }
 
-        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null, string jsEngineType = "Jint")
+        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string jsEngineType, string collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
         {
-            return CreateSrcDestAndAddEtl(new[] { collections }, script, applyToAllDocuments, disabled, mentor, srcOptions, jsEngineType);
+            return CreateSrcDestAndAddEtl(jsEngineType, new[] { collections }, script, applyToAllDocuments, disabled, mentor, srcOptions);
         }
 
-        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null, string jsEngineType = "Jint")
+        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string jsEngineType, IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
         {
             _src = GetDocumentStore(srcOptions?.SetJavaScriptEngine(jsEngineType) ?? Options.ForJavaScriptEngine(jsEngineType));
             var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType));
