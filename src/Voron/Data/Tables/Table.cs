@@ -1021,7 +1021,7 @@ namespace Voron.Data.Tables
             return tree;
         }
 
-        internal Tree GetTree(AbstractBTreeIndexDef idx)
+        internal Tree GetTree(TableSchema.AbstractBTreeIndexDef idx)
         {
             if (idx.IsGlobal)
                 return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: _globalPageAllocator);
@@ -1047,7 +1047,7 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, AbstractBTreeIndexDef index)
+        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractBTreeIndexDef index)
         {
             try
             {
@@ -1071,7 +1071,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, AbstractBTreeIndexDef index)
+        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractBTreeIndexDef index)
         {
             try
             {
@@ -1114,7 +1114,7 @@ namespace Voron.Data.Tables
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(AbstractBTreeIndexDef index, Slice value, long skip, bool startsWith = false)
+        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice value, long skip, bool startsWith = false)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1148,7 +1148,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<SeekResult> SeekForwardFromPrefix(AbstractBTreeIndexDef index, Slice start, Slice prefix, long skip)
+        public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.AbstractBTreeIndexDef index, Slice start, Slice prefix, long skip)
         {
             var tree = GetTree(index);
             using (var it = tree.Iterate(true))
@@ -1178,7 +1178,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneForwardFromPrefix(AbstractBTreeIndexDef index, Slice value)
+        public TableValueHolder SeekOneForwardFromPrefix(TableSchema.AbstractBTreeIndexDef index, Slice value)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1203,7 +1203,7 @@ namespace Voron.Data.Tables
             return null;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(AbstractBTreeIndexDef index, Slice prefix, Slice last, long skip)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice prefix, Slice last, long skip)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1241,7 +1241,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(AbstractBTreeIndexDef index, Slice prefix, Slice last)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1273,7 +1273,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(AbstractBTreeIndexDef index, Slice last)
+        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice last)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1298,7 +1298,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public TableValueHolder SeekOneBackwardFrom(AbstractBTreeIndexDef index, Slice prefix, Slice last)
+        public TableValueHolder SeekOneBackwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
             if (tree == null)
@@ -1328,7 +1328,7 @@ namespace Voron.Data.Tables
             return null;
         }
 
-        public long GetCountOfMatchesFor(AbstractBTreeIndexDef index, Slice value)
+        public long GetCountOfMatchesFor(TableSchema.AbstractBTreeIndexDef index, Slice value)
         {
             var tree = GetTree(index);
 
@@ -1780,7 +1780,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public long DeleteForwardFrom(AbstractBTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
+        public long DeleteForwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Action<TableValueHolder> beforeDelete = null, Func<TableValueHolder, bool> shouldAbort = null)
         {
             AssertWritableTable();
@@ -1829,7 +1829,7 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
-        public long DeleteForwardFrom(AbstractBTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
+        public long DeleteForwardFrom(TableSchema.AbstractBTreeIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Func<TableValueHolder, bool> beforeDelete)
         {
             AssertWritableTable();
