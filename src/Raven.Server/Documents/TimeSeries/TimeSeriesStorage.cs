@@ -709,7 +709,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.LoadCurrentSegment())
+                if (holder.GetCurrentSegment())
                 {
                     // if we got here it means that `IsOverlapping` is false
                     // but a segment with matching ranges exists 
@@ -717,7 +717,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return false;
                 }
 
-                holder.AppendToNewSegment(segment, baseline);
+                holder.AppendToNewSegment(segment, baseline, changeVector);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
@@ -1026,12 +1026,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                 ReduceCountBeforeAppend();
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, ReadOnlySegment.NumberOfLiveEntries);
-
+                using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (Table.Allocate(out var tvb))
                 {
                     tvb.Add(SliceHolder.TimeSeriesKeySlice);
                     tvb.Add(Bits.SwapBytes(_currentEtag));
-                    tvb.Add(Slices.Empty); // we put empty slice in the change-vector, so it wouldn't replicate
+                    tvb.Add(cv);
                     tvb.Add(newValueSegment.Ptr, newValueSegment.NumberOfBytes);
                     tvb.Add(SliceHolder.CollectionSlice);
                     tvb.Add(_context.GetTransactionMarker());
@@ -1120,6 +1120,16 @@ namespace Raven.Server.Documents.TimeSeries
                     return true;
                 }
 
+                return false;
+            }
+
+            public bool GetCurrentSegment()
+            {
+                if (Table.ReadByKey(SliceHolder.TimeSeriesKeySlice, out _tvr))
+                {
+                    Initialize();
+                    return true;
+                }
                 return false;
             }
 
