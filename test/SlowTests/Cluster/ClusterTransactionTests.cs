@@ -533,7 +533,7 @@ namespace SlowTests.Cluster
                     }))
                     {
                         mre1.Set();
-                        mre2.WaitOne();
+                        mre2.WaitOne(TimeSpan.FromSeconds(30));
                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                         await session.StoreAsync(user1, "users/1");
                         await session.SaveChangesAsync();
@@ -548,7 +548,7 @@ namespace SlowTests.Cluster
                     }))
                     {
                         mre2.Set();
-                        mre1.WaitOne();
+                        mre1.WaitOne(TimeSpan.FromSeconds(30));
                         session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/karmel", user3);
                         await session.StoreAsync(user3, "users/3");
                         await session.SaveChangesAsync();
