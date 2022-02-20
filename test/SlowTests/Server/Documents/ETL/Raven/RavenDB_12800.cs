@@ -15,8 +15,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Theory]
-        [InlineData(@"
+        private const string scriptShould_stop_batch_if_size_limit_exceeded = @"
             var doc = loadToUsers(this);
 
             var attachments = getAttachments();
@@ -24,15 +23,20 @@ namespace SlowTests.Server.Documents.ETL.Raven
             for (var i = 0; i < attachments.length; i++) {
                 doc.addAttachment(loadAttachment(attachments[i].Name));
             }
-        ")]
-        [InlineData(null)]
-        public void Should_stop_batch_if_size_limit_exceeded(string script)
+        ";
+
+        [Theory]
+        [InlineData(scriptShould_stop_batch_if_size_limit_exceeded, "Jint")]
+        [InlineData(null, "Jint")]
+        [InlineData(scriptShould_stop_batch_if_size_limit_exceeded, "V8")]
+        [InlineData(null, "V8")]
+        public void Should_stop_batch_if_size_limit_exceeded(string script, string jsEngineType)
         {
             using (var src = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5"
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5")
             }))
-            using (var dest = GetDocumentStore())
+            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = src.OpenSession())
                 {

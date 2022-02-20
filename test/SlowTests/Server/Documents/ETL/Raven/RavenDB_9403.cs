@@ -1,4 +1,5 @@
 ﻿using System;
+using FastTests.Server.JavaScript;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,11 +12,13 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Fact]
-        public void Identifier_of_loaded_doc_should_not_be_created_using_cluster_identities()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Identifier_of_loaded_doc_should_not_be_created_using_cluster_identities(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", "loadToPeople(this);");
 

@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Utils;
 using Newtonsoft.Json;
 using Raven.Client;
@@ -973,11 +974,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot()
+        [Theory, Trait("Category", "Smuggler")]
+        [JavaScriptEngineClassData]
+        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot(string jsEngineType)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 var entity = new User();
                 using (var session = store.OpenAsyncSession())
@@ -2259,14 +2261,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions()
+        [Theory, Trait("Category", "Smuggler")]
+        [JavaScriptEngineClassData]
+        public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions(string jsEngineType)
         {
+            var options = Options.ForJavaScriptEngine(jsEngineType);
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var userForFullBackup = new User();
             var userForIncrementalBackup = new User();
-            using (var src = GetDocumentStore())
+            using (var src = GetDocumentStore(options))
             {
                 using (var session = src.OpenAsyncSession())
                 {
@@ -2289,7 +2293,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Backup.RunBackupAsync(Server, backupTaskId, src, isFullBackup: false);
             }
 
-            using (var dest = GetDocumentStore())
+            using (var dest = GetDocumentStore(options))
             {
                 string fromDirectory = Directory.GetDirectories(backupPath).First();
                 await dest.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), fromDirectory);

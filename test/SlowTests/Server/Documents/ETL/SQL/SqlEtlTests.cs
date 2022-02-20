@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using FastTests.Voron.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Attachments;
@@ -65,10 +66,11 @@ for (var i = 0; i < this.OrderLines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [Fact]
-        public async Task ReplicateMultipleBatches()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ReplicateMultipleBatches(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -156,10 +158,11 @@ DROP DATABASE [SqlReplication-{dbName}]";
             }
         }
 
-        [Fact]
-        public async Task SimpleTransformation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task SimpleTransformation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -202,10 +205,11 @@ DROP DATABASE [SqlReplication-{dbName}]";
 
 
 
-        [Fact]
-        public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task ShouldHandleCaseMismatchBetweenTableDefinitionAndLoadTo(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -256,10 +260,11 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
             }
         }
 
-        [Fact]
-        public async Task CanLoadToTableWithSchemaName()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanLoadToTableWithSchemaName(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -320,10 +325,11 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
             }
         }
 
-        [Fact]
-        public async Task NullPropagation()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task NullPropagation(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -369,10 +375,11 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
-        public async Task NullPropagation_WithExplicitNull()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task NullPropagation_WithExplicitNull(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -419,10 +426,11 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
-        public async Task RavenDB_3341()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenDB_3341(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -471,10 +479,11 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
-        public async Task CanUpdateToBeNoItemsInChildTable()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanUpdateToBeNoItemsInChildTable(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -516,10 +525,11 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
-        public async Task CanDelete()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanDelete(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -557,10 +567,11 @@ loadToOrders(orderData);");
             }
         }
 
-        [Fact]
-        public async Task RavenDB_3172()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task RavenDB_3172(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -673,11 +684,13 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
         }
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanTestScript(bool performRolledBackTransaction)
+        [InlineData(true, "Jint")]
+        [InlineData(false, "Jint")]
+        [InlineData(true, "V8")]
+        [InlineData(false, "V8")]
+        public async Task CanTestScript(bool performRolledBackTransaction, string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -900,10 +913,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public async Task Should_error_if_attachment_doesnt_exist()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task Should_error_if_attachment_doesnt_exist(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -973,10 +987,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public async Task LoadingMultipleAttachments()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task LoadingMultipleAttachments(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1048,10 +1063,11 @@ for (var i = 0; i < attachments.length; i++)
             }
         }
 
-        [Fact]
-        public async Task CanSkipSettingFieldIfAttachmentDoesntExist()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanSkipSettingFieldIfAttachmentDoesntExist(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1152,140 +1168,141 @@ loadToOrders(orderData);
             }
         }
 
-            [Fact]
-            public async Task CanUseVarcharAndNVarcharFunctions()
+        [Fact]
+        public async Task CanUseVarcharAndNVarcharFunctions()
+        {
+            using (var store = GetDocumentStore())
             {
-                using (var store = GetDocumentStore())
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
-                    {
-                        CreateRdbmsSchema(connectionString, @"
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Users]
 (
-    [Id] [nvarchar](50) NOT NULL,
-    [FirstName] [varchar](30) NOT NULL,
-    [LastName] [nvarchar](30) NULL,
-    [FirstName2] [varchar](30) NOT NULL,
-    [LastName2] [nvarchar](30) NULL
+[Id] [nvarchar](50) NOT NULL,
+[FirstName] [varchar](30) NOT NULL,
+[LastName] [nvarchar](30) NULL,
+[FirstName2] [varchar](30) NOT NULL,
+[LastName2] [nvarchar](30) NULL
 )
 ");
-                        using (var session = store.OpenAsyncSession())
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User {Name = "Joe Doń"});
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                    AddEtl(store, new SqlEtlConfiguration()
+                    {
+                        Name = "CanUserNonVarcharAndNVarcharFunctions",
+                        ConnectionStringName = "test",
+                        SqlTables = {new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},},
+                        Transforms =
                         {
-                            await session.StoreAsync(new User {Name = "Joe Doń"});
-
-                            await session.SaveChangesAsync();
-                        }
-
-                        var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
-
-                        AddEtl(store, new SqlEtlConfiguration()
-                        {
-                            Name = "CanUserNonVarcharAndNVarcharFunctions",
-                            ConnectionStringName = "test",
-                            SqlTables = {new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},},
-                            Transforms =
+                            new Transformation()
                             {
-                                new Transformation()
-                                {
-                                    Name = "varchartest",
-                                    Collections = {"Users"},
-                                    Script = @"
+                                Name = "varchartest",
+                                Collections = {"Users"},
+                                Script = @"
 
 var names = this.Name.split(' ');
 
 loadToUsers(
 {
-    FirstName: varchar(names[0], 30),
-    LastName: nvarchar(names[1], 30),
-    FirstName2: varchar(names[0]),
-    LastName2:  nvarchar(names[1]),
+FirstName: varchar(names[0], 30),
+LastName: nvarchar(names[1], 30),
+FirstName2: varchar(names[0]),
+LastName2:  nvarchar(names[1]),
 });
 "
-                                }
                             }
-                        }, new SqlConnectionString {Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
+                        }
+                    }, new SqlConnectionString {Name = "test", FactoryName = "System.Data.SqlClient", ConnectionString = connectionString });
 
-                        etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                        using (var con = new SqlConnection())
+                    using (var con = new SqlConnection())
+                    {
+                        con.ConnectionString = connectionString;
+                        con.Open();
+
+                        using (var dbCommand = con.CreateCommand())
                         {
-                            con.ConnectionString = connectionString;
-                            con.Open();
-
-                            using (var dbCommand = con.CreateCommand())
-                            {
-                                dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
-                                Assert.Equal(1, dbCommand.ExecuteScalar());
-                            }
+                            dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
+                            Assert.Equal(1, dbCommand.ExecuteScalar());
                         }
                     }
                 }
             }
+        }
 
-            [Fact]
-                public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_stop_batch_if_size_limit_exceeded_RavenDB_12800(string jsEngineType)
+        {
+            using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5") }))
+            {
+                using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
-                    using (var store = GetDocumentStore(new Options { ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxBatchSize)] = "5" }))
-                    {
-                        using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
-                        {
-                            CreateRdbmsSchema(connectionString, @"
+                    CreateRdbmsSchema(connectionString, @"
 CREATE TABLE [dbo].[Orders]
 (
-    [Id] [nvarchar](50) NOT NULL,
-    [Pic] [varbinary](max) NULL
+[Id] [nvarchar](50) NOT NULL,
+[Pic] [varbinary](max) NULL
 )
 ");
-                            using (var session = store.OpenSession())
-                            {
+                    using (var session = store.OpenSession())
+                    {
 
-                                for (int i = 0; i < 6; i++)
-                                {
-                                    var order = new Orders.Order();
-                                    session.Store(order);
+                        for (int i = 0; i < 6; i++)
+                        {
+                            var order = new Orders.Order();
+                            session.Store(order);
 
-                                    var r = new Random(i);
+                            var r = new Random(i);
 
-                                    var bytes = new byte[1024 * 1024 * 1];
+                            var bytes = new byte[1024 * 1024 * 1];
 
-                                    r.NextBytes(bytes);
+                            r.NextBytes(bytes);
 
-                                    session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
-                                }
+                            session.Advanced.Attachments.Store(order, "my-attachment", new MemoryStream(bytes));
+                        }
 
-                                session.SaveChanges();
-                            }
+                        session.SaveChanges();
+                    }
 
-                    var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
+            var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses >= 5);
 
-                            SetupSqlEtl(store, connectionString, @"
+                    SetupSqlEtl(store, connectionString, @"
 
 var orderData = {
-    Id: id(this),
-    Pic: loadAttachment('my-attachment') 
+Id: id(this),
+Pic: loadAttachment('my-attachment') 
 };
 
 loadToOrders(orderData);
 ");
 
-                            etlDone.Wait(TimeSpan.FromMinutes(5));
+                    etlDone.Wait(TimeSpan.FromMinutes(5));
 
-                            var database = GetDatabase(store.Database).Result;
+                    var database = GetDatabase(store.Database).Result;
 
-                            var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
+                    var etlProcess = (SqlEtl)database.EtlLoader.Processes.First();
 
-                            var stats = etlProcess.GetPerformanceStats();
+                    var stats = etlProcess.GetPerformanceStats();
 
-                            Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
+                    Assert.Contains("Stopping the batch because maximum batch size limit was reached (5 MBytes)", stats.Select(x => x.BatchTransformationCompleteReason).ToList());
 
-                    etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
+            etlDone = WaitForEtl(store, (n, s) => s.LoadSuccesses >= 6);
 
-                    etlDone.Wait(TimeSpan.FromMinutes(1));
-                        }
-                    }
+            etlDone.Wait(TimeSpan.FromMinutes(1));
                 }
+            }
+        }
 
-                private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
+        private async Task<string> ReadFromWebSocket(ArraySegment<byte> buffer, WebSocket source)
         {
             using (var ms = new MemoryStream())
             {

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
@@ -99,10 +100,11 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
-        public async Task CanOutputInDeleteBehaviorFunction()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanOutputInDeleteBehaviorFunction(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var session = store.OpenAsyncSession())
                 {

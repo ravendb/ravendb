@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -144,10 +145,11 @@ namespace SlowTests.Verifications
             public string Title { get; set; }
         }
         
-        [Fact]
-        public void WillMapPropertiesOnMapIndexes()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void WillMapPropertiesOnMapIndexes(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 CreateData(store);
 
@@ -174,10 +176,11 @@ select {
             }
         }
 
-        [Fact]
-        public void WillMapPropertiesOnMapReduceIndexes()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void WillMapPropertiesOnMapReduceIndexes(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 CreateData(store);
 

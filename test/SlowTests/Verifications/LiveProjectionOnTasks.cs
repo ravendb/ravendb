@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
@@ -15,10 +16,11 @@ namespace SlowTests.Verifications
         {
         }
 
-        [Fact]
-        public void TaskLiveProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void TaskLiveProjection(string jsEngineType)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 new TaskSummaryIndex().Execute((IDocumentStore)documentStore);
 

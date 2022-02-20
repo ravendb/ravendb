@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using FastTests.Server.JavaScript;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
@@ -19,22 +20,28 @@ namespace SlowTests.Server.Documents.ETL.Raven
         {
         }
 
-        [Theory]
-        [InlineData("Users", null)]
-        [InlineData(null, null)]
-        [InlineData("Users", @"
+        private const string scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting = @"
     loadToUsers(this);
 
 function loadCountersOfUsersBehavior(doc, counter)
 {
     return true;
 }
-")]
+";
+        
+        [Theory]
+        [InlineData("Users", null, "Jint")]
+        [InlineData(null, null, "Jint")]
+        [InlineData("Users", scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting, "Jint")]
+        [InlineData("Users", null, "V8")]
+        [InlineData(null, null, "V8")]
+        [InlineData("Users", scriptShould_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting, "V8")]
 
-        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(string collection, string script)
+        public void Should_load_all_counters_when_no_script_is_defined_or_load_counter_behavior_sends_everyting(string collection, string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 if (collection == null)
                     AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
@@ -113,11 +120,13 @@ function loadCountersOfUsersBehavior(doc, counter)
             }
         }
 
-        [Fact]
-        public void Should_not_send_counters_metadata_when_using_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_not_send_counters_metadata_when_using_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
@@ -153,11 +162,13 @@ function loadCountersOfUsersBehavior(doc, counter)
         }
 
 
-        [Fact]
-        public void Should_handle_counters()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_handle_counters(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -287,11 +298,13 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
-        public void Can_use_get_counters()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_use_get_counters(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -341,11 +354,13 @@ for (var i = 0; i < counters.length; i++) {
             }
         }
 
-        [Fact]
-        public void Should_remove_counter_if_add_counter_gets_null_argument()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_remove_counter_if_add_counter_gets_null_argument(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -412,11 +427,13 @@ doc.addCounter(loadCounter('likes'));
             }
         }
 
-        [Fact]
-        public void Can_use_has_counter()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_use_has_counter(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -750,11 +767,13 @@ if (hasCounter('down')) {
             }
         }
 
-        [Fact]
-        public void Should_handle_counters_according_to_behavior_defined_in_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_handle_counters_according_to_behavior_defined_in_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -838,11 +857,13 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
-        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_not_send_counters_if_load_counters_behavior_isnt_defined(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
@@ -886,12 +907,13 @@ loadToUsers(this);");
             }
         }
 
-        [Fact]
-        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_send_all_counters_on_doc_update_if_load_counters_behavior_set(string jsEngineType)
         {
             using (var src = GetDocumentStore(new Options()
             {
-                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2")
             }))
             using (var dest = GetDocumentStore())
             {
@@ -978,11 +1000,13 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
                          "are loaded to the same collection on a destination side", errors[0]);
         }
 
-        [Fact]
-        public void Load_counters_behavior_function_can_use_other_function_defined_in_script()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Load_counters_behavior_function_can_use_other_function_defined_in_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"
 loadToUsers(this);
@@ -1068,11 +1092,13 @@ function loadCountersOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact]
-        public void Can_define_multiple_load_counter_behavior_functions()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Can_define_multiple_load_counter_behavior_functions(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
                     @"

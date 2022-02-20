@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Sparrow.Extensions;
@@ -162,14 +163,16 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
-        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanParseNumericEdgeCasesRawValuesInJSProjection(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -189,14 +192,16 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
-        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())
@@ -281,14 +286,16 @@ from EdgeCaseValues as e select MyProjection(e)"
             }
         }
 
-        [Fact]
-        public async Task CanModifyRawAndOriginalValuesTogether()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanModifyRawAndOriginalValuesTogether(string jsEngineType)
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
 
             using (var store = GetDocumentStore(new Options()
             {
-                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200,
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType)
             }))
             {
                 using (var session = store.OpenAsyncSession())

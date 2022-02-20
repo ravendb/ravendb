@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations;
@@ -1194,12 +1195,13 @@ namespace SlowTests.Smuggler
                 }
             }
 
-        [Fact, Trait("Category", "Smuggler")]
-        public async Task CanRestoreSubscriptionsFromBackup()
+        [Theory, Trait("Category", "Smuggler")]
+        [JavaScriptEngineClassData]
+        public async Task CanRestoreSubscriptionsFromBackup(string jsEngineType)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();

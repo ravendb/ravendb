@@ -2,6 +2,7 @@
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
@@ -45,13 +46,14 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public async Task MaximumScriptSteps()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task MaximumScriptSteps(string jsEngineType)
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => 
-                record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "30"
+                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => 
+                    record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "30")
             }))
             {
                 using (var session = store.OpenSession())
