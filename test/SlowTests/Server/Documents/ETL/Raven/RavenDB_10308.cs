@@ -83,8 +83,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void Should_not_send_attachments_metadata_when_using_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");

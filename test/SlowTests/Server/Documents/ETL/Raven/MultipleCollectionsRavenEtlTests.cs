@@ -16,8 +16,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void Docs_from_two_collections_loaded_to_single_one(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, new [] { "Users", "People" }, script: @"loadToUsers({Name: this.Name});");
 

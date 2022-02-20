@@ -23,8 +23,9 @@ namespace SlowTests.Server.Documents.ETL
         [JavaScriptEngineClassData]
         public async Task AggregatesTransformationErrorsInSingleAlert(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"throw 'super exception';
                                        loadToUsers(this);");

@@ -23,8 +23,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void Simple_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: @"this.Name = 'James Doe';
                                        loadToUsers(this);");
@@ -75,8 +76,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void SetMentorToEtlAndFailover(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script:null ,mentor: "C");
 
@@ -130,8 +132,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void No_script(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: null);
 
@@ -181,8 +184,9 @@ namespace SlowTests.Server.Documents.ETL.Raven
         [JavaScriptEngineClassData]
         public void Filtering_and_transformation_with_load_document(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -275,8 +279,9 @@ loadToUsers(
         [JavaScriptEngineClassData]
         public void Loading_to_different_collections(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -375,8 +380,9 @@ loadToAddresses(load(this.AddressId));
         [JavaScriptEngineClassData]
         public void Loading_to_different_collections_using_this(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -461,8 +467,9 @@ loadToAddresses(this.Address);
         [JavaScriptEngineClassData]
         public void Loading_to_the_same_collection_by_js_object_should_preserve_collection_metadata(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -503,8 +510,9 @@ loadToUsers({Name: this.Name + ' ' + this.LastName });
         [JavaScriptEngineClassData]
         public void Update_of_disassembled_document(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -630,8 +638,9 @@ loadToOrders(orderData);
         [JavaScriptEngineClassData]
         public void Can_get_document_id(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
@@ -725,8 +734,9 @@ loadToOrders(orderData);
         [JavaScriptEngineClassData]
         public void Can_load_to_specific_collection_when_applying_to_all_docs(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
 

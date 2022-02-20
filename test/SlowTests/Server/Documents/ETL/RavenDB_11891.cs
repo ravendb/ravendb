@@ -175,8 +175,9 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         [JavaScriptEngineClassData]
         public void Should_filter_out_deletions_using_generic_delete_behavior(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, collections: new string[0], script:
                     @"
@@ -340,8 +341,9 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         [InlineData(new[] { "Users", "Employees" }, false, "V8")]
         public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments, string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, collections: collections, script:
                     @"
@@ -502,8 +504,9 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
         [InlineData(Should_choose_more_specific_delete_behavior_function_Script2, "V8")]
         public void Should_choose_more_specific_delete_behavior_function(string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script: script);
 

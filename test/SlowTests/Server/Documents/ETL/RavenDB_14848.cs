@@ -63,8 +63,9 @@ namespace SlowTests.Server.Documents.ETL
         [JavaScriptEngineClassData]
         public void ShouldResetEtl(string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 using (var session = src.OpenSession())
                 {

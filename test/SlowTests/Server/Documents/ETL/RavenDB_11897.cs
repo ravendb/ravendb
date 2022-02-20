@@ -41,8 +41,9 @@ namespace SlowTests.Server.Documents.ETL
         [InlineData(Should_handle_as_empty_script_but_filter_out_deletions_Script2, "V8")]
         public void Should_handle_as_empty_script_but_filter_out_deletions(string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 AddEtl(src, dest, "Users", script: script);
 

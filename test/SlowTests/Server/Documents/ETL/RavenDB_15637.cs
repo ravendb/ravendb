@@ -88,8 +88,9 @@ return !deleted;
         [InlineData(_scriptShouldDelete2, "V8")]
         public void ShouldDeleteDestinationDocumentWhenFilteredOutOfLoad(string script, string jsEngineType)
         {
-            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
-            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            var options = Options.ForJavaScriptEngine(jsEngineType);
+            using (var src = GetDocumentStore(options))
+            using (var dest = GetDocumentStore(options))
             {
                 using (var session = dest.OpenSession())
                 {
