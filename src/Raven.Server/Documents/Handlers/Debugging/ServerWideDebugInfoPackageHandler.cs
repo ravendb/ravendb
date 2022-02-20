@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 debugInfoDict[route.Path] = sw.Elapsed;
             }
 
-            await DebugInfoPackageUtils.WriteExtraDebugInfoAsZipEntryAsync(debugInfoDict, archive, databaseName);
+            await DebugInfoPackageUtils.WriteDebugInfoTimesAsZipEntryAsync(debugInfoDict, archive, databaseName);
         }
 
         internal static async Task InvokeAndWriteToArchive(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient,

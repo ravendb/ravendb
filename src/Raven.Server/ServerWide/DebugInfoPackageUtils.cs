@@ -76,19 +76,19 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static async Task WriteExtraDebugInfoAsZipEntryAsync(Dictionary<string, TimeSpan> debugInfoTimeSpans, ZipArchive archive, string databaseName)
+        public static async Task WriteDebugInfoTimesAsZipEntryAsync(Dictionary<string, TimeSpan> debugInfoTimeSpans, ZipArchive archive, string databaseName)
         {
-            var entryName = databaseName == null ? "DebugInfo-ServerWide" : $"DebugInfo-ServerWide-{databaseName}";
+            var entryName = databaseName == null ? "server-wide-requestTimes" : $"{databaseName}-requestTimes";
             var entry = archive.CreateEntry($"{entryName}.txt");
             entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
 
-            var sorted = debugInfoTimeSpans.OrderBy(o => o.Value);
+            var sorted = debugInfoTimeSpans.OrderByDescending(o => o.Value);
             await using (var entryStream = entry.Open())
             await using (var sw = new StreamWriter(entryStream))
             {
                 foreach (var timeInfo in sorted)
                 {
-                    await sw.WriteLineAsync(timeInfo.Key + ", " + timeInfo.Value);
+                    await sw.WriteLineAsync(timeInfo.Value + ", " + timeInfo.Key);
                 }
                 await sw.FlushAsync();
             }
