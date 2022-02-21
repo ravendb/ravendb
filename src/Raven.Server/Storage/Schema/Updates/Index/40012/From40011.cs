@@ -16,7 +16,7 @@ namespace Raven.Server.Storage.Schema.Updates.Index
             {
                 var tableSchema = new TableSchema();
 
-                tableSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+                tableSchema.DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     IsGlobal = false,

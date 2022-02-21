@@ -52,7 +52,7 @@ namespace Raven.Server.Storage.Schema.Updates.Index
         private static Tree GetNewErrorTimestampsTreeFromErrorsTable(UpdateStep step, Slice errorTimestampsSlice)
         {
             var newTableSchema = new TableSchema();
-            var indexDef = new TableSchema.StaticBTreeIndexDef
+            var indexDef = new TableSchema.IndexDef
             {
                 StartIndex = 0,
                 IsGlobal = false,
@@ -82,7 +82,7 @@ namespace Raven.Server.Storage.Schema.Updates.Index
         {
             oldTableSchema = new TableSchema();
 
-            oldTableSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            oldTableSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = 0,
                 IsGlobal = true,

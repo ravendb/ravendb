@@ -123,7 +123,7 @@ namespace Raven.Server.Documents
             full name
             collections are never deleted from the collections table
             */
-            CollectionsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+            CollectionsSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)CollectionsTable.Name,
                 Count = 1,
@@ -135,26 +135,26 @@ namespace Raven.Server.Documents
             DocsSchema.CompressValues(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: false);
             CompressedDocsSchema.CompressValues(CompressedDocsSchema.FixedSizeIndexes[CollectionEtagsSlice], compress: true);
 
-            TombstonesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+            TombstonesSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)TombstoneTable.LowerId,
                 Count = 1,
                 IsGlobal = true,
                 Name = TombstonesSlice
             });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
+            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)TombstoneTable.Etag,
                 IsGlobal = false,
                 Name = CollectionEtagsSlice
             });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
+            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)TombstoneTable.Etag,
                 IsGlobal = true,
                 Name = AllTombstonesEtagsSlice
             });
-            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
+            TombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)TombstoneTable.DeletedEtag,
                 IsGlobal = false,
@@ -163,9 +163,9 @@ namespace Raven.Server.Documents
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
             {
-                docsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
-                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
+                docsSchema.DefineKey(new TableSchema.IndexDef { StartIndex = (int)DocumentsTable.LowerId, Count = 1, IsGlobal = true, Name = DocsSlice });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = false, Name = CollectionEtagsSlice });
+                docsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef { StartIndex = (int)DocumentsTable.Etag, IsGlobal = true, Name = AllDocsEtagsSlice });
             }
         }
 
@@ -2160,7 +2160,7 @@ namespace Raven.Server.Documents
             }
 
             Table table;
-            TableSchema.FixedSizeTreeIndexDef indexDef;
+            TableSchema.FixedSizeKeyIndexDef indexDef;
             if (tombstones)
             {
                 table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,

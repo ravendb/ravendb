@@ -566,7 +566,7 @@ namespace Voron.Impl.Compaction
                             // size before a flush
                             if (transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2 || ShouldCloseTxFor32Bit(transactionSize, compactedEnv))
                             {
-                                schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
+                                schema.Key.GetValue(txr.Allocator, ref entry.Reader, out lastSlice);
                                 break;
                             }
 

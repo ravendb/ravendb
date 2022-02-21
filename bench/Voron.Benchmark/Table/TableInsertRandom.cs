@@ -58,7 +58,7 @@ namespace Voron.Benchmark.Table
             Slice.From(Configuration.Allocator, "TestSchema2", ByteStringType.Immutable, out SchemaPKNameSlice);
 
             Schema = new TableSchema()
-                .DefineKey(new TableSchema.StaticBTreeIndexDef
+                .DefineKey(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     Count = 0,

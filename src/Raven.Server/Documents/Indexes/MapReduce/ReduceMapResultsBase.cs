@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 Slice.From(ctx, "PageNumber", ByteStringType.Immutable, out PageNumberSlice);
             }
             ReduceResultsSchema = new TableSchema()
-                .DefineKey(new TableSchema.StaticBTreeIndexDef
+                .DefineKey(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     Count = 1,

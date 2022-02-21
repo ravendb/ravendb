@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
 
         private unsafe void CreateSchema(DocumentDatabase documentDatabase)
         {
-            _errorsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            _errorsSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = 0,
                 // there is just a single instance of this table

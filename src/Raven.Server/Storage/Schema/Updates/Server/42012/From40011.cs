@@ -50,21 +50,21 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
             ItemsSchema = new TableSchema();
 
-            ItemsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+            ItemsSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = 0,
                 Count = 1
             });
 
             CertificatesSchema = new TableSchema();
-            CertificatesSchema.DefineKey(new TableSchema.StaticBTreeIndexDef()
+            CertificatesSchema.DefineKey(new TableSchema.IndexDef()
             {
                 StartIndex = (int)CertificatesTable.Key,
                 Count = 1,
                 IsGlobal = false,
                 Name = CertificatesSlice
             });
-            CertificatesSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            CertificatesSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)CertificatesTable.Hash,
                 Count = 1,
