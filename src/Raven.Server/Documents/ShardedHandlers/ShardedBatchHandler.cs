@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray("Commands", _commands);
+                    await writer.WriteArrayAsync("Commands", _commands);
                     if (_mode == TransactionMode.ClusterWide)
                     {
                         writer.WriteComma();
