@@ -1087,7 +1087,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
+                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
             }
         }
     }

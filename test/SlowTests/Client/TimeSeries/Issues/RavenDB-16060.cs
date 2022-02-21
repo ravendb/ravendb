@@ -524,7 +524,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"], rawName: "StockPrices");
+                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
@@ -600,7 +600,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"], rawName: "StockPrices");
+                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
