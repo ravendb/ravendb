@@ -1808,7 +1808,7 @@ namespace Raven.Server.Documents.Patch
             
             private void DisposeArgsV8()
             {
-                if (_args.Length > 1 && _args[1].Object is BlittableObjectInstanceV8 boi)
+                if (_args.Length > 1 && _args[1].Kind == JsHandleType.V8 && _args[1].Object is BlittableObjectInstanceV8 boi)
                 {
                     var global = ScriptEngineV8.GlobalObject;
                     foreach (var propertyNameOrig in boi.EnumerateOwnPropertiesUnordered())
