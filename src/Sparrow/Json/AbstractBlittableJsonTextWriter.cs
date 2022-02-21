@@ -63,13 +63,13 @@ namespace Sparrow.Json
             EscapeCharacters[(byte)'"'] = (byte)'"';
         }
 
-        private readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
+        private protected readonly JsonOperationContext.MemoryBuffer _pinnedBuffer;
         private readonly byte* _buffer;
 
         private readonly byte* _auxiliarBuffer;
         private readonly int _auxiliarBufferLength;
 
-        private int _pos;
+        private protected int _pos;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnAuxiliarBuffer;
 
@@ -722,20 +722,6 @@ namespace Sparrow.Json
             EnsureBuffer(2);
             _buffer[_pos++] = (byte)'\r';
             _buffer[_pos++] = (byte)'\n';
-        }
-
-        public void WriteStream(Stream stream)
-        {
-            FlushInternal();
-
-            while (true)
-            {
-                _pos = stream.Read(_pinnedBuffer.Memory.Memory.Span);
-                if (_pos == 0)
-                    break;
-
-                FlushInternal();
-            }
         }
 
         public void WriteMemoryChunk(IntPtr ptr, int size)

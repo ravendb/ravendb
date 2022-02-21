@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -1651,6 +1652,8 @@ namespace Raven.Server.ServerWide
                         shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord?.Raw);
                     }
 
+                    VerifyIndexNames(newDatabaseRecord);
+
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded(databaseExists, shouldSetClientConfigEtag, index, addDatabaseCommand, newDatabaseRecord, context))
                     {
                         UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
@@ -1709,6 +1712,32 @@ namespace Raven.Server.ServerWide
                                 if (hasChanges)
                                     throw new RachisInvalidOperationException(
                                         $"Cannot update {task} configuration with DatabaseRecord. Please use a dedicated operation to update the {task} configuration.");
+                            }
+                        }
+                    }
+
+                    void VerifyIndexNames(BlittableJsonReaderObject dbDoc)
+                    {
+                        if (dbDoc.TryGet(nameof(DatabaseRecord.Indexes), out BlittableJsonReaderObject obj) == false || obj == null)
+                            return;
+
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < obj.Count; i++)
+                        {
+                            obj.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (!(propertyDetails.Value is BlittableJsonReaderObject bjro))
+                                continue;
+
+                            if (bjro.TryGet(nameof(IndexDefinition.Name), out string indexName) == false || indexName == null)
+                                continue;
+
+                            if (indexName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                            {
+                                throw new RachisInvalidOperationException($"Index name cannot start with {Constants.Documents.Indexing.SideBySideIndexNamePrefix} but got {indexName}");
                             }
                         }
                     }

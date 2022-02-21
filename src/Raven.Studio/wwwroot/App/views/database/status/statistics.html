@@ -219,27 +219,4 @@
             </div>
         </div>
     </div>
-    <hr />
-    <div class="identities">
-        <div class="flex-horizontal">
-            <h2 class="flex-end on-base-background">Identities</h2>
-            <small class="js-identities-header identities-header has-info-icon flex-end"><i class="icon-info text-info"></i></small>
-        </div>
-        <div class="row" data-bind="visible: identities().length === 0">
-            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                <i class="icon-xl icon-empty-set text-muted"></i>
-                <h2 class="text-center text-muted">No identities have been defined for this database.</h2>
-            </div>
-        </div>
-        <div class="row row-sm flex-row" data-bind="visible: identities().length">
-            <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
-                <div class="stats-list margin-bottom flex-grow" data-bind="foreach: identities">
-                    <div class="stats-item">
-                        <div class="name" data-bind="text: Prefix, attr: { title: Prefix }"></div>
-                        <div class="value" data-bind="text: Value"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </section>

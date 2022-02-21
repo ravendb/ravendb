@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly ProjectionOptions Projection;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBaseServerSide indexDefinition)
         {
             Projection = new ProjectionOptions(query);
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static FieldToFetch GetFieldToFetch(
-            IndexDefinitionBase indexDefinition,
+            IndexDefinitionBaseServerSide indexDefinition,
             QueryMetadata metadata,
             ProjectionBehavior? projectionBehavior,
             SelectField selectField,
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Queries
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
             QueryMetadata metadata,
             ProjectionBehavior? projectionBehavior,
-            IndexDefinitionBase indexDefinition,
+            IndexDefinitionBaseServerSide indexDefinition,
             out bool anyExtractableFromIndex,
             out bool extractAllStoredFields,
             out bool singleFieldNoAlias,

@@ -4,10 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Linq;
 using Lextm.SharpSnmpLib;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Database
@@ -23,17 +20,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         {
             var count = 0;
             foreach (var database in GetLoadedDatabases())
-                count += GetCountSafely(database, GetCount);
+                count += GetCountSafely(database, DatabaseNumberOfErrorIndexes.GetCount);
 
             return new Integer32(count);
-        }
-
-        private static int GetCount(DocumentDatabase database)
-        {
-            return database
-                .IndexStore
-                .GetIndexes()
-                .Count(x => x.State == IndexState.Error);
         }
     }
 }

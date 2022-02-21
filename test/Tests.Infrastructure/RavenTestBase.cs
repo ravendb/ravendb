@@ -634,7 +634,7 @@ namespace FastTests
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
-                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith("ReplacementOf/"));
+                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
                 if (staleIndexesCount == 0)
                     return;
 

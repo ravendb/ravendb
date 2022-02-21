@@ -46,6 +46,20 @@ namespace Sparrow.Json
             return bytesCount;
         }
 
+        public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
+        {
+            await FlushAsync(token).ConfigureAwait(false);
+
+            while (true)
+            {
+                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(false);
+                if (_pos == 0)
+                    break;
+
+                await FlushAsync(token).ConfigureAwait(false);
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {

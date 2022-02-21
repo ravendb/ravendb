@@ -20,12 +20,15 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override Integer32 GetData(DocumentDatabase database)
         {
-            var count = database
+            return new Integer32(GetCount(database));
+        }
+
+        internal static int GetCount(DocumentDatabase database)
+        {
+            return database
                 .IndexStore
                 .GetIndexes()
                 .Count(x => x.State == IndexState.Error);
-
-            return new Integer32(count);
         }
     }
 }

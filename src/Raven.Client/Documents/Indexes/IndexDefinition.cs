@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Indexes
     /// <summary>
     /// A definition of a RavenIndex
     /// </summary>
-    public class IndexDefinition
+    public class IndexDefinition : IndexDefinitionBase
     {
         private static readonly Regex _newLineCharacters = new Regex("\r?\n", RegexOptions.Compiled);
 
@@ -24,21 +24,6 @@ namespace Raven.Client.Documents.Indexes
         {
             _configuration = new IndexConfiguration();
         }
-
-        /// <summary>
-        /// This is the means by which the outside world refers to this index definition
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Priority of an index
-        /// </summary>
-        public IndexPriority? Priority { get; set; }
-
-        /// <summary>
-        /// Index state
-        /// </summary>
-        public IndexState? State { get; set; }
 
         /// <summary>
         /// Index lock mode:
@@ -546,6 +531,7 @@ namespace Raven.Client.Documents.Indexes
             definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
             definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
             definition.DeploymentMode = DeploymentMode;
+            definition.ClusterState = (ClusterState == null) ? null : new ClusterState(ClusterState);
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;

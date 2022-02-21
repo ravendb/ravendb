@@ -225,6 +225,32 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
+        public bool TryPeek(string[] matches, bool skipWhitespace = true)
+        {
+            if (SkipWhitespace(skipWhitespace) == false)
+                return false;
+
+            foreach (string match in matches)
+            {
+                if (match.Length + _pos > _q.Length)
+                    return false;
+
+                if (string.Compare(_q, _pos, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                    continue;
+
+                if (_pos + match.Length < _q.Length)
+                {
+                    if (char.IsLetterOrDigit(match[match.Length - 1]) &&
+                        char.IsLetterOrDigit(_q[_pos + match.Length]))
+                        continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryScan(string match, bool skipWhitespace = true)
         {
             if (TryPeek(match, skipWhitespace) == false)
