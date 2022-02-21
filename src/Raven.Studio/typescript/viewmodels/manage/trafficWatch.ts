@@ -17,9 +17,12 @@ import TrafficWatchHttpChange = Raven.Client.Documents.Changes.TrafficWatchHttpC
 import trafficWatchQueriesDialog from "viewmodels/manage/trafficWatchQueriesDialog";
 import app = require("durandal/app");
 
-type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes; 
+type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType | Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.OperationTypes;
 
 class runQueryFeature implements columnPreviewFeature {
+
+    private queryList: string[] = [];
+
     install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void {
         $tooltip.on("click", ".run-query", () => {
             const value = valueProvider();
@@ -30,7 +33,8 @@ class runQueryFeature implements columnPreviewFeature {
                 return;
             }
 
-            const queryList = runQueryFeature.getQueryList(value);
+            const queryList = this.queryList;
+            
             if (queryList.length === 1) {
                 runQueryFeature.executeQuery(queryList[0], item);
             } else {
@@ -44,14 +48,18 @@ class runQueryFeature implements columnPreviewFeature {
         });
     }
 
-    private static getQueryList(value: any): string[] {
+    private static getMultiGetQueriesList(value: any): string[] {
         const queryList: string[] = [];
 
-        const lines = value.split('\r\n');
+        const lines = value.split('\n');
         lines.forEach((line: string) => {
             if (line) {
-                const query = JSON.parse(line).Query.slice("?query=".length);
-                if (query) {
+                const jsonObj = JSON.parse(line);
+                
+                const queriesEndpoint = jsonObj.Url.slice("/queries".length * -1) === "/queries";
+                const query = jsonObj.Query.slice("?query=".length);
+                                
+                if (queriesEndpoint && query) {
                     queryList.push(query);
                 }
             }
@@ -59,7 +67,7 @@ class runQueryFeature implements columnPreviewFeature {
 
         return queryList;
     }
-    
+
     private static executeQuery(value: any, item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): void {
         const query = queryCriteria.empty();
 
@@ -75,13 +83,23 @@ class runQueryFeature implements columnPreviewFeature {
     }
     
     syntax(column: virtualColumn, escapedValue: any, element: any): string {
-        const buttonText = element.Type === 'MultiGet' ? "RunQuery..." : "RunQuery";
-        
-        if (column.header === "Custom Info" && escapedValue !== generalUtils.escapeHtml("N/A")) {
-            return `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>${buttonText}</span></button>`;
-        } else {
+        if (column.header !== "Custom Info" || escapedValue === generalUtils.escapeHtml("N/A")) {
             return "";
         }
+        
+        this.queryList = [];
+        let buttonText: string;
+
+        if (element.Type === "MultiGet") {
+            this.queryList = runQueryFeature.getMultiGetQueriesList(generalUtils.unescapeHtml(escapedValue));
+            buttonText = this.queryList.length > 1 ? "RunQuery..." : (this.queryList.length === 1 ? "RunQuery" : "");
+        }        
+        
+        if (element.Type === "Queries" && (element.HttpMethod === "POST" || element.HttpMethod === "GET")) {
+            buttonText = "RunQuery";
+        }
+        
+        return buttonText ? `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>${buttonText}</span></button>` : "";
     }
 }
 
