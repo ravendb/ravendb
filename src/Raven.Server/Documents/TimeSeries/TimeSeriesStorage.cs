@@ -410,7 +410,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, remoteChangeVector))
                     {
-                        if (holder.LoadCurrentSegment() == false)
+                        if (holder.LoadClosestSegment() == false)
                             return false;
 
                         // we need to get the next segment before the actual remove, since it might lead to a split
@@ -709,7 +709,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.GetCurrentSegment())
+                if (holder.LoadCurrentSegment())
                 {
                     // if we got here it means that `IsOverlapping` is false
                     // but a segment with matching ranges exists 
@@ -748,7 +748,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.LoadCurrentSegment() == false)
+                if (holder.LoadClosestSegment() == false)
                     holder.AppendToNewSegment(segment, baseline, changeVectorFromReplication: changeVector);
                 else
                     holder.AppendExistingSegment(segment, changeVectorFromReplication: changeVector);
@@ -1112,7 +1112,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public bool LoadCurrentSegment()
+            //Return true if we have the same key or the closest result to the sliceHolder
+            public bool LoadClosestSegment()
             {
                 if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice, SliceHolder.TimeSeriesKeySlice, out _tvr))
                 {
@@ -1123,7 +1124,8 @@ namespace Raven.Server.Documents.TimeSeries
                 return false;
             }
 
-            public bool GetCurrentSegment()
+            //Return true only if we have the same key as the sliceHolder
+            public bool LoadCurrentSegment()
             {
                 if (Table.ReadByKey(SliceHolder.TimeSeriesKeySlice, out _tvr))
                 {
@@ -1302,7 +1304,7 @@ namespace Raven.Server.Documents.TimeSeries
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, changeVectorFromReplication);
-                            if (segmentHolder.LoadCurrentSegment() == false)
+                            if (segmentHolder.LoadClosestSegment() == false)
                             {
                                 // no matches for this series at all, need to create new segment
                                 segmentHolder.AppendToNewSegment(current);
