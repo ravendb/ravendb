@@ -1435,6 +1435,33 @@ namespace Raven.Server.Json
             return (numberOfResults, totalDocumentsSizeInBytes);
         }
 
+        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IAsyncEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
+        {
+            long numberOfResults = 0;
+            long totalDocumentsSizeInBytes = 0;
+
+            writer.WriteStartArray();
+
+            var first = true;
+            await foreach (var document in documents.WithCancellation(token))
+            {
+                numberOfResults++;
+
+                if (document != null)
+                    totalDocumentsSizeInBytes += document.Data.Size;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                WriteDocument(writer, context, document, metadataOnly);
+                await writer.FlushAsync(token); // we must flush here because we dispose the document
+            }
+
+            writer.WriteEndArray();
+            return (numberOfResults, totalDocumentsSizeInBytes);
+        }
+
         public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             if (document == null)

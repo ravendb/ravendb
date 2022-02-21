@@ -8,7 +8,10 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
@@ -114,6 +117,18 @@ namespace Raven.Server.Documents.Sharding
         public int GetShardIndex(TransactionOperationContext context, string key)
         {
             var shardId = GetShardId(context, key);
+            for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
+            {
+                if (shardId < _record.ShardAllocations[i + 1].RangeStart)
+                    return _record.ShardAllocations[i].Shard;
+            }
+
+            return _record.ShardAllocations[^1].Shard;
+        }
+
+        public int GetShardIndex(ByteStringContext context, LazyStringValue key)
+        {
+            var shardId = ShardHelper.GetBucket(context, key);
             for (int i = 0; i < _record.ShardAllocations.Count - 1; i++)
             {
                 if (shardId < _record.ShardAllocations[i + 1].RangeStart)
