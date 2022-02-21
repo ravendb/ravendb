@@ -18,7 +18,7 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.StaticBTreeIndexDef
+                var expectedIndex = new TableSchema.IndexDef
                 {
                     StartIndex = 2,
                     Count = 1,
@@ -26,7 +26,7 @@ namespace FastTests.Voron.Tables
                 };
                 Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
 
-                var actualIndex = new TableSchema.StaticBTreeIndexDef
+                var actualIndex = new TableSchema.IndexDef
                 {
                     StartIndex = 1,
                     Count = 1,
@@ -43,13 +43,13 @@ namespace FastTests.Voron.Tables
         {
             using (var tx = Env.WriteTransaction())
             {
-                var expectedIndex = new TableSchema.FixedSizeTreeIndexDef
+                var expectedIndex = new TableSchema.FixedSizeKeyIndexDef
                 {
                     StartIndex = 2,
                 };
                 Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
 
-                var actualIndex = new TableSchema.FixedSizeTreeIndexDef
+                var actualIndex = new TableSchema.FixedSizeKeyIndexDef
                 {
                     StartIndex = 5,
                 };
@@ -67,7 +67,7 @@ namespace FastTests.Voron.Tables
             {
                 var expectedSchema = new TableSchema();
 
-                var def = new TableSchema.FixedSizeTreeIndexDef
+                var def = new TableSchema.FixedSizeKeyIndexDef
                 {
                     StartIndex = 2,
                 };
@@ -77,7 +77,7 @@ namespace FastTests.Voron.Tables
 
                 var actualSchema = new TableSchema();
 
-                def = new TableSchema.FixedSizeTreeIndexDef
+                def = new TableSchema.FixedSizeKeyIndexDef
                 {
                     StartIndex = 4,
                 };
@@ -97,7 +97,7 @@ namespace FastTests.Voron.Tables
             {
                 var expectedSchema = new TableSchema();
 
-                var def = new TableSchema.StaticBTreeIndexDef
+                var def = new TableSchema.IndexDef
                 {
                     Count = 3,
                     StartIndex = 2,
@@ -107,7 +107,7 @@ namespace FastTests.Voron.Tables
 
                 var actualSchema = new TableSchema();
 
-                def = new TableSchema.StaticBTreeIndexDef
+                def = new TableSchema.IndexDef
                 {
                     StartIndex = 4,
                 };
@@ -128,7 +128,7 @@ namespace FastTests.Voron.Tables
             {
                 var expectedSchema = new TableSchema();
 
-                var def = new TableSchema.StaticBTreeIndexDef
+                var def = new TableSchema.IndexDef
                 {
                     Count = 3,
                     StartIndex = 2,
@@ -143,7 +143,7 @@ namespace FastTests.Voron.Tables
 
                 expectedSchema.Validate(actualSchema);
 
-                def = new TableSchema.StaticBTreeIndexDef
+                def = new TableSchema.IndexDef
                 {
                     StartIndex = 4,
                 };

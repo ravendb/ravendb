@@ -58,7 +58,7 @@ namespace FastTests.Voron.Compaction
 
                 // Create the schema
                 var schema = new TableSchema()
-                    .DefineKey(new TableSchema.StaticBTreeIndexDef
+                    .DefineKey(new TableSchema.IndexDef
                     {
                         StartIndex = 0,
                         Count = 1,

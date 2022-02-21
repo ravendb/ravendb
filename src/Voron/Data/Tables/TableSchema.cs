@@ -1,11 +1,8 @@
 using Sparrow;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using Sparrow.Binary;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.RawData;
@@ -24,14 +21,14 @@ namespace Voron.Data.Tables
         public static readonly Slice CompressionDictionariesSlice;
         public static readonly Slice CurrentCompressionDictionaryIdSlice;
 
-        private StaticBTreeIndexDef _primaryKey;
+        private IndexDef _primaryKey;
         private bool _compressed;
 
-        public FixedSizeTreeIndexDef CompressedEtagSourceIndex;
+        public FixedSizeKeyIndexDef CompressedEtagSourceIndex;
 
-        private readonly Dictionary<Slice, AbstractBTreeIndexDef> _indexes = new(SliceComparer.Instance);
+        private readonly Dictionary<Slice, AbstractTreeIndexDef> _indexes = new(SliceComparer.Instance);
 
-        private readonly Dictionary<Slice, FixedSizeTreeIndexDef> _fixedSizeIndexes = new(SliceComparer.Instance);
+        private readonly Dictionary<Slice, FixedSizeKeyIndexDef> _fixedSizeIndexes = new(SliceComparer.Instance);
 
         public byte TableType { get; set; }
 
@@ -53,24 +50,24 @@ namespace Voron.Data.Tables
             }
         }
 
-        public StaticBTreeIndexDef Key => _primaryKey;
+        public IndexDef Key => _primaryKey;
 
         // Indexes are conceptually Dictionary<index name, Dictionary<unique index value, HashSet<storage id>>
 
         /// <summary>
         /// Indexes are conceptually Dictionary&lt;index name, Dictionary&lt;unique index value, HashSet&lt;storage id&gt;&gt;
         /// </summary>
-        public Dictionary<Slice, AbstractBTreeIndexDef> Indexes => _indexes;
+        public Dictionary<Slice, AbstractTreeIndexDef> Indexes => _indexes;
 
         // FixedSizeIndexes are conceptually Dictionary<index name, Dictionary<long value, storage id>>
 
         /// <summary>
         /// FixedSizeIndexes are conceptually Dictionary&lt;index name, Dictionary&lt;long value, storage id&gt;&gt;
         /// </summary>
-        public Dictionary<Slice, FixedSizeTreeIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
+        public Dictionary<Slice, FixedSizeKeyIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
 
 
-        public TableSchema CompressValues(FixedSizeTreeIndexDef etagSource, bool compress)
+        public TableSchema CompressValues(FixedSizeKeyIndexDef etagSource, bool compress)
         {
             _compressed = compress;
             CompressedEtagSourceIndex = etagSource ?? throw new ArgumentNullException(nameof(etagSource));
@@ -83,7 +80,7 @@ namespace Voron.Data.Tables
             set => _compressed = value;
         }
 
-        public TableSchema DefineIndex(AbstractBTreeIndexDef index)
+        public TableSchema DefineIndex(AbstractTreeIndexDef index)
         {
             index.Validate();
 
@@ -92,7 +89,7 @@ namespace Voron.Data.Tables
             return this;
         }
 
-        public TableSchema DefineFixedSizeIndex(FixedSizeTreeIndexDef index)
+        public TableSchema DefineFixedSizeIndex(FixedSizeKeyIndexDef index)
         {
             if (!index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name))
                 throw new ArgumentException("Fixed size index name must be non-empty", nameof(index));
@@ -102,7 +99,7 @@ namespace Voron.Data.Tables
             return this;
         }
 
-        public TableSchema DefineKey(StaticBTreeIndexDef index)
+        public TableSchema DefineKey(IndexDef index)
         {
             bool hasEmptyName = !index.Name.HasValue || SliceComparer.Equals(Slices.Empty, index.Name);
 
@@ -318,7 +315,7 @@ namespace Voron.Data.Tables
             if (hasPrimaryKey)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var pk = StaticBTreeIndexDef.ReadFrom(context, currentPtr, currentSize);
+                var pk = IndexDef.ReadFrom(context, currentPtr, currentSize);
                 schema.DefineKey(pk);
             }
 
@@ -345,7 +342,7 @@ namespace Voron.Data.Tables
             while (indexCount > 0)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var fixedIndexSchemaDef = FixedSizeTreeIndexDef.ReadFrom(context, currentPtr, currentSize);
+                var fixedIndexSchemaDef = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
                 schema.DefineFixedSizeIndex(fixedIndexSchemaDef);
 
                 indexCount--;
@@ -357,17 +354,15 @@ namespace Voron.Data.Tables
                 if (*(int*)currentPtr != 0)
                 {
                     currentPtr = input.Read(currentIndex, out currentSize);
-                    schema.CompressedEtagSourceIndex = FixedSizeTreeIndexDef.ReadFrom(context, currentPtr, currentSize);
+                    schema.CompressedEtagSourceIndex = FixedSizeKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
                 }
             }
 
             return schema;
         }
 
-        private static AbstractBTreeIndexDef ReadAbstractIndexDefinition(ByteStringContext context, byte* currentPtr, int currentSize)
+        private static AbstractTreeIndexDef ReadAbstractIndexDefinition(ByteStringContext context, byte* currentPtr, int currentSize)
         {
-            AbstractBTreeIndexDef indexDef;
-
             var reader = new TableValueReader(currentPtr, currentSize);
             byte* typePtr = reader.Read(0, out _);
             var type = (TreeIndexType)(*(ulong*)typePtr);
@@ -375,16 +370,12 @@ namespace Voron.Data.Tables
             switch (type)
             {
                 case TreeIndexType.Default:
-                    indexDef = StaticBTreeIndexDef.ReadFrom(context, currentPtr, currentSize);
-                    break;
+                    return IndexDef.ReadFrom(context, currentPtr, currentSize);
                 case TreeIndexType.DynamicKeyValues:
-                    indexDef = DynamicBTreeIndexDef.ReadFrom(context, currentPtr, currentSize);
-                    break;
+                    return DynamicKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            return indexDef;
         }
 
         public void Validate(TableSchema actual)
@@ -421,7 +412,7 @@ namespace Voron.Data.Tables
 
             foreach (var entry in _fixedSizeIndexes)
             {
-                if (!actual._fixedSizeIndexes.TryGetValue(entry.Key, out FixedSizeTreeIndexDef index))
+                if (!actual._fixedSizeIndexes.TryGetValue(entry.Key, out FixedSizeKeyIndexDef index))
                     throw new ArgumentException(
                         $"Expected schema to have an index named {entry.Key}",
                         nameof(actual));

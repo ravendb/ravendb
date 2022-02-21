@@ -44,19 +44,19 @@ namespace Raven.Server.NotificationCenter
         {
             Logger = LoggingSource.Instance.GetLogger<NotificationsStorage>(resourceName);
 
-            _actionsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+            _actionsSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = NotificationsSchema.NotificationsTable.IdIndex,
                 Count = 1
             });
 
-            _actionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+            _actionsSchema.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
             {
                 StartIndex = NotificationsSchema.NotificationsTable.CreatedAtIndex,
                 Name = ByCreatedAt
             });
 
-            _actionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
+            _actionsSchema.DefineIndex(new TableSchema.IndexDef // might be the same ticks, so duplicates are allowed - cannot use fixed size index
             {
                 StartIndex = NotificationsSchema.NotificationsTable.PostponedUntilIndex,
                 Name = ByPostponedUntil

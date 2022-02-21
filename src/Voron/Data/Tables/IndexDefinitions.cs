@@ -1,0 +1,443 @@
+using System;
+using System.Diagnostics;
+using System.Reflection;
+using Sparrow;
+using Sparrow.Binary;
+using Sparrow.Server;
+
+namespace Voron.Data.Tables
+{
+    public unsafe partial class TableSchema
+    {
+        [Flags]
+        public enum TreeIndexType
+        {
+            Default = 0x01,
+            DynamicKeyValues = 0x2
+        }
+
+        public abstract class AbstractTableIndexDef
+        {
+            public bool IsGlobal;
+
+            public Slice Name;
+
+            public abstract byte[] Serialize();
+
+            public virtual void Validate(AbstractTableIndexDef actual)
+            {
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
+
+                if (!SliceComparer.Equals(Name, actual.Name))
+                    throw new ArgumentException(
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
+                        nameof(actual));
+
+                if (IsGlobal != actual.IsGlobal)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
+                        nameof(actual));
+            }
+
+            public virtual void Validate()
+            {
+                if (Name.HasValue == false || SliceComparer.Equals(Slices.Empty, Name))
+                    throw new ArgumentException("Index name must be non-empty", nameof(Name));
+            }
+        }
+
+        public abstract class AbstractTreeIndexDef : AbstractTableIndexDef
+        {
+            public abstract TreeIndexType Type { get; }
+
+            public abstract ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+                out Slice slice);
+
+            public abstract ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+                out Slice slice);
+
+        }
+
+        public class IndexDef : AbstractTreeIndexDef
+        {
+            public override TreeIndexType Type => TreeIndexType.Default;
+
+            /// <summary>
+            /// Here we take advantage on the fact that the values are laid out in memory sequentially
+            /// we can point to a certain item index, and use one or more fields in the key directly, 
+            /// without any copying
+            /// </summary>
+            public int StartIndex = -1;
+
+            public int Count = -1;
+
+            public override ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+                out Slice slice)
+            {
+                var ptr = value.Read(StartIndex, out int totalSize);
+#if DEBUG
+                if (totalSize < 0)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
+#endif
+                for (var i = 1; i < Count; i++)
+                {
+                    int size;
+                    value.Read(i + StartIndex, out size);
+#if DEBUG
+                    if (size < 0)
+                        throw new ArgumentOutOfRangeException(nameof(size), "Size cannot be negative");
+#endif
+                    totalSize += size;
+                }
+#if DEBUG
+                if (totalSize < 0 || totalSize > value.Size)
+                    throw new ArgumentOutOfRangeException(nameof(value), "Reading a slice that is longer than the value");
+                if (totalSize > ushort.MaxValue)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize),
+                        "Reading a slice that too big to be a slice");
+#endif
+                return Slice.External(context, ptr, (ushort)totalSize, out slice);
+            }
+
+            public override ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+                out Slice slice)
+            {
+                if (Count == 1)
+                    return value.SliceFromLocation(context, StartIndex, out slice);
+
+                int totalSize = value.SizeOf(StartIndex);
+                for (int i = 1; i < Count; i++)
+                {
+                    totalSize += value.SizeOf(i + StartIndex);
+                }
+#if DEBUG
+                if (totalSize < 0)
+                    throw new ArgumentOutOfRangeException(nameof(totalSize), "Size cannot be negative");
+#endif
+                var scope = context.Allocate(totalSize, out ByteString ret);
+                try
+                {
+                    var ptr = ret.Ptr;
+                    Slice val;
+                    using (value.SliceFromLocation(context, StartIndex, out val))
+                    {
+                        val.CopyTo(ptr);
+                        ptr += val.Size;
+                    }
+                    for (var i = 1; i < Count; i++)
+                    {
+                        using (value.SliceFromLocation(context, i + StartIndex, out val))
+                        {
+                            val.CopyTo(ptr);
+                            ptr += val.Size;
+                        }
+                    }
+                    slice = new Slice(ret);
+                    return scope;
+                }
+                catch (Exception)
+                {
+                    scope.Dispose();
+                    throw;
+                }
+            }
+
+            public override byte[] Serialize()
+            {
+                // We serialize the Type enum as ulong to be "future-proof"
+                var castedType = (long)Type;
+
+                var serializer = new TableValueBuilder
+                {
+                    castedType,
+                    StartIndex,
+                    Count,
+                    IsGlobal,
+                    Name
+                };
+
+                byte[] serialized = new byte[serializer.Size];
+
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
+                }
+
+                return serialized;
+            }
+
+            public override void Validate(AbstractTableIndexDef actual)
+            {
+                base.Validate(actual);
+
+                if (actual is not IndexDef indexDef)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be an instance of type='{nameof(IndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        nameof(actual));
+
+                if (Type != indexDef.Type)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be have Type='{Type}', got Type='{indexDef.Type}' instead",
+                        nameof(actual));
+
+                if (StartIndex != indexDef.StartIndex)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{indexDef.StartIndex}' instead",
+                        nameof(actual));
+
+                if (Count != indexDef.Count)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have Count='{Count}', got Count='{indexDef.Count}' instead",
+                        nameof(actual));
+            }
+
+            public override void Validate()
+            {
+                base.Validate();
+
+                if (StartIndex < 0)
+                    throw new ArgumentOutOfRangeException(nameof(StartIndex), "StartIndex cannot be negative");
+            }
+
+            public static IndexDef ReadFrom(ByteStringContext context, byte* location, int size)
+            {
+                var input = new TableValueReader(location, size);
+                var indexDef = new IndexDef();
+
+                byte* currentPtr = input.Read(1, out int currentSize);
+                indexDef.StartIndex = *(int*)currentPtr;
+
+                currentPtr = input.Read(2, out currentSize);
+                indexDef.Count = *(int*)currentPtr;
+
+                currentPtr = input.Read(3, out currentSize);
+                indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
+
+                currentPtr = input.Read(4, out currentSize);
+                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out indexDef.Name);
+
+                return indexDef;
+            }
+        }
+
+        public class DynamicKeyIndexDef : AbstractTreeIndexDef
+        {
+            public override TreeIndexType Type => TreeIndexType.DynamicKeyValues;
+
+            public delegate ByteStringContext.Scope IndexEntryKeyGenerator(ByteStringContext context, ref TableValueReader value, out Slice slice);
+
+            public IndexEntryKeyGenerator GenerateKey;
+
+            public override ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+                out Slice slice)
+            {
+                return GenerateKey(context, ref value, out slice);
+            }
+
+            public override ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+                out Slice slice)
+            {
+                using (context.Allocate(value.Size, out var buffer))
+                {
+                    value.CopyTo(buffer.Ptr);
+                    var reader = value.CreateReader(buffer.Ptr);
+                    return GenerateKey(context, ref reader, out slice);
+                }
+            }
+
+            public override byte[] Serialize()
+            {
+                // We serialize the Type enum as ulong to be "future-proof"
+                var castedType = (long)Type;
+
+                var serializer = new TableValueBuilder
+                {
+                    castedType,
+                    IsGlobal,
+                    Name
+                };
+
+                var methodNameBytes = Encodings.Utf8.GetBytes(GenerateKey.Method.Name);
+                fixed (byte* ptr = methodNameBytes)
+                {
+                    serializer.Add(ptr, methodNameBytes.Length);
+                }
+
+                Debug.Assert(GenerateKey.Method.DeclaringType?.FullName != null && GenerateKey.Method.DeclaringType.Assembly.FullName != null,
+                    $"Invalid {nameof(GenerateKey)} '{GenerateKey.Method.Name}'");
+
+                var assemblyName = new AssemblyName(GenerateKey.Method.DeclaringType.Assembly.FullName);
+                var declaringType = $"{GenerateKey.Method.DeclaringType.FullName}, {assemblyName.Name}";
+                var declaringTypeBytes = Encodings.Utf8.GetBytes(declaringType);
+                fixed (byte* ptr = declaringTypeBytes)
+                {
+                    serializer.Add(ptr, declaringTypeBytes.Length);
+                }
+
+                byte[] serialized = new byte[serializer.Size];
+
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
+                }
+
+                return serialized;
+            }
+
+            public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
+            {
+                var input = new TableValueReader(location, size);
+                var indexDef = new DynamicKeyIndexDef();
+
+                byte* currentPtr = input.Read(1, out _);
+                indexDef.IsGlobal = Convert.ToBoolean(*currentPtr);
+
+                currentPtr = input.Read(2, out var currentSize);
+                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out indexDef.Name);
+
+                // read IndexEntryKeyGenerator method name
+                currentPtr = input.Read(3, out currentSize);
+                var methodName = Encodings.Utf8.GetString(currentPtr, currentSize);
+
+                // read IndexEntryKeyGenerator declaring type
+                currentPtr = input.Read(4, out currentSize);
+                var declaringType = Encodings.Utf8.GetString(currentPtr, currentSize);
+
+                //var type = System.Type.GetType(declaringType);
+                var type = System.Type.GetType(declaringType);
+
+                Debug.Assert(type != null, $"Invalid data, failed to get {nameof(GenerateKey)}.Method.DeclaringType from deserialized value : {declaringType}");
+
+                var method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+
+                Debug.Assert(method != null, $"Invalid data, failed to get method-info from type : {type}, method name : {methodName}");
+                Debug.Assert(method.IsStatic, $"Invalid data, {nameof(GenerateKey)} must be a static method. method name : {methodName}");
+                Debug.Assert(method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() != null, 
+                    $"Invalid data, {nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
+
+                var @delegate = Delegate.CreateDelegate(typeof(IndexEntryKeyGenerator), method);
+                indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
+
+                return indexDef;
+            }
+
+            public override void Validate(AbstractTableIndexDef actual)
+            {
+                base.Validate(actual);
+
+                if (actual is not DynamicKeyIndexDef dynamicIndexDef)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be an instance of type='{nameof(DynamicKeyIndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        nameof(actual));
+
+                if (Type != dynamicIndexDef.Type)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be have Type='{Type}', got Type='{dynamicIndexDef.Type}' instead",
+                        nameof(actual));
+
+                if (GenerateKey.Method.Name != dynamicIndexDef.GenerateKey.Method.Name)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have {nameof(GenerateKey)}.Method.Name='{GenerateKey.Method.Name}', " +
+                        $"got {nameof(GenerateKey)}.Method.Name='{dynamicIndexDef.GenerateKey.Method.Name}' instead",
+                        nameof(actual));
+
+                if (GenerateKey.Method.DeclaringType != dynamicIndexDef.GenerateKey.Method.DeclaringType)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have {nameof(GenerateKey)}.Method.DeclaringType='{GenerateKey.Method.DeclaringType}', " +
+                        $"got {nameof(GenerateKey)}.Method.DeclaringType='{dynamicIndexDef.GenerateKey.Method.DeclaringType}' instead",
+                        nameof(actual));
+            }
+
+            public override void Validate()
+            {
+                base.Validate();
+
+                if (GenerateKey == null)
+                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{GenerateKey} delegate cannot be null");
+
+                if (GenerateKey.Method.DeclaringType == null)
+                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)}.Method.DeclaringType cannot be null");
+
+                if (GenerateKey.Method.IsStatic == false)
+                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be a static method");
+
+                if (GenerateKey.Method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() == null)
+                    throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'");
+            }
+        }
+
+        public class FixedSizeKeyIndexDef : AbstractTableIndexDef
+        {
+            public int StartIndex = -1;
+
+            public long GetValue(ref TableValueReader value)
+            {
+                var ptr = value.Read(StartIndex, out int totalSize);
+                Debug.Assert(totalSize == sizeof(long), $"{totalSize} == sizeof(long) - {Name}");
+                return Bits.SwapBytes(*(long*)ptr);
+            }
+
+            public long GetValue(ByteStringContext context, TableValueBuilder value)
+            {
+                using (value.SliceFromLocation(context, StartIndex, out Slice slice))
+                {
+                    return Bits.SwapBytes(*(long*)slice.Content.Ptr);
+                }
+            }
+
+            public override byte[] Serialize()
+            {
+                var serializer = new TableValueBuilder
+                {
+                    StartIndex,
+                    IsGlobal,
+                    Name
+                };
+
+                byte[] serialized = new byte[serializer.Size];
+
+                fixed (byte* destination = serialized)
+                {
+                    serializer.CopyTo(destination);
+                }
+
+                return serialized;
+            }
+
+            public static FixedSizeKeyIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
+            {
+                var input = new TableValueReader(location, size);
+                var output = new FixedSizeKeyIndexDef();
+
+                int currentSize;
+                byte* currentPtr = input.Read(0, out currentSize);
+                output.StartIndex = *(int*)currentPtr;
+
+                currentPtr = input.Read(1, out currentSize);
+                output.IsGlobal = Convert.ToBoolean(*currentPtr);
+
+                currentPtr = input.Read(2, out currentSize);
+                Slice.From(context, currentPtr, currentSize, ByteStringType.Immutable, out output.Name);
+
+                return output;
+            }
+
+            public override void Validate(AbstractTableIndexDef actual)
+            {
+                base.Validate(actual);
+
+                if (actual is not FixedSizeKeyIndexDef fixedSizeIndexDef)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be an instance of type='{nameof(FixedSizeKeyIndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        nameof(actual));
+
+                if (StartIndex != fixedSizeIndexDef.StartIndex)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{fixedSizeIndexDef.StartIndex}' instead",
+                        nameof(actual));
+
+            }
+        }
+    }
+}

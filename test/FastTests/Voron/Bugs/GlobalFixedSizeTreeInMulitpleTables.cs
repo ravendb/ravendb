@@ -21,14 +21,14 @@ namespace FastTests.Voron.Bugs
                 Slice.From(tx.Allocator, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
                 Slice.From(tx.Allocator, "Etag", ByteStringType.Immutable, out var etag);
                 var revisionsSchema = new TableSchema();
-                revisionsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+                revisionsSchema.DefineKey(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     Count = 1,
                     Name = changeVectorSlice,
                     IsGlobal = false
                 });
-                var indexDef = new TableSchema.StaticBTreeIndexDef
+                var indexDef = new TableSchema.IndexDef
                 {
                     StartIndex = 1,
                     Name = etag,

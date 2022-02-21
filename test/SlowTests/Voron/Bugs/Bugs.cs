@@ -71,7 +71,7 @@ namespace SlowTests.Voron.Bugs
         public void RepeatedInsertingInTheSameTransaction()
         {
             var schema = new TableSchema()
-                                .DefineKey(new TableSchema.StaticBTreeIndexDef
+                                .DefineKey(new TableSchema.IndexDef
                                 {
                                     StartIndex = 0,
                                 });

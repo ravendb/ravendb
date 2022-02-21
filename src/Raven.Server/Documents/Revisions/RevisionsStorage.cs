@@ -163,39 +163,39 @@ namespace Raven.Server.Documents.Revisions
 
         private static void AddRevisionIndexes(TableSchema revisionsSchema, Slice changeVectorSlice)
         {
-            revisionsSchema.DefineKey(new TableSchema.StaticBTreeIndexDef
+            revisionsSchema.DefineKey(new TableSchema.IndexDef
             {
                 StartIndex = (int)RevisionsTable.ChangeVector,
                 Count = 1,
                 Name = changeVectorSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)RevisionsTable.LowerId,
                 Count = 3,
                 Name = IdAndEtagSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)RevisionsTable.Etag,
                 Name = AllRevisionsEtagsSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeTreeIndexDef
+            revisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
             {
                 StartIndex = (int)RevisionsTable.Etag,
                 Name = CollectionRevisionsEtagsSlice
             });
-            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)RevisionsTable.DeletedEtag,
                 Count = 1,
                 Name = DeleteRevisionEtagSlice,
                 IsGlobal = true
             });
-            revisionsSchema.DefineIndex(new TableSchema.StaticBTreeIndexDef
+            revisionsSchema.DefineIndex(new TableSchema.IndexDef
             {
                 StartIndex = (int)RevisionsTable.Resolved,
                 Count = 2,
@@ -1858,7 +1858,7 @@ namespace Raven.Server.Documents.Revisions
                     break;
                 var current = TableValueToRevision(context, ref tvr.Reader);
 
-                using (docsSchemaIndex.GetSlice(context.Allocator, ref tvr.Reader, out var idAndEtag))
+                using (docsSchemaIndex.GetValue(context.Allocator, ref tvr.Reader, out var idAndEtag))
                 using (Slice.External(context.Allocator, idAndEtag, idAndEtag.Size - sizeof(long), out var prefix))
                 {
                     bool hasPrevious = false;

@@ -23,7 +23,7 @@ namespace SlowTests.Voron.Issues
             using (var tx = Env.WriteTransaction())
             {
                 Slice.From(tx.Allocator, "Compression", out var etagIndexName);
-                var fixedSizedIndex = new TableSchema.FixedSizeTreeIndexDef
+                var fixedSizedIndex = new TableSchema.FixedSizeKeyIndexDef
                 {
                     Name = etagIndexName,
                     IsGlobal = true,
@@ -33,7 +33,7 @@ namespace SlowTests.Voron.Issues
                 var tableSchema = new TableSchema()
                     .CompressValues(fixedSizedIndex, true)
                     .DefineFixedSizeIndex(fixedSizedIndex)
-                    .DefineKey(new TableSchema.StaticBTreeIndexDef
+                    .DefineKey(new TableSchema.IndexDef
                     {
                         StartIndex = 0,
                         Count = 1,
