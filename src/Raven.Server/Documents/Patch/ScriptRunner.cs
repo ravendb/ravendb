@@ -456,7 +456,6 @@ namespace Raven.Server.Documents.Patch
             {
                 if (_args.Length != args.Length)
                 {
-                    DisposeArgs();
                     _args = new JsHandle[args.Length];
                 }
 
@@ -531,11 +530,11 @@ namespace Raven.Server.Documents.Patch
 
                     Reset();
                     OriginalDocumentId = documentId;
-
-                    SetArgs(jsonCtx, method, args);
-
+                    
                     try
                     {
+                        SetArgs(jsonCtx, method, args);
+
                         using (var jsMethod = ScriptEngineHandle.GetGlobalProperty(method))
                         {
                             if (jsMethod.IsUndefined)
