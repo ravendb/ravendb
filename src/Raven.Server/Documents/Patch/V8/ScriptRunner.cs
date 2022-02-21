@@ -1697,57 +1697,23 @@ namespace Raven.Server.Documents.Patch
 
             private InternalHandle ScalarToRawStringV8(V8Engine engine, bool isConstructCall, InternalHandle self2, params InternalHandle[] args)
             {
-                throw new NotImplementedException("scalarToRawString(document, lambdaToField) has not been implemented yet"); // TODO parser is needed here
-
-                /*if (args.Length != 2)
+                if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
                 var firstParam = args[0];
-                if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstance selfInstance)
+                if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstanceV8 selfInstance)
                 {
                     var secondParam = args[1];
-                    if (secondParam.IsObject && secondParam.Object is V8Function lambda) // V8: is ScriptFunctionInstance lambda)
+                    if (secondParam.IsFunction)
                     {
-                        var functionAst = lambda.FunctionDeclaration;
-                        string propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
-
-                        IBlittableObjectProperty existingValue = default;
-                        if (selfInstance.TryGetValue(propName, out existingValue) && existingValue != null)
-                        {
-                            if (existingValue.Changed)
-                            {
-                                return existingValue.ValueHandle.V8.Item;
-                            }
-                        }
-
-                        var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
-
-                        if (propertyIndex == -1)
+                        // we don't have access to AST so we just call the function 
+                        var res = secondParam.StaticCall(firstParam);
+                        if (res.IsUndefined)
                         {
                             return selfInstance.EngineV8.CreateObject();
                         }
 
-                        BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                        selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
-                        var value = propDetails.Value;
-
-                        switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
-                        {
-                            case BlittableJsonToken.Null:
-                                return selfInstance.EngineV8.CreateNullValue();
-                            case BlittableJsonToken.Boolean:
-                                return selfInstance.EngineV8.CreateValue((bool)value);
-                            case BlittableJsonToken.Integer:
-                                return selfInstance.EngineV8.FromObject(value); // or ObjectBinder? instead of ObjectWrapper
-                            case BlittableJsonToken.LazyNumber:
-                                return selfInstance.EngineV8.FromObject(value);  // or ObjectBinder? instead of ObjectWrapper // potentially could be BlittableObjectInstance.BlittableObjectProperty.GetJsValueForLazyNumber(selfInstance.JavaScriptUtils, (LazyNumberValue)value);
-                            case BlittableJsonToken.String:
-                                return selfInstance.EngineV8.CreateValue(value.ToString());
-                            case BlittableJsonToken.CompressedString:
-                                return selfInstance.EngineV8.CreateValue(value.ToString());
-                            default:
-                                throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
-                        }
+                        return res;
                     }
                     else
                     {
@@ -1757,7 +1723,7 @@ namespace Raven.Server.Documents.Patch
                 else
                 {
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
-                }*/
+                }
             }
 
             private InternalHandle CmpXchangeInternalV8(string key)
