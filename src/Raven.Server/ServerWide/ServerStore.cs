@@ -143,6 +143,8 @@ namespace Raven.Server.ServerWide
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
+            FeatureGuardian = new FeatureGuardian(configuration);
+
             _server = server;
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
@@ -501,6 +503,8 @@ namespace Raven.Server.ServerWide
         }
 
         public bool HasFixedPort { get; internal set; }
+
+        public readonly FeatureGuardian FeatureGuardian;
 
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false, CancellationToken token = default)
         {

@@ -18,6 +18,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils.Features;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -115,8 +116,7 @@ namespace Raven.Server.Documents.Queries
         {
             try
             {
-                if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Graph Queries");
+                Database.ServerStore.FeatureGuardian.Assert(Feature.GraphApi);
 
                 using (QueryRunner.MarkQueryAsRunning(Constants.Documents.Indexing.DummyGraphIndexName, query, token))
                 using (var timingScope = new QueryTimingsScope())

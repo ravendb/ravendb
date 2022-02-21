@@ -8,6 +8,7 @@ using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Commercial;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils.Features;
 
 namespace Raven.Server.Config.Categories
 {
@@ -237,11 +238,5 @@ namespace Raven.Server.Config.Categories
             if (UrlUtil.IsZeros(parsedUri.Host))
                 throw new ArgumentException($"Invalid host value in {optName} configuration option: {parsedUri.Host}");
         }
-    }
-
-    public enum FeaturesAvailability
-    {
-        Stable,
-        Experimental
     }
 }
