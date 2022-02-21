@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
         }
 
-        public GetIndexErrorsOperation(int? shard)
+        internal GetIndexErrorsOperation(int? shard)
         {
             _shard = shard;
         }
@@ -27,8 +27,8 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
             _indexNames = indexNames;
         }
-        
-        public GetIndexErrorsOperation(string[] indexNames, int shard)
+
+        internal GetIndexErrorsOperation(string[] indexNames, int shard)
         {
             _indexNames = indexNames;
             _shard = shard;
