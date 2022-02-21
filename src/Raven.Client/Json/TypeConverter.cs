@@ -171,7 +171,7 @@ namespace Raven.Client.Json
                 case TimeSpan timeSpan:
                     kvpKeyAsString = timeSpan.ToString("c", CultureInfo.InvariantCulture);
                     break;
-#if NET6_0_OR_GREATER
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                 case DateOnly dateOnly:
                     kvpKeyAsString = dateOnly.ToString(Sparrow.DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                     break;

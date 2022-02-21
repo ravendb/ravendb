@@ -248,81 +248,6 @@ namespace Sparrow.Json
         }
 
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-        public static bool TryParseDateOnly(char* buffer, int len, out DateOnly dateOnly)
-        {
-            if (len is not 10 || buffer[4] is not '-' || buffer[7] is not '-')
-                goto Failed;
-
-            if (TryParseNumber4(buffer, 0, out int year) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 5, out int month) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 8, out int day) == false)
-                goto Failed;
-
-            dateOnly = new DateOnly(year, month, day);
-            return true;
-
-            Failed:
-            dateOnly = default;
-            return false;
-        }
-
-        public static bool TryParseTimeOnly(char* buffer, int len, out TimeOnly timeOnly)
-        {
-            if (len is not 16 || buffer[2] is not ':' || buffer[5] is not ':' || buffer[8] is not '.')
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 0, out int hours) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 3, out int minutes) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 6, out int seconds) == false)
-                goto Failed;
-
-            if (TryParseNumber3(buffer, 9, out var milliseconds) == false)
-                goto Failed;
-
-            if (TryParseNumber4(buffer, 12, out var control) == false)
-                goto Failed;
-            else if (control is not 0)
-                goto Failed;
-
-
-            timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds);
-            return true;
-
-            Failed:
-            timeOnly = default;
-            return false;
-        }
-
-        public static bool TryParseDateOnly(byte* buffer, int len, out DateOnly dateOnly)
-        {
-            if (len is not 10 || buffer[4] is not (byte)'-' || buffer[7] is not (byte)'-')
-                goto Failed;
-
-            if (TryParseNumber4(buffer, 0, out int year) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 5, out int month) == false)
-                goto Failed;
-
-            if (TryParseNumber2(buffer, 8, out int day) == false)
-                goto Failed;
-
-            dateOnly = new DateOnly(year, month, day);
-            return true;
-
-            Failed:
-            dateOnly = default;
-            return false;
-        }
-
         public static bool TryParseTimeOnly(byte* buffer, int len, out TimeOnly timeOnly)
         {
             if (len is not (8 or 16) || buffer[2] is not (byte)':' || buffer[5] is not (byte)':')
@@ -361,6 +286,90 @@ namespace Sparrow.Json
             timeOnly = default;
             return false;
         }
+        
+        public static bool TryParseTimeOnly(char* buffer, int len, out TimeOnly timeOnly)
+        {
+            if (len is not (8 or 16) || buffer[2] is not ':' || buffer[5] is not ':' || buffer[8] is not '.')
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 0, out int hours) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 3, out int minutes) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 6, out int seconds) == false)
+                goto Failed;
+
+            int milliseconds = 0;
+            if (len is 16)
+            {
+                if (buffer[8] is not '.')
+                    goto Failed;
+                
+                    
+                if (TryParseNumber3(buffer, 9, out milliseconds) == false)
+                    goto Failed;
+
+                if (TryParseNumber4(buffer, 12, out var control) == false)
+                    goto Failed;
+                
+                if (control is not 0)
+                    goto Failed;
+            }
+
+
+            timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds);
+            return true;
+
+            Failed:
+            timeOnly = default;
+            return false;
+        }
+
+        public static bool TryParseDateOnly(byte* buffer, int len, out DateOnly dateOnly)
+        {
+            if (len is not 10 || buffer[4] is not (byte)'-' || buffer[7] is not (byte)'-')
+                goto Failed;
+
+            if (TryParseNumber4(buffer, 0, out int year) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 5, out int month) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 8, out int day) == false)
+                goto Failed;
+
+            dateOnly = new DateOnly(year, month, day);
+            return true;
+
+            Failed:
+            dateOnly = default;
+            return false;
+        }
+        
+        public static bool TryParseDateOnly(char* buffer, int len, out DateOnly dateOnly)
+        {
+            if (len is not 10 || buffer[4] is not '-' || buffer[7] is not '-')
+                goto Failed;
+
+            if (TryParseNumber4(buffer, 0, out int year) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 5, out int month) == false)
+                goto Failed;
+
+            if (TryParseNumber2(buffer, 8, out int day) == false)
+                goto Failed;
+
+            dateOnly = new DateOnly(year, month, day);
+            return true;
+
+            Failed:
+            dateOnly = default;
+            return false;
+        }
 #endif
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -377,10 +386,10 @@ namespace Sparrow.Json
             @do = default;
             to = default;
 
-            if (TryParseDateOnly(buffer, len, out @do))
+            if (len is 10 && TryParseDateOnly(buffer, len, out @do))
                 return Result.DateOnly;
 
-            if (TryParseTimeOnly(buffer, len, out to))
+            if (len is 8 or 16 && TryParseTimeOnly(buffer, len, out to))
                 return Result.TimeOnly;
 #endif
 

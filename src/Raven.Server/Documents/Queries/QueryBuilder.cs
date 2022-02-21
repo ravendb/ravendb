@@ -627,13 +627,13 @@ namespace Raven.Server.Documents.Queries
             {
                 case LazyStringValue lsv:
                     result = LazyStringParser.TryParseTimeForQuery(lsv.Buffer, lsv.Size, out dt, out dto, out @do, out to, 
-                        index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                        index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     break;
                 case string valueAsString:
                     fixed (char* buffer = valueAsString)
                     {
                         result = LazyStringParser.TryParseTimeForQuery(buffer, valueAsString.Length, out dt, out dto, out @do, out to,
-                            index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                            index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
 
                     }
 
@@ -643,7 +643,7 @@ namespace Raven.Server.Documents.Queries
                     fixed (char* buffer = otherAsString)
                     {
                         result = LazyStringParser.TryParseTimeForQuery(buffer, otherAsString.Length, out dt, out dto, out @do, out to,
-                            index.Definition.Version >= IndexDefinitionBase.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
+                            index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.ProperlyParseThreeDigitsMillisecondsDates);
                     }
 
                     break;

@@ -443,18 +443,34 @@ namespace Raven.Server.Documents.Indexes.Static
             if (field is LazyStringValue lsv)
             {
                 if (LazyStringParser.TryParseDateOnly(lsv.Buffer, lsv.Length, out var @do) == false) 
-                    return null;
+                    return DynamicNullObject.Null;
                 
                 return @do;
             }
+            
+            if (field is string str)
+            {
+                fixed (char* strBuffer = str.AsSpan())
+                {
+                    if (LazyStringParser.TryParseDateOnly(strBuffer, str.Length, out var to) == false)
+                        return DynamicNullObject.Null;
 
+                    return to;
+                }
+            }
+            
             if (field is DateTime dt)
                 return DateOnly.FromDateTime(dt);
 
             if (field is DateOnly dtO)
                 return dtO;
 
-            throw new InvalidDataException($"Expected {nameof(DateTime)}, {nameof(DateOnly)} or JSON value.");
+            if (field is DynamicNullObject or null)
+            {
+                return DynamicNullObject.Null;
+            }
+            
+            throw new InvalidDataException($"Expected {nameof(DateTime)}, {nameof(DateOnly)}, null, string or JSON value.");
         }
 
         public unsafe dynamic AsTimeOnly(dynamic field)
@@ -462,9 +478,20 @@ namespace Raven.Server.Documents.Indexes.Static
             if (field is LazyStringValue lsv)
             {
                 if (LazyStringParser.TryParseTimeOnly(lsv.Buffer, lsv.Length, out var to) == false)
-                    return null;
+                    return DynamicNullObject.Null;
 
                 return to;
+            }
+
+            if (field is string str)
+            {
+                fixed (char* strBuffer = str.AsSpan())
+                {
+                    if (LazyStringParser.TryParseTimeOnly(strBuffer, str.Length, out var to) == false)
+                        return DynamicNullObject.Null;
+
+                    return to;
+                }
             }
             
             if (field is TimeSpan ts)
@@ -474,8 +501,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (field is TimeOnly toF)
                 return toF;
+
+            if (field is DynamicNullObject or null)
+            {
+                return DynamicNullObject.Null;
+            }
             
-            throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)} or JSON value.");
+            throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)}, null, string or JSON value.");
         }
 
         public IEnumerable<AbstractField> CreateSpatialField(string name, object lat, object lng)
