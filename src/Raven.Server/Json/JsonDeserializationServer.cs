@@ -15,7 +15,6 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -49,7 +48,7 @@ using Raven.Server.Web.System;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
-using Raven.Server.Integrations.PostgreSQL.Handlers;
+using Raven.Server.Documents.Sharding;
 
 namespace Raven.Server.Json
 {

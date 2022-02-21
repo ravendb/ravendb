@@ -5,20 +5,20 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Commands
+namespace Raven.Server.Documents.Sharding
 {
-    public class WaitForDatabaseCommands : RavenCommand
+    public class WaitForRaftCommands : RavenCommand
     {
         private readonly List<long> _raftIndexIds;
 
-        public WaitForDatabaseCommands(List<long> raftIndexIds)
+        public WaitForRaftCommands(List<long> raftIndexIds)
         {
             _raftIndexIds = raftIndexIds;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/wait-for-indexes-notification";
+            url = $"{node.Url}/databases/{node.Database}/wait-for-raft-commands";
 
             var waitForCommands = new WaitForCommandsRequest
             {

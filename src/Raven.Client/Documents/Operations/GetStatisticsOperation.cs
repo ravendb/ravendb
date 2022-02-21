@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations
         {
         }
 
-        public GetStatisticsOperation(int shard)
+        internal GetStatisticsOperation(int shard)
         {
             _shard = shard;
         }
@@ -48,16 +48,14 @@ namespace Raven.Client.Documents.Operations
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/stats";
-                var hasQueryString = false;
                 if (_debugTag != null)
                 {
                     url += "?" + _debugTag;
-                    hasQueryString = true;
                 }
 
                 if (_shard.HasValue)
                 {
-                    if (hasQueryString == false)
+                    if (_debugTag == null)
                         url += "?";
                     url += $"&shard={_shard}";
                 }

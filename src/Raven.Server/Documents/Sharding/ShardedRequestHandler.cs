@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
-using Raven.Client.Extensions;
-using Raven.Client.Http;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
@@ -106,7 +102,7 @@ namespace Raven.Server.Documents.Sharding
                 var requestExecutors = ShardedContext.RequestExecutors;
                 var waitingTasks = new Task[requestExecutors.Length];
 
-                var waitForDatabaseCommands = new WaitForDatabaseCommands(raftIndexIds);
+                var waitForDatabaseCommands = new WaitForRaftCommands(raftIndexIds);
                 for (var index = 0; index < requestExecutors.Length; index++)
                 {
                     waitingTasks[index] = requestExecutors[index].ExecuteAsync(waitForDatabaseCommands, context, token: cts.Token);

@@ -29,8 +29,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin, DisableOnCpuCreditsExhaustion = true)]
         public async Task Put()
         {
-            var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
-            if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
+            var isReplicated = GetBoolValueQueryString("is-replicated", required: false);
+            if (isReplicated.HasValue && isReplicated.Value)
             {
                 await HandleLegacyIndexesAsync();
                 return;

@@ -14,10 +14,10 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/admin/indexes", "PUT")]
         public async Task Put()
         {
-            var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
-            if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
+            var isReplicated = GetBoolValueQueryString("is-replicated", required: false);
+            if (isReplicated.HasValue && isReplicated.Value)
             {
-                throw new NotSupportedException($"Legacy replication of indexes isn't supported in a sharded environment");
+                throw new NotSupportedException("Legacy replication of indexes isn't supported in a sharded environment");
             }
 
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters

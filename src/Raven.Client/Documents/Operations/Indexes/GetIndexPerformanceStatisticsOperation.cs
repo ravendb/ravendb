@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Indexes
         {
         }
 
-        public GetIndexPerformanceStatisticsOperation(int? shard)
+        internal GetIndexPerformanceStatisticsOperation(int? shard)
         {
             _shard = shard;
         }
@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
         }
 
-        public GetIndexPerformanceStatisticsOperation(string[] indexNames, int shard)
+        internal GetIndexPerformanceStatisticsOperation(string[] indexNames, int shard)
         {
             _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
             _shard = shard;
