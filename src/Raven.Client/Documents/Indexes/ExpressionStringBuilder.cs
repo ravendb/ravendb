@@ -1328,7 +1328,7 @@ namespace Raven.Client.Documents.Indexes
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
             if (node.Type == typeof(TimeOnly) || node.Type == typeof(DateOnly))
             {
-                Out($"As{(node.Type == typeof(TimeOnly) ? "TimeOnly" : "DateOnly")}(");
+                Out($"As{node.Type.Name}(");
                 OutMember(node.Expression, node.Member, exprType);
                 Out(")");
                 return node;

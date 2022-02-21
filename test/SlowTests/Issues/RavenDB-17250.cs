@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Queries;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using SlowTests.Client.TimeSeries.BulkInsert;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,6 +15,9 @@ namespace SlowTests.Issues;
 
 public class RavenDB_17250 : RavenTestBase
 {
+    //This tests will fail after updating Raven into new .NET version.
+    //Remember to add new version into FEATURE_DATEONLY_TIMEONLY_SUPPORT const.
+
     public RavenDB_17250(ITestOutputHelper output) : base(output)
     {
     }
@@ -33,19 +36,20 @@ public class RavenDB_17250 : RavenTestBase
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
             using var session = store.OpenSession();
 
-            var resultRaw2 = session.Query<DateAndTimeOnlyIndex.IndexEntry, DateAndTimeOnlyIndex>().Where(p => p.DateOnly < @do).OrderBy(p => p.DateOnly).ProjectInto<DateAndTimeOnly>();
+            var resultRaw2 = session.Query<DateAndTimeOnlyIndex.IndexEntry, DateAndTimeOnlyIndex>().Where(p => p.DateOnly < @do).OrderBy(p => p.DateOnly)
+                .ProjectInto<DateAndTimeOnly>();
             var result = resultRaw2.ToList();
             result.ForEach(i => Assert.True(i.DateOnly < @do));
             WaitForUserToContinueTheTest(store);
         }
     }
-
+    
     [Fact]
-    public void DateOnlyTimeOnlyIndexTransformationFromDiffrentsTypes()
+    public void IndexWithLetQueries()
     {
         using var store = GetDocumentStore();
         var data = CreateDatabaseData(store);
-        var index = new DateAndTimeOnlyIndexWithDateTime();
+        var index = new IndexWithLet();
         index.Execute(store);
         WaitForIndexing(store);
         {
@@ -53,36 +57,82 @@ public class RavenDB_17250 : RavenTestBase
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
             using var session = store.OpenSession();
 
-            var resultRaw2 = session.Query<DateAndTimeOnlyIndexWithDateTime.IndexEntry, DateAndTimeOnlyIndexWithDateTime>().Where(p => p.DateOnly < @do).OrderBy(p => p.DateOnly).ProjectInto<DateAndTimeOnly>();
+            var resultRaw2 = session.Query<IndexWithLet.IndexEntry, IndexWithLet>().Where(p => p.Year == 5).ProjectInto<DateAndTimeOnly>();
             var result = resultRaw2.ToList();
-            result.ForEach(i => Assert.True(i.DateOnly < @do));
+            result.ForEach(i =>
+            {
+                Assert.Equal(5, i.DateOnly.Year);
+            });
+            
         }
     }
-
-    private class DateTimeTicks
-    {
-        public DateTime BenchTicks { get; set; }
-    }
-
+    
     [Fact]
-    public void DateAndTimeOnlyInQueryPerfTest()
+    public void TransformDateInJsPatch()
     {
-        int items = 100_000, queries = 10_000;
         using var store = GetDocumentStore();
-        var rnd = new Random(124323567);
-        {
-            using var bulkInsert = store.BulkInsert();
-            var list = Enumerable.Range(0, items).Select(i =>
-                new DateTimeTicks() { BenchTicks = new DateTime(rnd.NextInt64(DateTime.MinValue.Ticks + 1, DateTime.MaxValue.Ticks - 1)) });
-            foreach (var dateTime in list)
-                bulkInsert.Store(dateTime);
-        }
-        foreach (int i in Enumerable.Range(0, queries))
+        var @do = new DateOnly(2022, 2, 21);
+        var to = new TimeOnly(21, 11, 00);
+        var entity = new DateAndTimeOnly() { DateOnly = @do, TimeOnly = to };
         {
             using var session = store.OpenSession();
-            var dt = new DateTime(rnd.NextInt64(DateTime.MinValue.Ticks + 1, DateTime.MaxValue.Ticks - 1));
-            var t = session.Advanced.RawQuery<DateTimeTicks>("from DateTimeTicks where BenchTicks < $p0").AddParameter("p0", dt.ToString("O").Substring(0, 10))
-                .ToList();
+            session.Store(entity);
+            session.SaveChanges();
+        }
+        var operation = store.Operations.Send(new PatchByQueryOperation(@"
+declare function modifyDateInJs(date, days) {
+  var result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result.toISOString().substring(0,10);
+}
+
+from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1); }"));
+        operation.WaitForCompletion(TimeSpan.FromSeconds(5));
+        {
+            using var session = store.OpenSession();
+            var single = session.Query<DateAndTimeOnly>().Single();
+            Assert.Equal(@do.AddDays(1), single.DateOnly);
+        }
+    }
+
+
+    [Fact]
+    public void PatchDateOnlyAndTimeOnly()
+    {
+        using var store = GetDocumentStore();
+        var @do = new DateOnly(2022, 2, 21);
+        var to = new TimeOnly(21, 11, 00);
+        string id;
+        var entity = new DateAndTimeOnly() { DateOnly = @do, TimeOnly = to };
+        {
+            using var session = store.OpenSession();
+            session.Store(entity);
+            session.SaveChanges();
+            id = session.Advanced.GetDocumentId(entity);
+        }
+
+        {
+            using var session = store.OpenSession();
+            session.Advanced.Patch<DateAndTimeOnly, DateOnly>(id, x => x.DateOnly, @do.AddDays(1));
+            session.SaveChanges();
+        }
+
+        {
+            using var session = store.OpenSession();
+            var single = session.Query<DateAndTimeOnly>().Single();
+            Assert.Equal(@do.AddDays(1), single.DateOnly);
+        }
+
+        {
+            using var session = store.OpenSession();
+            session.Advanced.Patch<DateAndTimeOnly, TimeOnly>(id, x => x.TimeOnly, to.AddHours(1));
+            session.SaveChanges();
+        }
+
+        {
+            using var session = store.OpenSession();
+            var single = session.Query<DateAndTimeOnly>().Single();
+            Assert.Equal(to.AddHours(1), single.TimeOnly);
         }
     }
 
@@ -115,6 +165,34 @@ public class RavenDB_17250 : RavenTestBase
         }
     }
 
+    [Fact]
+    public void Queries()
+    {
+        using var store = GetDocumentStore();
+        var data = CreateDatabaseData(store);
+
+        {            
+            using var session = store.OpenSession();
+            var after = new TimeOnly(15, 00);
+            var before = new TimeOnly(17, 00);
+            var result = session.Query<DateAndTimeOnly>().Where(i => i.TimeOnly > after && i.TimeOnly < before).ToList();
+            result.ForEach(i =>
+            {
+                Assert.True(i.TimeOnly > after && i.TimeOnly < before);
+            });
+        }
+        
+        {            
+            using var session = store.OpenSession();
+            var after = new DateOnly(1, 9, 1);
+            var before = new DateOnly(2, 6, 17);
+            var result = session.Query<DateAndTimeOnly>().Where(i => i.DateOnly > after && i.DateOnly < before).ToList();
+            result.ForEach(i =>
+            {
+                Assert.True(i.DateOnly > after && i.DateOnly < before);
+            });
+        }
+    }
 
     private List<DateAndTimeOnly> CreateDatabaseData(IDocumentStore store)
     {
@@ -140,7 +218,7 @@ public class RavenDB_17250 : RavenTestBase
         public class IndexEntry
         {
             public DateOnly DateOnly { get; set; }
-            
+
             public int Year { get; set; }
 
             public DateOnly DateOnlyString { get; set; }
@@ -153,41 +231,29 @@ public class RavenDB_17250 : RavenTestBase
         {
             Map = dates => from date in dates
 
-                //let x = date.DateTime
+                
                 select new IndexEntry()
                 {
-                    // year =  AsDateOnly(x).Year,
-
-                    DateOnly = date.DateOnly//, TimeOnly = AsTimeOnly(date.TimeOnly), DateOnlyString = date.DateOnly, TimeOnlyString = date.TimeOnly
+                    DateOnly = date.DateOnly , 
+                    TimeOnly = date.TimeOnly
                 };
         }
     }
 
-    private class DateAndTimeOnlyIndexWithDateTime : AbstractIndexCreationTask<DateAndTimeOnly, DateAndTimeOnlyIndex.IndexEntry>
+    private class IndexWithLet : AbstractIndexCreationTask<DateAndTimeOnly, DateAndTimeOnlyIndex.IndexEntry>
     {
         public class IndexEntry
         {
             public DateOnly DateOnly { get; set; }
             public int Year { get; set; }
-
-            public DateOnly DateOnlyString { get; set; }
-
-            public TimeOnly TimeOnlyString { get; set; }
             public TimeOnly TimeOnly { get; set; }
         }
 
-        public DateAndTimeOnlyIndexWithDateTime()
+        public IndexWithLet()
         {
             Map = dates => from date in dates
-                let x = date.DateTime
-                select new IndexEntry()
-                {
-                    Year = AsDateOnly(x).Year,
-                    DateOnly = AsDateOnly(new DateOnly(2020,12,24)),
-                    TimeOnly = AsTimeOnly(date.TimeOnly),
-                    DateOnlyString = date.DateOnly,
-                    TimeOnlyString = date.TimeOnly
-                };
+                let x = date.DateOnly
+                select new IndexEntry() { Year = x.Year, DateOnly = new DateOnly(2020, 12, 24), TimeOnly = date.TimeOnly, };
         }
     }
 }

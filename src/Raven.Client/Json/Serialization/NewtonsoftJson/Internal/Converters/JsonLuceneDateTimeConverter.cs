@@ -68,8 +68,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                 objectType == typeof(DateTime) ||
                 objectType == typeof(DateTimeOffset) ||
                 objectType == typeof(DateTime?) ||
-                objectType == typeof(DateTimeOffset?)
-                ;
+                objectType == typeof(DateTimeOffset?);
         }
 
         /// <summary>

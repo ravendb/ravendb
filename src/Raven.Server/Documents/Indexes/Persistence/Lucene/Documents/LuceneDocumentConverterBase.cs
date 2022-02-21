@@ -18,6 +18,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
+using Sparrow.Server;
 using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -364,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.DateOnly)
             {
                 var dateOnly = (DateOnly)value;
-                var asString = dateOnly.ToString("O");
+                var asString = dateOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                 var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;
 
                 instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
@@ -380,7 +381,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.TimeOnly)
             {
                 var timeOnly = (TimeOnly)value;
-                var asString = timeOnly.ToString("O");
+                var asString = timeOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                 instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
