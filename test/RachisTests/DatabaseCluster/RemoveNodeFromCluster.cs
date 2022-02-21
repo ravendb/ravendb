@@ -152,7 +152,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(0, outgoingConnections);
 
                 foreach (var n in cluster.Nodes)
-                    n.ServerStore.EnsureNotPassive();
+                    await n.ServerStore.EnsureNotPassiveAsync();
 
                 using (var session = store.OpenAsyncSession())
                 {
