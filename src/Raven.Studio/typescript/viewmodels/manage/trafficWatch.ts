@@ -22,7 +22,7 @@ type trafficChangeType = Raven.Client.Documents.Changes.TrafficWatchChangeType |
 class runQueryFeature implements columnPreviewFeature {
     install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void {
         $tooltip.on("click", ".run-query", () => {
-            let value = valueProvider();
+            const value = valueProvider();
             const item: Raven.Client.Documents.Changes.TrafficWatchChangeBase = elementProvider();
 
             if (item.TrafficWatchType !== "Http" || (item as TrafficWatchHttpChange).Type !== "MultiGet") {
@@ -50,8 +50,7 @@ class runQueryFeature implements columnPreviewFeature {
         const lines = value.split('\r\n');
         lines.forEach((line: string) => {
             if (line) {
-                // parse & strip the "?query=" from beginning of text
-                const query = JSON.parse(line).Query.slice(7);
+                const query = JSON.parse(line).Query.slice("?query=".length);
                 if (query) {
                     queryList.push(query);
                 }
