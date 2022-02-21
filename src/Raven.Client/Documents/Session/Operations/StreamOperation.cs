@@ -114,6 +114,11 @@ namespace Raven.Client.Documents.Session.Operations
 
         public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
         {
+            return CreateStreamCommand(startsWith, matches, start, pageSize, exclude, startAfter);
+        }
+
+        internal static StreamCommand CreateStreamCommand(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
+        {
             var sb = new StringBuilder("streams/docs?");
 
             if (startsWith != null)
@@ -286,9 +291,9 @@ namespace Raven.Client.Documents.Session.Operations
             public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
                 _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
-                _returnContext = session.RequestExecutor.ContextPool.AllocateOperationContext(out _builderContext);
+                _builderReturnContext = session.RequestExecutor.ContextPool.AllocateOperationContext(out _builderContext);
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
-                _session = session;
+                _inputContext = session.Context;
                 _isQueryStream = isQueryStream;
                 _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
@@ -297,8 +302,23 @@ namespace Raven.Client.Documents.Session.Operations
                 _isTimeSeriesStream = isTimeSeriesStream;
             }
 
+            public YieldStreamResults(JsonContextPool pool, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
+            {
+                _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
+                _builderReturnContext = pool.AllocateOperationContext(out _builderContext);
+                _inputReturnContext = pool.AllocateOperationContext(out _inputContext);
+
+                _peepingTomStream = new PeepingTomStream(_response.Stream, _inputContext);
+                _isQueryStream = isQueryStream;
+                _isAsync = isAsync;
+                _streamQueryStatistics = streamQueryStatistics;
+                _maxDocsCountOnCachedRenewSession = 1024;
+                _token = token;
+                _isTimeSeriesStream = isTimeSeriesStream;
+            }
+
             private readonly StreamResult _response;
-            private readonly InMemoryDocumentSessionOperations _session;
+            private readonly JsonOperationContext _inputContext;
             private readonly int _maxDocsCountOnCachedRenewSession;
             private JsonParserState _state;
             private UnmanagedJsonParser _parser;
@@ -313,7 +333,8 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
             private readonly JsonOperationContext _builderContext;
-            private readonly IDisposable _returnContext;
+            private readonly IDisposable _builderReturnContext;
+            private readonly IDisposable _inputReturnContext;
             private BlittableJsonDocumentBuilder _builder;
 
 #if NETSTANDARD2_0 || NETCOREAPP2_1
@@ -347,7 +368,8 @@ namespace Raven.Client.Documents.Session.Operations
                 _returnBuffer.Dispose();
                 _peepingTomStream.Dispose();
                 _builder.Dispose();
-                _returnContext.Dispose();
+                _builderReturnContext.Dispose();
+                _inputReturnContext?.Dispose();
             }
 
             public bool MoveNext()
@@ -450,9 +472,9 @@ namespace Raven.Client.Documents.Session.Operations
                     _initialized = true;
 
                     _state = new JsonParserState();
-                    _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                    _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");
                     _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
-                    _returnBuffer = _session.Context.GetMemoryBuffer(out _buffer);
+                    _returnBuffer = _inputContext.GetMemoryBuffer(out _buffer);
 
                     if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
@@ -461,9 +483,9 @@ namespace Raven.Client.Documents.Session.Operations
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     if (_isQueryStream)
-                        HandleStreamQueryStats(_session.Context, _response, _parser, _state, _buffer, _streamQueryStatistics);
+                        HandleStreamQueryStats(_inputContext, _response, _parser, _state, _buffer, _streamQueryStatistics);
 
-                    var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
+                    var property = UnmanagedJsonParserHelper.ReadString(_inputContext, _peepingTomStream, _parser, _state, _buffer);
 
                     if (string.Equals(property, "Results") == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
@@ -491,9 +513,9 @@ namespace Raven.Client.Documents.Session.Operations
                     _initialized = true;
 
                     _state = new JsonParserState();
-                    _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
+                    _parser = new UnmanagedJsonParser(_inputContext, _state, "stream contents");
                     _builder = new BlittableJsonDocumentBuilder(_builderContext, BlittableJsonDocumentBuilder.UsageMode.ToDisk, "readArray/singleResult", _parser, _state);
-                    _returnBuffer = _session.Context.GetMemoryBuffer(out _buffer);
+                    _returnBuffer = _inputContext.GetMemoryBuffer(out _buffer);
 
                     if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);

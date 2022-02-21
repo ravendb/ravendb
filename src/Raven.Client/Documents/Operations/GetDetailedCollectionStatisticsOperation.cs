@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations
             return new GetDetailedCollectionStatisticsCommand();
         }
 
-        private class GetDetailedCollectionStatisticsCommand : RavenCommand<DetailedCollectionStatistics>
+        internal class GetDetailedCollectionStatisticsCommand : RavenCommand<DetailedCollectionStatistics>
         {
             public override bool IsReadRequest => true;
 
