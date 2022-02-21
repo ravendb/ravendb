@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Patch.V8
                 if (jsOptions == null)
                     return;
                 string strictModeFlag = jsOptions.StrictMode ? "--use_strict" : "--no-use_strict";
-                string[] optionsCmd = {strictModeFlag}; //, "--max_old_space_size=1024"};
+                string[] optionsCmd = {strictModeFlag};
                 Engine.SetFlagsFromCommandLine(optionsCmd);
                 MaxDuration = (int)jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
             }
