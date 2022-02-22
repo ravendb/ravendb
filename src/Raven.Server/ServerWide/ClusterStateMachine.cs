@@ -949,12 +949,17 @@ namespace Raven.Server.ServerWide
                 var error = clusterTransaction.ExecuteCompareExchangeCommands(rawRecord.GetClusterTransactionId(), context, index, compareExchangeItems);
                 if (error == null)
                 {
-                    clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                    DatabasesLandlord.ClusterDatabaseChangeType notify;
+                    if (clusterTransaction.HasDocumentsInTransaction)
+                    {
+                        clusterTransaction.SaveCommandsBatch(context, rawRecord, index, ClusterTransactionWaiter);
+                        notify = DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions;
+                    }
+                    else
+                    {
+                        notify = DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
+                    }
                     
-                    var notify = clusterTransaction.HasDocumentsInTransaction
-                    ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
-                    : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
-
                     NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
                     return null;

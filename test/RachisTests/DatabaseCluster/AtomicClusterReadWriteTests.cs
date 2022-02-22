@@ -461,7 +461,6 @@ namespace RachisTests.DatabaseCluster
             await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
         }
 
-        [Fact]
         public async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
         {
             var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
@@ -502,7 +501,6 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        [Fact]
         public async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
         {
             var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
@@ -538,7 +536,6 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        [Fact]
         public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
         {
             using var store = GetDocumentStore();
@@ -680,6 +677,24 @@ namespace RachisTests.DatabaseCluster
         public async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {
             await base.ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate();
+        }
+        
+        [Fact]
+        public async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
+        {
+            await ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell();
+        }
+
+        [Fact]
+        public async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
+        {
+            await ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell();
+        }
+
+        [Fact]
+        public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
+        {
+            await ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved();
         }
     }
 }

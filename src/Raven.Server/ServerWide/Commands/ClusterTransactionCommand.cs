@@ -422,13 +422,14 @@ namespace Raven.Server.ServerWide.Commands
 
                 for (int i = 0; i < commandsPreShard.Length; i++)
                 {
+                    var shardCommands = commandsPreShard[i] ?? (IEnumerable<object>)Array.Empty<object>();
                     var toSave = context.ReadObject(new DynamicJsonValue
                     {
-                        [nameof(DatabaseCommands)] = commandsPreShard[i],
+                        [nameof(DatabaseCommands)] = shardCommands,
                         [nameof(Options)] = Options.ToJson()
                     }, "serialized-database-commands");
 
-                    SaveCommandBatch(context, index, shardNames[i], commandsCountPerDatabase, items, toSave, commandsPreShard.Length);
+                    SetCommandBatch(context, index, shardNames[i], commandsCountPerDatabase, items, toSave, shardCommands.Count());
                 }
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
@@ -445,7 +446,7 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
-                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
+                InsertCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
             }
         }
 
@@ -516,8 +517,19 @@ namespace Raven.Server.ServerWide.Commands
             return result;
         }
 
-        private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
+        private void InsertCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
             BlittableJsonReaderObject commands, long commandsCount)
+        {
+            SaveCommandBatch(context, index, databaseName, commandsCountPerDatabase, items, commands, commandsCount, ItemsInsert);
+        }
+        private void SetCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
+            BlittableJsonReaderObject commands, long commandsCount)
+        {
+            SaveCommandBatch(context, index, databaseName, commandsCountPerDatabase, items, commands, commandsCount, ItemsSet);
+        }
+        
+        private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
+            BlittableJsonReaderObject commands, long commandsCount, Action<Table, TableValueBuilder> saveAction)
         {
             using (GetPrefix(context, databaseName, out var databaseSlice))
             {
@@ -528,12 +540,15 @@ namespace Raven.Server.ServerWide.Commands
                     tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
                     tvb.Add(commands.BasePointer, commands.Size);
                     tvb.Add(index);
-                    items.Insert(tvb);
+                    saveAction(items, tvb);
                 }
                 using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
                     *(long*)ptr = prevCount + commandsCount;
             }
         }
+        
+        static void ItemsInsert(Table items, TableValueBuilder tvb) => items.Insert(tvb);
+        static void ItemsSet(Table items, TableValueBuilder tvb) => items.Set(tvb);
 
         public bool HasDocumentsInTransaction => SerializedDatabaseCommands != null && DatabaseCommandsCount != 0;
 

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Xunit;
@@ -302,30 +304,42 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task ShardedClusterTransaction_WhenStoreTwoDocsToTwoSahrdsInTwoTrxAndTryToGetTheFirst_ShouldNotStuck()
         {
-            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+            const string firstDocId = "testObjs/0";
             
-            var firstDocId = "testObjs/0";
-            var secondDocId = "testObjs/1";
-            using (var store = GetDocumentStore(new Options
-                   {
-                       Server = nodes.Single(n => n.ServerStore.NodeTag != n.ServerStore.LeaderTag),
-                       ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
-                   }))
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+            using var watcherStore = GetDocumentStore(new Options
             {
-                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                Server = nodes.Single(n => n.ServerStore.NodeTag != n.ServerStore.LeaderTag), 
+                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true,
+            });
+            using var leaderStore = new DocumentStore
+            {
+                Database = watcherStore.Database, Urls = new[] {leader.WebUrl}, Conventions = new DocumentConventions {DisableTopologyUpdates = true}
+            }.Initialize();
+            
+            for (int i = 0; i < 1000; i++)
+            {
+                var id = $"testObjs/{i}";
+                using (var session = watcherStore.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
                 {
-                    await session.StoreAsync(new TestObj(), firstDocId);
-                    await session.SaveChangesAsync();
-
-                    await session.StoreAsync(new TestObj(), secondDocId);
+                    await session.StoreAsync(new TestObj{Prop = id}, id);
                     await session.SaveChangesAsync();
                 }
 
+                await CheckCanLoad(watcherStore, id);
+                await CheckCanLoad(leaderStore, id);
+            }
+
+            async Task CheckCanLoad(IDocumentStore store, string savedId)
+            {
                 using (var session = store.OpenAsyncSession())
                 {
                     var tokenSource = new CancellationTokenSource();
-                    tokenSource.CancelAfter(TimeSpan.FromSeconds(10));
+                    tokenSource.CancelAfter(TimeSpan.FromSeconds(Debugger.IsAttached ? 10 : 180));
                     _ = await session.LoadAsync<TestObj>(firstDocId, tokenSource.Token);
+                    var loaded = await session.LoadAsync<TestObj>(savedId, tokenSource.Token);
+                    Assert.NotNull(loaded);
+                    Assert.Equal(savedId, loaded.Prop);
                 }
             }
         }
