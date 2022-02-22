@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             {
                 await using (var gzipStream = new GZipStream(RequestHandler.GetInputStream(stream, _options), CompressionMode.Decompress))
                 {
-                    _writer.WriteStream(gzipStream);
+                    await _writer.WriteStreamAsync(gzipStream);
                 }
             } 
 

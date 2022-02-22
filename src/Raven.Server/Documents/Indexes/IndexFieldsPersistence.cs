@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Indexes
         public IndexFieldsPersistence(Index index)
         {
             _index = index ?? throw new ArgumentNullException(nameof(index));
-            _supportsTimeFields = index.Definition.Version >= IndexDefinitionBase.IndexVersion.TimeTicks;
+            _supportsTimeFields = index.Definition.Version >= IndexDefinitionBaseServerSide.IndexVersion.TimeTicks;
         }
 
         internal void Initialize()

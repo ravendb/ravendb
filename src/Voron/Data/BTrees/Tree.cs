@@ -569,38 +569,67 @@ namespace Voron.Data.BTrees
             var root = GetReadOnlyTreePage(rootPageNumber);
             stack.Push(root);
             pages.Add(rootPageNumber);
-            while (stack.Count > 0)
+            var leafKeys = new HashSet<Slice>(SliceComparer.Instance);
+
+            try
             {
-                var p = stack.Pop();
-
-                using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, DecompressionUsage.Read, skipCache: true)) : null)
+                while (stack.Count > 0)
                 {
-                    if (p.NumberOfEntries == 0 && p != root)
-                    {
-                        DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                        throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
+                    var p = stack.Pop();
 
-                    }
-                    p.DebugValidate(this, rootPageNumber);
-                    if (p.IsBranch == false)
-                        continue;
-
-                    if (p.NumberOfEntries < 2)
+                    using (p.IsCompressed ? (DecompressedLeafPage)(p = DecompressPage(p, DecompressionUsage.Read, skipCache: true)) : null)
                     {
-                        throw new InvalidOperationException("The branch page " + p.PageNumber + " has " +
-                                                            p.NumberOfEntries + " entry");
-                    }
-
-                    for (int i = 0; i < p.NumberOfEntries; i++)
-                    {
-                        var page = p.GetNode(i)->PageNumber;
-                        if (pages.Add(page) == false)
+                        if (p.NumberOfEntries == 0 && p != root)
                         {
                             DebugStuff.RenderAndShowTree(this, rootPageNumber);
-                            throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                            throw new InvalidOperationException("The page " + p.PageNumber + " is empty");
+
                         }
-                        stack.Push(GetReadOnlyTreePage(page));
+                        p.DebugValidate(this, rootPageNumber);
+
+                        if (p.IsBranch == false)
+                        {
+                            for (int i = 0; i < p.NumberOfEntries; i++)
+                            {
+                                using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, p.GetNode(i), out Slice keySlice))
+                                {
+                                    var clonedKey = keySlice.Clone(_tx.Allocator);
+
+                                    if (leafKeys.Add(clonedKey) == false)
+                                    {
+                                        DebugStuff.RenderAndShowTree(this, rootPageNumber);
+                                        throw new InvalidOperationException("The key '" + keySlice + "' already appeared in the tree");
+                                    }
+                                }
+                            }
+
+                            continue;
+                        }
+
+                        if (p.NumberOfEntries < 2)
+                        {
+                            throw new InvalidOperationException("The branch page " + p.PageNumber + " has " +
+                                                                p.NumberOfEntries + " entry");
+                        }
+
+                        for (int i = 0; i < p.NumberOfEntries; i++)
+                        {
+                            var page = p.GetNode(i)->PageNumber;
+                            if (pages.Add(page) == false)
+                            {
+                                DebugStuff.RenderAndShowTree(this, rootPageNumber);
+                                throw new InvalidOperationException("The page " + page + " already appeared in the tree!");
+                            }
+                            stack.Push(GetReadOnlyTreePage(page));
+                        }
                     }
+                }
+            }
+            finally
+            {
+                foreach (var key in leafKeys)
+                {
+                    key.Release(_tx.Allocator);
                 }
             }
         }

@@ -46,7 +46,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, List<Stream> items)
+        public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, List<Stream> items)
         {
             writer.WritePropertyName(name);
 
@@ -57,7 +57,7 @@ namespace Sparrow.Json
                     writer.WriteComma();
 
                 items[i].Position = 0;
-                writer.WriteStream(items[i]);
+                await writer.WriteStreamAsync(items[i]).ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }
