@@ -51,12 +51,13 @@ class runQueryFeature implements columnPreviewFeature {
     private static getMultiGetQueriesList(value: any): string[] {
         const queryList: string[] = [];
 
-        const lines = value.split('\n');
+        const lines = value.split(/\r?\n/);
+        
         lines.forEach((line: string) => {
             if (line) {
                 const jsonObj = JSON.parse(line);
                 
-                const queriesEndpoint = jsonObj.Url.slice("/queries".length * -1) === "/queries";
+                const queriesEndpoint = jsonObj.Url.endsWith("/queries");
                 const query = jsonObj.Query.slice("?query=".length);
                                 
                 if (queriesEndpoint && query) {
@@ -92,11 +93,11 @@ class runQueryFeature implements columnPreviewFeature {
 
         if (element.Type === "MultiGet") {
             this.queryList = runQueryFeature.getMultiGetQueriesList(generalUtils.unescapeHtml(escapedValue));
-            buttonText = this.queryList.length > 1 ? "RunQuery..." : (this.queryList.length === 1 ? "RunQuery" : "");
+            buttonText = this.queryList.length > 1 ? "Run Query ..." : (this.queryList.length === 1 ? "Run Query" : "");
         }        
         
         if (element.Type === "Queries" && (element.HttpMethod === "POST" || element.HttpMethod === "GET")) {
-            buttonText = "RunQuery";
+            buttonText = "Run Query";
         }
         
         return buttonText ? `<button class="btn btn-default btn-sm run-query"><i class="icon-query"></i><span>${buttonText}</span></button>` : "";
