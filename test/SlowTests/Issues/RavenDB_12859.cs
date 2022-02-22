@@ -461,18 +461,14 @@ namespace SlowTests.Issues
                     Assert.NotNull(fax);
                     Assert.Equal("123", fax.Fax);*/
 
-                    void testCode2()
+                    Assert.Throws<InvalidQueryException>(() =>
                     {
                         session.Advanced
                             .RawQuery<Company_WithExtraField>("from index 'Companies/ByName' as c select { ExtraField : c.ExtraField }")
                             .Projection(ProjectionBehavior.FromDocumentOrThrow)
                             .NoCaching()
                             .FirstOrDefault();
-                    }
-                    if (jsEngineType == "Jint")
-                        Assert.Throws<InvalidQueryException>(testCode2);
-                    else
-                        Assert.Throws<JavaScriptException>(testCode2);
+                    });
                 }
 
                 using (var session = store.OpenSession())
@@ -507,18 +503,14 @@ namespace SlowTests.Issues
                     Assert.Equal("HR_Stored", values.Name);
                     Assert.Equal(null, values.Fax);
 
-                    void testCode3()
+                    Assert.Throws<InvalidQueryException>(() =>
                     {
                         values = session.Advanced
                             .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
                             .NoCaching()
                             .Projection(ProjectionBehavior.FromIndexOrThrow)
                             .FirstOrDefault();
-                    }
-                    if (jsEngineType == "Jint")
-                        Assert.Throws<InvalidQueryException>(testCode3);
-                    else
-                        Assert.Throws<JavaScriptException>(testCode3);
+                    });
 
                     values = session.Advanced
                             .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
@@ -530,19 +522,14 @@ namespace SlowTests.Issues
                     Assert.Equal("HR", values.Name);
                     Assert.Equal("123", values.Fax);
 
-                    void testCode4()
+                    Assert.Throws<InvalidQueryException>(() =>
                     {
                         session.Advanced
                             .RawQuery<Company_WithExtraField>("from index 'Companies/ByName' as c select { Name : c.Name, ExtraField: c.ExtraField }")
                             .NoCaching()
                             .Projection(ProjectionBehavior.FromDocumentOrThrow)
                             .FirstOrDefault();
-                    }
-                        
-                    if (jsEngineType == "Jint")
-                        Assert.Throws<InvalidQueryException>(testCode4);
-                    else
-                        Assert.Throws<JavaScriptException>(testCode4);
+                    });
                     
                 }
             }
