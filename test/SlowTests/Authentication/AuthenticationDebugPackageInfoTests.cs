@@ -275,7 +275,7 @@ namespace SlowTests.Authentication
             foreach (var e in debugEntries)
                 Assert.True(archiveEntries.Contains(e), $"{e} is missing from the debug package");
             foreach (var e in archiveEntries)
-                Assert.True(debugEntries.Contains(e), $"{e} should not be in the debug package");
+                Assert.True(debugEntries.Contains(e) || e.Contains("requestTimes"), $"{e} should not be in the debug package");
         }
 
         private string GetFileNameWithoutExtension(RouteInformation route, string prefixFolder)
