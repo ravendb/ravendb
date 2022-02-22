@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -50,6 +52,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -65,6 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -80,6 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -95,6 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -110,6 +116,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -123,6 +130,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private PoolWithLevels<V8EngineEx>.PooledValue _scriptEngineV8Pooled;
         public V8EngineEx.ContextEx ContextExV8; 
+
+        internal Exception _lastException;
 
         protected void InitializeV8()
         {
@@ -169,6 +178,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -204,6 +214,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -233,6 +244,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }
@@ -292,6 +304,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             catch (Exception e) 
             {
+                _lastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
 

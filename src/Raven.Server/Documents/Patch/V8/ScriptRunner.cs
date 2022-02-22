@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Patch
 
             private V8EngineEx.ContextEx _contextExV8; 
 
+            private Exception _lastException;
+        
             public void InitializeV8()
             {
                 var poolOfEngines = V8EngineEx.GetPool(_jsOptions);
@@ -184,6 +186,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -209,6 +212,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -304,6 +308,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -388,6 +393,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -478,6 +484,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -565,6 +572,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -641,6 +649,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -654,6 +663,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -698,6 +708,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -744,6 +755,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -776,6 +788,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -816,6 +829,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -835,6 +849,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -961,18 +976,10 @@ namespace Raven.Server.Documents.Patch
                             reader?.Dispose();
                     }
                 }
-                catch (Exception e) 
+                catch (Exception e)
                 {
+                    _lastException = e;
                     return engine.CreateError(e.Message, JSValueType.ExecutionError);
-                    // the original exception could be serialized here in order to be restored in ScriptRunner/Index and thrown unwrapped of JavaScriptException 
-                    /*
-                    var stream = new MemoryStream();
-                    IFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, e);
-                    stream.Close();
-                    StreamReader reader = new StreamReader(stream);
-                    return engine.CreateError("Serialized exception:" + reader.ReadToEnd(), JSValueType.ExecutionError);
-                    */
                 }
             }
 
@@ -1010,6 +1017,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1089,6 +1097,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1106,6 +1115,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1151,6 +1161,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1163,6 +1174,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1175,6 +1187,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1326,6 +1339,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1388,6 +1402,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1403,7 +1418,7 @@ namespace Raven.Server.Documents.Patch
                                                     "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
             }
 
-            private static InternalHandle ThrowOnLoadDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle ThrowOnLoadDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try
                 {
@@ -1411,11 +1426,12 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
 
-            private static InternalHandle ThrowOnPutDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle ThrowOnPutDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try
                 {
@@ -1423,11 +1439,12 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
 
-            private static InternalHandle ThrowOnDeleteDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle ThrowOnDeleteDocumentV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try
                 {
@@ -1435,6 +1452,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1454,6 +1472,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1522,11 +1541,12 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
 
-            private static InternalHandle CompareDatesV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            private InternalHandle CompareDatesV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
             {
                 try
                 {
@@ -1578,6 +1598,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1656,6 +1677,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1671,6 +1693,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1686,6 +1709,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
@@ -1703,38 +1727,73 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
+                    _lastException = e;
                     return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
 
-            private InternalHandle ScalarToRawStringV8(V8Engine engine, bool isConstructCall, InternalHandle self2, params InternalHandle[] args)
+            private InternalHandle ScalarToRawStringV8(V8Engine engine, bool isConstructCall, InternalHandle self2, params InternalHandle[] args) // callback
             {
-                if (args.Length != 2)
-                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
-
-                var firstParam = args[0];
-                if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstanceV8 selfInstance)
+                try
                 {
-                    var secondParam = args[1];
-                    if (secondParam.IsFunction)
-                    {
-                        // we don't have access to AST so we just call the function 
-                        var res = secondParam.StaticCall(firstParam);
-                        if (res.IsUndefined)
-                        {
-                            return selfInstance.EngineV8.CreateObject();
-                        }
+                    if (args.Length != 2)
+                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
-                        return res;
+                    var firstParam = args[0];
+                    if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstanceV8 selfInstance)
+                    {
+                        var secondParam = args[1];
+                        if (secondParam.IsFunction)
+                        {
+                            // we don't have access to AST so we just call the function 
+                            var res = secondParam.StaticCall(firstParam);
+                            if (res.IsUndefined)
+                            {
+                                return selfInstance.EngineV8.CreateObject();
+                            }
+
+                            return res;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+                        }
                     }
                     else
                     {
-                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
                     }
                 }
-                else
+                catch (Exception e) 
                 {
-                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
+                    _lastException = e;
+                    return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
+            }
+
+            public InternalHandle GetMetadataV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            {
+                try
+                {
+                    return JsUtilsV8 != null ? JsUtilsV8.GetMetadata(engine, isConstructCall, self, args) : DummyJsCallbackV8(engine, isConstructCall, self, args);
+                }
+                catch (Exception e) 
+                {
+                    _lastException = e;
+                    return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
+            }
+
+            public InternalHandle GetDocumentIdV8(V8Engine engine, bool isConstructCall, InternalHandle self, params InternalHandle[] args) // callback
+            {
+                try
+                {
+                    return JsUtilsV8 != null ? JsUtilsV8.GetDocumentId(engine, isConstructCall, self, args) : DummyJsCallbackV8(engine, isConstructCall, self, args);
+                }
+                catch (Exception e) 
+                {
+                    _lastException = e;
+                    return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
                 }
             }
 

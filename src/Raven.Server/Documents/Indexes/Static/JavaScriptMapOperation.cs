@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using Esprima.Ast;
 using Jint;
 using Jint.Native.Array;
@@ -68,6 +69,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             lock (_engineHandle)
             {
+                _index._lastException = null;
                 switch (_jsEngineType)
                 {
                     case JavaScriptEngineType.Jint:
@@ -105,7 +107,14 @@ namespace Raven.Server.Documents.Indexes.Static
                                 }
 
                                 jsRes = MapFunc.StaticCall(jsItem);
-                                jsRes.ThrowOnError();
+                                if (_index._lastException != null)
+                                {
+                                    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
+                                }
+                                else
+                                {
+                                    jsRes.ThrowOnError();
+                                }
                             }
                             catch (JavaScriptException jse)
                             {
@@ -130,6 +139,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             finally
                             {
                                 _engineHandle.ForceGarbageCollection();
+                                _index._lastException = null;
                             }
 
                             using (jsRes)

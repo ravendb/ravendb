@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
@@ -190,6 +191,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 lock (EngineHandle)
                 {
+                    _index._lastException = null;
+
                     switch (EngineHandle.EngineType)
                     {
                         case JavaScriptEngineType.Jint:
@@ -217,7 +220,15 @@ namespace Raven.Server.Documents.Indexes.Static
 #endif
 
                                 jsRes = Reduce.StaticCall(jsGrouping);
-                                jsRes.ThrowOnError();
+                                if (_index._lastException != null)
+                                {
+                                    ExceptionDispatchInfo.Capture(_index._lastException).Throw();
+                                }
+                                else
+                                {
+                                    jsRes.ThrowOnError();
+                                }
+                                
                                 if (jsRes.IsObject == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}",
                                         new Exception($"Reduce result is not object: {jsRes.ToString()}"));
@@ -247,6 +258,7 @@ namespace Raven.Server.Documents.Indexes.Static
             finally
             {
                 _groupedItems.Clear();
+                _index._lastException = null;
             }
         }
 

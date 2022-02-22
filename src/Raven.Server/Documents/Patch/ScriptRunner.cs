@@ -6,6 +6,7 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -326,11 +327,11 @@ namespace Raven.Server.Documents.Patch
                     }
                     
                     ScriptEngineHandle.SetGlobalClrCallBack("getMetadata",
-                        (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, JsUtilsV8 != null ? JsUtilsV8.GetMetadata : DummyJsCallbackV8));
+                        (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, GetMetadataV8));
                     ScriptEngineHandle.SetGlobalClrCallBack("metadataFor",
-                        (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, JsUtilsV8 != null ? JsUtilsV8.GetMetadata : DummyJsCallbackV8));
+                        (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, GetMetadataV8));
                     ScriptEngineHandle.SetGlobalClrCallBack("id",
-                        (JsUtilsJint != null ? JsUtilsJint.GetDocumentId : DummyJsCallbackJint, JsUtilsV8 != null ? JsUtilsV8.GetDocumentId : DummyJsCallbackV8));
+                        (JsUtilsJint != null ? JsUtilsJint.GetDocumentId : DummyJsCallbackJint, GetDocumentIdV8));
 
                     ScriptEngineHandle.SetGlobalClrCallBack("output", (OutputDebugJint, OutputDebugV8));
 
@@ -524,6 +525,7 @@ namespace Raven.Server.Documents.Patch
                 lock (ScriptEngineHandle)
                 {
                     SetContext();
+                    _lastException = null;
                     
                     _docsCtx = docCtx;
                     _jsonCtx = jsonCtx ?? ThrowArgumentNull();
@@ -558,7 +560,17 @@ namespace Raven.Server.Documents.Patch
                             
                             using (var jsRes = jsMethod.StaticCall(_args))
                             {
-                                jsRes.ThrowOnError();
+                                if (jsRes.IsError)
+                                {
+                                    if (_lastException != null)
+                                    {
+                                        ExceptionDispatchInfo.Capture(_lastException).Throw();
+                                    }
+                                    else
+                                    {
+                                        jsRes.ThrowOnError();
+                                    }
+                                }
 #if DEBUG
                                 var resStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes).AsString;
 #endif
@@ -577,25 +589,6 @@ namespace Raven.Server.Documents.Patch
                         //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                         JsUtilsV8.Clear();
                         throw CreateFullError(e);
-
-                        // the original exception from  could be deserialized here and thrown unwrapped of JavaScriptException
-                        /*
-                        var message = e.Message;
-                        var serializedException = "Serialized exception";
-                        var posSerializedException = message.IndexOf(serializedException);
-                        if (posSerializedException >= 0)
-                        {
-                            var posStartBuffer = posSerializedException + serializedException.Length;
-                            byte[] byteArray = Encoding.ASCII.GetBytes( message.Substring(posStartBuffer, message.Length - posStartBuffer) );
-                            var stream = new MemoryStream( byteArray );
-                            IFormatter formatter = new BinaryFormatter();
-                            var eInternal = (Exception)formatter.Deserialize(stream);
-                            throw eInternal;
-                        }
-                        else
-                        {
-                            throw CreateFullError(e);
-                        }*/
                     }
                     catch (Exception)
                     {
@@ -611,6 +604,7 @@ namespace Raven.Server.Documents.Patch
                         _docsCtx = null;
                         _jsonCtx = null;
                         _token = default;
+                        _lastException = null;
                     }
                 }
             }
