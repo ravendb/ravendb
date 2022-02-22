@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
@@ -18,6 +19,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         internal GetIndexPerformanceStatisticsOperation(int? shard)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _shard = shard;
         }
 
@@ -28,6 +30,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         internal GetIndexPerformanceStatisticsOperation(string[] indexNames, int shard)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _indexNames = indexNames ?? throw new ArgumentNullException(nameof(indexNames));
             _shard = shard;
         }

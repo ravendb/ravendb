@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
@@ -316,41 +317,33 @@ namespace Raven.Client.ServerWide
         {
             if (IsSharded)
             {
-                foreach (var shard in Shards)
-                {
-                    //TODO: rolling index deployment for Sharding
-                }
+                //https://issues.hibernatingrhinos.com/issue/RavenDB-17763
+                throw new NotImplementedException();
             }
-            else
+
+            RollingIndexes ??= new Dictionary<string, RollingIndex>();
+
+            var rollingIndex = new RollingIndex();
+            RollingIndexes[indexName] = rollingIndex;
+
+            var chosenNode = ChooseFirstNode();
+
+            foreach (var node in Topology.AllNodes)
             {
-                RollingIndexes ??= new Dictionary<string, RollingIndex>();
+                var deployment = new RollingIndexDeployment { CreatedAt = createdAt };
 
-                var rollingIndex = new RollingIndex();
-                RollingIndexes[indexName] = rollingIndex;
-
-                var chosenNode = ChooseFirstNode();
-
-                foreach (var node in Topology.AllNodes)
+                if (node.Equals(chosenNode))
                 {
-                    var deployment = new RollingIndexDeployment
-                    {
-                        CreatedAt = createdAt
-                    };
-
-                    if (node.Equals(chosenNode))
-                    {
-                        deployment.State = RollingIndexState.Running;
-                        deployment.StartedAt = createdAt;
-                    }
-                    else
-                    {
-                        deployment.State = RollingIndexState.Pending;
-                    }
-
-                    rollingIndex.ActiveDeployments[node] = deployment;
+                    deployment.State = RollingIndexState.Running;
+                    deployment.StartedAt = createdAt;
                 }
+                else
+                {
+                    deployment.State = RollingIndexState.Pending;
+                }
+
+                rollingIndex.ActiveDeployments[node] = deployment;
             }
-            
         }
 
         private string ChooseFirstNode()

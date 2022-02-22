@@ -3,6 +3,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -18,11 +19,13 @@ namespace Raven.Client.Documents.Operations
 
         internal GetStatisticsOperation(int shard)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _shard = shard;
         }
 
         internal GetStatisticsOperation(string debugTag, string nodeTag = null, int? shard = null)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _debugTag = debugTag;
             _nodeTag = nodeTag;
             _shard = shard;

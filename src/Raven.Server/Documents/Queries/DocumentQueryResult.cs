@@ -65,7 +65,8 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override Dictionary<string, Document>  GetRevisionIncludesByChangeVector() => _revisionsChangeVectorResults;
-        public Dictionary<string, Dictionary<DateTime, Document>>  GetRevisionIncludesIdByDateTime() => _revisionsDateTimeBeforeResults;
+
+        public override Dictionary<string, Dictionary<DateTime, Document>>  GetRevisionIncludesIdByDateTime() => _revisionsDateTimeBeforeResults;
 
         public override ValueTask AddResultAsync(Document result, CancellationToken token)
         {

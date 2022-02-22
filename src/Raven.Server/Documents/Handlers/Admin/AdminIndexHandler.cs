@@ -20,7 +20,6 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -36,35 +35,21 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return;
             }
 
-            await PutInternal(new PutIndexParameters
-            {
-                RequestHandler = this,
-                ContextPool = Database.ServerStore.ContextPool,
-                DatabaseName = Database.Name,
-                ValidatedAsAdmin = true,
-                PutIndexTask = PutIndexTask
-            });
+            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: true, Database.ServerStore.ContextPool, Database.Name, PutIndexTask));
         }
 
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
-            await PutInternal(new PutIndexParameters
-            {
-                RequestHandler = this,
-                ContextPool = Database.ServerStore.ContextPool,
-                DatabaseName = Database.Name,
-                ValidatedAsAdmin = false,
-                PutIndexTask = PutIndexTask
-            });
+            await PutInternal(new PutIndexParameters(this, validatedAsAdmin: false, Database.ServerStore.ContextPool, Database.Name, PutIndexTask));
         }
 
-        private async Task<long> PutIndexTask(IndexDefinition indexDefinition, string raftRequestId, string source = null)
+        private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
         {
-            return await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+            return await Database.IndexStore.CreateIndexInternal(args.IndexDefinition, $"{args.RaftRequestId}/{args.IndexDefinition.Name}", args.Source);
         }
 
-        public static async Task PutInternal(PutIndexParameters parameters)
+        internal static async Task PutInternal(PutIndexParameters parameters)
         {
             using (parameters.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -108,7 +93,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await parameters.PutIndexTask(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                    var index = await parameters.PutIndexTask((indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source));
                     raftIndexIds.Add(index);
 
                     createdIndexes.Add(new PutIndexResult
@@ -122,7 +107,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     parameters.RequestHandler.AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
 
                 if (parameters.WaitForIndexNotification != null)
-                    await parameters.WaitForIndexNotification(context, raftIndexIds);
+                    await parameters.WaitForIndexNotification((context, raftIndexIds));
 
                 parameters.RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -133,19 +118,31 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        public class PutIndexParameters
+        internal class PutIndexParameters
         {
-            public TransactionContextPool ContextPool { get; set; }
+            public PutIndexParameters(RequestHandler requestHandler, bool validatedAsAdmin, TransactionContextPool contextPool, 
+                string databaseName, Func<(IndexDefinition IndexDefinition, string RaftRequestId, string Source), Task<long>> putIndexTask,
+                Func<(JsonOperationContext Context, List<long> RaftIndexIds), Task> waitForIndexNotification = null)
+            {
+                RequestHandler = requestHandler;
+                ValidatedAsAdmin = validatedAsAdmin;
+                ContextPool = contextPool;
+                DatabaseName = databaseName;
+                PutIndexTask = putIndexTask;
+                WaitForIndexNotification = waitForIndexNotification;
+            }
 
-            public bool ValidatedAsAdmin { get; set; }
+            public RequestHandler RequestHandler { get; }
 
-            public RequestHandler RequestHandler { get; set; }
+            public bool ValidatedAsAdmin { get; }
 
-            public string DatabaseName { get; set; }
+            public TransactionContextPool ContextPool { get; }
 
-            public Func<IndexDefinition, string, string, Task<long>> PutIndexTask { get; set; }
+            public string DatabaseName { get; }
 
-            public Func<JsonOperationContext, List<long>, Task> WaitForIndexNotification { get; set; }
+            public Func<(IndexDefinition IndexDefinition, string RaftRequestId, string Source), Task<long>> PutIndexTask { get; }
+
+            public Func<(JsonOperationContext, List<long>), Task> WaitForIndexNotification { get; }
         }
 
         private async Task HandleLegacyIndexesAsync()

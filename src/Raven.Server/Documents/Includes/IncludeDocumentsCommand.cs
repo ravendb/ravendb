@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Includes
             }
         }
 
-        public void Fill(List<Document> result, bool queryReturnMissingIncludeAsNull)
+        public void Fill(List<Document> result, bool includeMissingAsNull)
         {
             if (_includedIds == null || _includedIds.Count == 0)
                 return;
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Includes
                 try
                 {
                     includedDoc = _storage.Get(_context, includedDocId);
-                    if (includedDoc == null && queryReturnMissingIncludeAsNull == false)
+                    if (includedDoc == null && includeMissingAsNull == false)
                         continue;
                 }
                 catch (DocumentConflictException e)

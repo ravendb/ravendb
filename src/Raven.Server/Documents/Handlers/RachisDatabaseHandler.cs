@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class RachisDatabaseHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/wait-for-raft-commands", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/rachis/wait-for-raft-commands", "POST", AuthorizationStatus.Operator)]
         public async Task WaitForRaftCommands()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

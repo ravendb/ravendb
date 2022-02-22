@@ -9,7 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
@@ -44,10 +44,6 @@ namespace Raven.Server.Documents.Sharding
         public DatabaseRecord DatabaseRecord => _record;
 
         public int[] FullRange;
-
-        private ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
-
-        private readonly ConcurrentDictionary<string, AbstractStaticIndexBase> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
 
         public ShardedContext(ServerStore serverStore, DatabaseRecord record)
         {
@@ -224,7 +220,7 @@ namespace Raven.Server.Documents.Sharding
             //TODO: cache the compiled JavaScript indexes
             return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false 
                 ? null 
-                : IndexCompilationCache.GetIndexInstance(indexDefinition, _ravenConfiguration, IndexDefinitionBase.IndexVersion.CurrentVersion);
+                : IndexCompilationCache.GetIndexInstance(indexDefinition, _ravenConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
         public bool TryGetAutoIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)

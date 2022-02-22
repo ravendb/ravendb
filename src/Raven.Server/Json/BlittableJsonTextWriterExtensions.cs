@@ -577,19 +577,17 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
 
-            /*TODO:
-             var revisionByCv = result.GetRevisionIncludesByChangeVector();
+            var revisionByCv = result.GetRevisionIncludesByChangeVector();
             var revisionByDateTime = result.GetRevisionIncludesIdByDateTime();
             if (revisionByCv != null || revisionByDateTime != null)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RevisionIncludes));
                 writer.WriteStartArray();
-                await writer.WriteRevisionIncludes(context:context, revisionsByChangeVector: revisionByCv, revisionsByDateTime: revisionByDateTime, token: token); 
+                await writer.WriteRevisionIncludes(context: context, revisionsByChangeVector: revisionByCv, revisionsByDateTime: revisionByDateTime, token: token);
                 writer.WriteEndArray();
-            }*/
+            }
 
-            
             var counters = result.GetCounterIncludes();
             if (counters != null)
             {

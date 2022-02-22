@@ -100,6 +100,11 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime()
+        {
+            throw new NotSupportedException();
+        }
+
         public override async ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
         {
             StartResponseIfNeeded();

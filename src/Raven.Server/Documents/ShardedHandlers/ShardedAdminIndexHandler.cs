@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -20,44 +21,32 @@ namespace Raven.Server.Documents.ShardedHandlers
                 throw new NotSupportedException("Legacy replication of indexes isn't supported in a sharded environment");
             }
 
-            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters
-            {
-                RequestHandler = this,
-                ContextPool = ContextPool,
-                DatabaseName = ShardedContext.DatabaseName,
-                ValidatedAsAdmin = true,
-                PutIndexTask = PutIndexTask,
-                WaitForIndexNotification = WaitForExecutionOfDatabaseCommands
-            });
+            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true, 
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfDatabaseCommands(args.Context, args.RaftIndexIds)));
         }
 
         [RavenShardedAction("/databases/*/indexes", "PUT")]
         public async Task PutJavaScript()
         {
-            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters
-            {
-                RequestHandler = this,
-                ContextPool = ContextPool,
-                DatabaseName = ShardedContext.DatabaseName,
-                ValidatedAsAdmin = false,
-                PutIndexTask = PutIndexTask,
-                WaitForIndexNotification = WaitForExecutionOfDatabaseCommands
-            });
+            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfDatabaseCommands(args.Context, args.RaftIndexIds)));
         }
 
-        private async Task<long> PutIndexTask(IndexDefinition indexDefinition, string raftRequestId, string source = null)
+        private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
         {
-            if (indexDefinition == null)
-                throw new ArgumentNullException(nameof(indexDefinition));
+            if (args.IndexDefinition == null)
+                throw new ArgumentNullException(nameof(args.IndexDefinition));
 
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+                "Validate the index definition and take the configuration from the database record");
             //TODO: ValidateStaticIndex(definition);
 
             var command = new PutIndexCommand(
-                indexDefinition,
+                args.IndexDefinition,
                 ShardedContext.DatabaseName,
-                source,
+                args.Source,
                 ServerStore.Server.Time.GetUtcNow(),
-                raftRequestId,
+                args.RaftRequestId,
                 10,//TODO: _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
                 IndexDeploymentMode.Parallel//TODO: _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
             );
@@ -69,7 +58,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
             catch (Exception e)
             {
-                IndexStore.ThrowIndexCreationException("static", indexDefinition.Name, e, "the cluster is probably down", ServerStore);
+                IndexStore.ThrowIndexCreationException("static", args.IndexDefinition.Name, e, "the cluster is probably down", ServerStore);
             }
 
             return index;
