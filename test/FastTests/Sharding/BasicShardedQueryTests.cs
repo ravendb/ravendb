@@ -199,6 +199,39 @@ namespace FastTests.Sharding
         }
 
         [Fact]
+        public void Simple_Projection_With_Order_By_AlphaNumeric()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                store.ExecuteIndex(new UserMapIndex());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "a1", Age = 1 }, "users/1");
+                    session.Store(new User { Name = "a2", Age = 2 }, "users/2");
+                    session.Store(new User { Name = "a10", Age = 3 }, "users/3");
+                    session.SaveChanges();
+
+                    WaitForIndexing(store, sharded: true);
+
+                    var queryResult = session.Query<UserMapIndex.Result, UserMapIndex>()
+                        .OrderBy(x => x.Name, OrderingType.AlphaNumeric)
+                        .As<User>()
+                        .Select(x => new
+                        {
+                            x.Age
+                        })
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+                    Assert.Equal(1, queryResult[0].Age);
+                    Assert.Equal(2, queryResult[1].Age);
+                    Assert.Equal(3, queryResult[2].Age);
+                }
+            }
+        }
+
+        [Fact]
         public void Simple_Projection_With_Order_By_And_Raw_Query()
         {
             using (var store = GetShardedDocumentStore())
@@ -367,20 +400,6 @@ select {{
                     Assert.Equal(4, queryResult2[1].NewCount);
                 }
             }
-        }
-
-        private class AutoMapReduceResult
-        {
-            public string Company { get; set; }
-
-            public int Count { get; set; }
-        }
-
-        private class AutoMapReduceResult2
-        {
-            public string NewCompanyName { get; set; }
-
-            public int NewCount { get; set; }
         }
 
         [Fact]
@@ -795,6 +814,20 @@ select project(o)")
                 //TODO: remove when we have the fields from the index
                 StoreAllFields(FieldStorage.Yes);
             }
+        }
+
+        private class AutoMapReduceResult
+        {
+            public string Company { get; set; }
+
+            public int Count { get; set; }
+        }
+
+        private class AutoMapReduceResult2
+        {
+            public string NewCompanyName { get; set; }
+
+            public int NewCount { get; set; }
         }
     }
 }
