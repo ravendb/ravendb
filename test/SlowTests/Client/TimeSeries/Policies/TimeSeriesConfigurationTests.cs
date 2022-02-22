@@ -14,7 +14,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -1321,7 +1320,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
             }
         }
 
@@ -1449,7 +1448,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                         ModifyDatabaseName = _ => store.Database
                     }))
                     {
-                        await QueryFromMultipleTimeSeries.VerifyPolicyExecution(nodeStore, config.Collections["Users"], 12);
+                        await TimeSeries.VerifyPolicyExecution(nodeStore, config.Collections["Users"], 12);
                     }
                 }
             }

@@ -92,7 +92,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -174,7 +174,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -253,7 +253,7 @@ select timeseries(
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -410,7 +410,7 @@ select out(u)
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -579,7 +579,7 @@ select out(u)
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
             
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -792,7 +792,7 @@ select out()
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 var raw = GetSum(store, now);
                 Assert.Equal(noPolicy, raw);
@@ -801,7 +801,7 @@ select out()
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 var rawAndRoll = GetSum(store, now);
                 Assert.Equal(raw, rawAndRoll);
@@ -860,7 +860,7 @@ select out()
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 var raw = GetSum(store, now);
                 Assert.Equal(noPolicy, raw);
@@ -868,7 +868,7 @@ select out()
                 config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 var rawAndRoll = GetSum(store, now);
                 Assert.Equal(raw, rawAndRoll);
@@ -1015,7 +1015,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -1103,7 +1103,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -1181,7 +1181,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -1258,7 +1258,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -1372,7 +1372,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
 
                 using (var session = store.OpenSession())
@@ -1460,7 +1460,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
 
                 using (var session = store.OpenSession())
                 {
@@ -1547,7 +1547,7 @@ select out()
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
                 var raw = GetSum(store, now);
                 Assert.Equal(noPolicy, raw);
 
@@ -1555,7 +1555,7 @@ select out()
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"],12);
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"],12);
 
                 var rawAndRoll = GetSum(store, now);
                 Assert.Equal(raw, rawAndRoll);
