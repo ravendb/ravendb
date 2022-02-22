@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client;
@@ -16,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
-    public unsafe class ShardedContext
+    public unsafe partial class ShardedContext
     {
         public const int NumberOfShards = 1024 * 1024;
 
@@ -52,6 +51,7 @@ namespace Raven.Server.Documents.Sharding
 
             FullRange = Enumerable.Range(0, _record.Shards.Length).ToArray();
             _shardExecutor = new ShardExecutor(this);
+            Streaming = new ShardedStreaming(this);
         }
 
         public void UpdateDatabaseRecord(DatabaseRecord record)

@@ -6,20 +6,15 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Server;
-using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers
@@ -59,8 +54,8 @@ namespace Raven.Server.Documents.ShardedHandlers
             var qToken = GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var token = ContinuationToken.FromBase64<ShardedDocumentsPagingContinuation>(context, qToken) ?? 
-                            new ShardedDocumentsPagingContinuation(ShardedContext, GetStart(), GetPageSize());
+                var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ?? 
+                            new ShardedPagingContinuation(ShardedContext, GetStart(), GetPageSize());
 
                 var op = new ShardedCollectionDocumentsOperation(token);
                 var results = (ExtendedStreamResult)(await ShardExecutor.ExecuteParallelForAllAsync(op));
@@ -85,98 +80,34 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        public async IAsyncEnumerable<Document> GetDocuments(ExtendedStreamResult documents, ShardedDocumentsPagingContinuation pagingContinuation, [EnumeratorCancellation] CancellationToken token)
+        public async IAsyncEnumerable<Document> GetDocuments(ExtendedStreamResult documents, ShardedPagingContinuation pagingContinuation, [EnumeratorCancellation] CancellationToken token)
         {
-            var pageSize = pagingContinuation.PageSize;
-            using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+            await foreach (var result in ShardedContext.Streaming.PagedShardedStream(documents, BlittableToStreamDocument, StreamDocumentByLastModifiedComparer.Instance,
+                               pagingContinuation, token))
             {
-                await using (var merged = new MergedAsyncEnumerator<Document>(StreamDocumentByLastModifiedComparer.Instance))
-                {
-                    for (int i = 0; i < documents.Results.Span.Length; i++)
-                    {
-                        var contextPool = ShardedContext.RequestExecutors[i].ContextPool;
-                        var it = new StreamOperation.YieldStreamResults(contextPool, response: documents.Results.Span[i], isQueryStream: false,
-                            isTimeSeriesStream: false, isAsync: true, streamQueryStatistics: null);
-                        await it.InitializeAsync();
-                        await merged.AddAsyncEnumerator(new YieldDocuments(it, token));
-                    }
-
-                    while (await merged.MoveNextAsync(token))
-                    {
-                        if (pageSize-- <= 0)
-                            yield break;
-
-                        var id = merged.Current.Id;
-                        var shard = ShardedContext.GetShardIndex(context, id);
-                        pagingContinuation.Pages[shard].Start++;
-
-                        yield return merged.Current;
-                    }
-                }
+                yield return result.Item;
             }
         }
 
-        public class ShardedDocumentsPagingContinuation : ContinuationToken
+        private ShardStreamItem<Document> BlittableToStreamDocument(BlittableJsonReaderObject json)
         {
-            public int PageSize;
-            public ShardPaging[] Pages;
-
-            public ShardedDocumentsPagingContinuation()
+            var metadata = json.GetMetadata();
+            metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id);
+            return new ShardStreamItem<Document>
             {
-                
-            }
-
-            public ShardedDocumentsPagingContinuation(ShardedContext shardedContext, int start, int pageSize)
-            {
-                var shards = shardedContext.ShardCount;
-                var startPortion = start / shards;
-                var remaining = start - startPortion * shards;
-
-                Pages = new ShardPaging[shards];
-                
-                for (var index = 0; index < Pages.Length; index++)
+                Item = new Document
                 {
-                    Pages[index].Shard = index;
-                    Pages[index].Start = startPortion;
-                }
-                Pages[0].Start += remaining;
-
-                PageSize = pageSize;
-            }
-
-            public override DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue
-                {
-                    [nameof(Pages)] = new DynamicJsonArray(Pages),
-                    [nameof(PageSize)] = PageSize
-                };
-            }
-
-            public struct ShardPaging : IDynamicJson
-            {
-                public int Shard;
-                public int Start;
-                public DynamicJsonValue ToJson()
-                {
-                    return new DynamicJsonValue
-                    {
-                        [nameof(Start)] = Start,
-                        [nameof(Shard)] = Shard
-                    };
-                }
-            }
-        }
-        public class ExtendedStreamResult : StreamResult
-        {
-            public Memory<StreamResult> Results;
+                    Data = json
+                },
+                Id = id
+            };
         }
 
         private readonly struct ShardedCollectionDocumentsOperation : IShardedOperation<StreamResult>
         {
-            private readonly ShardedDocumentsPagingContinuation _token;
+            private readonly ShardedPagingContinuation _token;
 
-            public ShardedCollectionDocumentsOperation(ShardedDocumentsPagingContinuation token)
+            public ShardedCollectionDocumentsOperation(ShardedPagingContinuation token)
             {
                 _token = token;
             }
@@ -251,38 +182,18 @@ namespace Raven.Server.Documents.ShardedHandlers
 
     }
 
-    public class StreamDocumentByLastModifiedComparer : Comparer<Document>
+    public class StreamDocumentByLastModifiedComparer : Comparer<ShardStreamItem<Document>>
     {
         public static StreamDocumentByLastModifiedComparer Instance = new StreamDocumentByLastModifiedComparer();
-
-        public override int Compare(Document x, Document y)
+        
+        public override int Compare(ShardStreamItem<Document> x, ShardStreamItem<Document> y)
         {
-            var diff = x.LastModified.Ticks - y.LastModified.Ticks;
+            var diff = x.Item.LastModified.Ticks - y.Item.LastModified.Ticks;
             if (diff > 0)
                 return 1;
             if (diff < 0)
                 return -1;
             return 0;
-        }
-    }
-
-    internal class YieldDocuments : AsyncDocumentSession.AbstractYieldStream<Document>
-    {
-        public YieldDocuments(StreamOperation.YieldStreamResults enumerator, CancellationToken token) : base(enumerator, token)
-        {
-        }
-
-        internal override Document ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
-        {
-            var json = asyncEnumerator.Current;
-            var metadata = json.GetMetadata();
-            metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id);
-
-            return new Document
-            {
-                Data = json,
-                Id = id
-            };
         }
     }
 }
