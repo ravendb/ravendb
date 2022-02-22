@@ -38,6 +38,7 @@
     <Compile Include="..\..\src\Raven.Server\ServerWide\SecretProtection.cs" Link="Server\ServerWide\SecretProtection.cs" />
     <Compile Include="..\..\src\Raven.Server\ServerWide\SodiumSubKeyId.cs" Link="Server\ServerWide\SodiumSubKeyId.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\RavenCli.cs" Link="Server\Utils\Cli\RavenCli.cs" />
+    <Compile Include="..\..\src\Raven.Server\Utils\Features\FeaturesAvailability.cs" Link="Server\Utils\Features\FeaturesAvailability.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\IOExtensions.cs" Link="Server\Utils\IOExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />

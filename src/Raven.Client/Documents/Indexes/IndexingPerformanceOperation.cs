@@ -22,6 +22,8 @@ namespace Raven.Client.Documents.Indexes
         public ReduceRunDetails ReduceDetails { get; set; }
 
         public MapRunDetails MapDetails { get; set; }
+        
+        public CleanupRunDetails CleanupDetails { get; set; }
 
         public LuceneMergeDetails LuceneMergeDetails { get; set; }
 
