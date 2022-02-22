@@ -51,11 +51,12 @@ namespace Raven.Server.Documents.Patch.V8
             private Context? _contextNative;
             public V8Engine Engine;
             public V8EngineEx EngineEx { get { return (V8EngineEx)Engine; } }
-            
-            public ContextEx(V8Engine engine, ObjectTemplate? globalTemplate = null)
+
+            public ContextEx(V8Engine engine, IJavaScriptContext jsContext, ObjectTemplate? globalTemplate = null)
             {
                 _contextNative = engine.CreateContext(globalTemplate);
                 Engine = engine;
+                _jsContext = jsContext;
             }
 
             public void Dispose()
@@ -79,6 +80,9 @@ namespace Raven.Server.Documents.Patch.V8
             public IJavaScriptOptions? JsOptions => _jsOptions;
 
         
+            private IJavaScriptContext _jsContext;
+            public IJavaScriptContext JsContext => _jsContext;
+            
             public void SetBasicConfiguration()
             {
                 //.LocalTimeZone(TimeZoneInfo.Utc);  // TODO -> ??? maybe these V8 args: harmony_intl_locale_info, harmony_intl_more_timezone
@@ -485,15 +489,9 @@ var process = {
         {
         }
 
-        public V8EngineEx(IJavaScriptOptions? jsOptions = null) : base(false, jsConverter: JsConverter.Instance)
+        public ContextEx CreateAndSetContextEx(IJavaScriptOptions jsOptions, IJavaScriptContext jsContext, ObjectTemplate? globalTemplate = null)
         {
-            if (jsOptions != null)
-                CreateAndSetContextEx(jsOptions);
-        }
-
-        public ContextEx CreateAndSetContextEx(IJavaScriptOptions jsOptions, ObjectTemplate? globalTemplate = null)
-        {
-            var contextEx = new ContextEx(this, globalTemplate);
+            var contextEx = new ContextEx(this, jsContext, globalTemplate);
             Context = contextEx;
             contextEx.SetOptions(jsOptions);
             contextEx.InitializeGlobal();

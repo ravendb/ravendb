@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Patch
         private static string GetTypes(JsHandle value) => $"JintType({value.ValueType}) .NETType({value.GetType().Name})";
  
         
-        public partial class SingleRun
+        public partial class SingleRun : IJavaScriptContext
         {
             public IJsEngineHandle ScriptEngineHandle;
             public JavaScriptUtilsBase JsUtilsBase;

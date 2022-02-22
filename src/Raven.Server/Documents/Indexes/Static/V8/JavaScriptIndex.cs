@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
     }
 
-    public abstract partial class AbstractJavaScriptIndex
+    public abstract partial class AbstractJavaScriptIndex : IJavaScriptContext
     {
         public V8EngineEx EngineExV8 => _scriptEngineV8Pooled.Value;
         public V8Engine EngineV8 => _scriptEngineV8Pooled.Value;
@@ -132,20 +132,28 @@ namespace Raven.Server.Documents.Indexes.Static
         public V8EngineEx.ContextEx ContextExV8; 
 
         internal Exception _lastException;
-
+        
+        public Exception LastException
+        {
+            get => _lastException;
+            set
+            {
+                _lastException = value;
+            }
+        }
+        
         protected void InitializeV8()
         {
             var poolOfEngines = V8EngineEx.GetPool(JsOptions);
             _scriptEngineV8Pooled = poolOfEngines.GetValue();
 
-            EngineExV8.CreateAndSetContextEx(JsOptions);
             EngineHandle = EngineExV8;
             _engineForParsing = new JintEngineExForV8();
         }
         
         public void InitializeLockedV8()
         {
-            ContextExV8 = EngineExV8.CreateAndSetContextEx(JsOptions);
+            ContextExV8 = EngineExV8.CreateAndSetContextEx(JsOptions, this);
         }
             
         public void DisposeV8()

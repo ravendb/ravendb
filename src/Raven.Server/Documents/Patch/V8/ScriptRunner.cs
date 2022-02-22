@@ -83,21 +83,29 @@ namespace Raven.Server.Documents.Patch
             private V8EngineEx.ContextEx _contextExV8; 
 
             private Exception _lastException;
-        
+
+            public Exception LastException
+            {
+                get => _lastException;
+                set
+                {
+                    _lastException = value;
+                }
+            }
+
             public void InitializeV8()
             {
                 var poolOfEngines = V8EngineEx.GetPool(_jsOptions);
                 _scriptEngineV8Pooled = poolOfEngines.GetValue();
-                var scriptEngineExV8 = ScriptEngineExV8;
-                ScriptEngineHandle = scriptEngineExV8;
+                ScriptEngineHandle = ScriptEngineExV8;
 
-                JsUtilsV8 = new JavaScriptUtilsV8(_runnerBase, scriptEngineExV8);
+                JsUtilsV8 = new JavaScriptUtilsV8(_runnerBase, ScriptEngineExV8);
                 JsUtilsBase = JsUtilsV8;
             }
             
             public void InitializeLockedV8()
             {
-                _contextExV8 = ScriptEngineExV8.CreateAndSetContextEx(_jsOptions);
+                _contextExV8 = ScriptEngineExV8.CreateAndSetContextEx(_jsOptions, this);
             }
             
             private void SetContextV8()
