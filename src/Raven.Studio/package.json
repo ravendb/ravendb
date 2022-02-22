@@ -4,7 +4,8 @@
   "scripts": {
     "gulp": "gulp",
     "compile": "npm run gulp compile",
-    "restore": "npm run gulp restore"
+    "restore": "npm run gulp restore",
+    "restore_compile": "npm run gulp restore_compile"
   },
   "private": true,
   "devDependencies": {
