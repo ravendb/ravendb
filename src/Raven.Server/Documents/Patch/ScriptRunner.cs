@@ -3,8 +3,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using System.Threading;
 using Amazon.SimpleNotificationService.Model;
 using Jint;
@@ -573,6 +577,25 @@ namespace Raven.Server.Documents.Patch
                         //ScriptRunnerResult is in charge of disposing of the disposable but it is not created (the clones did)
                         JsUtilsV8.Clear();
                         throw CreateFullError(e);
+
+                        // the original exception from  could be deserialized here and thrown unwrapped of JavaScriptException
+                        /*
+                        var message = e.Message;
+                        var serializedException = "Serialized exception";
+                        var posSerializedException = message.IndexOf(serializedException);
+                        if (posSerializedException >= 0)
+                        {
+                            var posStartBuffer = posSerializedException + serializedException.Length;
+                            byte[] byteArray = Encoding.ASCII.GetBytes( message.Substring(posStartBuffer, message.Length - posStartBuffer) );
+                            var stream = new MemoryStream( byteArray );
+                            IFormatter formatter = new BinaryFormatter();
+                            var eInternal = (Exception)formatter.Deserialize(stream);
+                            throw eInternal;
+                        }
+                        else
+                        {
+                            throw CreateFullError(e);
+                        }*/
                     }
                     catch (Exception)
                     {

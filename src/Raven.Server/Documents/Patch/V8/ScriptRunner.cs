@@ -3,8 +3,11 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using Jint.Native;
 using V8.Net;
@@ -960,7 +963,16 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (Exception e) 
                 {
-                    return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                    return engine.CreateError(e.Message, JSValueType.ExecutionError);
+                    // the original exception could be serialized here in order to be restored in ScriptRunner/Index and thrown unwrapped of JavaScriptException 
+                    /*
+                    var stream = new MemoryStream();
+                    IFormatter formatter = new BinaryFormatter();
+                    formatter.Serialize(stream, e);
+                    stream.Close();
+                    StreamReader reader = new StreamReader(stream);
+                    return engine.CreateError("Serialized exception:" + reader.ReadToEnd(), JSValueType.ExecutionError);
+                    */
                 }
             }
 
