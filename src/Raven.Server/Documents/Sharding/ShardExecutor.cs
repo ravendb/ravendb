@@ -21,16 +21,23 @@ namespace Raven.Server.Documents.Sharding
         public Task<TResult> ExecuteOneByOneForAllAsync<TResult>(IShardedOperation<TResult> operation)
             => ExecuteForShardsAsync<OneByOneExecution, ThrowOnFailure, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
 
+        public Task<TCombinedResult> ExecuteParallelForAllAsync<TResult, TCombinedResult>(IShardedOperation<TResult, TCombinedResult> operation)
+            => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult, TCombinedResult>(new Memory<int>(_shardedContext.FullRange), operation);
+
         public Task<TResult> ExecuteParallelForAllAsync<TResult>(IShardedOperation<TResult> operation)
             => ExecuteForShardsAsync<ParallelExecution, ThrowOnFailure, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
-
 
         public Task<TResult> ExecuteForAllAsync<TExecutionMode, TFailureMode, TResult>(IShardedOperation<TResult> operation)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
             => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(new Memory<int>(_shardedContext.FullRange), operation);
 
-        public async Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult> operation)
+        public Task<TResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult>(Memory<int> shards, IShardedOperation<TResult, TResult> operation)
+            where TExecutionMode : struct, IExecutionMode
+            where TFailureMode : struct, IFailureMode
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation);
+
+        public async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards, IShardedOperation<TResult, TCombinedResult> operation)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
         {
@@ -93,13 +100,13 @@ namespace Raven.Server.Documents.Sharding
                     }
 
                     var result = operation.Combine(new Memory<TResult>(resultsArray, 0, position));
-                    if (typeof(TResult) == typeof(BlittableJsonReaderObject))
+                    if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
                     {
                         if (result == null)
                             return default;
 
                         var blittable = result as BlittableJsonReaderObject;
-                        return (TResult)(object)blittable.Clone(operation.CreateOperationContext());
+                        return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
                     }
                     return result;
                 }

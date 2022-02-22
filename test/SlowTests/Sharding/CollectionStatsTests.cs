@@ -82,13 +82,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        public class CollectionResult
-        {
-            public List<object> Results;
-            public string ContinuationToken;
-        }
-
-        private class GetCollectionOperation : IMaintenanceOperation<CollectionResult>
+        private class GetCollectionOperation : IMaintenanceOperation<ShardedCollectionHandler.CollectionResult>
         {
             private readonly string _continuation;
             private readonly int? _start;
@@ -111,12 +105,12 @@ namespace SlowTests.Sharding
                 _continuation = continuation;
             }
 
-            public RavenCommand<CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            public RavenCommand<ShardedCollectionHandler.CollectionResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
                 return new GetCollectionCommand(_start, _pageSize, _continuation);
             }
 
-            internal class GetCollectionCommand : RavenCommand<CollectionResult>
+            internal class GetCollectionCommand : RavenCommand<ShardedCollectionHandler.CollectionResult>
             {
                 private readonly string _continuation;
                 private readonly int? _start;
@@ -153,7 +147,7 @@ namespace SlowTests.Sharding
                     if (response == null)
                         ThrowInvalidResponse();
 
-                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<CollectionResult>(response);
+                    Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ShardedCollectionHandler.CollectionResult>(response);
                 }
             }
         }
