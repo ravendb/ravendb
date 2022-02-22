@@ -1248,6 +1248,16 @@ class indexPerformance extends viewModelBase {
                     luceneMergeDetails += `<div class="tooltip-li">Merged documents: <div class="value">${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}</div></div>`;
                 tooltipHtml += luceneMergeDetails;
             }
+            
+            if (element.CleanupDetails) {
+                let cleanupDetails : string;
+                cleanupDetails = `<div class="tooltip-header">Cleanup details</div>`;
+                if (element.CleanupDetails.BatchCompleteReason) {
+                    cleanupDetails += `<div class="tooltip-li">Batch complete reason: <div class="value">${element.CleanupDetails.BatchCompleteReason}</div></div>`;
+                }
+                cleanupDetails += `<div class="tooltip-li">Delete successes: <div class="value">${element.CleanupDetails.DeleteSuccesses.toLocaleString()}</div></div>`;
+                tooltipHtml += cleanupDetails;
+            }
 
             if (element.MapDetails) {
                 let mapDetails: string;
@@ -1270,6 +1280,7 @@ class indexPerformance extends viewModelBase {
                 referenceDetails += `<div class="tooltip-li">Currently allocated: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.CurrentlyAllocated)} </div></div>`;
                 referenceDetails += `<div class="tooltip-li">Process private memory: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.ProcessPrivateMemory)}</div></div>`;
                 referenceDetails += `<div class="tooltip-li">Process working set: <div class="value">${generalUtils.formatBytesToSize(element.ReferenceDetails.ProcessWorkingSet)}</div></div>`;
+                referenceDetails += `<div class="tooltip-li">Batch complete reason: <div class="value">${element.ReferenceDetails.BatchCompleteReason}</div></div>`;
                 tooltipHtml += referenceDetails;
             }
 

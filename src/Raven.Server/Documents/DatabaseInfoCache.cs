@@ -110,7 +110,7 @@ namespace Raven.Server.Documents
         /// </summary>
         /// <param name="ctx">A context allocated outside the method with an open write transaction</param>
         /// <param name="databaseName">The database name as a slice</param>
-        public void DeleteInternal(TransactionOperationContext ctx, Slice databaseName)
+        private void DeleteInternal(TransactionOperationContext ctx, Slice databaseName)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Deleting database info for '{databaseName}'.");
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents
         public void Delete(string databaseName)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var tx = ctx.OpenWriteTransaction())
+            using (var tx = ctx.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
             using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out Slice key))
             {
                 DeleteInternal(ctx, key);

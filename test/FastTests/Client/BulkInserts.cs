@@ -26,8 +26,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [InlineData(false)]
-        public async Task Simple_Bulk_Insert(bool useSsl)
+        [InlineData(false, false)]
+        public async Task Simple_Bulk_Insert(bool useSsl, bool disableHttpConnectionClose)
         {
             string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
@@ -42,6 +42,9 @@ namespace FastTests.Client
                 });
 
                 Server.ForTestingPurposesOnly().PrintExceptionDuringBulkInsertProcessingToConsole = true;
+
+                if (disableHttpConnectionClose)
+                    Server.ForTestingPurposesOnly().DisableHttpConnectionCloseDuringBulkInsertProcessing = true;
             }
 
             using (var store = GetDocumentStore(new Options
