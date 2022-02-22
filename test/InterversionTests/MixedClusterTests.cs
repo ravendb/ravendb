@@ -436,15 +436,16 @@ namespace InterversionTests
         [Fact]
         public async Task SingleSubscriptionMixedClusterEnsureAcknowledgeFallsBackToV52Behavior_RavenDB_17764()
         {
-            var proccess526List = await CreateCluster(new string[] {"5.2.6", "5.2.6"});
+            var proccess526List = await CreateCluster(new string[] { "5.2.6", "5.2.6" });
             await UpgradeServerAsync("current", proccess526List[0]);
 
             using (var store53 = await GetStore(proccess526List[0].Url, proccess526List[0].Process, null,
-                       new InterversionTestOptions() {ReplicationFactor = 2, CreateDatabase = true}))
+                       new InterversionTestOptions() { ReplicationFactor = 2, CreateDatabase = true }))
             {
                 var subscriptionId = await store53.Subscriptions.CreateAsync<User>(new SubscriptionCreationOptions<User>()
                 {
-                    MentorNode = "A", Name = Guid.NewGuid().ToString()
+                    MentorNode = "A",
+                    Name = Guid.NewGuid().ToString()
                 });
 
                 using (var session = store53.OpenAsyncSession(store53.Database))
@@ -454,13 +455,14 @@ namespace InterversionTests
                 }
 
                 await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
-                             {
-                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3), MaxDocsPerBatch = 1,
-                             }))
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
+                    MaxDocsPerBatch = 1,
+                }))
                 {
                     try
                     {
-                        await worker.Run(async x =>
+                        await worker.Run(x =>
                         {
                             if (x.Items[0].Id == "users/1")
                             {
@@ -481,14 +483,15 @@ namespace InterversionTests
                 }
 
                 await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
-                             {
-                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3), MaxDocsPerBatch = 1,
-                             }))
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
+                    MaxDocsPerBatch = 1,
+                }))
                 {
                     AsyncManualResetEvent amre = new();
                     var users1Resent = false;
-                    
-                    worker.Run(async x =>
+
+                    _ = worker.Run(x =>
                     {
                         if (x.Items[0].Id == "users/1")
                         {
@@ -530,10 +533,10 @@ namespace InterversionTests
                 }
 
                 await using (var worker = store53.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)
-                             {
-                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
-                                 MaxDocsPerBatch = 1,
-                             }))
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(3),
+                    MaxDocsPerBatch = 1,
+                }))
                 {
                     var amre = new AsyncManualResetEvent();
                     amre.Set();
@@ -541,7 +544,7 @@ namespace InterversionTests
                     var changeVectorOfFirstDoc = "";
                     var idOf2ndDoc = "";
                     var idOf3rdDoc = "";
-                    
+
                     worker.AfterAcknowledgment += async batch =>
                     {
                         if (batch.Items[0].Id == idOf2ndDoc && filesReceived == 2)
@@ -555,10 +558,10 @@ namespace InterversionTests
                         }
                     };
 
-                    worker.Run(async x =>
+                    _ = worker.Run(async x =>
                     {
                         await amre.WaitAsync(_reasonableWaitTime);
-                        
+
                         filesReceived++;
 
                         if (filesReceived == 1)
@@ -570,9 +573,9 @@ namespace InterversionTests
                             amre.Reset();
                         }
 
-                        if(filesReceived >= 3)
+                        if (filesReceived >= 3)
                             idOf3rdDoc = x.Items[0].Id;
-                        
+
                     });
                     await WaitForValueAsync(() => Task.FromResult(idOf2ndDoc == idOf3rdDoc && string.IsNullOrWhiteSpace(idOf3rdDoc) == false), true);
                 }

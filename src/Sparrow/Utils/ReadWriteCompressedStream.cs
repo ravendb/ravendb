@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Buffers;
 using System.IO;
@@ -102,12 +100,12 @@ namespace Sparrow.Utils
             throw new NotSupportedException();
         }
 
-        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return _input.BeginRead(buffer, offset, count, callback, state);
         }
 
-        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
         {
             return _output.BeginWrite(buffer, offset, count, callback, state);
         }

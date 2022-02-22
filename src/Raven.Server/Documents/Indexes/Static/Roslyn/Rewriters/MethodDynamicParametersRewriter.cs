@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
-            var isPublic = node.Modifiers.Any(x => x.Kind() == SyntaxKind.PublicKeyword);
+            var isPublic = node.Modifiers.Any(x => x.IsKind(SyntaxKind.PublicKeyword));
             if (isPublic == false)
                 return node; //need to only modify public methods 
             
