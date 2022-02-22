@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
-using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
@@ -54,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             if (IsNull(str2))
                 return 1;
 
-            return AlphanumComparer.Instance.Compare(str1, str2);
+            return UnmanagedStringAlphanumComparer.Instance.Compare(str1, str2);
         }
 
         private static bool IsNull(UnmanagedStringArray.UnmanagedString str1)
@@ -75,7 +73,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             if (IsNull(str2))
                 return 1;
 
-            return AlphanumComparer.Instance.Compare(_bottom, str2);
+            return UnmanagedStringAlphanumComparer.Instance.Compare(_bottom, str2);
         }
 
         public override void Copy(int slot, int doc, IState state)
@@ -92,6 +90,137 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public override IComparable this[int slot] => _values[slot];
 
+
+        internal abstract class AbstractAlphanumericComparisonState<T>
+        {
+            public readonly T OriginalString;
+            private readonly int _stringLength;
+            private bool _currentSequenceIsNumber;
+            public int CurrentPositionInString;
+            public char CurrentCharacter;
+            public int NumberLength;
+            public int CurrentSequenceStartPosition;
+            public int StringBufferOffset;
+
+            protected AbstractAlphanumericComparisonState(T originalString, int stringLength)
+            {
+                OriginalString = originalString;
+                _stringLength = stringLength;
+                _currentSequenceIsNumber = false;
+                CurrentPositionInString = 0;
+                CurrentCharacter = (char)0;
+                NumberLength = 0;
+                CurrentSequenceStartPosition = 0;
+                StringBufferOffset = 0;
+            }
+
+            protected abstract int GetStartPosition();
+
+            protected abstract char ReadOneChar(out int bytesUsed);
+
+            protected abstract int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<T> string2State);
+
+            protected abstract int CompareStrings(AbstractAlphanumericComparisonState<T> string2State);
+
+            public int CompareTo(AbstractAlphanumericComparisonState<T> other)
+            {
+                // Walk through two the strings with two markers.
+                while (CurrentPositionInString < _stringLength &&
+                       other.CurrentPositionInString < other._stringLength)
+                {
+                    ScanNextAlphabeticOrNumericSequence();
+                    other.ScanNextAlphabeticOrNumericSequence();
+
+                    var result = CompareSequence(other);
+
+                    if (result != 0)
+                    {
+                        return result;
+                    }
+                }
+
+                if (CurrentPositionInString < _stringLength)
+                    return 1;
+
+                if (other.CurrentPositionInString < other._stringLength)
+                    return -1;
+
+                return 0;
+            }
+
+            private void ScanNextAlphabeticOrNumericSequence()
+            {
+                CurrentSequenceStartPosition = GetStartPosition();
+                CurrentCharacter = ReadOneChar(out var bytesUsed);
+                _currentSequenceIsNumber = char.IsDigit(CurrentCharacter);
+                NumberLength = 0;
+
+                bool currentCharacterIsDigit;
+                var insideZeroPrefix = CurrentCharacter == '0';
+
+                // Walk through all following characters that are digits or
+                // characters in BOTH strings starting at the appropriate marker.
+                // Collect char arrays.
+                do
+                {
+                    if (_currentSequenceIsNumber)
+                    {
+                        if (CurrentCharacter != '0')
+                        {
+                            insideZeroPrefix = false;
+                        }
+
+                        if (insideZeroPrefix == false)
+                        {
+                            NumberLength++;
+                        }
+                    }
+
+                    CurrentPositionInString++;
+                    StringBufferOffset += bytesUsed;
+
+                    if (CurrentPositionInString < _stringLength)
+                    {
+                        CurrentCharacter = ReadOneChar(out bytesUsed);
+                        currentCharacterIsDigit = char.IsDigit(CurrentCharacter);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                } while (currentCharacterIsDigit == _currentSequenceIsNumber);
+
+            }
+
+            private int CompareSequence(AbstractAlphanumericComparisonState<T> other)
+            {
+                // if both sequences are numbers, compare between them
+                if (_currentSequenceIsNumber && other._currentSequenceIsNumber)
+                {
+                    // if effective numbers are not of the same length, it means that we can tell which is greater (in an order of magnitude, actually)
+                    if (NumberLength != other.NumberLength)
+                    {
+                        return NumberLength.CompareTo(other.NumberLength);
+                    }
+
+                    // else, it means they should be compared by string, again, we compare only the effective numbers
+                    return CompareNumbersAsStrings(other);
+                    
+                }
+
+                // if one of the sequences is a number and the other is not, the number is always smaller
+                if (_currentSequenceIsNumber != other._currentSequenceIsNumber)
+                {
+                    if (_currentSequenceIsNumber)
+                        return -1;
+
+                    return 1;
+                }
+
+                return CompareStrings(other);
+            }
+        }
+
         // based on: https://www.dotnetperls.com/alphanumeric-sorting
         internal sealed class StringAlphanumComparer : IComparer<string>
         {
@@ -102,105 +231,39 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
             }
 
-            public struct AlphanumericStringComparisonState
+            private class AlphanumericStringComparisonState : AbstractAlphanumericComparisonState<string>
             {
-                public int CurPositionInString;
-                public char CurCharacter;
-                public readonly string OriginalString;
-                public readonly int StringLength;
-                public bool CurSequenceIsNumber;
-                public int NumberLength;
-                public int CurSequenceStartPosition;
-
-                public AlphanumericStringComparisonState(string originalString)
+                public AlphanumericStringComparisonState(string originalString) : base(originalString, originalString.Length)
                 {
-                    OriginalString = originalString;
-                    StringLength = originalString.Length;
-                    CurSequenceStartPosition = 0;
-                    NumberLength = 0;
-                    CurSequenceIsNumber = false;
-                    CurCharacter = (char)0;
-                    CurPositionInString = 0;
                 }
 
-                public void ScanNextAlphabeticOrNumericSequence()
+                protected override int GetStartPosition()
                 {
-                    CurSequenceStartPosition = CurPositionInString;
-                    CurCharacter = OriginalString[CurPositionInString];
-                    CurSequenceIsNumber = char.IsDigit(CurCharacter);
-                    NumberLength = 0;
-
-                    var curCharacterIsDigit = CurSequenceIsNumber;
-                    var insideZeroPrefix = CurCharacter == '0';
-
-                    // Walk through all following characters that are digits or
-                    // characters in BOTH strings starting at the appropriate marker.
-                    // Collect char arrays.
-                    do
-                    {
-                        if (CurSequenceIsNumber)
-                        {
-                            if (CurCharacter != '0')
-                            {
-                                insideZeroPrefix = false;
-                            }
-
-                            if (insideZeroPrefix == false)
-                            {
-                                NumberLength++;
-                            }
-                        }
-
-                        CurPositionInString++;
-
-                        if (CurPositionInString < StringLength)
-                        {
-                            CurCharacter = OriginalString[CurPositionInString];
-                            curCharacterIsDigit = char.IsDigit(CurCharacter);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    } while (curCharacterIsDigit == CurSequenceIsNumber);
-
+                    return CurrentPositionInString;
                 }
 
-                public int CompareWithAnotherState(AlphanumericStringComparisonState other)
+                protected override char ReadOneChar(out int bytesUsed)
                 {
-                    var string1State = this;
-                    var string2State = other;
+                    bytesUsed = 0; // irrelevant
+                    return OriginalString[CurrentPositionInString];
+                }
 
-                    // if both sequences are numbers, compare between them
-                    if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
-                    {
-                        // if effective numbers are not of the same length, it means that we can tell which is greater (in an order of magnitude, actually)
-                        if (string1State.NumberLength != string2State.NumberLength)
-                        {
-                            return string1State.NumberLength.CompareTo(string2State.NumberLength);
-                        }
-
-                        // else, it means they should be compared by string, again, we compare only the effective numbers
-                        return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
-                            string1State.OriginalString, string1State.CurPositionInString - string1State.NumberLength, string1State.NumberLength,
-                            string2State.OriginalString, string2State.CurPositionInString - string2State.NumberLength, string1State.NumberLength);
-                    }
-
-                    // if one of the sequences is a number and the other is not, the number is always smaller
-                    if (string1State.CurSequenceIsNumber != string2State.CurSequenceIsNumber)
-                    {
-                        if (string1State.CurSequenceIsNumber)
-                            return -1;
-                        return 1;
-                    }
-
+                protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<string> other)
+                {
                     return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
-                    string1State.OriginalString, string1State.CurSequenceStartPosition, string1State.CurPositionInString - string1State.CurSequenceStartPosition,
-                    string2State.OriginalString, string2State.CurSequenceStartPosition, string2State.CurPositionInString - string2State.CurSequenceStartPosition);
+                        OriginalString, CurrentPositionInString - NumberLength, NumberLength,
+                        other.OriginalString, other.CurrentPositionInString - other.NumberLength, other.NumberLength);
+                }
+
+                protected override int CompareStrings(AbstractAlphanumericComparisonState<string> other)
+                {
+                    return System.Globalization.CultureInfo.InvariantCulture.CompareInfo.Compare(
+                        OriginalString, CurrentSequenceStartPosition, CurrentPositionInString - CurrentSequenceStartPosition,
+                        other.OriginalString, other.CurrentSequenceStartPosition, other.CurrentPositionInString - other.CurrentSequenceStartPosition);
                 }
             }
 
-            public unsafe int Compare(string string1, string string2)
+            public int Compare(string string1, string string2)
             {
                 if (string1 == null)
                 {
@@ -215,169 +278,63 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                 var string1State = new AlphanumericStringComparisonState(string1);
                 var string2State = new AlphanumericStringComparisonState(string2);
 
-                // Walk through two the strings with two markers.
-                while (string1State.CurPositionInString < string1State.StringLength &&
-                        string2State.CurPositionInString < string2State.StringLength)
-                {
-                    string1State.ScanNextAlphabeticOrNumericSequence();
-                    string2State.ScanNextAlphabeticOrNumericSequence();
-
-                    var result = string1State.CompareWithAnotherState(string2State);
-
-                    if (result != 0)
-                    {
-                        return result;
-                    }
-                }
-
-                if (string1State.CurPositionInString < string1State.StringLength)
-                    return 1;
-                if (string2State.CurPositionInString < string2State.StringLength)
-                    return -1;
-
-                return 0;
+                return string1State.CompareTo(string2State);
             }
-
         }
 
         // based on: https://www.dotnetperls.com/alphanumeric-sorting
-        internal sealed class AlphanumComparer : IComparer<UnmanagedStringArray.UnmanagedString>
+        internal sealed class UnmanagedStringAlphanumComparer : IComparer<UnmanagedStringArray.UnmanagedString>
         {
-            public static readonly AlphanumComparer Instance = new AlphanumComparer();
+            public static readonly UnmanagedStringAlphanumComparer Instance = new UnmanagedStringAlphanumComparer();
 
-            private AlphanumComparer()
+            private UnmanagedStringAlphanumComparer()
             {
 
             }
 
-            public unsafe struct AlphanumericStringComparisonState
+            private class AlphanumericUnmanagedStringComparisonState : AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString>
             {
-                public int CurPositionInString;
-                public char CurCharacter;
-                public readonly UnmanagedStringArray.UnmanagedString OriginalString;
-                public readonly int StringLength;
-                public bool CurSequenceIsNumber;
-                public int NumberLength;
-                public int CurSequenceStartPosition;
-                public int StringBufferOffset;
-
-                public AlphanumericStringComparisonState(UnmanagedStringArray.UnmanagedString originalString)
-                {
-                    StringLength = Encoding.UTF8.GetCharCount(originalString.StringAsBytes);
-                    OriginalString = originalString;
-                    CurSequenceStartPosition = 0;
-                    NumberLength = 0;
-                    CurSequenceIsNumber = false;
-                    CurCharacter = (char)0;
-                    CurPositionInString = 0;
-                    StringBufferOffset = 0;
-                }
-
-                public void ScanNextAlphabeticOrNumericSequence()
-                {
-                    CurSequenceStartPosition = StringBufferOffset;
-                    var used = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurCharacter);
-                    CurSequenceIsNumber = char.IsDigit(CurCharacter);
-                    NumberLength = 0;
-
-                    var curCharacterIsDigit = CurSequenceIsNumber;
-                    var insideZeroPrefix = CurCharacter == '0';
-
-                    // Walk through all following characters that are digits or
-                    // characters in BOTH strings starting at the appropriate marker.
-                    // Collect char arrays.
-                    do
-                    {
-                        if (CurSequenceIsNumber)
-                        {
-                            if (CurCharacter != '0')
-                            {
-                                insideZeroPrefix = false;
-                            }
-
-                            if (insideZeroPrefix == false)
-                            {
-                                NumberLength++;
-                            }
-                        }
-
-                        CurPositionInString++;
-                        StringBufferOffset += used;
-
-                        if (CurPositionInString < StringLength)
-                        {
-                            used = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurCharacter);
-                            curCharacterIsDigit = char.IsDigit(CurCharacter);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    } while (curCharacterIsDigit == CurSequenceIsNumber);
-
-                }
-
                 [ThreadStatic]
                 private static Decoder Decoder;
 
-                private static int ReadOneChar(Span<byte> str, int offset, ref char ch)
+                public AlphanumericUnmanagedStringComparisonState(UnmanagedStringArray.UnmanagedString originalString)
+                    : base(originalString, Encoding.UTF8.GetCharCount(originalString.StringAsBytes))
                 {
-                    fixed (byte* buffer = str)
-                    fixed (char* c = &ch)
-                    {
-                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
-                        decoder.Convert(buffer + offset, str.Length - offset, c, 1, flush: true, out var bytesUsed,
-                            out var charUsed, out _);
-
-                        if (charUsed != 1)
-                            throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
-
-                        return bytesUsed;
-                    }
                 }
 
-                public int CompareWithAnotherState(AlphanumericStringComparisonState other)
+                protected override int GetStartPosition()
                 {
-                    var string1State = this;
-                    var string2State = other;
+                    return StringBufferOffset;
+                }
 
-                    // if both sequences are numbers, compare between them
-                    if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
-                    {
-                        // if effective numbers are not of the same length, it means that we can tell which is greater (in an order of magnitude, actually)
-                        if (string1State.NumberLength != string2State.NumberLength)
-                        {
-                            return string1State.NumberLength.CompareTo(string2State.NumberLength);
-                        }
+                protected override char ReadOneChar(out int bytesUsed)
+                {
+                    bytesUsed = ReadOneChar(OriginalString.StringAsBytes, StringBufferOffset, ref CurrentCharacter);
+                    return CurrentCharacter;
+                }
 
-                        // else, it means they should be compared by string, again, we compare only the effective numbers
-                        // One digit is always one byte, so no need to care about chars vs bytes 
-                        return string1State.OriginalString.StringAsBytes.Slice(string1State.StringBufferOffset - string1State.NumberLength, string1State.NumberLength)
-                            .SequenceCompareTo(string2State.OriginalString.StringAsBytes.Slice(string2State.StringBufferOffset - string2State.NumberLength,
-                                string2State.NumberLength));
-                    }
+                protected override int CompareNumbersAsStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
+                {
+                    return OriginalString.StringAsBytes.Slice(StringBufferOffset - NumberLength, NumberLength)
+                        .SequenceCompareTo(other.OriginalString.StringAsBytes.Slice(other.StringBufferOffset - other.NumberLength,
+                            other.NumberLength));
+                }
 
-                    // if one of the sequences is a number and the other is not, the number is always smaller
-                    if (string1State.CurSequenceIsNumber != string2State.CurSequenceIsNumber)
-                    {
-                        if (string1State.CurSequenceIsNumber)
-                            return -1;
-                        return 1;
-                    }
-
+                protected override int CompareStrings(AbstractAlphanumericComparisonState<UnmanagedStringArray.UnmanagedString> other)
+                {
                     // should be case insensitive
                     char ch1 = default;
                     char ch2 = default;
-                    var offset1 = string1State.CurSequenceStartPosition;
-                    var offset2 = string2State.CurSequenceStartPosition;
+                    var offset1 = CurrentSequenceStartPosition;
+                    var offset2 = other.CurrentSequenceStartPosition;
 
-                    var length1 = string1State.StringBufferOffset - string1State.CurSequenceStartPosition;
-                    var length2 = string2State.StringBufferOffset - string2State.CurSequenceStartPosition;
+                    var length1 = StringBufferOffset - CurrentSequenceStartPosition;
+                    var length2 = other.StringBufferOffset - other.CurrentSequenceStartPosition;
 
                     while (length1 > 0 && length2 > 0)
                     {
-                        var read1 = ReadOneChar(string1State.OriginalString.StringAsBytes, offset1, ref ch1);
-                        var read2 = ReadOneChar(string2State.OriginalString.StringAsBytes, offset2, ref ch2);
+                        var read1 = ReadOneChar(OriginalString.StringAsBytes, offset1, ref ch1);
+                        var read2 = ReadOneChar(other.OriginalString.StringAsBytes, offset2, ref ch2);
 
                         length1 -= read1;
                         length2 -= read2;
@@ -395,6 +352,22 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     }
 
                     return length1 - length2;
+                }
+
+                private static unsafe int ReadOneChar(Span<byte> str, int offset, ref char ch)
+                {
+                    fixed (byte* buffer = str)
+                    fixed (char* c = &ch)
+                    {
+                        var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
+                        decoder.Convert(buffer + offset, str.Length - offset, c, 1, flush: true, out var bytesUsed,
+                            out var charUsed, out _);
+
+                        if (charUsed != 1)
+                            throw new InvalidOperationException($"Read unexpected number of chars {charUsed} from string: '{Encoding.UTF8.GetString(str)}' at offset: {offset}");
+
+                        return bytesUsed;
+                    }
                 }
             }
 
@@ -433,33 +406,12 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             {
                 Debug.Assert(string1.IsNull == false);
                 Debug.Assert(string2.IsNull == false);
-                
-                var string1State = new AlphanumericStringComparisonState(string1);
-                var string2State = new AlphanumericStringComparisonState(string2);
 
-                // Walk through two the strings with two markers.
-                while (string1State.CurPositionInString < string1State.StringLength &&
-                        string2State.CurPositionInString < string2State.StringLength)
-                {
-                    string1State.ScanNextAlphabeticOrNumericSequence();
-                    string2State.ScanNextAlphabeticOrNumericSequence();
+                var string1State = new AlphanumericUnmanagedStringComparisonState(string1);
+                var string2State = new AlphanumericUnmanagedStringComparisonState(string2);
 
-                    var result = string1State.CompareWithAnotherState(string2State);
-
-                    if (result != 0)
-                    {
-                        return result;
-                    }
-                }
-
-                if (string1State.CurPositionInString < string1State.StringLength)
-                    return 1;
-                if (string2State.CurPositionInString < string2State.StringLength)
-                    return -1;
-
-                return 0;
+                return string1State.CompareTo(string2State);
             }
-
         }
     }
 }
