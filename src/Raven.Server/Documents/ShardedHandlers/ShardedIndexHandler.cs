@@ -5,6 +5,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -13,8 +14,9 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/indexes/stats", "GET")]
         public async Task Stats()
         {
-            var shard = GetLongQueryString("shard", false);
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement it for the Client API");
 
+            var shard = GetLongQueryString("shard", false);
             if (shard == null)
                 throw new InvalidOperationException("In a sharded environment you must provide a shard id");
 
@@ -37,8 +39,9 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/indexes/performance", "GET")]
         public async Task Performance()
         {
-            var shard = GetLongQueryString("shard", false);
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement it for the Client API");
 
+            var shard = GetLongQueryString("shard", false);
             if (shard == null)
                 throw new InvalidOperationException("In a sharded environment you must provide a shard id");
 
@@ -61,8 +64,9 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/indexes/errors", "GET")]
         public async Task GetErrors()
         {
-            var shard = GetLongQueryString("shard", false);
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement it for the Client API");
 
+            var shard = GetLongQueryString("shard", false);
             if (shard == null)
                 throw new InvalidOperationException("In a sharded environment you must provide a shard id");
 

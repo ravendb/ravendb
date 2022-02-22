@@ -518,8 +518,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Title != null && track2.Title != null)
                 {
                     result = titleDescending == false ?
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Title, track1.Title);
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track2.Title, track1.Title);
                     if (result != 0)
                         return result;
                 }
@@ -532,8 +532,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Artist != null && track2.Artist != null)
                 {
                     result = artistDescending == false ?
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
                     if (result != 0)
                         return result;
                 }
@@ -735,8 +735,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Title != null && track2.Title != null)
                 {
                     result = titleDescending == false ?
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Title, track1.Title);
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track1.Title, track2.Title) :
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track2.Title, track1.Title);
                     if (result != 0)
                         return result;
                 }
@@ -749,8 +749,8 @@ namespace SlowTests.Tests.Sorting
                 if (track1.Artist != null && track2.Artist != null)
                 {
                     result = artistDescending == false ?
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
-                        AlphaNumericFieldComparator.AlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track1.Artist, track2.Artist) :
+                        AlphaNumericFieldComparator.UnmanagedStringAlphanumComparer.Instance.Compare(track2.Artist, track1.Artist);
                     if (result != 0)
                         return result;
                 }

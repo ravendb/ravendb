@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
@@ -16,8 +17,9 @@ namespace Raven.Client.Documents.Operations.Indexes
             
         }
 
-        public GetIndexesStatisticsOperation(int? shard)
+        internal GetIndexesStatisticsOperation(int? shard)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _shard = shard;
         }
 

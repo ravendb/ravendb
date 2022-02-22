@@ -4323,7 +4323,7 @@ namespace Raven.Server.ServerWide
                     using (oldDatabaseRecord)
                     {
                         var updatedDatabaseRecord = context.ReadObject(oldDatabaseRecord, "updated-database-record");
-                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: key.Substring(DbKeyPrefix.Length)));
+                        toUpdate.Add((Key: key, DatabaseRecord: updatedDatabaseRecord, DatabaseName: key.Substring(dbKey.Length)));
                     }
                 }
             }

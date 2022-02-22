@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Server.Documents;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -41,7 +42,11 @@ namespace Raven.Server.NotificationCenter
         public void Dispose()
         {
             if (_database == null)
-                return;// TODO: Sharding - fix this for queries
+            {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Sharding - fix this for queries");
+                return;
+            }
+
             if (_sw.Elapsed <= _database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
                 return;
 

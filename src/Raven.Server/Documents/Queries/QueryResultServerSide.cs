@@ -10,6 +10,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -111,6 +112,8 @@ namespace Raven.Server.Documents.Queries
         public abstract void AddRevisionIncludes(IncludeRevisionsCommand command);
        
         public abstract Dictionary<string, Document> GetRevisionIncludesByChangeVector();
+
+        public abstract Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime();
     }
 
     public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
@@ -139,6 +142,7 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsInclude  => true;
         public override bool SupportsHighlighting  => true;
         public override bool SupportsExplanations  => true;
+
         public override void AddCounterIncludes(IncludeCountersCommand command)
         {
             throw new NotImplementedException();
@@ -176,7 +180,12 @@ namespace Raven.Server.Documents.Queries
 
         public override Dictionary<string, Document> GetRevisionIncludesByChangeVector()
         {
-            throw new NotImplementedException();
+            return null;
+        }
+
+        public override Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime()
+        {
+            return null;
         }
     }
 }

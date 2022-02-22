@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/wait-for-raft-commands";
+            url = $"{node.Url}/databases/{node.Database}/rachis/wait-for-raft-commands";
 
             var waitForCommands = new WaitForCommandsRequest
             {

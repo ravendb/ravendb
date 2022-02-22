@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Handlers
                     includeCompareExchangeValues?.Gather(document);
                 }
 
-                includeDocs.Fill(includes, GetBoolFromHeaders("Missing-Includes") ?? false);
+                includeDocs.Fill(includes, GetBoolFromHeaders(Constants.Headers.MissingIncludes) ?? false);
                 includeCompareExchangeValues?.Materialize();
 
                 var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includes, includeCounters, includeTimeSeries, includeCompareExchangeValues);

@@ -819,7 +819,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 throw new NotImplementedException();
             }
 
-            protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
+            public override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
             {
                 throw new NotImplementedException();
             }
