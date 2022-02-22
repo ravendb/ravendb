@@ -101,5 +101,23 @@ namespace RachisTests.DatabaseCluster
         {
             await base.ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate();
         }
+        
+        [Fact(Skip = "Should implement expiration for shard")]
+        public async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
+        {
+            await ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell();
+        }
+
+        [Fact(Skip = "Should implement expiration for shard")]
+        public async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
+        {
+            await ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell();
+        }
+
+        [Fact(Skip = "Should implement expiration for shard")]
+        public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
+        {
+            await ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved();
+        }
     }
 }
