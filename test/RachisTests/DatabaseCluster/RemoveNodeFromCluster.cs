@@ -151,6 +151,9 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.Equal(0, outgoingConnections);
 
+                foreach (var n in cluster.Nodes)
+                    await n.ServerStore.EnsureNotPassiveAsync();
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "foo/bar/2");
@@ -366,7 +369,7 @@ namespace RachisTests.DatabaseCluster
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
                 Assert.True(record != null, $"record is null: {GetRaftHistory(removed)}");
                 Assert.True(record.Topology != null, $"topology is null: {GetRaftHistory(removed)}");
-                
+
                 Assert.Equal(1, record.Topology.Count);
                 Assert.Equal(1, record.Topology.ReplicationFactor);
 

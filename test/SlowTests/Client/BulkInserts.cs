@@ -16,7 +16,16 @@ namespace SlowTests.Client
         {
             using (var x = new FastTests.Client.BulkInserts(Output))
             {
-                await x.Simple_Bulk_Insert(useSsl: true);
+                await x.Simple_Bulk_Insert(useSsl: true, disableHttpConnectionClose: false);
+            }
+        }
+
+        [Fact]
+        public async Task Simple_Bulk_Insert_With_Ssl_And_Connection_Close_Disabled()
+        {
+            using (var x = new FastTests.Client.BulkInserts(Output))
+            {
+                await x.Simple_Bulk_Insert(useSsl: true, disableHttpConnectionClose: true);
             }
         }
     }

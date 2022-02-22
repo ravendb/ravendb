@@ -21,6 +21,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -37,6 +38,7 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -53,6 +55,8 @@ namespace FastTests
     public abstract partial class RavenTestBase : TestBase
     {
         public static BackupTestBase Backup => BackupTestBase.Instance.Value;
+
+        public static TimeSeriesTestBase TimeSeries => TimeSeriesTestBase.Instance.Value;
 
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 

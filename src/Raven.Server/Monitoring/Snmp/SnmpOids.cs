@@ -251,6 +251,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of active TCP connections")]
             public const string TcpActiveConnections = "1.15.1";
 
+            [Description("Indicates if any experimental features are used")]
+            public const string FeatureAnyExperimental = "1.16.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();

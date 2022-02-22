@@ -402,7 +402,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                     using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, baseline, remoteChangeVector))
                     {
-                        if (holder.LoadCurrentSegment() == false)
+                        if (holder.LoadClosestSegment() == false)
                             return false;
 
                         // we need to get the next segment before the actual remove, since it might lead to a split
@@ -710,7 +710,7 @@ namespace Raven.Server.Documents.TimeSeries
                     return false;
                 }
 
-                holder.AppendToNewSegment(segment, baseline);
+                holder.AppendToNewSegment(segment, baseline, changeVector);
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
                 {
@@ -741,7 +741,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.LoadCurrentSegment() == false)
+                if (holder.LoadClosestSegment() == false)
                     holder.AppendToNewSegment(segment, baseline, changeVectorFromReplication: changeVector);
                 else
                     holder.AppendExistingSegment(segment, changeVectorFromReplication: changeVector);
@@ -1028,12 +1028,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                 ReduceCountBeforeAppend();
                 _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, ReadOnlySegment.NumberOfLiveEntries);
-
+                using (Slice.From(_context.Allocator, _currentChangeVector, out Slice cv))
                 using (Table.Allocate(out var tvb))
                 {
                     tvb.Add(SliceHolder.TimeSeriesKeySlice);
                     tvb.Add(Bits.SwapBytes(_currentEtag));
-                    tvb.Add(Slices.Empty); // we put empty slice in the change-vector, so it wouldn't replicate
+                    tvb.Add(cv);
                     tvb.Add(newValueSegment.Ptr, newValueSegment.NumberOfBytes);
                     tvb.Add(SliceHolder.CollectionSlice);
                     tvb.Add(_context.GetTransactionMarker());
@@ -1144,7 +1144,8 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss._documentDatabase.NotificationCenter.Add(alert);
             }
 
-            public bool LoadCurrentSegment()
+            //Return true if we have the same key or the closest result to the sliceHolder
+            public bool LoadClosestSegment()
             {
                 if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice, SliceHolder.TimeSeriesKeySlice, out _tvr))
                 {
@@ -1152,6 +1153,17 @@ namespace Raven.Server.Documents.TimeSeries
                     return true;
                 }
 
+                return false;
+            }
+
+            //Return true only if we have the same key as the sliceHolder
+            public bool LoadCurrentSegment()
+            {
+                if (Table.ReadByKey(SliceHolder.TimeSeriesKeySlice, out _tvr))
+                {
+                    Initialize();
+                    return true;
+                }
                 return false;
             }
 
@@ -1698,7 +1710,7 @@ namespace Raven.Server.Documents.TimeSeries
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, options);
-                            if (segmentHolder.LoadCurrentSegment() == false)
+                            if (segmentHolder.LoadClosestSegment() == false)
                             {
                                 // no matches for this series at all, need to create new segment
                                 segmentHolder.AppendToNewSegment(current);
