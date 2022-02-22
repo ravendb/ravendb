@@ -33,7 +33,7 @@ public class FeatureGuardian
         {
             case Feature.GraphApi:
             case Feature.PostgreSql:
-                return _configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable;
+                return _configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental;
         }
 
         return true;
