@@ -65,6 +65,7 @@ using Raven.Server.Storage;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
@@ -142,6 +143,8 @@ namespace Raven.Server.ServerWide
             MemoryInformation.EnableEarlyOutOfMemoryChecks = true;
 
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+
+            FeatureGuardian = new FeatureGuardian(configuration);
 
             _server = server;
 
@@ -501,6 +504,8 @@ namespace Raven.Server.ServerWide
         }
 
         public bool HasFixedPort { get; internal set; }
+
+        public readonly FeatureGuardian FeatureGuardian;
 
         public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false, CancellationToken token = default)
         {

@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup .NET Core
+    - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
@@ -46,7 +46,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Setup .NET Core
+    - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
