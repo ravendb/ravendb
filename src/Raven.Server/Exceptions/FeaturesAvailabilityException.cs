@@ -26,5 +26,10 @@ namespace Raven.Server.Exceptions
                 $"Can not use '{feature.GetDescription()}', as this is an experimental feature and the server does not support experimental features. " +
                 $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
         }
+
+        public static void Throw(string message)
+        {
+            throw new FeaturesAvailabilityException(message);
+        }
     }
 }
