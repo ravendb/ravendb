@@ -37,10 +37,7 @@ namespace SlowTests.Issues
                     incrementCounter(id(this), '', 5)
                 }"));
 
-                var e = (Exception)Assert.Throws<RavenException>(() =>
-                {
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
-                });
+                var e = (Exception)Assert.Throws<RavenException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
 
                 Assert.Contains("'name' must be a non-empty string argument", e.Message);
             }
