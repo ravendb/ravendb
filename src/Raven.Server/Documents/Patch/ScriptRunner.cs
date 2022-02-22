@@ -553,7 +553,8 @@ namespace Raven.Server.Documents.Patch
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
                             {
-                                var argStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]).AsString;
+                                var jsStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]);
+                                var argStr = jsStr.IsUndefined ? "undefined" : jsStr.AsString;
                                 argsStr += argStr + "\n\n";
                             }
 #endif
