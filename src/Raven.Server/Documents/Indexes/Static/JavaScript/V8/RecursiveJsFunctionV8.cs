@@ -65,12 +65,12 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
             using (var jsRes = _func.StaticCall(_item))
             {
-                jsRes.ThrowOnError(); // TODO check if is needed here
+                jsRes.ThrowOnError(); 
                 var current = NullIfEmptyEnumerable(jsRes);
                 if (current.Kind != NullIfEmptyEnumerableKind.None)
                 {
                     using (var jsResPush = _result.StaticCall("push", _item))
-                        jsResPush.ThrowOnError(); // TODO check if is needed here
+                        jsResPush.ThrowOnError(); 
                     return _result;
                 }
                 
@@ -103,11 +103,11 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
                 return;
 
             using (var jsResPush = _result.StaticCall("push", current))
-                jsResPush.ThrowOnError(); // TODO check if is needed here
+                jsResPush.ThrowOnError();
 
             using (var jsRes = _func.StaticCall(current))
             {
-                jsRes.ThrowOnError(); // TODO check if is needed here
+                jsRes.ThrowOnError();
                 var result = NullIfEmptyEnumerable(jsRes);
                 if (result.Kind != NullIfEmptyEnumerableKind.None)
                     _queue.Enqueue(result);
