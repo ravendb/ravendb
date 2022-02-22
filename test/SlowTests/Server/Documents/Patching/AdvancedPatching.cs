@@ -295,10 +295,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
-        public async Task CanHandleNonsensePatching()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public async Task CanHandleNonsensePatching(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 using (var commands = store.Commands())
                 {
