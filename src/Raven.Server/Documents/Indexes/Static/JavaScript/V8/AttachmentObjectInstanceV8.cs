@@ -88,6 +88,8 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             }
             catch (Exception e) 
             {
+                var engineEx = (V8EngineEx)engine;
+                engineEx.Context.JsContext.LastException = e;
                 return engine.CreateError(e.ToString(), JSValueType.ExecutionError);
             }
         }

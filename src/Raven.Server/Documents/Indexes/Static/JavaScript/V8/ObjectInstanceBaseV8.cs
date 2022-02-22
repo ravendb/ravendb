@@ -23,21 +23,47 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return ObjClr.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);
-
+                try
+                {
+                    return ObjClr.NamedPropertyGetter((V8EngineEx)Engine, ref propertyName);
+                }
+                catch (Exception e)
+                {
+                    var engineEx = (V8EngineEx)Engine;
+                    engineEx.Context.JsContext.LastException = e;
+                    return Engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
 
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                if (ObjClr._properties.ContainsKey(propertyName))
-                    return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
+                try
+                {
+                    if (ObjClr._properties.ContainsKey(propertyName))
+                        return V8PropertyAttributes.Locked | V8PropertyAttributes.DontEnum;
 
-                return null;
+                    return null;
+                }
+                catch (Exception e)
+                {
+                    var engineEx = (V8EngineEx)Engine;
+                    engineEx.Context.JsContext.LastException = e;
+                    return null;
+                }
             }
 
             public override InternalHandle NamedPropertyEnumerator()
             {
-                return ((V8EngineEx)Engine).CreateArrayWithDisposal(ObjClr._properties.Keys.Select((string propertyName) => Engine.CreateValue(propertyName)).ToArray());
+                try
+                {
+                    return ((V8EngineEx)Engine).CreateArrayWithDisposal(ObjClr._properties.Keys.Select((string propertyName) => Engine.CreateValue(propertyName)).ToArray());
+                }
+                catch (Exception e)
+                {
+                    var engineEx = (V8EngineEx)Engine;
+                    engineEx.Context.JsContext.LastException = e;
+                    return Engine.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
 
         }
