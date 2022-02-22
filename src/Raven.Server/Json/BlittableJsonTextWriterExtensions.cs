@@ -25,6 +25,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
 using Raven.Server.Utils;
@@ -1433,6 +1434,12 @@ namespace Raven.Server.Json
 
             writer.WriteEndArray();
             return (numberOfResults, totalDocumentsSizeInBytes);
+        }
+
+        public static void WriteContinuationToken(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, ContinuationToken continuation)
+        {
+            writer.WritePropertyName(ContinuationToken.PropertyName);
+            writer.WriteString(continuation.ToBase64(context));
         }
 
         public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IAsyncEnumerable<Document> documents, bool metadataOnly, CancellationToken token)

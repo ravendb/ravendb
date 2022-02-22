@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                             new ShardedPagingContinuation(ShardedContext, GetStart(), GetPageSize());
 
                 var op = new ShardedCollectionDocumentsOperation(token);
-                var results = (ExtendedStreamResult)(await ShardExecutor.ExecuteParallelForAllAsync(op));
+                var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
@@ -67,11 +67,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     var documents = GetDocuments(results, token, cancelToken.Token);
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
+                    writer.WritePropertyName(nameof(CollectionResult.Results));
                     (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, cancelToken.Token);
                     writer.WriteComma();
-                    writer.WritePropertyName(ContinuationToken.PropertyName);
-                    writer.WriteString(token.ToBase64(context));
+                    writer.WriteContinuationToken(context, token);
                     writer.WriteEndObject();
                 }
 
@@ -80,7 +79,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        public async IAsyncEnumerable<Document> GetDocuments(ExtendedStreamResult documents, ShardedPagingContinuation pagingContinuation, [EnumeratorCancellation] CancellationToken token)
+        public async IAsyncEnumerable<Document> GetDocuments(CombinedStreamResult documents, ShardedPagingContinuation pagingContinuation, [EnumeratorCancellation] CancellationToken token)
         {
             await foreach (var result in ShardedContext.Streaming.PagedShardedStream(documents, BlittableToStreamDocument, StreamDocumentByLastModifiedComparer.Instance,
                                pagingContinuation, token))
@@ -91,8 +90,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         private ShardStreamItem<Document> BlittableToStreamDocument(BlittableJsonReaderObject json)
         {
-            var metadata = json.GetMetadata();
-            metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id);
+            var id = json.GetLazyStringId();
             return new ShardStreamItem<Document>
             {
                 Item = new Document
@@ -102,8 +100,14 @@ namespace Raven.Server.Documents.ShardedHandlers
                 Id = id
             };
         }
+        
+        public class CollectionResult
+        {
+            public List<object> Results;
+            public string ContinuationToken;
+        }
 
-        private readonly struct ShardedCollectionDocumentsOperation : IShardedOperation<StreamResult>
+        private readonly struct ShardedCollectionDocumentsOperation : IShardedOperation<StreamResult, CombinedStreamResult>
         {
             private readonly ShardedPagingContinuation _token;
 
@@ -112,9 +116,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                 _token = token;
             }
 
-            public StreamResult Combine(Memory<StreamResult> results)
+            public CombinedStreamResult Combine(Memory<StreamResult> results)
             {
-                return new ExtendedStreamResult { Results = results };
+                return new CombinedStreamResult { Results = results };
             }
 
             public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>

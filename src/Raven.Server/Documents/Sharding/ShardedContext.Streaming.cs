@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Sharding
                 _shardedContext = shardedContext;
             }
 
-            public async IAsyncEnumerable<ShardStreamItem<T>> ShardedStream<T>(ExtendedStreamResult combinedStream,
+            public async IAsyncEnumerable<ShardStreamItem<T>> ShardedStream<T>(CombinedStreamResult combinedStream,
                 Func<BlittableJsonReaderObject, ShardStreamItem<T>> converter, Comparer<ShardStreamItem<T>> comparer,
                 [EnumeratorCancellation] CancellationToken token)
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            public async IAsyncEnumerable<ShardStreamItem<T>> PagedShardedStream<T>(ExtendedStreamResult combinedStream,
+            public async IAsyncEnumerable<ShardStreamItem<T>> PagedShardedStream<T>(CombinedStreamResult combinedStream,
                 Func<BlittableJsonReaderObject, ShardStreamItem<T>> converter, Comparer<ShardStreamItem<T>> comparer, ShardedPagingContinuation pagingContinuation,
                 [EnumeratorCancellation] CancellationToken token)
             {
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class ExtendedStreamResult : StreamResult
+    public class CombinedStreamResult : StreamResult
     {
         public Memory<StreamResult> Results;
     }

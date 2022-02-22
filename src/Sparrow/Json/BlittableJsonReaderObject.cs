@@ -1509,5 +1509,7 @@ namespace Sparrow.Json
 
             return false;
         }
+
+        public ReadOnlySpan<byte> AsSpan() => new ReadOnlySpan<byte>(BasePointer, Size);
     }
 }
