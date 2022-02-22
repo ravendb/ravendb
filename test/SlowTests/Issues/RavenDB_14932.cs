@@ -69,10 +69,10 @@ namespace SlowTests.Issues
                 }
 
                 await WaitForPolicyRunner(database);
-                await VerifyPolicyExecution(store, config.Collections["Users"], 4, policies: new List<TimeSeriesPolicy> { p1 });
-                await VerifyPolicyExecution(store, config.Collections["Users"], 5, policies: new List<TimeSeriesPolicy> { p2 });
-                await VerifyPolicyExecution(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });
-                await VerifyPolicyExecution(store, config.Collections["Users"], 3, policies: new List<TimeSeriesPolicy> { p4 });
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 4, policies: new List<TimeSeriesPolicy> { p1 });
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 5, policies: new List<TimeSeriesPolicy> { p2 });
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 3, policies: new List<TimeSeriesPolicy> { p4 });
 
                 WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);

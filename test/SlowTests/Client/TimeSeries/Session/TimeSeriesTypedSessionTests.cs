@@ -13,7 +13,6 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Policies;
-using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -656,7 +655,7 @@ select out(doc)
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
@@ -784,7 +783,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await QueryFromMultipleTimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
+                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
