@@ -33,33 +33,72 @@ namespace Raven.Server.Documents.Patch.V8
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override InternalHandle NamedPropertyGetter(ref string propertyName)
             {
-                return ObjClr.GetOwnPropertyJsV8(propertyName);
+                try
+                {
+                    return ObjClr.GetOwnPropertyJsV8(propertyName);
+                }
+                catch (Exception e) 
+                {
+                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override InternalHandle NamedPropertySetter(ref string propertyName, InternalHandle jsValue, V8PropertyAttributes attributes = V8PropertyAttributes.Undefined)
             {
-                return ObjClr.SetOwnProperty(propertyName, jsValue, attributes);
+                try
+                {
+                    return ObjClr.SetOwnProperty(propertyName, jsValue, attributes);
+                }
+                catch (Exception e) 
+                {
+                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override bool? NamedPropertyDeleter(ref string propertyName)
             {
-                return ObjClr.DeleteOwnProperty(propertyName);
+                try
+                {
+                    return ObjClr.DeleteOwnProperty(propertyName);
+                }
+                catch (Exception e) 
+                {
+                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override V8PropertyAttributes? NamedPropertyQuery(ref string propertyName)
             {
-                return ObjClr.QueryOwnProperty(propertyName);
+                try
+                {
+                    return ObjClr.QueryOwnProperty(propertyName);
+                }
+                catch (Exception e) 
+                {
+                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    return null;
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public override InternalHandle NamedPropertyEnumerator()
             {
-                return ObjClr.EnumerateOwnPropertiesJsV8();
+                try
+                {
+                    return ObjClr.EnumerateOwnPropertiesJsV8();
+                }
+                catch (Exception e) 
+                {
+                    ObjClr.EngineExV8.Context.JsContext.LastException = e;
+                    return ObjClr.EngineV8.CreateError(e.ToString(), JSValueType.ExecutionError);
+                }
             }
-
         }
 
         private bool _disposed = false;
