@@ -338,6 +338,7 @@ namespace SlowTests.Issues
             }
         }
 
+        // TODO [shlomo] restore the test and make it for multiple configurations of V8 engine sharing
         [Theory]
         [JavaScriptEngineClassData]
         public void Can_Use_Projection_Behavior_Query_JavaScript(string jsEngineType)
@@ -345,7 +346,7 @@ namespace SlowTests.Issues
             var options = Options.ForJavaScriptEngine(jsEngineType, d =>
             {
                 d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.TargetContextCountPerEngine)] = 1.ToString();            
-                d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = 1.ToString();            
+                //d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = 1.ToString();            
             });
             using (var store = GetDocumentStore(options))
             {
@@ -442,19 +443,14 @@ namespace SlowTests.Issues
 
                     Assert.Null(fax.Fax);*/
 
-                    void testCode()
+                    Assert.Throws<InvalidQueryException>(() =>
                     {
                         session.Advanced
                             .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
                             .Projection(ProjectionBehavior.FromIndexOrThrow)
                             .NoCaching()
                             .FirstOrDefault();
-                    };
-
-                    if (jsEngineType == "Jint")
-                        Assert.Throws<InvalidQueryException>(testCode);
-                    else
-                        Assert.Throws<JavaScriptException>(testCode);
+                    });
 
                     /*var fax = session.Advanced
                         .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
