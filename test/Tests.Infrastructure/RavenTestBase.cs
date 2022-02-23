@@ -1570,8 +1570,8 @@ namespace FastTests
 
             public override string ToString()
             {
-                return _descriptionBuilder == null 
-                    ? base.ToString() 
+                return _descriptionBuilder == null
+                    ? base.ToString()
                     : _descriptionBuilder.ToString();
             }
 

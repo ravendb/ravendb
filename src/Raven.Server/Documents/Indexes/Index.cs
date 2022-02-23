@@ -3045,8 +3045,6 @@ namespace Raven.Server.Documents.Indexes
             if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
                 throw new NotSupportedException("Explanations are not supported by this type of query.");
 
-            resultToFill.IsMapReduce = Type.IsMapReduce();
-
             using (var marker = MarkQueryAsRunning(query))
             {
                 var queryDuration = Stopwatch.StartNew();
