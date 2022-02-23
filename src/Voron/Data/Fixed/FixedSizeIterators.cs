@@ -164,6 +164,9 @@ namespace Voron.Data.Fixed
                 if (count != 0)
                     _pos += count;
 
+                if (_pos < 0)
+                    return false;
+
                 return _pos < _header->NumberOfEntries;
             }
 
