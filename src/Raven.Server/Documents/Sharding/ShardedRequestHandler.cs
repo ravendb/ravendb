@@ -7,6 +7,7 @@ using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
+using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
@@ -50,6 +51,14 @@ namespace Raven.Server.Documents.Sharding
             BaseShardUrl = url.Substring(relativeIndex);
             RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
+        }
+
+        protected ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context)
+        {
+            var qToken = GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
+            var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
+                        new ShardedPagingContinuation(ShardedContext, GetStart(), GetPageSize());
+            return token;
         }
 
         public ShardExecutor ShardExecutor => ShardedContext.ShardExecutor;

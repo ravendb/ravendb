@@ -18,7 +18,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioCollectionsHandler : DatabaseRequestHandler
     {
-        private const int ColumnsSamplingLimit = 10;
+        public const int ColumnsSamplingLimit = 10;
         private const int StringLengthLimit = 255;
 
         private const string ObjectStubsKey = "$o";
@@ -118,7 +118,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
+        public static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
         {
             writer.WriteStartObject();
 
@@ -138,7 +138,7 @@ namespace Raven.Server.Web.Studio
                 {
                     unsafe
                     {
-                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
+                        document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     }
 
                     var sendFull = fullPropertiesToSend.Contains(prop.Name);
@@ -152,6 +152,7 @@ namespace Raven.Server.Web.Studio
                             {
                                 writer.WriteComma();
                             }
+
                             first = false;
                         }
 
@@ -179,6 +180,7 @@ namespace Raven.Server.Web.Studio
                     }
                 }
             }
+
             if (first == false)
                 writer.WriteComma();
 
@@ -215,7 +217,7 @@ namespace Raven.Server.Web.Studio
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteTrimmedValue(AsyncBlittableJsonTextWriter writer, BlittableJsonToken token, object val)
+        private static void WriteTrimmedValue(AsyncBlittableJsonTextWriter writer, BlittableJsonToken token, object val)
         {
             switch (token)
             {
@@ -269,7 +271,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private static HashSet<LazyStringValue> ExtractColumnNames(Document[] documents, DocumentsOperationContext context)
+        public static HashSet<LazyStringValue> ExtractColumnNames(Document[] documents, JsonOperationContext context)
         {
             var columns = new HashSet<LazyStringValue>();
 
@@ -301,7 +303,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        public static void RemoveMetadata(DocumentsOperationContext context, HashSet<LazyStringValue> columns)
+        public static void RemoveMetadata(JsonOperationContext context, HashSet<LazyStringValue> columns)
         {
             var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
             columns.Remove(metadataField);

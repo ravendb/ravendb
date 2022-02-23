@@ -51,11 +51,9 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/collections/docs", "GET")]
         public async Task GetCollectionDocuments()
         {
-            var qToken = GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ?? 
-                            new ShardedPagingContinuation(ShardedContext, GetStart(), GetPageSize());
+                var token = GetOrCreateContinuationToken(context);
 
                 var op = new ShardedCollectionDocumentsOperation(token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
@@ -90,14 +88,14 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         private ShardStreamItem<Document> BlittableToStreamDocument(BlittableJsonReaderObject json)
         {
-            var id = json.GetLazyStringId();
+            var metadata = json.GetMetadata();
             return new ShardStreamItem<Document>
             {
                 Item = new Document
                 {
                     Data = json
                 },
-                Id = id
+                Id = metadata.GetLazyStringId()
             };
         }
         
@@ -192,7 +190,17 @@ namespace Raven.Server.Documents.ShardedHandlers
         
         public override int Compare(ShardStreamItem<Document> x, ShardStreamItem<Document> y)
         {
-            var diff = x.Item.LastModified.Ticks - y.Item.LastModified.Ticks;
+            return DocumentByLastModifiedComparer.Instance.Compare(x.Item, y.Item);
+        }
+    }
+
+    public class DocumentByLastModifiedComparer : Comparer<Document>
+    {
+        public static DocumentByLastModifiedComparer Instance = new DocumentByLastModifiedComparer();
+        
+        public override int Compare(Document x, Document y)
+        {
+            var diff = x.LastModified.Ticks - y.LastModified.Ticks;
             if (diff > 0)
                 return 1;
             if (diff < 0)

@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Sharding
         }
     }
 
-    public class CombinedStreamResult : StreamResult
+    public class CombinedStreamResult
     {
         public Memory<StreamResult> Results;
     }
