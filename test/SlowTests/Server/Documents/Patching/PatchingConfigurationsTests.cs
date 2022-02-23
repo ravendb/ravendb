@@ -46,15 +46,11 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Theory]
-        [JavaScriptEngineClassData]
+        // for Jint only as V8 doesn't support the restriction on maximum steps
+        [Fact]
         public async Task MaximumScriptSteps(string jsEngineType)
         {
-            using (var store = GetDocumentStore(new Options
-            {
-                ModifyDatabaseRecord = Options.ModifyForJavaScriptEngine(jsEngineType, record => 
-                    record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "30")
-            }))
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
