@@ -23,25 +23,29 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         {
         }
 
-        private string ScriptWithNoIdMethodUsage => @"
-var orderData = {
-    OrderLinesCount: this.OrderLines.length,
-    TotalCost: 0
-};
+        private string ScriptWithNoIdMethodUsage(string jsEngineType)
+        {
+            var optChaining = jsEngineType == "Jint" ? "" : "?";
+            return @$"
+var orderData = {{
+OrderLinesCount: this.OrderLines{optChaining}.length,
+TotalCost: 0
+}};
 
-for (var i = 0; i < this.Lines.length; i++) {
-    var line = this.Lines[i];
-    var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
-    orderData.TotalCost += cost;
-    loadTo" + OrderLinesIndexName + @"({
-        Qty: line.Quantity,
-        Product: line.Product,
-        Cost: cost
-    });
-}
+for (var i = 0; i < this.Lines{optChaining}.length; i++) {{
+var line = this.Lines[i];
+var cost = (line.Quantity * line.PricePerUnit) *  ( 1 - line.Discount);
+orderData.TotalCost += cost;
+loadTo" + OrderLinesIndexName + @$"({{
+    Qty: line.Quantity,
+    Product: line.Product,
+    Cost: cost
+}});
+}}
 
 loadTo" + OrdersIndexName + @"(orderData);
 ";
+        }
 
         [RequiresElasticSearchTheory]
         [JavaScriptEngineClassData]
@@ -50,7 +54,7 @@ loadTo" + OrdersIndexName + @"(orderData);
             using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
-                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage, DefaultIndexes, new List<string> { "Orders" });
+                var config = SetupElasticEtl(store, ScriptWithNoIdMethodUsage(jsEngineType), DefaultIndexes, new List<string> { "Orders" });
 
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -145,7 +149,7 @@ loadTo" + OrdersIndexName + @"(orderData);
                                        },
                                        Transforms =
                                        {
-                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage }
+                                           new Transformation { Collections = { "Orders" }, Name = "OrdersAndLines", Script = ScriptWithNoIdMethodUsage(jsEngineType) }
                                        }
                                    }
                                }, database, database.ServerStore, context, out var testResult))
