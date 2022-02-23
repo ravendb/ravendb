@@ -455,15 +455,6 @@ namespace Raven.Server.Documents.Subscriptions
                 });
         }
 
-        public void DropCancelledConnections()
-        {
-            foreach (var connection in _connections)
-            {
-                if(connection.CancellationTokenSource.IsCancellationRequested)
-                    DropSingleConnection(connection);
-            }
-        }
-
         public SubscriptionConnection MostRecentEndedConnection()
         {
             if (_recentConnections.TryPeek(out var recentConnection))

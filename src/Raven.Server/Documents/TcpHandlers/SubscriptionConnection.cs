@@ -143,6 +143,8 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 RecentSubscriptionStatuses.TryDequeue(out _);
             }
+
+          //  Console.WriteLine($"{_options.SubscriptionName}: " + message);
             RecentSubscriptionStatuses.Enqueue(message);
         }
 
@@ -395,7 +397,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         _logger.Info(
                             $"Finished processing subscription {SubscriptionId} / from client {TcpConnection.TcpClient.Client.RemoteEndPoint}");
                     }
-
                     disposeOnDisconnect?.Dispose();
                 }
             }
