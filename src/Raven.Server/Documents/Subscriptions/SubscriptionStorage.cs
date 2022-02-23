@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
         {
-            if (_subscriptions.TryRemove(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
+            if (_subscriptions.TryGetValue(subscriptionId, out SubscriptionConnectionsState subscriptionConnectionsState) == false)
                 return false;
 
             foreach (var subscriptionConnection in subscriptionConnectionsState.GetConnections())
@@ -689,7 +689,10 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (recentConnection != null && recentConnection.Stats.LastMessageSentAt < oldestPossibleIdleSubscription)
                 {
-                    _subscriptions.Remove(kvp.Key, out _);
+                    if (_subscriptions.TryRemove(kvp.Key, out var subsState))
+                    {
+                        subsState.Dispose();
+                    }
                 }
             }
         }
@@ -701,7 +704,10 @@ namespace Raven.Server.Documents.Subscriptions
                 if (state.Value.IsSubscriptionActive())
                     continue;
 
-                _subscriptions.Remove(state.Key, out _);
+                if (_subscriptions.TryRemove(state.Key, out var subsState))
+                {
+                    subsState.Dispose();
+                }
             }
         }
 
