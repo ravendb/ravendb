@@ -144,7 +144,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 RecentSubscriptionStatuses.TryDequeue(out _);
             }
 
-          //  Console.WriteLine($"{_options.SubscriptionName}: " + message);
             RecentSubscriptionStatuses.Enqueue(message);
         }
 
