@@ -173,14 +173,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var exceptionType = jsEngineType switch
-                {
-                    "Jint" => typeof(DocumentDoesNotExistException),
-                    "V8" => typeof(JavaScriptException),
-                    _ => throw new NotSupportedException($"Not supported JS engine kind '{jsEngineType}'.")
-                };
-                ;
-                Assert.Throws(exceptionType, () =>
+                Assert.Throws(typeof(DocumentDoesNotExistException), () =>
                 {
                     store.Operations
                         .Send(new PatchOperation(testDoc1.Id, null, new PatchRequest
@@ -189,7 +182,7 @@ namespace SlowTests.Issues
                         }));
                 });
 
-                Assert.Throws(exceptionType, () =>
+                Assert.Throws(typeof(DocumentDoesNotExistException), () =>
                 {
                     store.Operations
                         .Send(new PatchOperation(testDoc1.Id, null, new PatchRequest
