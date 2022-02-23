@@ -1,6 +1,6 @@
 using System;
 
-namespace Voron
+namespace Voron.Data.Tables
 {
     [AttributeUsage(AttributeTargets.Method)]
     public class IndexEntryKeyGeneratorAttribute : Attribute
