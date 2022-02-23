@@ -55,7 +55,7 @@ namespace Raven.Server.Smuggler.Documents
             _source = source;
         }
 
-        public virtual IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public virtual ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
             _writer = new AsyncBlittableJsonTextWriter(_context, _gzipStream);
@@ -69,12 +69,18 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteInteger(buildVersion);
             }
 
+            return ValueTask.FromResult(InitializeAsyncDispose());
+        }
+
+        protected virtual IAsyncDisposable InitializeAsyncDispose()
+        {
             return new AsyncDisposableAction(async () =>
             {
-                if (options.IsShard == false)
+                if (_options.IsShard == false)
                 {
                     _writer.WriteEndObject();
                 }
+
                 await _writer.DisposeAsync();
                 await _gzipStream.DisposeAsync();
             });

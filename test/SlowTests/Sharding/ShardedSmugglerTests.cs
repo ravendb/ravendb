@@ -40,9 +40,9 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding
 {
-    public class SmugglerTests : ShardedTestBase
+    public class ShardedSmugglerTests : ShardedTestBase
     {
-        public SmugglerTests(ITestOutputHelper output) : base(output)
+        public ShardedSmugglerTests(ITestOutputHelper output) : base(output)
         {
         }
 

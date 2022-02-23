@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -17,10 +15,8 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -28,36 +24,24 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class ShardedDatabaseSmuggler : SmugglerBase
     {
-        private readonly TransactionOperationContext _transactionOperationContext;
-        private readonly List<DatabaseRecord.ShardRangeAssignment> _shardAllocation;
         private readonly DatabaseRecord _databaseRecord;
         private readonly ServerStore _server;
-        private long _buildVersion;
-        private readonly ShardedContext _shardedContext;
-        private readonly ShardedSmugglerHandler _handler;
-        private readonly TransactionContextPool _contextPool;
 
-        public ShardedDatabaseSmuggler(TransactionContextPool contextPool,
+        public ShardedDatabaseSmuggler(
             ISmugglerSource source,
             JsonOperationContext jsonOperationContext,
-            TransactionOperationContext transactionOperationContext,
             DatabaseRecord databaseRecord,
             ServerStore server,
             ShardedContext shardedContext,
             ShardedSmugglerHandler handler,
-            DatabaseSmugglerOptionsServerSide options = null,
-            SmugglerResult result = null, 
+            DatabaseSmugglerOptionsServerSide options,
+            SmugglerResult result, 
             Action<IOperationProgress> onProgress = null, 
             CancellationToken token = default) : 
             base(source, new MultiShardedDestination(source, shardedContext, handler), server.Server.Time, jsonOperationContext, options, result, onProgress, token)
         {
-            _contextPool = contextPool;
-            _transactionOperationContext = transactionOperationContext;
-            _shardAllocation = databaseRecord.ShardAllocations;
             _databaseRecord = databaseRecord;
             _server = server;
-            _shardedContext = shardedContext;
-            _handler = handler;
         }
 
         public override SmugglerPatcher CreatePatcher() => new ServerSmugglerPatcher(_options, _server);

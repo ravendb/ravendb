@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.ShardedHandlers;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
@@ -16,7 +14,6 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server.Smuggler.Documents
@@ -26,7 +23,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly ShardedContext _shardedContext;
         private readonly ShardedSmugglerHandler _handler;
         private readonly ISmugglerSource _source;
-        private readonly List<StreamDestination> _destinations;
+        private readonly StreamDestination[] _destinations;
         private DatabaseSmugglerOptionsServerSide _options;
 
         public MultiShardedDestination(ISmugglerSource source, ShardedContext shardedContext, ShardedSmugglerHandler handler)
@@ -34,43 +31,58 @@ namespace Raven.Server.Smuggler.Documents
             _source = source;
             _shardedContext = shardedContext;
             _handler = handler;
-            _destinations = new List<StreamDestination>();
+            _destinations = new StreamDestination[shardedContext.ShardCount];
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public async ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _options = options;
-            var streams = new List<Stream>();
-            var disposables = new List<IDisposable>();
-            var destinationsDispose = new List<IAsyncDisposable>();
+            var holders = new StreamDestinationHolder[_shardedContext.ShardCount];
 
-            for (int i = 0; i < _shardedContext.ShardCount; i++)
-            {
-                streams.Add(_handler.GetOutputStream(new BeatingBlockingStream(), options));
-                disposables.Add(_handler.ContextPool.AllocateOperationContext(out JsonOperationContext context));
-                var destination = new StreamDestinationShardImport(streams[i], context, _source);
-                _destinations.Add(destination);
-                destinationsDispose.Add(destination.InitializeAsync(options, result, buildVersion));
-            }
-
-            var importOperation = new ShardedImportOperation(_handler, streams, options);
-
+            var importOperation = new ShardedImportOperation(_handler, holders, options);
             var t = _shardedContext.ShardExecutor.ExecuteParallelForAllAsync(importOperation);
+
+            await Task.WhenAll(importOperation.ExposedStreamTasks);
+
+            for (int i = 0; i < holders.Length; i++)
+            {
+                await PrepareShardStreamDestination(holders, i, result, buildVersion);
+            }
 
             return new AsyncDisposableAction(async () =>
             {
-                foreach (var asyncDisposable in destinationsDispose)
+                for (int i = 0; i < holders.Length; i++)
                 {
-                    await asyncDisposable.DisposeAsync();
+                    await holders[i].DisposeAsync();
                 }
 
                 await t;
-
-                foreach (var disposable in disposables)
-                {
-                    disposable.Dispose();
-                }
             });
+        }
+
+        private async Task PrepareShardStreamDestination(StreamDestinationHolder[] holders, int shard, SmugglerResult result, long buildVersion)
+        {
+            var stream = _handler.GetOutputStream(holders[shard].OutStream.OutputStream.Result, _options);
+            holders[shard].InputStream = stream;
+            holders[shard].ContextReturn = _handler.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+            var destination = new StreamDestination(stream, context, _source);
+            holders[shard].DestinationAsyncDisposable = await destination.InitializeAsync(_options, result, buildVersion);
+            _destinations[shard] = destination;
+        }
+
+        internal struct StreamDestinationHolder : IAsyncDisposable
+        {
+            public Stream InputStream;
+            public StreamExposerContent OutStream;
+            public IDisposable ContextReturn;
+            public IAsyncDisposable DestinationAsyncDisposable;
+
+            public async ValueTask DisposeAsync()
+            {
+                await DestinationAsyncDisposable.DisposeAsync();
+                OutStream.Complete();
+                ContextReturn.Dispose();
+            }
         }
 
         // All the NotImplementedException methods are handled on the smuggler level, since they are cluster wide and do no require any specific database
@@ -114,7 +126,7 @@ namespace Raven.Server.Smuggler.Documents
             new ShardedLegacyActions(_shardedContext, _destinations.Select(d => d.LegacyAttachmentDeletions()).ToArray(), _options);
 
 
-        public abstract class ShardedActions<T> : INewDocumentActions, INewCompareExchangeActions where T : IAsyncDisposable
+        private abstract class ShardedActions<T> : INewDocumentActions, INewCompareExchangeActions where T : IAsyncDisposable
         {
             private JsonOperationContext _context;
             private readonly IDisposable _rtnCtx;
@@ -273,26 +285,5 @@ namespace Raven.Server.Smuggler.Documents
                 await _actions[index].WriteLegacyDeletions(id);
             }
         }
-
-        public class StreamDestinationShardImport : StreamDestination
-        {
-            private readonly Stream _stream;
-
-            public StreamDestinationShardImport(Stream stream, JsonOperationContext context, ISmugglerSource source) : base(stream, context, source)
-            {
-                _stream = stream;
-            }
-
-            public override IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
-            {
-                var dispose = base.InitializeAsync(options, result, buildVersion);
-                return new AsyncDisposableAction(async () =>
-                {
-                    await dispose.DisposeAsync();
-                    await _stream.DisposeAsync();
-                });
-            }
-        }
-
     }
 }

@@ -35,70 +35,25 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        private class StreamExposerContent : HttpContent
+        private class BulkInsertStreamExposerContent : StreamExposerContent
         {
-            public readonly Task<Stream> OutputStream;
-            private readonly TaskCompletionSource<Stream> _outputStreamTcs;
-            private readonly TaskCompletionSource<object> _done;
-
-            public bool IsDone => _done.Task.IsCompleted;
-
-            public StreamExposerContent()
-            {
-                _outputStreamTcs = new TaskCompletionSource<Stream>(TaskCreationOptions.RunContinuationsAsynchronously);
-                OutputStream = _outputStreamTcs.Task;
-                _done = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            }
-
             public void Done()
             {
-                if (_done.TrySetResult(null) == false)
+                if (Complete() == false)
                 {
                     throw new BulkInsertProtocolViolationException("Unable to close the stream", _done.Task.Exception);
                 }
-            }
-
-            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-            {
-                _outputStreamTcs.TrySetResult(stream);
-
-                return _done.Task;
-            }
-
-            protected override bool TryComputeLength(out long length)
-            {
-                length = -1;
-                return false;
-            }
-
-            public void ErrorOnRequestStart(Exception exception)
-            {
-                _outputStreamTcs.TrySetException(exception);
-            }
-
-            public void ErrorOnProcessingRequest(Exception exception)
-            {
-                _done.TrySetException(exception);
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                _done.TrySetCanceled();
-
-                //after dispose we don't care for unobserved exceptions
-                _done.Task.IgnoreUnobservedExceptions();
-                _outputStreamTcs.Task.IgnoreUnobservedExceptions();
             }
         }
 
         private class BulkInsertCommand : RavenCommand<HttpResponseMessage>
         {
             public override bool IsReadRequest => false;
-            private readonly StreamExposerContent _stream;
+            private readonly BulkInsertStreamExposerContent _stream;
             private readonly bool _skipOverwriteIfUnchanged;
             private readonly long _id;
 
-            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag, bool skipOverwriteIfUnchanged)
+            public BulkInsertCommand(long id, BulkInsertStreamExposerContent stream, string nodeTag, bool skipOverwriteIfUnchanged)
             {
                 _id = id;
                 _stream = stream;
@@ -149,7 +104,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly IDisposable _resetContext;
 
         private Stream _stream;
-        private readonly StreamExposerContent _streamExposerContent;
+        private readonly BulkInsertStreamExposerContent _streamExposerContent;
         private bool _first = true;
         private CommandType _inProgressCommand;
         private readonly CountersBulkInsertOperation _countersOperation;
@@ -232,7 +187,7 @@ namespace Raven.Client.Documents.BulkInsert
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _currentWriter = new StreamWriter(new MemoryStream());
             _backgroundWriter = new StreamWriter(new MemoryStream());
-            _streamExposerContent = new StreamExposerContent();
+            _streamExposerContent = new BulkInsertStreamExposerContent();
             _countersOperation = new CountersBulkInsertOperation(this);
             _attachmentsOperation = new AttachmentsBulkInsertOperation(this);
 
