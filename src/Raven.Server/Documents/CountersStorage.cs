@@ -1550,8 +1550,9 @@ namespace Raven.Server.Documents
                 yield return c;
         }
 
-        public long GetNumberOfCountersAndDeletedCountersForDocument(DocumentsOperationContext context, string docId)
+        internal long GetNumberOfCountersAndDeletedCountersForDocument(DocumentsOperationContext context, string docId)
         {
+            // for testing purposes only
             // get the number of counters without skipping the deleted counters
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
@@ -1560,14 +1561,16 @@ namespace Raven.Server.Documents
             {
                 foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
-                    var data = GetCounterValuesData(context, ref counterGroup.Value.Reader);
-                    if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
-                        return 0;
+                    using (var data = GetCounterValuesData(context, ref counterGroup.Value.Reader))
+                    {
+                        if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
+                            return 0;
 
-                    if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
-                        return 0;
+                        if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                            return 0;
 
-                    countersCount += counterValues.Count;
+                        countersCount += counterValues.Count;
+                    }
                 }
             }
 
@@ -2073,7 +2076,7 @@ namespace Raven.Server.Documents
                             table.DeleteByKey(counterGroupKey);
 
                             names.GetPropertyByIndex(1, ref prop);
-                            using var newScope = context.Allocator.Allocate(CounterKeysSlice.Size + 1 + 1, out ByteString newCounterKey);
+                            using var newScope = context.Allocator.Allocate(CounterKeysSlice.Size + 1 /* separator */  + 1 /* replace the current name with next one in counters group */, out ByteString newCounterKey);
                             documentKeyPrefix.CopyTo(newCounterKey.Ptr);
                             Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, prop.Name.Buffer, prop.Name.Size);
                             Slice.From(context.Allocator, newCounterKey.Ptr, documentKeyPrefix.Size + prop.Name.Size, out counterGroupKey);
@@ -2114,12 +2117,17 @@ namespace Raven.Server.Documents
                         var document = _documentsStorage.Get(context, item.DocumentId,
                             throwOnConflict: true);
 
-                        var newData = document.Data.Clone(context);
-                        _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
+                        if (document == null)
+                            return 0;
+
+                        using (var newData = document.Data.Clone(context))
+                        {
+                            _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
+                        }
                     }
                     catch (InvalidOperationException e)
                     {
-                        throw new InvalidOperationException($"Failed to get or update document '{item.DocumentId}'," +
+                        throw new InvalidOperationException($"Failed to update document '{item.DocumentId}'," +
                                                             $"Exception: {e}");
                     }
                 }
