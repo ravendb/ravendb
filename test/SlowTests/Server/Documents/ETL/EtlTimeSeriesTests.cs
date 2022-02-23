@@ -79,12 +79,12 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
                 var type = typeof(T);
                 var justForXUnit = XUnitMark + i;
                 if (type == typeof(TestDataType))
-                    return new object[] { justForXUnit, Params[i].Collection, Params[i].Script };
+                    return new object[] { justForXUnit, Params[i].Collection, Params[i].Script, Params[i].jsEngineType };
 
                 if (type == typeof(SuccessTestDataType))
-                    return new object[] { justForXUnit, true, Params[i].Collection, Params[i].Script };
+                    return new object[] { justForXUnit, true, Params[i].Collection, Params[i].Script, Params[i].jsEngineType };
 
-                return new object[] { justForXUnit, false, Params[i].Collection, Params[i].Script };
+                return new object[] { justForXUnit, false, Params[i].Collection, Params[i].Script, Params[i].jsEngineType };
             }
 
             public IEnumerator<object[]> GetEnumerator() => Enumerable.Range(0, Params.Length)
@@ -112,13 +112,15 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
                     };
                     return new (string[] Collections, string Script, string jsEngineType)[]
                     {
-                        (new string[0], null, "Jint"), (new [] {"Users"}, scripts[0], "Jint"),
+                        (new string[0], null, "Jint"), 
+                        (new [] {"Users"}, scripts[0], "Jint"),
                         (new [] {"Users"}, scripts[1], "Jint"), 
                         (new [] {"Users"}, scripts[2], "Jint"), 
                         (new [] {"Users"}, scripts[3], "Jint"), 
                         (new [] {"Users"}, scripts[4], "Jint"), 
                         (new [] {"Users"}, _script2, "Jint"),
-                        (new string[0], null, "Jint"), (new [] {"Users"}, scripts[0], "V8"),
+                        (new string[0], null, "V8"), 
+                        (new [] {"Users"}, scripts[0], "V8"),
                         (new [] {"Users"}, scripts[1], "V8"),
                         (new [] {"Users"}, scripts[2], "V8"),
                         (new [] {"Users"}, scripts[3], "V8"),
