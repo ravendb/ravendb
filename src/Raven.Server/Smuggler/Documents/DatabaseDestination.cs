@@ -71,16 +71,18 @@ namespace Raven.Server.Smuggler.Documents
             _duplicateDocsHandler = new DuplicateDocsHandler(_database);
         }
 
-        public IAsyncDisposable InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
+        public ValueTask<IAsyncDisposable> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
             _options = options;
 
-            return new AsyncDisposableAction(() =>
+            var d = new AsyncDisposableAction(() =>
             {
                 _duplicateDocsHandler.Dispose();
                 return Task.CompletedTask;
             });
+
+            return ValueTask.FromResult<IAsyncDisposable>(d);
         }
 
         public IDatabaseRecordActions DatabaseRecord()

@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
                 SkipRevisionCreation = true
             };
 
-            await using (destination.InitializeAsync(options, null, buildVersion: default))
+            await using (await destination.InitializeAsync(options, null, buildVersion: default))
             await using (var documentActions = destination.Documents())
             await using (var buffered = new BufferedStream(RequestBodyStream()))
 #pragma warning disable CS0618 // Type or member is obsolete

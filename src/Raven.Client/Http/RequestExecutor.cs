@@ -1844,6 +1844,53 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
+        public delegate HttpMessageHandler CreateMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression,
+            bool hasExplicitlySetCompressionUsage = false);
+
+        public CreateMessageHandler CreateMessageHandlerDelegate = CreateHttpMessageHandler;
+        /*
+        public static SocketsHttpHandler CreateSocketMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
+        {
+            var socketsHttpHandler = new SocketsHttpHandler
+            {
+                MaxConnectionsPerServer = DefaultConnectionLimit,
+                KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(30)
+            };
+
+            socketsHttpHandler.AutomaticDecompression =
+                useCompression
+                    ? DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    : DecompressionMethods.None;
+
+            if (certificate != null)
+            {
+                socketsHttpHandler.SslOptions = new SslClientAuthenticationOptions
+                {
+                    ClientCertificates = new X509CertificateCollection { certificate },
+                };
+
+                if (ServerCertificateCustomValidationCallbackRegistrationException == null)
+                    socketsHttpHandler.SslOptions.RemoteCertificateValidationCallback += OnServerCertificateCustomValidationCallback;
+
+                try
+                {
+                    if (setSslProtocols)
+                        socketsHttpHandler.SslOptions.EnabledSslProtocols = TcpUtils.SupportedSslProtocols;
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    // The user can set the following manually:
+                    // ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                }
+
+                ValidateClientKeyUsages(certificate);
+            }
+
+            return socketsHttpHandler;
+        }
+        */
+
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
             HttpClientHandler httpMessageHandler;
@@ -1897,7 +1944,7 @@ namespace Raven.Client.Http
 
         public HttpClient CreateClient()
         {
-            var httpMessageHandler = CreateHttpMessageHandler(Certificate,
+            var httpMessageHandler = CreateMessageHandlerDelegate(Certificate,
                 setSslProtocols: true,
                 useCompression: Conventions.UseCompression,
                 hasExplicitlySetCompressionUsage: Conventions.HasExplicitlySetCompressionUsage);
