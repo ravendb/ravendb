@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        protected async Task WaitForExecutionOfDatabaseCommands(JsonOperationContext context, List<long> raftIndexIds)
+        protected async Task WaitForExecutionOfRaftCommands(JsonOperationContext context, List<long> raftIndexIds)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
             {

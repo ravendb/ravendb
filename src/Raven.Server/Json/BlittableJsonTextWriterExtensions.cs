@@ -614,13 +614,6 @@ namespace Raven.Server.Json
                 writer.WriteArray(nameof(result.TimeSeriesFields), result.TimeSeriesFields);
             }
 
-            if (result.IsMapReduce)
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(result.IsMapReduce));
-                writer.WriteBool(result.IsMapReduce);
-            }
-
             var compareExchangeValues = result.GetCompareExchangeValueIncludes();
             if (compareExchangeValues != null)
             {

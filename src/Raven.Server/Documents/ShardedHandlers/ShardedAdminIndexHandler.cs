@@ -22,14 +22,14 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
 
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true, 
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfDatabaseCommands(args.Context, args.RaftIndexIds)));
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfRaftCommands(args.Context, args.RaftIndexIds)));
         }
 
         [RavenShardedAction("/databases/*/indexes", "PUT")]
         public async Task PutJavaScript()
         {
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfDatabaseCommands(args.Context, args.RaftIndexIds)));
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => WaitForExecutionOfRaftCommands(args.Context, args.RaftIndexIds)));
         }
 
         private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)

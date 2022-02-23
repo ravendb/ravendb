@@ -212,7 +212,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
-        public static readonly Func<BlittableJsonReaderObject, WaitForCommandsRequest> WaitForCommands = GenerateJsonDeserializationRoutine<WaitForCommandsRequest>();
+        public static readonly Func<BlittableJsonReaderObject, WaitForCommandsRequest> WaitForRaftCommands = GenerateJsonDeserializationRoutine<WaitForCommandsRequest>();
 
         public class Parameters
         {

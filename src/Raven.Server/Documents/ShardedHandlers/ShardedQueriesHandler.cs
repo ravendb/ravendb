@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,11 +11,11 @@ using Esprima.Ast;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using NuGet.Packaging;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -28,7 +29,6 @@ using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
@@ -37,8 +37,7 @@ using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Constants = Raven.Client.Constants;
-using HttpMethod = Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http.HttpMethod;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -75,7 +74,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         // TODO: Sharding
                         //var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
                         
-                        var indexQueryReader = new QueriesHandler.IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), 
+                        var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), 
                             ShardedContext.QueryMetadataCache, database: null);
 
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -184,6 +183,8 @@ namespace Raven.Server.Documents.ShardedHandlers
             private readonly TransactionOperationContext _context;
             private readonly ShardedQueriesHandler _parent;
             private readonly IndexQueryServerSide _query;
+            private readonly bool _isMapReduceIndex;
+            private readonly bool _isAutoMapReduceQuery;
             private readonly Dictionary<int, ShardedQueryCommand> _commands;
             private readonly HashSet<int> _filteredShardIndexes;
             private readonly ShardedQueryResult _result;
@@ -202,6 +203,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                 _result = new ShardedQueryResult();
                 _parent = parent;
                 _query = query;
+                _isMapReduceIndex = _query.Metadata.IndexName != null && _parent.ShardedContext.IsMapReduceIndex(_query.Metadata.IndexName);
+                _isAutoMapReduceQuery = _query.Metadata.IsDynamic && _query.Metadata.IsGroupBy;
                 _commands = new Dictionary<int, ShardedQueryCommand>();
                 if (_query.QueryParameters != null && _query.QueryParameters.TryGet("Sharding.Context", out BlittableJsonReaderArray filter))
                 {
@@ -273,7 +276,10 @@ namespace Raven.Server.Documents.ShardedHandlers
                 var clone = _query.Metadata.Query.ShallowCopy();
                 clone.Offset = null; // sharded queries has to start from 0 on all nodes
                 clone.Limit = new ValueExpression("__raven_limit", ValueTokenType.Parameter);
-                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate) { [nameof(IndexQuery.Query)] = clone.ToString() };
+                queryTemplate.Modifications = new DynamicJsonValue(queryTemplate)
+                {
+                    [nameof(IndexQuery.Query)] = clone.ToString()
+                };
                 DynamicJsonValue modifiedArgs;
                 if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args))
                 {
@@ -300,7 +306,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     query.SelectFunctionBody.FunctionText == null)
                     return;
 
-                if (_query.Metadata.IndexName == null || _parent.ShardedContext.IsMapReduceIndex(_query.Metadata.IndexName) == false)
+                if (_query.Metadata.IndexName == null || _isMapReduceIndex == false)
                     return;
 
                 if (query.Load is { Count: > 0 })
@@ -391,7 +397,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                 foreach (var (_, cmd) in _commands)
                 {
                     _result.ResultEtag = Hashing.Combine(_result.ResultEtag, cmd.Result.ResultEtag);
-                    _result.IsMapReduce = cmd.Result.IsMapReduce;
                 }
             }
             
@@ -511,7 +516,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 BlittableJsonReaderObject GetOrderByFields(BlittableJsonReaderObject original)
                 {
-                    if (_result.IsMapReduce)
+                    if (_isMapReduceIndex || _isAutoMapReduceQuery)
                         return original;
 
                     if (original.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
@@ -587,17 +592,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public void ReduceResults()
             {
-                if (_query.Metadata.IsDynamic)
-                {
-                    if (_query.Metadata.IsGroupBy == false)
-                    {
-                        return;
-                    }
-
-                    //TODO: check if this can be replaced by handling it in ReduceMapReduceIndexResults
-                    ReduceDynamicResults();
-                }
-                else if (_result.IsMapReduce)
+                if (_isMapReduceIndex || _isAutoMapReduceQuery)
                 {
                     ReduceMapReduceIndexResults();
                 }
@@ -605,12 +600,19 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void ReduceMapReduceIndexResults()
             {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Make sure that we have the auto map index in the orchestrator");
+
                 if (_parent.ShardedContext.TryGetAutoIndexDefinition(_result.IndexName, out var autoIndexDefinition))
                 {
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)IndexStore.CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel);
                     var aggegation = ReduceMapResultsOfAutoIndex.AggregateOn(_result.Results, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);
                     _result.Results = aggegation.GetOutputsToStore().ToList();
                     return;
+                }
+
+                if (_isAutoMapReduceQuery)
+                {
+                    throw new InvalidOperationException($"Failed to get {_result.IndexName} index for the reduce part in the orchestrator");
                 }
 
                 var compiled = _parent.ShardedContext.GetCompiledMapReduceIndex(_result.IndexName, _context);
@@ -647,68 +649,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                 _result.Results = objects.GetOutputsToStore().ToList();
             }
 
-            private void ReduceDynamicResults()
-            {
-                var grouping = new Dictionary<GroupKey, List<BlittableJsonReaderObject>>();
-                foreach (BlittableJsonReaderObject item in _result.Results)
-                {
-                    var parts = new List<object>();
-                    foreach (var fld in _query.Metadata.GroupBy)
-                    {
-                        if (item.TryGet(fld.Name, out object val) == false)
-                        {
-                            throw new InvalidOperationException("Unable to reduce sharded query, missing field in projection: " + fld.Name);
-                        }
-
-                        parts.Add(val);
-                    }
-
-                    grouping.GetOrAdd(new GroupKey(parts)).Add(item);
-                }
-                
-                _result.Results.Clear();
-                
-                foreach (var (key, items) in grouping)
-                {
-                    //TODO: handle metadata merge
-                    var result = new DynamicJsonValue();
-                    for (int i = 0; i < _query.Metadata.GroupBy.Length; i++)
-                    {
-                        var groupByField = _query.Metadata.GroupBy[i];
-                        result[groupByField.Alias ?? groupByField.Name] = key[i];
-                    }
-
-                    foreach (var fld in _query.Metadata.SelectFields)
-                    {
-                        switch (fld.AggregationOperation)
-                        {
-                            // Count & Sum needs to be summed, since we are aggregating results here
-                            case AggregationOperation.Count:
-                            case AggregationOperation.Sum:
-                                double val = 0;
-                                foreach (var item in items)
-                                {
-                                    if (item.TryGet(fld.Name, out double v))
-                                        val += v;
-                                }
-
-                                result[fld.Alias ?? fld.Name] = val;
-                                break;
-                            case AggregationOperation.None:
-                                break;
-                            default:
-                                throw new ArgumentException("Not supported " + fld.AggregationOperation);
-                        }
-                    }
-
-                    _result.Results.Add(_context.ReadObject(result, "reduced-result"));
-                }
-            }
-
-
             public void ProjectAfterMapReduce()
             {
-                if (_result.IsMapReduce == false
+                if (_isMapReduceIndex == false && _isAutoMapReduceQuery == false
                     || (_query.Metadata.Query.Select == null || _query.Metadata.Query.Select.Count == 0)
                     && _query.Metadata.Query.SelectFunctionBody.FunctionText == null)
                     return;
@@ -746,48 +689,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                     }
                 }
             }
-
-            private class GroupKey
-            {
-                private readonly List<object> _items;
-                private readonly int _hash;
-
-                public object this[int i] => _items[i];
-                public GroupKey(List<object> items)
-                {
-                    _items = items;
-                    _hash = items.Count;
-                    foreach (object item in items)
-                    {
-                        _hash = Hashing.Combine(_hash, item?.GetHashCode() ?? 0);
-                    }
-                }
-
-                public override int GetHashCode()
-                {
-                    return _hash;
-                }
-
-                public override bool Equals(object? obj)
-                {
-                    if (obj is GroupKey other)
-                    {
-                        if (other._items.Count != _items.Count)
-                            return false;
-                        
-                        for (int i = 0; i < _items.Count; i++)
-                        {
-                            if (object.Equals(_items[i], other._items[i]) == false)
-                                return false;
-                        }
-
-                        return true;
-                    }
-
-                    return false;
-                }
-            }
-
 
             public ShardedQueryResult GetResult()
             {

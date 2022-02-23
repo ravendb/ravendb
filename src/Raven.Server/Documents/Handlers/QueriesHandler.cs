@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -197,54 +196,6 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteArray(nameof(indexQuery.Diagnostics), indexQuery.Diagnostics);
                 }
             };
-        }
-
-        public struct IndexQueryReader
-        {
-            public int Start, PageSize;
-            public HttpContext HttpContext;
-            public Stream Stream;
-            public QueryMetadataCache QueryMetadataCache;
-            public DocumentDatabase Database;
-
-            public IndexQueryReader(int start, int pageSize, HttpContext httpContext, Stream stream, QueryMetadataCache queryMetadataCache, DocumentDatabase database)
-            {
-                Start = start;
-                PageSize = pageSize;
-                HttpContext = httpContext;
-                Stream = stream;
-                QueryMetadataCache = queryMetadataCache;
-                Database = database;
-            }
-
-            public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
-            {
-                if (method == HttpMethod.Get)
-                {
-                    return AwaitAndReturn(context, tracker);
-                }
-
-                var read = context.ReadForMemoryAsync(Stream, "index/query");
-                if (read.IsCompleted)
-                {
-
-                    var result = IndexQueryServerSide.Create(HttpContext, read.Result, QueryMetadataCache, tracker, database: Database);
-                    return ValueTask.FromResult(result);
-                }
-
-                return AwaitAndReturn(read, tracker);
-            }
-
-            private async ValueTask<IndexQueryServerSide> AwaitAndReturn(ValueTask<BlittableJsonReaderObject> read, RequestTimeTracker tracker)
-            {
-                var json = await read;
-                return IndexQueryServerSide.Create(HttpContext, json, QueryMetadataCache, tracker, database: Database);
-            }
-
-            private async ValueTask<IndexQueryServerSide> AwaitAndReturn(JsonOperationContext context, RequestTimeTracker tracker)
-            {
-                return await IndexQueryServerSide.CreateAsync(HttpContext, Start, PageSize, context, tracker);
-            }
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, OperationCancelToken token)
