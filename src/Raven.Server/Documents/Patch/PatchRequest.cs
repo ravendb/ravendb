@@ -135,7 +135,9 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
                 {
                     var startPos = item.Range.Start;
                     var endPos = item.Range.End;
-                    result += script.Substring(startPos, endPos - startPos) + "\n\n";
+                    var itemCode = script.Substring(startPos, endPos - startPos) + "\n\n";
+                    if (item.Type != Nodes.VariableDeclaration || !itemCode.Contains("this"))
+                        result += itemCode;
                 }
             }
             return result;
