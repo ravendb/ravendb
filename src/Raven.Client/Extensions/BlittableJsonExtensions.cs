@@ -26,10 +26,8 @@ namespace Raven.Client.Extensions
             return id;
         }
 
-        internal static LazyStringValue GetLazyStringId(this BlittableJsonReaderObject json)
+        internal static LazyStringValue GetLazyStringId(this BlittableJsonReaderObject metadata)
         {
-            var metadata = json.GetMetadata();
-
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out LazyStringValue id) == false)
                 throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.Id}' field.");
 
