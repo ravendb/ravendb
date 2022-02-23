@@ -2120,9 +2120,9 @@ namespace Raven.Server.Documents
                         if (document == null)
                             return 0;
 
-                        using (var newData = document.Data.Clone(context))
+                        using (var old = document)
                         {
-                            _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
+                            _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, document.Data, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
                         }
                     }
                     catch (InvalidOperationException e)
