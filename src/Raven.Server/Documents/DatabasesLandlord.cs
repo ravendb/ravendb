@@ -322,11 +322,11 @@ namespace Raven.Server.Documents
             return disabled || isRestoring;
         }
 
-        private void UnloadDatabaseInternal(string databaseName,[CallerMemberName] string caller = null)
+        private void UnloadDatabaseInternal(string databaseName, [CallerMemberName] string caller = null)
         {
             using (DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller))
             {
-                
+
             }
         }
 
@@ -421,7 +421,7 @@ namespace Raven.Server.Documents
                 }
 
                 // delete the cache info
-                DeleteDatabaseCachedInfo(dbName, _serverStore);
+                DeleteDatabaseCachedInfo(dbName, throwOnError: true);
             }
             finally
             {
@@ -567,7 +567,6 @@ namespace Raven.Server.Documents
                     // there is no else, the db is probably faulted
                 });
                 DatabasesCache.Clear();
-
 
                 exceptionAggregator.ThrowIfNeeded();
             }
@@ -902,7 +901,7 @@ namespace Raven.Server.Documents
                 documentDatabase.Initialize(InitializeOptions.None, wakeup);
 
                 AddToInitLog("Finish database initialization");
-                DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
+                DeleteDatabaseCachedInfo(documentDatabase.Name, throwOnError: false);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -935,9 +934,20 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void DeleteDatabaseCachedInfo(string databaseName, ServerStore serverStore)
+        private void DeleteDatabaseCachedInfo(string databaseName, bool throwOnError)
         {
-            serverStore.DatabaseInfoCache.Delete(databaseName);
+            try
+            {
+                _serverStore.DatabaseInfoCache.Delete(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (throwOnError)
+                    throw;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete database info for '{databaseName}' database.", e);
+            }
         }
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)

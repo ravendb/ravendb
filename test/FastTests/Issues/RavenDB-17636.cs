@@ -20,19 +20,20 @@ public class FilterTests : RavenTestBase
     public FilterTests(ITestOutputHelper output) : base(output)
     {
     }
-    
+
     [Fact]
     public void CanUseFilterAsContextualKeywordForBackwardCompatability()
     {
         using var store = GetDocumentStore();
         var data = GetDatabaseItems();
         Insert(store, data);
-        Employee result;
-        QueryStatistics stats;
         // raw
         using (var s = store.OpenSession())
         {
-            result = s.Advanced.RawQuery<Employee>("from Employees filter where filter.Name = 'Jane' filter filter.Name ='Jane' select filter").SingleOrDefault();
+            var result = s.Advanced
+                .RawQuery<Employee>("from Employees filter where filter.Name = 'Jane' filter filter.Name ='Jane' select filter")
+                .SingleOrDefault();
+
             Assert.Equal("Jane", result.Name);
 
             var c = s.Advanced.RawQuery<Employee>(@"
@@ -41,7 +42,7 @@ declare function filter(a) {
 }
 from Employees as a
 select filter(a)").Count();
-            
+
             Assert.Equal(3, c);
 
         }
@@ -736,7 +737,7 @@ filter Name = 'Frank'")
         public BlogIndex()
         {
             Map = blogs => from b in blogs
-                select new { Tags = b.Tags };
+                           select new { Tags = b.Tags };
             Store("Tags", FieldStorage.Yes);
             Index("Tags", FieldIndexing.Exact);
         }
