@@ -11,6 +11,8 @@ namespace Raven.Server.Web.Studio.Processors;
 
 public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStudioCollectionsHandlerProcessorForPreviewCollection<DatabaseRequestHandler>
 {
+    private readonly DocumentDatabase _database;
+
     private int _start;
 
     private int _pageSize;
@@ -23,9 +25,10 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
 
     private DocumentsOperationContext _context;
 
-    public StudioCollectionsHandlerProcessorForPreviewCollection(DatabaseRequestHandler requestHandler)
+    public StudioCollectionsHandlerProcessorForPreviewCollection(DatabaseRequestHandler requestHandler, DocumentDatabase database)
         : base(requestHandler)
     {
+        _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
     protected override void Initialize()
@@ -35,12 +38,12 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _start = RequestHandler.GetStart();
         _pageSize = RequestHandler.GetPageSize();
 
-        _releaseContext = RequestHandler.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+        _releaseContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
         _closeTransaction = _context.OpenReadTransaction();
 
         _totalResults = IsAllDocsCollection
-            ? RequestHandler.Database.DocumentsStorage.GetNumberOfDocuments(_context)
-            : RequestHandler.Database.DocumentsStorage.GetCollection(Collection, _context).Count;
+            ? _database.DocumentsStorage.GetNumberOfDocuments(_context)
+            : _database.DocumentsStorage.GetCollection(Collection, _context).Count;
     }
 
     protected override JsonOperationContext GetContext()
@@ -64,7 +67,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         }
         else
         {
-            changeVector = RequestHandler.Database.DocumentsStorage.GetLastDocumentChangeVector(_context.Transaction.InnerTransaction, _context, Collection);
+            changeVector = _database.DocumentsStorage.GetLastDocumentChangeVector(_context.Transaction.InnerTransaction, _context, Collection);
 
             if (changeVector != null)
                 etag = $"{changeVector}/{_totalResults}";
@@ -82,10 +85,10 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
     protected override ValueTask<List<Document>> GetDocumentsAsync()
     {
         var documents = IsAllDocsCollection
-            ? RequestHandler.Database.DocumentsStorage
+            ? _database.DocumentsStorage
                 .GetDocumentsInReverseEtagOrder(_context, _start, _pageSize)
                 .ToList()
-            : RequestHandler.Database.DocumentsStorage
+            : _database.DocumentsStorage
                 .GetDocumentsInReverseEtagOrder(_context, Collection, _start, _pageSize)
                 .ToList();
 
