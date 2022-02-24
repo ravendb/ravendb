@@ -20,7 +20,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PreviewCollection()
         {
-            using (var processor = new StudioCollectionsHandlerProcessorForPreviewCollection(this))
+            using (var processor = new StudioCollectionsHandlerProcessorForPreviewCollection(this, Database))
                 await processor.ExecuteAsync();
         }
 
