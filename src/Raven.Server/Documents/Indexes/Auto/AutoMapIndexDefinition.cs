@@ -10,7 +10,7 @@ using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
-    public class AutoMapIndexDefinition : AutoIndexDefinitionBase
+    public class AutoMapIndexDefinition : AutoIndexDefinitionBaseServerSide
     {
         public AutoMapIndexDefinition(string collection, AutoIndexField[] fields, IndexDeploymentMode? deploymentMode, long? indexVersion = null)
             : base(AutoIndexNameFinder.FindMapIndexName(collection, fields), collection, fields, deploymentMode, indexVersion)
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Auto
             return indexDefinition;
         }
 
-        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase other)
+        public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide other)
         {
             var otherDefinition = other as AutoMapIndexDefinition;
             if (otherDefinition == null)

@@ -145,7 +145,7 @@ class databaseInfo {
                 return "Disabled";
             }
 
-            if (this.uptime()) {
+            if (this.online()) {
                 return "Online";
             }
             return "Offline";

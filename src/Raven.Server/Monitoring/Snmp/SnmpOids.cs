@@ -251,6 +251,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of active TCP connections")]
             public const string TcpActiveConnections = "1.15.1";
 
+            [Description("Indicates if any experimental features are used")]
+            public const string FeatureAnyExperimental = "1.16.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
@@ -443,6 +446,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of error indexes")]
             public const string NumberOfErrorIndexes = "5.2.{0}.5.6";
 
+            [Description("Number of faulty indexes")]
+            public const string NumberOfFaultyIndexes = "5.2.{0}.5.7";
+
             [Description("Number of writes (documents, attachments, counters)")]
             public const string WritesPerSecond = "5.2.{0}.6.1";
 
@@ -561,6 +567,9 @@ namespace Raven.Server.Monitoring.Snmp
 
                 [Description("Number of error indexes in all loaded databases")]
                 public const string TotalNumberOfErrorIndexes = "5.1.7.3";
+
+                [Description("Number of faulty indexes in all loaded databases")]
+                public const string TotalNumberOfFaultyIndexes = "5.1.7.4";
 
                 [Description("Number of indexed documents per second for map indexes (one minute rate) in all loaded databases")]
                 public const string TotalMapIndexIndexesPerSecond = "5.1.8.1";

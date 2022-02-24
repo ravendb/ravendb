@@ -7,16 +7,12 @@ import indexStalenessReasons = require("viewmodels/database/indexes/indexStalene
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import statsModel = require("models/database/stats/statistics");
 import popoverUtils = require("common/popoverUtils");
-import getIdentitiesCommand = require("commands/database/identities/getIdentitiesCommand");
-
-type identityItem = { Prefix: string, Value: number };
 
 class statistics extends viewModelBase {
 
     view = require("views/database/status/statistics.html");
 
     stats = ko.observable<statsModel>();
-    identities = ko.observableArray<identityItem>([]);
     rawJsonUrl: KnockoutComputed<string>;
 
     private refreshStatsObservable = ko.observable<number>();
@@ -112,25 +108,12 @@ class statistics extends viewModelBase {
         const dbDataLocationTask = new getStorageReportCommand(db)
             .execute();
         
-        const identitiesTask = new getIdentitiesCommand(db)
-            .execute();
-        
-        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask, identitiesTask)
+        return $.when<any>(dbStatsTask, indexesStatsTask, dbDataLocationTask)
             .done(([dbStats]: [Raven.Client.Documents.Operations.DetailedDatabaseStatistics],
                    [indexesStats]: [Raven.Client.Documents.Indexes.IndexStats[]],
-                   [dbLocation]: [storageReportDto],
-                   [identities]: [dictionary<number>]) => {
+                   [dbLocation]: [storageReportDto]) => {
                 this.processStatsResults(dbStats, indexesStats);
                 this.dataLocation(dbLocation.BasePath);
-                
-                const mappedIdentities = _.map(identities, (value, key): identityItem => {
-                    return {
-                        Prefix: key,
-                        Value: value
-                    };
-                });
-                
-                this.identities(_.sortBy(mappedIdentities, x => x.Prefix.toLocaleLowerCase()));
             });
     }
 

@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Indexes
                     string persistedConfigurationValue = null;
                     if (result != null)
                         persistedConfigurationValue = result.Reader.ToStringValue();
-                    else if (_index.Definition.Version < IndexDefinitionBase.IndexVersion.Analyzers)
+                    else if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.Analyzers)
                         persistedConfigurationValue = defaultAnalyzer;
 
                     if (persistedConfigurationValue != null)
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     else
                     {
-                        if (_index.Definition.Version < IndexDefinitionBase.IndexVersion.Corax)
+                        if (_index.Definition.Version < IndexDefinitionBaseServerSide.IndexVersion.Corax)
                             configurationTree.Add(configurationKey, SearchEngineType.Lucene.ToString());
                         else
                             configurationTree.Add(configurationKey, defaultEngineType.ToString());
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastDatabaseEtagOnIndexCreation >= currentEtag;
         }
 
-        public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
+        public void WriteDefinition(IndexDefinitionBaseServerSide indexDefinition, TimeSpan? timeout = null)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction(timeout))

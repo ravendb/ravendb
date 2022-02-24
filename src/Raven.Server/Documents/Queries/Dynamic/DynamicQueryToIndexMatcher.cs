@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 else if (index.Type != IndexType.AutoMap)
                     continue;
 
-                var auto = (AutoIndexDefinitionBase)index.Definition;
+                var auto = (AutoIndexDefinitionBaseServerSide)index.Definition;
 
                 var result = ConsiderUsageOfIndex(query, auto, explanations);
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return prioritizedResults[0];
         }
 
-        internal DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
+        internal DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBaseServerSide definition, List<Explanation> explanations = null)
         {
             var collection = query.ForCollection;
             var indexName = definition.Name;

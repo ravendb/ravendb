@@ -46,7 +46,7 @@ public static class CoraxIndexingHelpers
         return analyzerInstance;
     }
 
-    public static IndexFieldsMapping CreateCoraxAnalyzers(ByteStringContext context, Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+    public static IndexFieldsMapping CreateCoraxAnalyzers(ByteStringContext context, Index index, IndexDefinitionBaseServerSide indexDefinition, bool forQuerying = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(

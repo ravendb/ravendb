@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils.Features;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Platform;

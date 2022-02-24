@@ -17,7 +17,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override TimeTicks GetData()
         {
             if (_statistics.LastRequestTime.HasValue)
-                return new TimeTicks(SystemTime.UtcNow - _statistics.LastRequestTime.Value);
+                return SnmpValuesHelper.TimeSpanToTimeTicks(SystemTime.UtcNow - _statistics.LastRequestTime.Value);
 
             return null;
         }

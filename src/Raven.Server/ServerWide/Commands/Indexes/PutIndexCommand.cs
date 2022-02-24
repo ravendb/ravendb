@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Server.Config;
-using Raven.Server.Documents.Indexes;
+using Raven.Server.Extensions;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow;
@@ -28,6 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             : base(databaseName, uniqueRequestId)
         {
             Definition = definition;
+            Definition.ClusterState ??= new ClusterState();
             Source = source;
             CreatedAt = createdAt;
             RevisionsToKeep = revisionsToKeep;
@@ -62,7 +62,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Definition)] = TypeConverter.ToBlittableSupportedType(Definition);
+            json[nameof(Definition)] = Definition.ToJson();
             json[nameof(Source)] = Source;
             json[nameof(CreatedAt)] = CreatedAt;
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;

@@ -14,7 +14,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Properties;
 using Raven.Client.Util;
@@ -22,7 +21,6 @@ using Raven.Debug.StackTrace;
 using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
@@ -32,6 +30,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -192,10 +191,10 @@ namespace FastTests
 
         protected static TestCertificatesHolder _selfSignedCertificates;
 
-        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
+        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false, [CallerMemberName] string caller = null)
         {
             if (createNew)
-                return ReturnCertificatesHolder(Generate(Interlocked.Increment(ref _counter)));
+                return ReturnCertificatesHolder(Generate(caller, Interlocked.Increment(ref _counter)));
 
             var selfSignedCertificates = _selfSignedCertificates;
             if (selfSignedCertificates != null)
@@ -205,7 +204,7 @@ namespace FastTests
             {
                 selfSignedCertificates = _selfSignedCertificates;
                 if (selfSignedCertificates == null)
-                    _selfSignedCertificates = selfSignedCertificates = Generate();
+                    _selfSignedCertificates = selfSignedCertificates = Generate(caller);
 
                 return ReturnCertificatesHolder(selfSignedCertificates);
             }
@@ -215,7 +214,7 @@ namespace FastTests
                 return new TestCertificatesHolder(certificates, GetTempFileName);
             }
 
-            TestCertificatesHolder Generate(int gen = 0)
+            TestCertificatesHolder Generate(string caller, int gen = 0)
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
@@ -225,6 +224,8 @@ namespace FastTests
 
                 if (File.Exists(serverCertificatePath) == false)
                 {
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Generating cert file: {serverCertificatePath} (caller: {caller})");
+
                     try
                     {
                         certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
@@ -240,6 +241,8 @@ namespace FastTests
                     try
                     {
                         File.WriteAllBytes(serverCertificatePath, certBytes);
+
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Certificate {serverCertificatePath} generated successfully");
                     }
                     catch (Exception e)
                     {

@@ -14,11 +14,8 @@ using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -77,7 +74,7 @@ using Size = Sparrow.Size;
 namespace Raven.Server.Documents.Indexes
 {
     public abstract class Index<TIndexDefinition, TField> : Index
-        where TIndexDefinition : IndexDefinitionBase<TField> where TField : IndexFieldBase
+        where TIndexDefinition : IndexDefinitionBaseServerSide<TField> where TField : IndexFieldBase
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
@@ -259,7 +256,7 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly string _itemType;
 
-        protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBase definition)
+        protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition)
         {
             Type = type;
             SourceType = sourceType;
@@ -559,7 +556,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexState State { get; protected set; }
 
-        public IndexDefinitionBase Definition { get; private set; }
+        public IndexDefinitionBaseServerSide Definition { get; private set; }
 
         public string Name => Definition?.Name;
 
@@ -654,7 +651,7 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
         {
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
 
             var indexPath = configuration.StoragePath.Combine(name);
 
@@ -762,7 +759,7 @@ namespace Raven.Server.Documents.Indexes
                 _mre = new ThrottledManualResetEventSlim(Configuration.ThrottlingTimeInterval?.AsTimeSpan, timerManagement: ThrottledManualResetEventSlim.TimerManagement.Manual);
                 _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
-                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+                var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
 
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
@@ -1125,12 +1122,13 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        public virtual void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
             Debug.Assert(Type.IsStatic());
 
             configuration.InitializeAnalyzers(DocumentDatabase.Name);
             InitializeMetrics(configuration);
+            var startIndex = false;
 
             using (DrainRunningQueries())
             {
@@ -1139,6 +1137,23 @@ namespace Raven.Server.Documents.Indexes
                     Stop();
 
                 _indexStorage.WriteDefinition(definition);
+
+                if (definition.ClusterState?.LastStateIndex > (Definition.ClusterState?.LastStateIndex ?? -1))
+                {
+                    switch (definition.State)
+                    {
+                        case IndexState.Disabled:
+                            Disable();
+                            break;
+                        case IndexState.Normal:
+                            startIndex = true;
+                            SetState(definition.State);
+                            break;
+                        case IndexState.Error:
+                            SetState(definition.State);// Just in case we change to error manually ==> indexState == error and the index is paused
+                            break;
+                    }
+                }
 
                 Definition = definition;
                 Configuration = configuration;
@@ -1150,7 +1165,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _priorityChanged.Raise();
 
-                if (status == IndexRunningStatus.Running)
+                if (status == IndexRunningStatus.Running || startIndex)
                     Start();
             }
         }
@@ -1422,7 +1437,7 @@ namespace Raven.Server.Documents.Indexes
 
                             if (_indexDisabled)
                                 return;
-                            
+
                             var replaceStatus = ReplaceIfNeeded(batchCompleted: false, didWork: false);
 
                             if (replaceStatus == ReplaceStatus.Succeeded)
@@ -1746,7 +1761,7 @@ namespace Raven.Server.Documents.Indexes
                     _forTestingPurposes?.ActionToCallInFinallyOfExecuteIndexing?.Invoke();
 
                     _inMemoryIndexProgress.Clear();
-                    
+
                     if (storageEnvironment != null)
                         storageEnvironment.OnLogsApplied -= HandleLogsApplied;
 
@@ -2921,7 +2936,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var stats = new IndexStats.MemoryStats();
 
-            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+            var name = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
 
             var indexPath = Configuration.StoragePath.Combine(name);
 
@@ -4319,7 +4334,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (_firstBatchTimeout.HasValue && parameters.Stats.Duration > _firstBatchTimeout)
             {
-                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType,
                     $"Stopping the first batch after {_firstBatchTimeout} to ensure just created index has some results");
 
                 _firstBatchTimeout = null;
@@ -4329,7 +4344,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (parameters.Stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
-                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType,
                     $"Number of errors ({parameters.Stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return CanContinueBatchResult.False;
             }
@@ -4381,7 +4396,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 _scratchSpaceLimitExceeded = true;
 
-                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType,
                     $"Reached scratch space limit ({Configuration.ScratchSpaceLimit.Value}). Current scratch space is {new Size(_environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes, SizeUnit.Bytes)}");
 
                 return CanContinueBatchResult.False;
@@ -4393,7 +4408,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 _scratchSpaceLimitExceeded = true;
 
-                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, 
+                parameters.Stats.RecordBatchCompletedReason(parameters.WorkType,
                     $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
 
                 return CanContinueBatchResult.False;
@@ -4615,8 +4630,8 @@ namespace Raven.Server.Documents.Indexes
 
                         InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
-                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
+                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
 
                         using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                             StorageEnvironmentOptions.ForPath(compactPath.FullPath, tempPath?.FullPath, null, DocumentDatabase.IoChanges,
@@ -4668,7 +4683,9 @@ namespace Raven.Server.Documents.Indexes
                     result.AddMessage($"Starting data optimization of index '{Name}'.");
                     onProgress?.Invoke(result.Progress);
 
+                    using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                    using (CurrentIndexingScope.Current = new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, context, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                     using (var txw = indexContext.OpenWriteTransaction())
                     using (var writer = IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext))
                     {
@@ -4685,6 +4702,9 @@ namespace Raven.Server.Documents.Indexes
             // shutdown environment
             if (_isRunningQueriesWriteLockTaken.Value == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
+
+            if (Configuration.RunInMemory)
+                throw new InvalidOperationException("Cannot restart the environment of an index running in-memory");
 
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
@@ -4835,7 +4855,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var index in indexes)
                 {
-                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    if (directoryName == IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Key))
                     {
                         staticDef = index.Value;
                         autoDef = null;
@@ -4848,7 +4868,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var index in autoIndexes)
                 {
-                    if (directoryName == IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Key))
+                    if (directoryName == IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(index.Key))
                     {
                         autoDef = index.Value;
                         staticDef = null;

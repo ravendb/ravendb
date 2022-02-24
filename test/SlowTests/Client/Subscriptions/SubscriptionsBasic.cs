@@ -1235,7 +1235,7 @@ namespace SlowTests.Client.Subscriptions
 
                 using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) {MaxDocsPerBatch = 1}))
                 {
-                    worker.Run(async batch =>
+                    _ = worker.Run(async batch =>
                     {
                         firstCV = batch.Items[0].ChangeVector;
                         tryTriggerNextBatch.Set();

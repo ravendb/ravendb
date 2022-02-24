@@ -103,8 +103,8 @@ namespace SlowTests.Corax
                 var indexInstance1 = database.IndexStore.GetIndex(_index.IndexName);
                 var indexInstance2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
 
-                Assert.Equal(IndexDefinitionBase.IndexVersion.BaseVersion, indexInstance1.Definition.Version);
-                Assert.Equal(IndexDefinitionBase.IndexVersion.BaseVersion, indexInstance2.Definition.Version);
+                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.BaseVersion, indexInstance1.Definition.Version);
+                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.BaseVersion, indexInstance2.Definition.Version);
 
                 Assert.Equal(IndexState.Normal, indexInstance1.State);
                 Assert.Equal(IndexState.Normal, indexInstance2.State);

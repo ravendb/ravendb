@@ -2739,12 +2739,14 @@ namespace Raven.Server
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
             internal bool ThrowExceptionInTrafficWatchTcp = false;
             internal bool GatherVerboseDatabaseDisposeInformation = false;
-            internal bool PrintExceptionDuringBulkInsertProcessingToConsole = false;
+
             internal DebugPackageTestingStuff DebugPackage = new DebugPackageTestingStuff();
             internal class DebugPackageTestingStuff
             {
                 internal string[] RoutesToSkip = new string[] { };
             }
+
+
         }
     }
 }

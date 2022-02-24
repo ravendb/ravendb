@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Exceptions;
+using Raven.Server.Utils.Features;
 using Sparrow.Logging;
 
 namespace Raven.Server.Integrations.PostgreSQL
@@ -61,7 +62,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 }
                 else if (_server.ServerStore.LicenseManager.CanUsePostgreSqlIntegration(withNotification: true))
                 {
-                    if (_server.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental)
+                    if (_server.ServerStore.FeatureGuardian.CanUse(Feature.PostgreSql))
                         activate = true;
                     else
                     {
