@@ -188,7 +188,7 @@ namespace Raven.Server.Web.Studio.Sharding
                         Data = doc,
                         ChangeVector = metadata.GetChangeVector(),
                         LastModified = metadata.GetLastModified(),
-                        Id = metadata.GetLazyStringId(),
+                        Id = metadata.GetIdAsLazyString(),
                     });
                 }
 
