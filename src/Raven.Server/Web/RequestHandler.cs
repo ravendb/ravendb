@@ -316,7 +316,7 @@ namespace Raven.Server.Web
             return guid;
         }
 
-        protected string GetStringFromHeaders(string name)
+        protected internal string GetStringFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
             if (headers.Count == 0)
@@ -355,12 +355,12 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Could not parse header '{name}' header as {type}, value was: {etag}");
         }
 
-        protected int GetStart(int defaultStart = 0)
+        protected internal int GetStart(int defaultStart = 0)
         {
             return GetIntValueQueryString(StartParameter, required: false) ?? defaultStart;
         }
 
-        protected int GetPageSize()
+        protected internal int GetPageSize()
         {
             var pageSize = GetIntValueQueryString(PageSizeParameter, required: false);
             if (pageSize.HasValue == false)
@@ -462,7 +462,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Request should have a property name '{name}' which is mandatory.");
         }
 
-        protected Microsoft.Extensions.Primitives.StringValues GetStringValuesQueryString(string name, bool required = true)
+        internal Microsoft.Extensions.Primitives.StringValues GetStringValuesQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0)

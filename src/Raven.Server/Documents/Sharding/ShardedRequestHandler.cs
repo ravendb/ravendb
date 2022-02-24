@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.ServerWide.Context;
@@ -53,7 +50,7 @@ namespace Raven.Server.Documents.Sharding
             Method = new HttpMethod(request.Method);
         }
 
-        protected ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context)
+        protected internal ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context)
         {
             var qToken = GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
             var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
