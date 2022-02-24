@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     Data = json
                 },
-                Id = metadata.GetLazyStringId()
+                Id = metadata.GetIdAsLazyString()
             };
         }
         
