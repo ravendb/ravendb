@@ -280,7 +280,7 @@ namespace RachisTests
                 {
                     for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        var user = await session.LoadAsync<User>(ids[k]);
+                        var user = await session.LoadAsync<User>(ids[k], token);
                         user.Age++;
                     }
                     await session.SaveChangesAsync(token);
