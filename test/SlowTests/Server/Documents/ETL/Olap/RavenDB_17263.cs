@@ -68,7 +68,7 @@ namespace SlowTests.Server.Documents.ETL.Olap
                                     var orderDate = new Date(this.OrderedAt);
                                     var year = orderDate.getFullYear();
                                     var month = orderDate.getMonth();
-                                    var key = new Date(Date.UTC(year, month));
+                                    var key = new Date(year, month);
 
                                     loadToOrders(partitionBy(['order_date', key], ['location', $customPartitionValue]),
                                     {

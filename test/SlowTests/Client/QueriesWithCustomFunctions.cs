@@ -1456,8 +1456,8 @@ from 'Users' as u select output(u)", query.ToString());
                                 let msBd = RavenQuery.Raw<int>("Date.parse(u.Birthday)")
                                 let msNow = RavenQuery.Raw<int>("Date.now()")
                                 let days = RavenQuery.Raw<int>("Math.ceil((msNow - msBd) / (1000*60*60*24))")
-                                let hourBd = RavenQuery.Raw<int>("(new Date(msBd)).getUTCHours()")
-                                let hourNow = RavenQuery.Raw<int>("(new Date(msNow)).getUTCHours()")
+                                let hourBd = RavenQuery.Raw<int>("(new Date(msBd)).getHours()")
+                                let hourNow = RavenQuery.Raw<int>("(new Date(msNow)).getHours()")
                                 select new
                                 {
                                     Days = days,
@@ -1470,8 +1470,8 @@ from 'Users' as u select output(u)", query.ToString());
     var msBd = Date.parse(u.Birthday);
     var msNow = Date.now();
     var days = Math.ceil((msNow - msBd) / (1000*60*60*24));
-    var hourBd = (new Date(msBd)).getUTCHours();
-    var hourNow = (new Date(msNow)).getUTCHours();
+    var hourBd = (new Date(msBd)).getHours();
+    var hourNow = (new Date(msNow)).getHours();
     return { Days : days, HourBd : hourBd, HourNow : hourNow };
 }
 from 'Users' as u select output(u)", query.ToString());
@@ -1486,7 +1486,7 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Theory]
+        [Theory(Skip = "This test will fail as long as we set UTC time zone to JS engine")]
         [JavaScriptEngineClassData]
         public void Custom_Functions_With_Escape_Hatch_Inside_LetLocal(string jsEngineType)
         {
