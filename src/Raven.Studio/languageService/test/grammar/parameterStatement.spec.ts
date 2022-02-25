@@ -1,18 +1,12 @@
-﻿import {parseRql} from "../../src/parser";
-import {
-    CollectionByNameContext,
-    FilterBinaryExpressionContext,
-    FilterEqualExpressionContext, FilterNormalFuncContext,
-    FunctionContext, ParameterBeforeQueryContext,
-
-} from "../../src/generated/BaseRqlParser";
+﻿import { parseRql } from "../../src/parser";
+import { ParameterBeforeQueryContext } from "../../src/generated/BaseRqlParser";
 
 describe("Parameter statement parser", function () {
     it("uncompleted definition of parameter", function () {
         const { parser } = parseRql("$p0 = from test filter x");
 
         expect(parser.numberOfSyntaxErrors)
-            .toEqual(1);
+            .toBeGreaterThan(0);
     });
 
     it("before query", function () {

@@ -1,7 +1,7 @@
 import { autocomplete } from "../autocompleteUtils";
 import { AUTOCOMPLETE_META } from "../../src/providers/common";
 
-const nextKeywords = ["select", "limit", "load", "where"];
+const nextKeywords = ["select", "limit", "load", "where", "filter"];
 
 describe("can complete group by", function () {
     it("doesn't complete keywords as field name", async () => {

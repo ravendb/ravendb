@@ -8,6 +8,8 @@ const rootKeywords: number[] = [
     RqlParser.GROUP_BY,
     RqlParser.WHERE,
     RqlParser.LOAD,
+    RqlParser.FILTER,
+    RqlParser.FILTER_LIMIT,
     RqlParser.ORDER_BY,
     RqlParser.SELECT,
     RqlParser.INCLUDE,
@@ -336,6 +338,11 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
             return false;
         }
         
+        if (keyword === RqlParser.FILTER_LIMIT && !ctx.parseTree.filterStatement()) {
+            // can't use 'filter limit' when 'filter' was NOT used. 
+            return false;
+        }
+        
         return true;
     }
     
@@ -343,7 +350,7 @@ export class AutocompleteKeywords extends BaseAutocompleteProvider implements Au
         const { candidates, parser, parseTree, writtenText} = ctx;
         const result: autoCompleteWordList[] = [];
         
-        if (candidates.rules.has(RqlParser.RULE_rootKeywords)) {
+        if (candidates.rules.has(RqlParser.RULE_rootKeywords) && !candidates.rules.has(RqlParser.RULE_fromMode)) {
             // we use root keywords as escape hatch to allow field names like FROM, WHERE etc
             // if we have root keywords rule it means where are inside some block
             // so don't complete keywords
