@@ -100,6 +100,9 @@ namespace SlowTests.Issues
                     session.Delete("users/1");
                     await session.SaveChangesAsync();
                 }
+
+                await EnsureReplicatingAsync(store1, store2);
+
                 var db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 var val2 = await WaitForValueAsync(() =>
                     {
@@ -154,14 +157,14 @@ namespace SlowTests.Issues
                 Assert.Equal(0, val2);
 
                 val = await WaitForValueAsync(() =>
+                {
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
-                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
-                            return tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions);
-                        }
-                    }, false
+                        var tombstone = db.DocumentsStorage.GetDocumentOrTombstone(ctx, "users/1");
+                        return tombstone.Tombstone != null && tombstone.Tombstone.Flags.Contain(DocumentFlags.HasRevisions);
+                    }
+                }, false
                 );
                 Assert.False(val);
             }
@@ -240,7 +243,7 @@ namespace SlowTests.Issues
         {
             var msg = new StringBuilder()
                 .AppendLine("tombstone still has `HasRevisions` flag");
-            
+
             if (operationResult is not EnforceConfigurationResult enforceResult)
                 return msg.ToString();
 
