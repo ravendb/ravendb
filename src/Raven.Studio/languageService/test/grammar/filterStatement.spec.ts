@@ -1,4 +1,4 @@
-﻿import {parseRql} from "../../src/parser";
+﻿import { parseRql } from "../../src/parser";
 import {
     CollectionByNameContext,
     FilterBinaryExpressionContext,
@@ -34,7 +34,7 @@ describe("Filter statement parser", function () {
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
     });
-    
+
     it("equal", function () {
         const { parseTree, parser } = parseRql("from test filter x = 5");
 
@@ -53,12 +53,12 @@ describe("Filter statement parser", function () {
         expect(equalExpression._right.text)
             .toEqual("5");
     });
-    
+
     it("binary and function", function () {
         const { parseTree, parser } = parseRql("from test filter x = 5 and function(y)");
 
         expect(parser.numberOfSyntaxErrors)
-             .toEqual(0);
+            .toEqual(0);
 
         const where = parseTree.filterStatement();
 
@@ -86,13 +86,13 @@ describe("Filter statement parser", function () {
         expect(func._args.text)
             .toEqual("y");
     });
-    
+
     it("can't use `filter` as from alias", function () {
         const { parseTree, parser } = parseRql("from test filter");
 
         expect(parser.numberOfSyntaxErrors)
             .toBeGreaterThanOrEqual(1);
-        
+
         const from = parseTree.fromStatement();
         expect(from)
             .toBeInstanceOf(CollectionByNameContext);
@@ -105,40 +105,38 @@ describe("Filter statement parser", function () {
             .toBeTruthy();
     });
 
-        it("parsing function", function () {
-           const { parseTree, parser } = parseRql("from test filter first.second.third(argument)");
-           
-           expect(parser.numberOfSyntaxErrors)
-               .toEqual(0);
-           
-           const filter = parseTree.filterStatement();
-            const expr = filter.filterExpr();
-            expect(expr)
-                .toBeInstanceOf(FilterNormalFuncContext);
-            const func = expr as FilterNormalFuncContext;
-            
-            const firstMember = (func._funcExpr as FunctionContext)._addr;
-            expect(firstMember._name.text)
-                .toEqual("first");
-            
-            const secondMember = firstMember._member;
-            expect(secondMember._name.text)
-                .toEqual("second");
-
-            const thirdMember = secondMember._member;
-            expect(thirdMember._name.text)
-                .toEqual("third");
-
-            expect((func._funcExpr as FunctionContext)._args.text)
-                .toEqual("argument");
-        });
-
-    it("binary and function with filterLimit", function () {
-        const { parseTree, parser } = parseRql("from test filter x = 5 and function(y) filter_limit 1 limit 1");
+    it("parsing function", function () {
+        const { parseTree, parser } = parseRql("from test filter first.second.third(argument)");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
 
-      
+        const filter = parseTree.filterStatement();
+        const expr = filter.filterExpr();
+        expect(expr)
+            .toBeInstanceOf(FilterNormalFuncContext);
+        const func = expr as FilterNormalFuncContext;
+
+        const firstMember = (func._funcExpr as FunctionContext)._addr;
+        expect(firstMember._name.text)
+            .toEqual("first");
+
+        const secondMember = firstMember._member;
+        expect(secondMember._name.text)
+            .toEqual("second");
+
+        const thirdMember = secondMember._member;
+        expect(thirdMember._name.text)
+            .toEqual("third");
+
+        expect((func._funcExpr as FunctionContext)._args.text)
+            .toEqual("argument");
+    });
+
+    it("binary and function with filterLimit", function () {
+        const { parser } = parseRql("from test filter x = 5 and function(y) filter_limit 1 limit 1");
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(0);
     });
 });
