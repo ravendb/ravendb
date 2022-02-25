@@ -17,7 +17,7 @@ public static class LuceneIndexingHelpers
 {
     private static readonly ConcurrentDictionary<Type, bool> NotForQuerying = new ConcurrentDictionary<Type, bool>();
 
-    public static LuceneRavenPerFieldAnalyzerWrapper CreateLuceneAnalyzer(Index index, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+    public static LuceneRavenPerFieldAnalyzerWrapper CreateLuceneAnalyzer(Index index, IndexDefinitionBaseServerSide indexDefinition, bool forQuerying = false)
     {
         if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
             throw new InvalidOperationException(

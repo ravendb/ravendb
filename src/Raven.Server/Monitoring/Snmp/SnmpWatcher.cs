@@ -427,6 +427,7 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseNumberOfIndexes(server.ServerStore));
             store.Add(new TotalDatabaseCountOfStaleIndexes(server.ServerStore));
             store.Add(new TotalDatabaseNumberOfErrorIndexes(server.ServerStore));
+            store.Add(new TotalDatabaseNumberOfFaultyIndexes(server.ServerStore));
 
             store.Add(new TotalDatabaseMapIndexIndexedPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseMapReduceIndexMappedPerSecond(server.ServerStore));
@@ -467,6 +468,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ThreadPoolAvailableCompletionPortThreads());
 
             store.Add(new TcpActiveConnections());
+
+            store.Add(new FeatureAnyExperimental(server.ServerStore));
 
             AddGc(GCKind.Any);
             AddGc(GCKind.Background);

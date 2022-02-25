@@ -20,8 +20,13 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public abstract class IndexDefinitionBase
+    public abstract class IndexDefinitionBaseServerSide
     {
+        protected IndexDefinitionBaseServerSide()
+        {
+            ClusterState = new ClusterState();
+        }
+
         public string Name { get; protected set; }
 
         public abstract long Version { get; }
@@ -33,6 +38,8 @@ namespace Raven.Server.Documents.Indexes
         public IndexPriority Priority { get; set; }
 
         public IndexState State { get; set; }
+
+        internal readonly ClusterState ClusterState;
 
         public IndexDeploymentMode DeploymentMode { get; set; }
 
@@ -122,7 +129,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
-        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition);
+        public abstract IndexDefinitionCompareDifferences Compare(IndexDefinitionBaseServerSide indexDefinition);
 
         public abstract IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition);
 
@@ -150,7 +157,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase
+    public abstract class IndexDefinitionBaseServerSide<T> : IndexDefinitionBaseServerSide where T : IndexFieldBase
     {
         protected const string MetadataFileName = "metadata";
 
@@ -158,7 +165,7 @@ namespace Raven.Server.Documents.Indexes
         private long _indexVersion;
         private int? _cachedHashCode;
 
-        protected IndexDefinitionBase(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, IndexDeploymentMode? deploymentMode)
+        protected IndexDefinitionBaseServerSide(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, T[] mapFields, long indexVersion, IndexDeploymentMode? deploymentMode, long? clusterIndexForState)
         {
             Name = name;
             DeploymentMode = deploymentMode ?? IndexDeploymentMode.Parallel;
@@ -188,9 +195,10 @@ namespace Raven.Server.Documents.Indexes
             Priority = priority;
             State = state;
             _indexVersion = indexVersion;
+            ClusterState.LastStateIndex = clusterIndexForState ?? 0;
         }
 
-        static IndexDefinitionBase()
+        static IndexDefinitionBaseServerSide()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {

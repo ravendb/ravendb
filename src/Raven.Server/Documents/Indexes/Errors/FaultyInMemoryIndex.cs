@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         private readonly DateTime _createdAt;
 
-        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBase definition)
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBaseServerSide definition)
             : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, IndexState.Normal, new IndexField[0], definition))
         {
         }
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
         }
 
-        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBase definition)
+        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBaseServerSide definition)
             : base(IndexType.Faulty, IndexSourceType.None, definition)
         {
             _e = e;
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
-        public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
             throw new NotSupportedException($"{Type} index does not support updating it's definition and configuration.");
         }

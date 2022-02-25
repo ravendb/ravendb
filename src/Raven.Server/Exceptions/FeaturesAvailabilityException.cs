@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
+using Raven.Server.Utils;
+using Raven.Server.Utils.Features;
 
 namespace Raven.Server.Exceptions
 {
@@ -19,11 +20,16 @@ namespace Raven.Server.Exceptions
         {
         }
 
-        public static void Throw(string feature)
+        public static void Throw(Feature feature)
         {
             throw new FeaturesAvailabilityException(
-                $"Can not use '{feature}', as this is an experimental feature and the server does not support experimental features. " +
+                $"Can not use '{feature.GetDescription()}', as this is an experimental feature and the server does not support experimental features. " +
                 $"Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+        }
+
+        public static void Throw(string message)
+        {
+            throw new FeaturesAvailabilityException(message);
         }
     }
 }

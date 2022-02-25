@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return new AutoIndexDocsEnumerator(items, stats);
         }
 
-        public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
+        public override void Update(IndexDefinitionBaseServerSide definition, IndexingConfiguration configuration)
         {
             SetPriority(definition.Priority);
         }

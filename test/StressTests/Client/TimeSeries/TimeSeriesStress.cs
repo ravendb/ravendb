@@ -18,6 +18,7 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Patch;
 using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,7 @@ namespace StressTests.Client.TimeSeries
         {
         }
 
-        [Fact]
+        [Fact64Bit]
         public async Task RapidRetention()
         {
             var cluster = await CreateRaftCluster(3);

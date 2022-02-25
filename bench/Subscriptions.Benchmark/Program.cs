@@ -13,7 +13,7 @@ namespace Subscriptions.Benchmark
             await ConcurrentBenchmark();
         }
 
-        public static async Task TestSingleConnectionSubscription(string[] args)
+        public static Task TestSingleConnectionSubscription(string[] args)
         {
             var paramDictionary = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
             foreach (var arg in args)
@@ -155,6 +155,8 @@ namespace Subscriptions.Benchmark
                     canProcceedToStressHandle.Dispose();
                 }
             }
+
+            return Task.CompletedTask;
         }
 
         public static async Task ConcurrentBenchmark()

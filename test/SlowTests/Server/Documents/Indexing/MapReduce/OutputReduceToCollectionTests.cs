@@ -469,7 +469,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 var replacementIndex = (MapReduceIndex)db.IndexStore.GetIndexes().Single(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
                 var replacementIndexReduceOutputIndex = replacementIndex.Definition.ReduceOutputIndex.Value;
 
-                store.Maintenance.Send(new DeleteIndexOperation("ReplacementOf/DailyInvoicesIndex"));
+                store.Maintenance.Send(new DeleteIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}DailyInvoicesIndex"));
 
                 var indexes = db.IndexStore.GetIndexes().ToList();
 

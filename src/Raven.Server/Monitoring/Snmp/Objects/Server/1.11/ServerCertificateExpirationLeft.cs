@@ -24,7 +24,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             var notAfter = holder.Certificate.NotAfter;
 
             var timeLeft = notAfter - SystemTime.UtcNow;
-            return new TimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
         }
     }
 }

@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         _singleValueHash = (ulong)dbl;
                         break;
                     case Mode.MultipleValues:
-                        if (_indexVersion < IndexDefinitionBase.IndexVersion.ReduceKeyProcessorHashDoubleFix)
+                        if (_indexVersion < IndexDefinitionBaseServerSide.IndexVersion.ReduceKeyProcessorHashDoubleFix)
                         {
                             // we keep the previous behavior for old indexes, because it will keep the reduce buckets
                             CopyToBuffer((byte*)&d, sizeof(double));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup;
@@ -10,7 +11,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
     public class DatabaseOldestBackup : ScalarObjectBase<TimeTicks>
     {
         private readonly ServerStore _serverStore;
-
+        
         public DatabaseOldestBackup(ServerStore serverStore)
             : base(SnmpOids.Databases.General.TimeSinceOldestBackup)
         {
@@ -19,7 +20,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
         protected override TimeTicks GetData()
         {
-            return new TimeTicks(GetTimeSinceOldestBackup(_serverStore));
+            var timeOfOldestBackup = GetTimeSinceOldestBackup(_serverStore);
+            return SnmpValuesHelper.TimeSpanToTimeTicks(timeOfOldestBackup);
         }
 
         private static TimeSpan GetTimeSinceOldestBackup(ServerStore serverStore)
@@ -27,23 +29,34 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var now = SystemTime.UtcNow;
-                DateTime oldestBackup = now;
-
-                foreach (var databaseName in serverStore.Cluster.GetDatabaseNames(context))
-                {
-                    var lastBackup = GetLastBackup(context, serverStore, databaseName);
-                    if (lastBackup == null)
-                        continue;
-
-                    if (lastBackup < oldestBackup)
-                        oldestBackup = lastBackup.Value;
-                }
-
-                return now <= oldestBackup
-                    ? TimeSpan.Zero
-                    : now - oldestBackup;
+                var databaseNames = serverStore.Cluster.GetDatabaseNames(context);
+                DateTime? LastBackup(string databaseName) => GetLastBackup(context, serverStore, databaseName);
+                return GetTimeSinceOldestBackupInternal(databaseNames, LastBackup);
             }
+        }
+
+        internal static TimeSpan GetTimeSinceOldestBackupInternal(
+            List<string> databaseNames, 
+            Func<string, DateTime?> getLastBackup, 
+            SystemTime systemTime = null)
+        {
+            var now = systemTime?.GetUtcNow() ?? SystemTime.UtcNow;
+            DateTime oldestBackup = now;
+
+            foreach (var databaseName in databaseNames)
+            {
+                var lastBackup = getLastBackup(databaseName);
+                if (lastBackup == null)
+                    continue;
+
+                if (lastBackup < oldestBackup)
+                    oldestBackup = lastBackup.Value;
+            }
+            
+            if (now <= oldestBackup)
+                return TimeSpan.Zero;
+
+            return now - oldestBackup;
         }
 
         private static DateTime? GetLastBackup(TransactionOperationContext context, ServerStore serverStore, string databaseName)

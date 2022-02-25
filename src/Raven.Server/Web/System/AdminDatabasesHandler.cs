@@ -15,6 +15,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -316,6 +317,8 @@ namespace Raven.Server.Web.System
                 documentDatabase.Initialize(options);
 
                 var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
+                var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
+
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
                 {
                     Index index = null;
@@ -333,7 +336,7 @@ namespace Raven.Server.Web.System
                         {
                             case IndexType.AutoMap:
                             case IndexType.AutoMapReduce:
-                                var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBase)definition, index.Type);
+                                var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBaseServerSide)definition, index.Type);
                                 databaseRecord.AutoIndexes.Add(autoIndexDefinition.Name, autoIndexDefinition);
                                 break;
 
@@ -342,6 +345,15 @@ namespace Raven.Server.Web.System
                             case IndexType.JavaScriptMap:
                             case IndexType.JavaScriptMapReduce:
                                 var indexDefinition = index.GetIndexDefinition();
+                                if (indexDefinition.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    // the side by side index is the last version of this index
+                                    // and it's the one that should be stored in the database record
+                                    indexDefinition.Name = indexDefinition.Name[Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length..];
+                                    sideBySideIndexes.Add(indexDefinition.Name, indexDefinition);
+                                    continue;
+                                }
+
                                 databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
                                 break;
 
@@ -358,6 +370,11 @@ namespace Raven.Server.Web.System
                     {
                         index?.Dispose();
                     }
+                }
+
+                foreach ((string key, IndexDefinition value) in sideBySideIndexes)
+                {
+                    databaseRecord.Indexes[key] = value;
                 }
             }
         }
@@ -1092,31 +1109,31 @@ namespace Raven.Server.Web.System
                                     using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, database.DatabaseShutdown))
                                     {
                                         // first fill in data 
-                                foreach (var indexName in compactSettings.Indexes)
-                                {
-                                    var indexCompactionResult = new CompactionResult(indexName);
-                                    overallResult.IndexesResults.Add(indexName, indexCompactionResult);
-                                }
+                                        foreach (var indexName in compactSettings.Indexes)
+                                        {
+                                            var indexCompactionResult = new CompactionResult(indexName);
+                                            overallResult.IndexesResults.Add(indexName, indexCompactionResult);
+                                        }
 
-                                // then do actual compaction
-                                foreach (var indexName in compactSettings.Indexes)
-                                {
+                                        // then do actual compaction
+                                        foreach (var indexName in compactSettings.Indexes)
+                                        {
                                             indexCts.Token.ThrowIfCancellationRequested();
 
-                                    var index = database.IndexStore.GetIndex(indexName);
+                                            var index = database.IndexStore.GetIndex(indexName);
                                             var indexCompactionResult = (CompactionResult)overallResult.IndexesResults[indexName];
 
                                             if (index == null)
                                             {
                                                 indexCompactionResult.Skipped = true;
-                                    indexCompactionResult.Processed = true;
+                                                indexCompactionResult.Processed = true;
 
                                                 indexCompactionResult.AddInfo($"Index '{indexName}' does not exist.");
                                                 continue;
-                                }
+                                            }
 
-                                                                                // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
-                                    index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
+                                            // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
+                                            index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
                                             indexCompactionResult.Processed = true;
                                         }
                                     }
@@ -1163,7 +1180,7 @@ namespace Raven.Server.Web.System
                 throw new InvalidOperationException($"Could not load database '{databaseName}'.");
 
             using (database.PreventFromUnloadingByIdleOperations())
-            return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
+                return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
         }
 
         [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]

@@ -141,7 +141,7 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="JunitXml.TestLogger" Version="3.0.110" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="6.0.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>
@@ -199,6 +199,15 @@
     <None Update="SchemaUpgrade\Issues\SystemVersion\after_from14.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_17999\CompareExchange_Expiration_RavenData_v5.2_from50000.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_17999\CompareExchange_Expiration_RavenData_v5.2_new_from50000.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_17999\CompareExchange_Expiration_RavenData_v5.3_from50000.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -206,6 +215,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\Identities_CompareExchange_RavenData_from13.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_17999\CompareExchange_Expiration_RavenData_v5.2_from50000.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\RavenData_rc1_plus_additions.zip">

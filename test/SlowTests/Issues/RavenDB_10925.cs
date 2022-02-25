@@ -124,7 +124,7 @@ namespace SlowTests.Issues
                 Assert.Contains(i0, indexes);
 
                 var merged = indexes.Single(x => x != i0);
-                var definition = (AutoIndexDefinitionBase)merged.Definition;
+                var definition = (AutoIndexDefinitionBaseServerSide)merged.Definition;
 
                 var nameField = (AutoIndexField)definition.MapFields["Name"];
                 Assert.Equal(AutoFieldIndexing.Default | AutoFieldIndexing.Exact | AutoFieldIndexing.Search | AutoFieldIndexing.Highlighting, nameField.Indexing);
