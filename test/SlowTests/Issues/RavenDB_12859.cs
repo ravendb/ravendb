@@ -338,15 +338,18 @@ namespace SlowTests.Issues
             }
         }
 
-        // TODO [shlomo] restore the test and make it for multiple configurations of V8 engine sharing
         [Theory]
-        [JavaScriptEngineClassData]
-        public void Can_Use_Projection_Behavior_Query_JavaScript(string jsEngineType)
+        [InlineData("Jint", -1, -1)]
+        [InlineData("V8", 1, 1)]
+        [InlineData("V8", 1, -1)]
+        public void Can_Use_Projection_Behavior_Query_JavaScript(string jsEngineType, int targetContextCountPerEngine, int maxEngineCount)
         {
             var options = Options.ForJavaScriptEngine(jsEngineType, d =>
             {
-                d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.TargetContextCountPerEngine)] = 1.ToString();            
-                //d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = 1.ToString();            
+                if (targetContextCountPerEngine > 0)
+                    d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.TargetContextCountPerEngine)] = targetContextCountPerEngine.ToString();
+                if (maxEngineCount > 0)
+                    d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = maxEngineCount.ToString();            
             });
             using (var store = GetDocumentStore(options))
             {
