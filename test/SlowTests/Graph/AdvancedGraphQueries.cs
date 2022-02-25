@@ -1062,7 +1062,7 @@ namespace SlowTests.Graph
             }
         }                
 
-        [Fact(DisplayName = "Edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        [Fact(DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
         public void Edge_array_with_filter_should_work()
         {
             using (var store = GetDocumentStore())
@@ -1099,7 +1099,7 @@ namespace SlowTests.Graph
             }
         }        
 
-        [Fact(DisplayName = "Projection_with_edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        [Fact(DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Projection_with_edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
         public void Projection_with_edge_array_with_filter_should_work()
         {
             using (var store = GetDocumentStore())
