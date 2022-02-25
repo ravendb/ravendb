@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Patch.V8
             else if (jsObj.IsFunction)
                 _writer.WriteValueNull();
             else
-                WriteValueInternal(jsObj, jsObj, filterProperties);
+                WriteValueInternal(jsObj.HandleID, jsObj, filterProperties);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -237,7 +237,15 @@ namespace Raven.Server.Documents.Patch.V8
         {
             try
             {
-                if (_recursive.Add(target))
+                var isNativeObj = jsObj.IsObject && jsObj.ObjectID < 0;
+                if (isNativeObj)
+                {
+                    _recursiveNativeObjectsCount += 1;
+                }
+
+                if (isNativeObj && _recursiveNativeObjectsCount > 1000)
+                        _writer.WriteValueNull();
+                else if (_recursive.Add(target))
                     WriteInstance(jsObj, modifier: null, isRoot: false, filterProperties: filterProperties);
                 else
                     _writer.WriteValueNull();

@@ -20,12 +20,19 @@ namespace Raven.Server.Documents.Patch
         [ThreadStatic]
         protected static HashSet<object> _recursive;
 
+        [ThreadStatic]
+        protected static uint _recursiveNativeObjectsCount;
+
         protected static readonly double MaxJsDateMs = (DateTime.MaxValue - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds;
         protected static readonly double MinJsDateMs = -(new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc) - DateTime.MinValue).TotalMilliseconds;
 
         static JsBlittableBridge()
         {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => _recursive = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () =>
+            {
+                _recursive = null;
+                _recursiveNativeObjectsCount = 0;
+            };
         }
 
         public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode)
