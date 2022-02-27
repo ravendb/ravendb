@@ -14,6 +14,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Commercial.LetsEncrypt;
+using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;

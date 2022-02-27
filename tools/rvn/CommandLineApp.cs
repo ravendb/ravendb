@@ -6,8 +6,8 @@ using Raven.Server.Commercial;
 using Sparrow.Platform;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Raven.Server.Commercial.LetsEncrypt;
+using Raven.Server.Commercial.SetupWizard;
 using rvn.Parameters;
-using rvn.Server.SetupWizard;
 using Voron.Global;
 
 namespace rvn
