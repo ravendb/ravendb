@@ -621,6 +621,9 @@ namespace Raven.Server.Documents.Patch.V8
 
             property = GenerateProperty(strKey);
 
+            property._changed = true;
+            MarkChanged();
+
             _ownValues ??= new Dictionary<string, BlittableObjectProperty>(_blittable.Count);
 
             _ownValues[strKey] = property;
