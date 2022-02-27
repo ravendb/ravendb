@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.ShardResultStreaming;
+using Raven.Server.Documents.Sharding.ShardResultStreaming.ShardResultComparer;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -57,13 +55,14 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 var op = new ShardedCollectionDocumentsOperation(token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
+                using var streams = await results.InitializeAsync(ShardedContext, HttpContext.RequestAborted);
 
                 long numberOfResults;
                 long totalDocumentsSizeInBytes;
                 using (var cancelToken = CreateOperationToken())
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var documents = GetDocuments(results, token, cancelToken.Token);
+                    var documents = GetDocuments(streams, token);
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(CollectionResult.Results));
                     (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, cancelToken.Token);
@@ -77,26 +76,12 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        public async IAsyncEnumerable<Document> GetDocuments(CombinedStreamResult documents, ShardedPagingContinuation pagingContinuation, [EnumeratorCancellation] CancellationToken token)
+        public async IAsyncEnumerable<Document> GetDocuments(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation)
         {
-            await foreach (var result in ShardedContext.Streaming.PagedShardedStream(documents, BlittableToStreamDocument, StreamDocumentByLastModifiedComparer.Instance,
-                               pagingContinuation, token))
+            await foreach (var result in ShardedContext.Streaming.PagedShardedDocumentsByLastModified(documents, nameof(CollectionResult.Results), pagingContinuation))
             {
                 yield return result.Item;
             }
-        }
-
-        private ShardStreamItem<Document> BlittableToStreamDocument(BlittableJsonReaderObject json)
-        {
-            var metadata = json.GetMetadata();
-            return new ShardStreamItem<Document>
-            {
-                Item = new Document
-                {
-                    Data = json
-                },
-                Id = metadata.GetIdAsLazyString()
-            };
         }
         
         public class CollectionResult
@@ -105,18 +90,13 @@ namespace Raven.Server.Documents.ShardedHandlers
             public string ContinuationToken;
         }
 
-        private readonly struct ShardedCollectionDocumentsOperation : IShardedOperation<StreamResult, CombinedStreamResult>
+        private readonly struct ShardedCollectionDocumentsOperation : IShardedStreamableOperation
         {
             private readonly ShardedPagingContinuation _token;
 
             public ShardedCollectionDocumentsOperation(ShardedPagingContinuation token)
             {
                 _token = token;
-            }
-
-            public CombinedStreamResult Combine(Memory<StreamResult> results)
-            {
-                return new CombinedStreamResult { Results = results };
             }
 
             public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
@@ -180,32 +160,6 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public RavenCommand<DetailedCollectionStatistics> CreateCommandForShard(int shard) =>
                 new GetDetailedCollectionStatisticsOperation.GetDetailedCollectionStatisticsCommand();
-        }
-
-    }
-
-    public class StreamDocumentByLastModifiedComparer : Comparer<ShardStreamItem<Document>>
-    {
-        public static StreamDocumentByLastModifiedComparer Instance = new StreamDocumentByLastModifiedComparer();
-        
-        public override int Compare(ShardStreamItem<Document> x, ShardStreamItem<Document> y)
-        {
-            return DocumentByLastModifiedComparer.Instance.Compare(x.Item, y.Item);
-        }
-    }
-
-    public class DocumentByLastModifiedComparer : Comparer<Document>
-    {
-        public static DocumentByLastModifiedComparer Instance = new DocumentByLastModifiedComparer();
-        
-        public override int Compare(Document x, Document y)
-        {
-            var diff = x.LastModified.Ticks - y.LastModified.Ticks;
-            if (diff > 0)
-                return 1;
-            if (diff < 0)
-                return -1;
-            return 0;
         }
     }
 }

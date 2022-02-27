@@ -21,15 +21,10 @@ namespace Raven.Server.Documents.Sharding
         public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> cmd, int shard)
         {
             var executor = _shardedContext.RequestExecutors[shard];
-            var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
-            try
+            using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 await executor.ExecuteAsync(cmd, ctx);
                 return cmd.Result;
-            }
-            finally
-            {
-                release.Dispose();
             }
         }
 

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -43,10 +44,10 @@ namespace Raven.Client.Documents.Session
                 _query = query;
             }
 
-            internal override TimeSeriesStreamResult<T> ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
+            internal override TimeSeriesStreamResult<T> ResultCreator(IAsyncEnumerator<BlittableJsonReaderObject> asyncEnumerator)
             {
                 _query?.InvokeAfterStreamExecuted(asyncEnumerator.Current);
-                return _parent.CreateTimeSeriesStreamResult<T>(asyncEnumerator);
+                return _parent.CreateTimeSeriesStreamResult<T>((StreamOperation.YieldStreamResults)asyncEnumerator);
             }
         }
 

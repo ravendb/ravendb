@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.ShardResultStreaming;
+using Raven.Server.Documents.Sharding.ShardResultStreaming.ShardResultComparer;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
-using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -27,109 +25,164 @@ namespace Raven.Server.Documents.Sharding
                 _shardedContext = shardedContext;
             }
 
-            public async IAsyncEnumerable<ShardStreamItem<T>> ShardedStream<T>(CombinedStreamResult combinedStream,
-                Func<BlittableJsonReaderObject, ShardStreamItem<T>> converter, Comparer<ShardStreamItem<T>> comparer,
-                [EnumeratorCancellation] CancellationToken token)
+            public async ValueTask<Memory<ShardStreamItem<long>>> ReadCombinedLongAsync(
+                CombinedReadContinuationState combinedState,
+                string name)
             {
+                var combined = new ShardStreamItem<long>[combinedState.States.Length];
+                for (var index = 0; index < combinedState.States.Length; index++)
+                {
+                    var state = combinedState.States[index];
+                    var property = state.ReadString();
+                    if (property != name)
+                        state.ThrowInvalidJson();
+
+                    if (await state.ReadAsync() == false)
+                        state.ThrowInvalidJson();
+
+                    if (state.CurrentTokenType != JsonParserToken.Integer)
+                        state.ThrowInvalidJson();
+
+                    combined[index] = new ShardStreamItem<long>
+                    {
+                        Item = state.ReadLong,
+                        Shard = index
+                    };
+                }
+
+                return new Memory<ShardStreamItem<long>>(combined);
+            }
+
+            public async ValueTask<Memory<ShardStreamItem<T>>> ReadCombinedObjectAsync<T>(
+                CombinedReadContinuationState combinedState,
+                string name,
+                Func<BlittableJsonReaderObject, T> converter)
+            {
+                var combined = new ShardStreamItem<T>[combinedState.States.Length];
+                for (var index = 0; index < combinedState.States.Length; index++)
+                {
+                    var state = combinedState.States[index];
+                    var property = state.ReadString();
+                    if (property != name)
+                        state.ThrowInvalidJson();
+
+                    var result = await state.ReadObjectAsync();
+                    combined[index] = new ShardStreamItem<T>
+                    {
+                        Item = converter(result),
+                        Shard = index
+                    };
+                }
+
+                return new Memory<ShardStreamItem<T>>(combined);
+            }
+
+            public async ValueTask<Memory<ShardStreamItem<T>>> ReadCombinedObjectAsync<T>(
+                CombinedReadContinuationState combinedState,
+                string name,
+                Func<BlittableJsonReaderArray, T> converter)
+            {
+                var combined = new ShardStreamItem<T>[combinedState.States.Length];
+                for (var index = 0; index < combinedState.States.Length; index++)
+                {
+                    var state = combinedState.States[index];
+                    var property = state.ReadString();
+                    if (property != name)
+                        state.ThrowInvalidJson();
+
+                    var result = await state.ReadJsonArrayAsync();
+                    combined[index] = new ShardStreamItem<T>
+                    {
+                        Item = converter(result),
+                        Shard = index
+                    };
+                }
+
+                return new Memory<ShardStreamItem<T>>(combined);
+            }
+
+            public async IAsyncEnumerable<ShardStreamItem<T>> StreamCombinedArray<T>(
+                CombinedReadContinuationState combinedState,
+                string name,
+                Func<BlittableJsonReaderObject, T> converter, 
+                Comparer<ShardStreamItem<T>> comparer)
+            {
+                var shards = combinedState.States.Length;
+                var iterators = new YieldShardStreamResults[shards];
+                for (int i = 0; i < shards; i++)
+                {
+                    var it = new YieldShardStreamResults(combinedState.States[i], name);
+                    await it.InitializeAsync();
+                    iterators[i] = it;
+                }
+
                 await using (var merged = new MergedAsyncEnumerator<ShardStreamItem<T>>(comparer))
                 {
-                    for (int i = 0; i < combinedStream.Results.Span.Length; i++)
+                    for (int i = 0; i < shards; i++)
                     {
-                        var contextPool = _shardedContext.RequestExecutors[i].ContextPool;
-                        var it = new StreamOperation.YieldStreamResults(contextPool, response: combinedStream.Results.Span[i], isQueryStream: false,
-                            isTimeSeriesStream: false, isAsync: true, streamQueryStatistics: null);
-                        await it.InitializeAsync();
-                        await merged.AddAsyncEnumerator(new YieldDocuments<ShardStreamItem<T>>(it, converter, token));
+                        await merged.AddAsyncEnumerator(new YieldStreamArray<ShardStreamItem<T>, T>(iterators[i], converter, i, combinedState.CancellationToken));
                     }
 
-                    while (await merged.MoveNextAsync(token))
+                    while (await merged.MoveNextAsync(combinedState.CancellationToken))
                     {
                         yield return merged.Current;
                     }
                 }
             }
 
-            public async IAsyncEnumerable<ShardStreamItem<T>> PagedShardedStream<T>(CombinedStreamResult combinedStream,
-                Func<BlittableJsonReaderObject, ShardStreamItem<T>> converter, Comparer<ShardStreamItem<T>> comparer, ShardedPagingContinuation pagingContinuation,
-                [EnumeratorCancellation] CancellationToken token)
+            public async IAsyncEnumerable<ShardStreamItem<T>> PagedShardedStream<T>(
+                CombinedReadContinuationState combinedState,
+                string name,
+                Func<BlittableJsonReaderObject, T> converter, 
+                Comparer<ShardStreamItem<T>> comparer, 
+                ShardedPagingContinuation pagingContinuation)
             {
                 var pageSize = pagingContinuation.PageSize;
-                using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+                var results = StreamCombinedArray(combinedState, name, converter, comparer);
+                await foreach (var result in results.WithCancellation(combinedState.CancellationToken))
                 {
-                    var results = ShardedStream(combinedStream, converter, comparer, token);
-                    await foreach (var result in results.WithCancellation(token))
-                    {
-                        if (pageSize-- <= 0)
-                            yield break;
+                    if (pageSize-- <= 0)
+                        yield break;
 
-                        var id = result.Id;
-                        var shard =_shardedContext. GetShardIndex(context, id);
-                        pagingContinuation.Pages[shard].Start++;
+                    var shard = result.Shard;
+                    pagingContinuation.Pages[shard].Start++;
 
-                        yield return result;
-                    }
+                    yield return result;
                 }
             }
 
-            private class YieldDocuments<T> : AsyncDocumentSession.AbstractYieldStream<T>
+            public IAsyncEnumerable<ShardStreamItem<Document>> PagedShardedDocumentsByLastModified(
+                CombinedReadContinuationState combinedState,
+                string name,
+                ShardedPagingContinuation pagingContinuation)
             {
-                private readonly Func<BlittableJsonReaderObject, T> _converter;
+                return PagedShardedStream(
+                    combinedState, 
+                    name, 
+                    ShardResultConverter.BlittableToDocumentConverter, 
+                    StreamDocumentByLastModifiedComparer.Instance,
+                    pagingContinuation);
+            }
 
-                public YieldDocuments(StreamOperation.YieldStreamResults enumerator, Func<BlittableJsonReaderObject, T> converter, CancellationToken token) : base(enumerator, token)
+            private class YieldStreamArray<T,TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
+            {
+                private readonly Func<BlittableJsonReaderObject, TInner> _converter;
+                private readonly int _shard;
+
+                public YieldStreamArray(IAsyncEnumerator<BlittableJsonReaderObject> enumerator, Func<BlittableJsonReaderObject, TInner> converter, int shard, CancellationToken token) : base(enumerator, token)
                 {
                     _converter = converter;
+                    _shard = shard;
                 }
 
-                internal override T ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
+                internal override T ResultCreator(IAsyncEnumerator<BlittableJsonReaderObject> asyncEnumerator)
                 {
-                    return _converter(asyncEnumerator.Current);
+                    return (T)new ShardStreamItem<TInner>
+                    {
+                        Item = _converter(asyncEnumerator.Current),
+                        Shard = _shard
+                    };
                 }
-            }
-        }
-    }
-
-    public class ShardedPagingContinuation : ContinuationToken
-    {
-        public int PageSize;
-        public ShardPaging[] Pages;
-
-        public ShardedPagingContinuation()
-        {
-
-        }
-
-        public ShardedPagingContinuation(ShardedContext shardedContext, int start, int pageSize)
-        {
-            var shards = shardedContext.ShardCount;
-            var startPortion = start / shards;
-            var remaining = start - startPortion * shards;
-
-            Pages = new ShardPaging[shards];
-
-            for (var index = 0; index < Pages.Length; index++)
-            {
-                Pages[index].Shard = index;
-                Pages[index].Start = startPortion;
-            }
-
-            Pages[0].Start += remaining;
-
-            PageSize = pageSize;
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue { [nameof(Pages)] = new DynamicJsonArray(Pages), [nameof(PageSize)] = PageSize };
-        }
-
-        public struct ShardPaging : IDynamicJson
-        {
-            public int Shard;
-            public int Start;
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue { [nameof(Start)] = Start, [nameof(Shard)] = Shard };
             }
         }
     }
@@ -137,11 +190,18 @@ namespace Raven.Server.Documents.Sharding
     public class CombinedStreamResult
     {
         public Memory<StreamResult> Results;
+
+        public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedContext shardedContext, CancellationToken token)
+        {
+            var state = new CombinedReadContinuationState(shardedContext, this);
+            await state.InitializeAsync(token);
+            return state;
+        }
     }
 
     public class ShardStreamItem<T>
     {
         public T Item;
-        public LazyStringValue Id;
+        public int Shard;
     }
 }

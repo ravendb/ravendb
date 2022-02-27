@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -43,37 +44,42 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         HttpContext = requestHandler.HttpContext;
     }
 
-    protected virtual void Initialize()
+    protected virtual ValueTask Initialize()
     {
         Collection = RequestHandler.GetStringQueryString("collection", required: false);
         _bindings = RequestHandler.GetStringValuesQueryString("binding", required: false);
         _fullBindings = RequestHandler.GetStringValuesQueryString("fullBinding", required: false);
 
         IsAllDocsCollection = string.IsNullOrEmpty(Collection);
+        return ValueTask.CompletedTask;
     }
 
     protected abstract JsonOperationContext GetContext();
 
-    protected abstract long GetTotalResults();
+    protected abstract ValueTask<long> GetTotalResultsAsync();
 
     protected abstract bool NotModified(out string etag);
 
     protected abstract ValueTask<List<Document>> GetDocumentsAsync();
 
-    protected abstract List<string> GetAvailableColumns(List<Document> documents);
+    protected abstract ValueTask<List<string>> GetAvailableColumns(List<Document> documents);
 
     public async Task ExecuteAsync()
     {
-        Initialize();
+        await Initialize();
 
         if (NotModified(out var etag))
+        {
+            RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
             return;
+        }
 
         if (etag != null)
             HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
         var documents = await GetDocumentsAsync();
-        var availableColumns = GetAvailableColumns(documents);
+        var totalResults = await GetTotalResultsAsync();
+        var availableColumns = await GetAvailableColumns(documents);
 
         var propertiesPreviewToSend = IsAllDocsCollection
             ? _bindings.Count > 0 ? new HashSet<string>(_bindings) : new HashSet<string>()
@@ -86,36 +92,47 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
-            writer.WritePropertyName("Results");
-
-            writer.WriteStartArray();
-
-            var first = true;
-            foreach (var document in documents)
-            {
-                if (first == false)
-                    writer.WriteComma();
-                first = false;
-
-                using (document.Data)
-                {
-                    WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
-                }
-            }
-
-            writer.WriteEndArray();
-
-            writer.WriteComma();
-
-            writer.WritePropertyName("TotalResults");
-            writer.WriteInteger(GetTotalResults());
-
-            writer.WriteComma();
-
-            writer.WriteArray("AvailableColumns", availableColumns);
-
+            WriteResult(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
             writer.WriteEndObject();
         }
+    }
+
+    protected virtual void WriteResult(
+        AsyncBlittableJsonTextWriter writer, 
+        List<Document> documents, 
+        JsonOperationContext context, 
+        HashSet<string> propertiesPreviewToSend,
+        HashSet<string> fullPropertiesToSend, 
+        long totalResults, 
+        List<string> availableColumns)
+    {
+        writer.WritePropertyName("Results");
+
+        writer.WriteStartArray();
+
+        var first = true;
+        foreach (var document in documents)
+        {
+            if (first == false)
+                writer.WriteComma();
+            first = false;
+
+            using (document.Data)
+            {
+                WriteDocument(writer, context, document, propertiesPreviewToSend, fullPropertiesToSend);
+            }
+        }
+
+        writer.WriteEndArray();
+
+        writer.WriteComma();
+
+        writer.WritePropertyName("TotalResults");
+        writer.WriteInteger(totalResults);
+
+        writer.WriteComma();
+
+        writer.WriteArray("AvailableColumns", availableColumns);
     }
 
     private static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)

@@ -32,6 +32,12 @@ namespace Raven.Server.Utils
             }
         }
         
+        public static int GetBucket(LazyStringValue key)
+        {
+            using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+                return GetBucket(context, key);
+        }
+
         public static int GetBucket(TransactionOperationContext context, string key)
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, key, out var lowerId, out _))
