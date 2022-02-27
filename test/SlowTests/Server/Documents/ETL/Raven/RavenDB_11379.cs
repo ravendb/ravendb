@@ -18,7 +18,7 @@ var doc = loadToUsers(this);
 doc.addAttachment(loadAttachment('photo'));
 ";
 
-        private const string scriptShould_remove_attachment2 = @"s
+        private const string scriptShould_remove_attachment2 = @"
 var doc = loadToUsers(this);
 doc.addAttachment('image', loadAttachment('photo'));
 ";
@@ -28,7 +28,7 @@ var doc = loadToUsers(this);
 
 var attachments = this['@metadata']['@attachments'];
 
-for (var i = 0; i < attachments.length; i++) {
+for (var i = 0; i < attachments{optChaining}.length{zeroIfNull}; i++) {
     if (attachments[i].Name.endsWith('.png'))
         doc.addAttachment(loadAttachment(attachments[i].Name));
 }
@@ -47,6 +47,14 @@ for (var i = 0; i < attachments.length; i++) {
         [InlineData(scriptShould_remove_attachment3, false, "photo.png", "photo.png", "V8")]
         public void Should_remove_attachment(string script, bool applyToAllDocuments, string attachmentSourceName, string attachmentDestinationName, string jsEngineType)
         {
+            var isJint = jsEngineType == "Jint";
+            var optChaining = isJint ? "" : "?";
+            var zeroIfNull = isJint ? "" : " ?? 0";
+
+            script = script?
+                .Replace("{optChaining}", optChaining)
+                .Replace("{zeroIfNull}", zeroIfNull);
+            
             var options = Options.ForJavaScriptEngine(jsEngineType);
             using (var src = GetDocumentStore(options))
             using (var dest = GetDocumentStore(options))
