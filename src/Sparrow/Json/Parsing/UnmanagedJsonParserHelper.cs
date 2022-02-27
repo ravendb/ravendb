@@ -144,6 +144,31 @@ namespace Sparrow.Json.Parsing
             return state.Long;
         }
 
+        public static async ValueTask<BlittableJsonReaderArray> ReadJsonArrayAsync(
+            BlittableJsonDocumentBuilder builder,
+            PeepingTomStream peepingTomStream,
+            UnmanagedJsonParser parser,
+            JsonOperationContext.MemoryBuffer buffer,
+            CancellationToken token)
+        {
+            builder.ReadArrayDocument();
+            while (true)
+            {
+                if (builder.Read())
+                    break;
+
+                var read = await peepingTomStream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
+                if (read == 0)
+                    throw new EndOfStreamException("Stream ended without reaching end of json content");
+
+                parser.SetBuffer(buffer, 0, read);
+            }
+
+            builder.FinalizeDocument();
+
+            return builder.CreateArrayReader(noCache: true);
+        }
+
         public static async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
         {
             builder.ReadNestedObject();

@@ -31,7 +31,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override void Initialize()
+    protected override ValueTask Initialize()
     {
         base.Initialize();
 
@@ -44,6 +44,8 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _totalResults = IsAllDocsCollection
             ? _database.DocumentsStorage.GetNumberOfDocuments(_context)
             : _database.DocumentsStorage.GetCollection(Collection, _context).Count;
+
+        return ValueTask.CompletedTask;
     }
 
     protected override JsonOperationContext GetContext()
@@ -51,9 +53,9 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         return _context;
     }
 
-    protected override long GetTotalResults()
+    protected override ValueTask<long> GetTotalResultsAsync()
     {
-        return _totalResults;
+        return ValueTask.FromResult(_totalResults);
     }
 
     protected override bool NotModified(out string etag)
@@ -95,9 +97,9 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         return ValueTask.FromResult(documents);
     }
 
-    protected override List<string> GetAvailableColumns(List<Document> documents)
+    protected override ValueTask<List<string>> GetAvailableColumns(List<Document> documents)
     {
-        return ExtractColumnNames(documents, _context);
+        return ValueTask.FromResult(ExtractColumnNames(documents, _context));
     }
 
     public override void Dispose()
@@ -111,7 +113,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _releaseContext = null;
     }
 
-    private static List<string> ExtractColumnNames(List<Document> documents, JsonOperationContext context)
+    public static List<string> ExtractColumnNames(List<Document> documents, JsonOperationContext context)
     {
         var columns = new List<string>();
 
