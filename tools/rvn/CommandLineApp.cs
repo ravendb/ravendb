@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Platform;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Raven.Server.Commercial;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
@@ -60,16 +55,13 @@ namespace rvn
             }
         }
 
-        private static Task ConfigureSetupPackage()
+        private static void ConfigureSetupPackage()
         {
             _app.Command("create-setup-package", cmd =>
             {
-                Regex re = new Regex("[A-Za-z]{1,4}");
-
                 cmd.ExtendedHelpText = cmd.Description = "Creates RavenDB setup given setup-params.json";
                 cmd.HelpOption(HelpOptionString);
                 var setupParameters = ConfigureSetupParameters(cmd);
-                var configureInsecureSetup = ConfigureInsecureSetup(cmd);
                 var packageOutputFile = ConfigurePackageOutputFile(cmd);
 
                 cmd.OnExecuteAsync(async token =>
@@ -77,63 +69,18 @@ namespace rvn
                     if (File.Exists(setupParameters?.Value()) == false)
                         return ExitWithError("Path to setup params has not found", cmd);
 
-                    using (StreamReader file = File.OpenText(setupParameters.Value() ?? string.Empty))
+                    using (StreamReader file = File.OpenText(setupParameters?.Value() ?? string.Empty))
                     {
                         JsonSerializer serializer = new();
-                        var rootObj = (CreateSetupDto.Root)serializer.Deserialize(file, typeof(CreateSetupDto.Root));
-                        Debug.Assert(rootObj != null, nameof(rootObj) + " != null");
-                        foreach (var node in rootObj.Setup.Cluster.Nodes)
-                        {
-                            if (re.IsMatch(node.Tag) == false)
-                                return ExitWithError("Please enter no more than 4 characters.", cmd);
-                        }
-
-                        var nodeSetupInfo = new Dictionary<string, SetupInfo.NodeInfo>();
-
-                        foreach (var node in root.Setup.Cluster.Nodes)
-                        {
-                            nodeSetupInfo.Add(node.Tag,
-                                new SetupInfo.NodeInfo
-                                {
-                                    PublicServerUrl = null,
-                                    PublicTcpServerUrl = null,
-                                    Port = node.HttpPort,
-                                    TcpPort = node.TcpPort,
-                                    ExternalIpAddress = node.ExternalIp,
-                                    ExternalPort = 0,
-                                    ExternalTcpPort = 0,
-                                    Addresses = new List<string>
-                                    {
-                                        node.Ip
-                                    }
-                                });
-                        }
-
-                        var setupInfo = new SetupInfo
-                        {
-                            EnableExperimentalFeatures = false,
-                            RegisterClientCert = false,
-                            ClientCertNotAfter = null,
-                            License = root.Setup.License,
-                            Email = root.Setup.Email,
-                            Domain = root.Setup.Domain,
-                            RootDomain = root.Setup.RootDomain,
-                            ModifyLocalServer = false,
-                            LocalNodeTag = root.Setup.Cluster.Nodes[0].Tag,
-                            Certificate = null,
-                            Password = root.Setup.Password,
-                            NodeSetupInfos = nodeSetupInfo
-                        };
-                        var tokenSource = new CancellationTokenSource();
-                        var token = tokenSource.Token;
-                        var setupLetsEncryptTask =  LetsEncryptUtils.SetupLetsEncryptTask(setupInfo, token);
+                        var setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+                        var settingsPath = setupParameters?.Values[0];
+                        var setupLetsEncryptTask = await LetsEncryptUtils.SetupLetsEncryptByRvn(setupInfo,settingsPath ,token);
+                        var path = packageOutputFile.Values[0] ??= Path.Combine(AppContext.BaseDirectory, "Cluster.Settings.zip");
+                        await File.WriteAllBytesAsync(path, setupLetsEncryptTask, token);
                     }
-
-
                     return 0;
                 });
             });
-            return Task.CompletedTask;
         }
 
         private static void ConfigureLogsCommand()
@@ -431,14 +378,9 @@ namespace rvn
             return 1;
         }
 
-        private static CommandOption ConfigureInsecureSetup(CommandLineApplication cmd)
-        {
-            return cmd.Option("-i|--insecure-ravendb-url", "RavenDB insecure setup", CommandOptionType.SingleValue);
-        }
-
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
+            return cmd.Option("-s|--setup-parameters", "call setup endpoints and obtain the setup package for setup up the cluster", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
