@@ -12,6 +12,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
+using Raven.Server.Utils.Features;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;

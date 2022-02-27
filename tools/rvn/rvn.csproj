@@ -57,12 +57,9 @@
     <Compile Include="..\..\src\Raven.Server\Utils\IOExtensions.cs" Link="Server\Utils\IOExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
-    <Compile Include="..\..\src\Raven.Server\Utils\IOExtensions.cs" Link="Server\Utils\IOExtensions.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\JsonStringHelper.cs" Link="Server\Utils\JsonStringHelper.cs" />
-    <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\WelcomeMessage.cs" Link="Server\Utils\Cli\WelcomeMessage.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\Cli\ConsoleMessage.cs" Link="Server\Utils\Cli\ConsoleMessage.cs" />
-    <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\CertificateUtils.cs" Link="Server\Utils\CertificateUtils.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" Link="Server\Commercial\LetsEncrypt\SettingsZipFileHelper.cs" />
     <Compile Include="..\..\src\Raven.Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" Link="Server\Commercial\LetsEncrypt\RavenDnsRecordHelper.cs" />
