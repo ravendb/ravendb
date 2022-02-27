@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Security;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
@@ -21,19 +17,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.X509;
-using Org.BouncyCastle.Crypto.Prng;
-using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Https;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -49,20 +38,17 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Server.Platform.Posix;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using OpenFlags = System.Security.Cryptography.X509Certificates.OpenFlags;
-using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public const string GoogleDnsApi = "https://dns.google.com";
+        private const string GoogleDnsApi = "https://dns.google.com";
 
-        public static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
+        private static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
             return $"{nodeTag}.{userDomain}.{rootDomain}".ToLower();
         }
@@ -141,7 +127,7 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -161,16 +147,20 @@ namespace Raven.Server.Commercial
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
 
-            var cert = await CompleteAuthorizationAndGetCertificate(() =>
+            var cert = await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(
+                new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
-                },
-                setupInfo,
-                acmeClient,
-                challengeResult,
-                serverStore,
-                token);
+                    OnValidationSuccessful = () =>
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
+                    },
+                    SetupInfo = setupInfo,
+                    Client = acmeClient,
+                    ChallengeResult = challengeResult,
+                    ServerStore = serverStore,
+                    Token = token
+                });
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations("Successfully acquired certificate from Let's Encrypt.");
@@ -425,7 +415,7 @@ namespace Raven.Server.Commercial
                 var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
                 await acmeClient.Init(setupInfo.Email, token);
 
-                var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+                var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
                 progress.Processed++;
                 progress.AddInfo(challengeResult.Challenge != null
@@ -438,7 +428,14 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenge, setupInfo, token);
+                    await LetsEncryptUtils.UpdateDnsRecordsTask(new LetsEncryptUtils.UpdateDnsRecordParameters
+                    {
+                        OnProgress = onProgress,
+                        Progress = progress,
+                        Challenge = challengeResult.Challenge,
+                        SetupInfo = setupInfo,
+                        Token = token
+                    });
                 }
                 catch (Exception e)
                 {
@@ -451,17 +448,21 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Completing Let's Encrypt challenge(s)...");
                 onProgress(progress);
 
-                await CompleteAuthorizationAndGetCertificate(() =>
+                await LetsEncryptUtils.CompleteAuthorizationAndGetCertificate(new LetsEncryptUtils.CompleteAuthorizationAndGetCertificateParameters
+                {
+                    OnValidationSuccessful = () =>
                     {
                         progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
                         progress.AddInfo("Acquiring certificate.");
                         onProgress(progress);
                     },
-                    setupInfo,
-                    acmeClient,
-                    challengeResult,
-                    serverStore,
-                    token);
+                    SetupInfo = setupInfo,
+                    Client = acmeClient,
+                    ChallengeResult = challengeResult,
+                    ServerStore = serverStore,
+                    Token = token
+                });
+
 
                 progress.Processed++;
                 progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
@@ -539,105 +540,6 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
-        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo, LetsEncryptClient client,
-            (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult, ServerStore serverStore, CancellationToken token)
-        {
-            if (challengeResult.Challange == null && challengeResult.Cache != null)
-            {
-                return BuildNewPfx(setupInfo, challengeResult.Cache.Certificate, challengeResult.Cache.PrivateKey);
-            }
-
-            try
-            {
-                await client.CompleteChallenges(token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
-            }
-
-            onValidationSuccessful();
-
-            (X509Certificate2 Cert, RSA PrivateKey) result;
-            try
-            {
-                var existingPrivateKey = serverStore.Server.Certificate?.Certificate?.GetRSAPrivateKey();
-                result = await client.GetCertificate(existingPrivateKey, token);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
-            }
-
-            try
-            {
-                return BuildNewPfx(setupInfo, result.Cert, result.PrivateKey);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
-            }
-        }
-
-        private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, X509Certificate2 certificate, RSA privateKey)
-        {
-            var certWithKey = certificate.CopyWithPrivateKey(privateKey);
-
-            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
-
-            var chain = new X509Chain();
-            chain.ChainPolicy.DisableCertificateDownloads = true;
-
-            chain.Build(certificate);
-
-            foreach (var item in chain.ChainElements)
-            {
-                var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
-
-                if (item.Certificate.Thumbprint == certificate.Thumbprint)
-                {
-                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.GetRSAPrivateKey()).Private);
-                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] {new X509CertificateEntry(x509Certificate)});
-                    continue;
-                }
-
-                store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
-            }
-
-            var memoryStream = new MemoryStream();
-            store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
-            var certBytes = memoryStream.ToArray();
-
-            Debug.Assert(certBytes != null);
-            setupInfo.Certificate = Convert.ToBase64String(certBytes);
-
-            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-        }
-
-        private static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
-            SetupInfo setupInfo,
-            LetsEncryptClient client,
-            CancellationToken token)
-        {
-            try
-            {
-                var host = (setupInfo.Domain + "." + setupInfo.RootDomain).ToLowerInvariant();
-                var wildcardHost = "*." + host;
-                if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
-                    return (null, certBytes);
-
-                var result = await client.NewOrder(new[] {wildcardHost}, token);
-
-                result.TryGetValue(host, out var challenge);
-                // we may already be authorized for this?
-                return (challenge, null);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Failed to receive challenge(s) information from Let's Encrypt.", e);
-            }
-        }
-
         private static void LogErrorAndThrow(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, string msg, Exception e)
         {
             progress.AddError(msg, e);
@@ -686,7 +588,7 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException("Registration request to api.ravendb.net failed for: " + serializeObject, e);
                 }
 
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)
                 {
@@ -694,7 +596,7 @@ namespace Raven.Server.Commercial
                         $"Got unsuccessful response from registration request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                 }
 
-                var id = JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString).First().Value;
+                var id = (JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString) ?? throw new InvalidOperationException()).First().Value;
 
                 try
                 {
@@ -713,7 +615,7 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException("Registration-result request to api.ravendb.net failed.", e); //add the object we tried to send to error
                         }
 
-                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
 
                         if (response.IsSuccessStatusCode == false)
                         {
@@ -722,7 +624,7 @@ namespace Raven.Server.Commercial
                         }
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
-                    } while (registrationResult.Status == "PENDING");
+                    } while (registrationResult?.Status == "PENDING");
                 }
                 catch (Exception e)
                 {
@@ -733,143 +635,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task UpdateDnsRecordsTask(
-            Action<IOperationProgress> onProgress,
-            SetupProgressAndResult progress,
-            string challenge,
-            SetupInfo setupInfo,
-            CancellationToken token)
-        {
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
-            {
-                var registrationInfo = new RegistrationInfo
-                {
-                    License = setupInfo.License,
-                    Domain = setupInfo.Domain,
-                    Challenge = challenge,
-                    RootDomain = setupInfo.RootDomain,
-                    SubDomains = new List<RegistrationNodeInfo>()
-                };
-
-                foreach (var node in setupInfo.NodeSetupInfos)
-                {
-                    var regNodeInfo = new RegistrationNodeInfo
-                    {
-                        SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
-                        Ips = node.Value.ExternalIpAddress == null
-                            ? node.Value.Addresses
-                            : new List<string> {node.Value.ExternalIpAddress}
-                    };
-
-                    registrationInfo.SubDomains.Add(regNodeInfo);
-                }
-
-                progress.AddInfo($"Creating DNS record/challenge for node(s): {string.Join(", ", setupInfo.NodeSetupInfos.Keys)}.");
-
-                onProgress(progress);
-
-                if (registrationInfo.SubDomains.Count == 0 && registrationInfo.Challenge == null)
-                {
-                    // no need to update anything, can skip doing DNS update
-                    progress.AddInfo("Cached DNS values matched, skipping DNS update");
-                    return;
-                }
-
-                var serializeObject = JsonConvert.SerializeObject(registrationInfo);
-                HttpResponseMessage response;
-                try
-                {
-                    progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
-                    progress.AddInfo("Please wait between 30 seconds and a few minutes.");
-                    onProgress(progress);
-                    response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
-                        new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
-                    progress.AddInfo("Waiting for DNS records to update...");
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Registration request to api.ravendb.net failed for: " + serializeObject, e);
-                }
-
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                if (response.IsSuccessStatusCode == false)
-                {
-                    throw new InvalidOperationException(
-                        $"Got unsuccessful response from registration request: {response.StatusCode}.{Environment.NewLine}{responseString}");
-                }
-
-                if (challenge == null)
-                {
-                    var existingSubDomain =
-                        registrationInfo.SubDomains.FirstOrDefault(x => x.SubDomain.StartsWith(setupInfo.LocalNodeTag + ".", StringComparison.OrdinalIgnoreCase));
-                    if (existingSubDomain != null && new HashSet<string>(existingSubDomain.Ips).SetEquals(setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].Addresses))
-                    {
-                        progress.AddInfo("DNS update started successfully, since current node (" + setupInfo.LocalNodeTag +
-                                         ") DNS record didn't change, not waiting for full DNS propagation.");
-                        return;
-                    }
-                }
-
-                var id = JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString).First().Value;
-
-                try
-                {
-                    RegistrationResult registrationResult;
-                    var i = 1;
-                    do
-                    {
-                        try
-                        {
-                            await Task.Delay(1000, cts.Token);
-                            response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/registration-result?id=" + id,
-                                    new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token)
-                                .ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Registration-result request to api.ravendb.net failed.", e); //add the object we tried to send to error
-                        }
-
-                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                        if (response.IsSuccessStatusCode == false)
-                        {
-                            throw new InvalidOperationException(
-                                $"Got unsuccessful response from registration-result request: {response.StatusCode}.{Environment.NewLine}{responseString}");
-                        }
-
-                        registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
-
-                        if (i % 120 == 0)
-                            progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
-                        else if (i % 45 == 0)
-                            progress.AddInfo("If everything goes all right, we should be nearly there...");
-                        else if (i % 30 == 0)
-                            progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
-                        else if (i % 15 == 0)
-                            progress.AddInfo("Please be patient, updating DNS records takes time...");
-                        else if (i % 5 == 0)
-                            progress.AddInfo("Waiting...");
-
-                        onProgress(progress);
-
-                        i++;
-                    } while (registrationResult.Status == "PENDING");
-
-                    progress.AddInfo("Got successful response from api.ravendb.net.");
-                    onProgress(progress);
-                }
-                catch (Exception e)
-                {
-                    if (cts.IsCancellationRequested == false)
-                        throw;
-                    throw new TimeoutException("Request failed due to a timeout error", e);
-                }
-            }
-        }
-
-        public static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
+        private static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
         {
             var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
@@ -920,7 +686,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
+        private static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
             var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
@@ -978,7 +744,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task ValidateServerCanRunOnThisNode(BlittableJsonReaderObject settingsJsonObject, X509Certificate2 cert, ServerStore serverStore,
+        private static async Task ValidateServerCanRunOnThisNode(BlittableJsonReaderObject settingsJsonObject, X509Certificate2 cert, ServerStore serverStore,
             string nodeTag, CancellationToken token)
         {
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
@@ -1039,7 +805,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
+        private static async Task ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
             if ((await SetupParameters.Get(serverStore)).IsDocker)
             {
@@ -1049,34 +815,33 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            if (setupMode == SetupMode.LetsEncrypt)
+            switch (setupMode)
             {
-                if (setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false)
+                case SetupMode.LetsEncrypt when setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false:
                     throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'.");
-                if (IsValidEmail(setupInfo.Email) == false)
+                case SetupMode.LetsEncrypt when IsValidEmail(setupInfo.Email) == false:
                     throw new ArgumentException("Invalid email address.");
-                if (IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false)
+                case SetupMode.LetsEncrypt when IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false:
                     throw new ArgumentException("Invalid domain name.");
-                if (setupInfo.ClientCertNotAfter.HasValue && setupInfo.ClientCertNotAfter <= DateTime.UtcNow.Date)
+                case SetupMode.LetsEncrypt when setupInfo.ClientCertNotAfter.HasValue && setupInfo.ClientCertNotAfter <= DateTime.UtcNow.Date:
                     throw new ArgumentException("The client certificate expiration date must be in the future.");
+                case SetupMode.Secured when string.IsNullOrWhiteSpace(setupInfo.Certificate):
+                    throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
             }
 
-            if (setupMode == SetupMode.Secured && string.IsNullOrWhiteSpace(setupInfo.Certificate))
-                throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
-
-            foreach (var node in setupInfo.NodeSetupInfos)
+            foreach ((string key, SetupInfo.NodeInfo value) in setupInfo.NodeSetupInfos)
             {
-                RachisConsensus.ValidateNodeTag(node.Key);
+                RachisConsensus.ValidateNodeTag(key);
 
-                if (node.Value.Port == 0)
-                    setupInfo.NodeSetupInfos[node.Key].Port = 443;
+                if (value.Port == 0)
+                    setupInfo.NodeSetupInfos[key].Port = 443;
 
-                if (node.Value.TcpPort == 0)
-                    setupInfo.NodeSetupInfos[node.Key].TcpPort = 38888;
+                if (value.TcpPort == 0)
+                    setupInfo.NodeSetupInfos[key].TcpPort = 38888;
 
                 if (setupMode == SetupMode.LetsEncrypt &&
-                    setupInfo.NodeSetupInfos[node.Key].Addresses.Any(ip => ip.Equals("0.0.0.0")) &&
-                    string.IsNullOrWhiteSpace(setupInfo.NodeSetupInfos[node.Key].ExternalIpAddress))
+                    setupInfo.NodeSetupInfos[key].Addresses.Any(ip => ip.Equals("0.0.0.0")) &&
+                    string.IsNullOrWhiteSpace(setupInfo.NodeSetupInfos[key].ExternalIpAddress))
                 {
                     throw new ArgumentException("When choosing 0.0.0.0 as the ip address, you must provide an external ip to update in the DNS records.");
                 }
@@ -1108,7 +873,6 @@ namespace Raven.Server.Commercial
             return Uri.CheckHostName(domain) != UriHostNameType.Unknown;
         }
 
- 
 
         private static async Task CompleteConfigurationForNewNode(
             Action<IOperationProgress> onProgress,
@@ -1140,7 +904,8 @@ namespace Raven.Server.Commercial
             settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePath), out string certificateFileName);
 
             serverStore.Server.Certificate =
-                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword, serverStore.LicenseManager.LicenseStatus.Type, true);
+                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword,
+                    serverStore.LicenseManager.LicenseStatus.Type, true);
 
             if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
             {
@@ -1298,31 +1063,28 @@ namespace Raven.Server.Commercial
         {
             return await LetsEncryptUtils.CompleteClusterConfigurationAndGetSettingsZip(new LetsEncryptUtils.CompleteClusterConfigurationParameters
             {
-                onProgress = onProgress,
+                OnProgress = onProgress,
                 Progress = progress,
                 SetupInfo = setupInfo,
-                OnWriteSettingsJsonLocally = indentedJson  => 
+                SettingsPath = serverStore.Configuration.ConfigPath,
+                OnWriteSettingsJsonLocally = indentedJson =>
                 {
-                   return Task.Run(()=>LetsEncryptUtils.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
+                    return Task.Run(() => LetsEncryptUtils.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson), token);
                 },
                 OnGetCertificatePath = certificateFileName =>
                 {
-                    return Task.Run(()=>  serverStore.Configuration.GetSetting(
+                    return Task.Run(() => serverStore.Configuration.GetSetting(
                                               RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
                                           ?? Path.Combine(AppContext.BaseDirectory, certificateFileName), token);
                 },
                 OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
                 {
                     var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
-                        new ServerWideStudioConfiguration
-                        {
-                            Disabled = false,
-                            Environment = studioEnvironment
-                        }, RaftIdGenerator.DontCareId));
-                            
+                        new ServerWideStudioConfiguration {Disabled = false, Environment = studioEnvironment}, RaftIdGenerator.DontCareId));
+
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
                 },
-                OnBeforeAddingNodesToCluster = async (publicServerUrl, serverCert, serverCertBytes, localNodeTag) =>
+                OnBeforeAddingNodesToCluster = async (publicServerUrl, localNodeTag) =>
                 {
                     try
                     {
@@ -1357,9 +1119,9 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
                     }
                 },
-                RegisterClientCertInOs =  (onProgressCopy, progressCopy, clientCert) =>
+                RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) =>
                 {
-                    return Task.Run(()=>RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert), token);
+                    return Task.Run(() => RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert), token);
                 },
             });
         }
@@ -1383,7 +1145,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        
 
         private class UniqueResponseResponder : IStartup
         {
@@ -1408,7 +1169,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
+        private static async Task SimulateRunningServer(ServerStore serverStore, X509Certificate2 serverCertificate, string serverUrl, string nodeTag,
             IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
         {
             var configuration = RavenConfiguration.CreateForServer(null, settingsPath);
@@ -1486,7 +1247,7 @@ namespace Raven.Server.Commercial
                     // on MacOS this is not supported because Apple...
                     if (PlatformDetails.RunningOnMacOsx == false)
                     {
-                        httpMessageHandler.ServerCertificateCustomValidationCallback += (message, certificate2, chain, errors) =>
+                        httpMessageHandler.ServerCertificateCustomValidationCallback += (_, certificate2, _, _) =>
                             // we want to verify that we get the same thing back
                         {
                             if (certificate2.Thumbprint != serverCertificate.Thumbprint)
@@ -1508,7 +1269,7 @@ namespace Raven.Server.Commercial
                             {
                                 response = await client.GetAsync("/are-you-there?", cts.Token);
                                 response.EnsureSuccessStatusCode();
-                                result = await response.Content.ReadAsStringAsync();
+                                result = await response.Content.ReadAsStringAsync(cts.Token);
                                 if (result != guid)
                                 {
                                     throw new InvalidOperationException($"Expected result guid: {guid} but got {result}.");
@@ -1571,7 +1332,7 @@ namespace Raven.Server.Commercial
                 {
                     var response = await client.GetAsync($"/resolve?name={hostname}", cts.Token);
 
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var responseString = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
                     if (response.IsSuccessStatusCode == false)
                         throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
@@ -1580,7 +1341,7 @@ namespace Raven.Server.Commercial
 
                     // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
 
-                    if (dnsResult.Status != 0)
+                    if (dnsResult?.Status != 0)
                         throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
                                                             Environment.NewLine +
@@ -1619,35 +1380,7 @@ namespace Raven.Server.Commercial
                         + Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).");
             }
         }
-
-        // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        // public static async Task<byte[]> GenerateCertificateTask2(string name, RavenServer.CertificateHolder serverCertificateHolder, SetupInfo setupInfo)
-        // {
-        //     if (serverStore.Server.Certificate?.Certificate == null)
-        //         throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
-        //
-        //     // this creates a client certificate which is signed by the current server certificate
-        //     var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes,
-        //         setupInfo.ClientCertNotAfter ?? DateTime.UtcNow.Date.AddYears(5));
-        //
-        //     var newCertDef = new CertificateDefinition
-        //     {
-        //         Name = name,
-        //         // this does not include the private key, that is only for the client
-        //         Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-        //         Permissions = new Dictionary<string, DatabaseAccess>(),
-        //         SecurityClearance = SecurityClearance.ClusterAdmin,
-        //         Thumbprint = selfSignedCertificate.Thumbprint,
-        //         PublicKeyPinningHash = selfSignedCertificate.GetPublicKeyPinningHash(),
-        //         NotAfter = selfSignedCertificate.NotAfter
-        //     };
-        //
-        //     var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
-        //     await serverStore.Cluster.WaitForIndexNotification(res.Index);
-        //
-        //     return certBytes;
-        // }
-        //
+        
         public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
         {
             if (serverStore.Server.Certificate?.Certificate == null)

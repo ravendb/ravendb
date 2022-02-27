@@ -253,51 +253,6 @@ namespace Raven.Server.Commercial
         Finish
     }
 
-    public class SetupProgressAndResultFromRvn : IOperationResult,IOperationProgress
-    {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-
-        public bool ShouldPersist => false;
-        public string Message { get; private set; }
-
-        public readonly ConcurrentQueue<string> Messages;
-
-        public SetupProgressAndResultFromRvn(string message)
-        {
-            Messages = new ConcurrentQueue<string>();
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            var json = new DynamicJsonValue(GetType()) {[nameof(Messages)] = Messages.ToArray()};
-
-            return json;
-        }
-        
-        public void AddWarning(string message)
-        {
-            AddMessage("WARNING", message);
-        }
-
-        public void AddInfo(string message)
-        {
-            AddMessage("INFO", message);
-        }
-
-        public void AddError(string message, Exception ex = null)
-        {
-            AddMessage("ERROR", message, ex);
-        }
-
-        private void AddMessage(string type, string message, Exception ex = null) //<-- remember last message here
-        {
-            Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            Messages.Enqueue(Message);
-            if (Logger.IsInfoEnabled)
-                Logger.Info(Message, ex);
-        }
-    }
-
     public class SetupProgressAndResult : IOperationResult, IOperationProgress
     {
         public long Processed { get; set; }
