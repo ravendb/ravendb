@@ -1,12 +1,11 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
-namespace rvn.Server.SetupWizard;
+namespace Raven.Server.Commercial.SetupWizard;
 
 public class SetupWizardUtils
 { 

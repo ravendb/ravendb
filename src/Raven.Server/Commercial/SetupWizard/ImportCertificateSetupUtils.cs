@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 
-namespace rvn.Server.SetupWizard;
+namespace Raven.Server.Commercial.SetupWizard;
 
 public class ImportCertificateSetupUtils
 {

@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Operations;
 using Sparrow.Logging;
 
 namespace Raven.Server.Commercial.LetsEncrypt;
