@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Can_Parse_Short_In_Index()
+        public async Task Can_Parse_Numeric_Value_In_Index()
         {
             using (var store = GetDocumentStore())
             {
@@ -54,7 +54,14 @@ namespace SlowTests.Issues
         {
             public class Result
             {
-                public short? Short { get; set; }
+                public long Long { get; set; }
+                public int Int { get; set; }
+                public short Short { get; set; }
+                public ushort UShort { get; set; }
+                public uint UInt { get; set; }
+                public ulong Ulong { get; set; }
+                public byte Byte { get; set; }
+                public sbyte SByte { get; set; }
             }
 
             public DocumentIndex()
@@ -62,7 +69,14 @@ namespace SlowTests.Issues
                 Map = documents => from document in documents
                     select new Result
                     {
-                        Short = document.Id != null ? (short?)document.Short : null
+                        Long = (long)document.Short,
+                        Int = (int)document.Short,
+                        Short = (short)document.Short,
+                        Ulong = (ulong)document.Short,
+                        UInt = (uint)document.Short,
+                        UShort = (ushort)document.Short,
+                        Byte = (byte)document.Short,
+                        SByte = (sbyte)document.Short
                     };
             }
         }
