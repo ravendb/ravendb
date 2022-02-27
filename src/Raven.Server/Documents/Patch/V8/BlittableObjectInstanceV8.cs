@@ -1048,11 +1048,13 @@ namespace Raven.Server.Documents.Patch.V8
                 // First, try and see if the number is withing double boundaries.
                 // We use double's tryParse and it actually may round the number,
                 // But that are Jint's limitations
-                if (value.TryParseDouble(out double doubleVal))
+
+                // [shlomo] commented out the attempt to parse as double for the sake of the test RavenDB_7691.CanParseNumericEdgeCasesRawValuesInJSProjection as in Jint's version of ScalarToRawString there is no one 
+                /*if (value.TryParseDouble(out double doubleVal))
                 {
                     var engine = (V8Engine)engineEx; 
                     return engine.CreateValue(doubleVal);
-                }
+                }*/
 
                 // If number is not in double boundaries, we return the LazyNumberValue
                 return engineEx.CreateObjectBinder(value, keepAlive: false);
