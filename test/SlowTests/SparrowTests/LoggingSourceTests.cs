@@ -326,7 +326,7 @@ namespace SlowTests.SparrowTests
             {
                 for (var j = 0; j < 5; j++)
                 {
-                    await logger.OperationsWithWait("Some message");
+                    await logger.OperationsWithWait($"compressing = {compressing}");
                 }
                 Thread.Sleep(10);
             }
@@ -344,16 +344,17 @@ namespace SlowTests.SparrowTests
 
                 return Math.Abs(size - retentionSize) <= threshold;
             }, true, 10_000, 1_000);
+
+            loggingSource.EndLogging();
+
             string errorMessage = isRetentionPolicyApplied 
                 ? string.Empty
                 : $"{TempInfoToInvestigate(loggingSource, path)}. " +
-                  $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold})" + 
+                  $"ActualSize({size}), retentionSize({retentionSize}), threshold({threshold}), path({path})" +
                   Environment.NewLine + 
                   FileNamesWithSize(afterEndFiles);
 
             Assert.True(isRetentionPolicyApplied, errorMessage);
-
-            loggingSource.EndLogging();
         }
 
         private static string FileNamesWithSize(FileInfo[] files)
