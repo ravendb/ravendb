@@ -7,6 +7,7 @@ using Sparrow.Platform;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using Raven.Server.Commercial.LetsEncrypt;
 using rvn.Parameters;
+using rvn.Server.SetupWizard;
 using Voron.Global;
 
 namespace rvn
@@ -20,9 +21,6 @@ namespace rvn
                                                       "The server MUST be offline for the duration of those operations";
 
         private static CommandLineApplication _app;
-
-        private const string LetsEncryptMode = "lets-encrypt";
-        private const string ImportCertificateMode = "import-certificate";
         
         public static int Run(string[] args)
         {
@@ -65,7 +63,7 @@ namespace rvn
         {
             _app.Command("create-setup-package", cmd =>
             {
-                cmd.Description = "This command creates RavenDB setup ZIP file";
+                cmd.ExtendedHelpText = cmd.Description = "This command creates RavenDB setup ZIP file";
                 cmd.HelpOption(HelpOptionString);
                 
                 var mode = ConfigureModeOption(cmd);
@@ -80,14 +78,14 @@ namespace rvn
                     var setupParamVal = setupParam.Value();
                     var packageOutPathVal = packageOutPath.Value();
                     var certPathVal = certPath.Value();
-                    var certPassTuple = (certPass.Value(), Environment.GetEnvironmentVariable("RVN_CERT_PASS"));
-                    
+                    var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
+
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
                         SetupInfoPath = setupParamVal,
-                        PackageOutputPath = packageOutPathVal,
+                        PackageOutputPath = packageOutPathVal?.ToLower(),
                         Command = cmd,
-                        SetupMode = modeVal,
+                        Mode = modeVal,
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
                         Progress = new SetupProgressAndResult(tuple =>
@@ -114,7 +112,15 @@ namespace rvn
             SetupInfo setupInfo;
 
             if (File.Exists(parameters.SetupInfoPath) == false)
+            {
                 return ExitWithError($"{nameof(parameters.SetupInfoPath)} does not exits", parameters.Command);
+            }
+  
+            if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip") == false)
+            {
+                return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extenstion", parameters.Command);
+            }
+
 
             try
             {
@@ -126,41 +132,35 @@ namespace rvn
             }
             catch (Exception e)
             {
-                return ExitWithError($"Failed to deserialize SetupInfo object form this file path {nameof(parameters.SetupInfoPath)}\nError: {e}",parameters.Command);
-            }
+                return ExitWithError($"Failed to deserialize SetupInfo object form this file path {nameof(parameters.SetupInfoPath)}\nError: {e}", parameters.Command);            }
 
             if (string.IsNullOrEmpty(setupInfo?.Domain))
                 return ExitWithError($"{nameof(setupInfo.Domain)} cannot be empty",parameters.Command);
             
             parameters.PackageOutputPath ??= setupInfo.Domain;
             
-            if (string.IsNullOrEmpty(parameters.CertPassword.PassFromEnv) == false)
+            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
             {
-                setupInfo.Password = parameters.CertPassword.PassFromEnv;
-            }
-            else if (string.IsNullOrEmpty(parameters.CertPassword.passFromCmd) == false)
-            {
-                setupInfo.Password = parameters.CertPassword.PassFromEnv;
+                setupInfo.Password = parameters.CertPassword;
             }
 
-            switch (parameters.SetupMode)
+            switch (parameters.Mode)
             {
-                case ImportCertificateMode when string.IsNullOrEmpty(parameters.CertificatePath):
+                case "own-certificate" when string.IsNullOrEmpty(parameters.CertificatePath):
                 {
                     return ExitWithError("--path option must be set", parameters.Command);
                 }
-                case ImportCertificateMode:
+                case "own-certificate":
                 {
-                    
                     var certBytes = await File.ReadAllBytesAsync(parameters.CertificatePath, parameters.CancellationToken);
                     var certBase64 = Convert.ToBase64String(certBytes);
                     setupInfo.Certificate = certBase64;
-                    zipFile = await LetsEncryptUtils.ImportCertificateSetup(setupInfo, parameters.Progress, parameters.CancellationToken);
+                    zipFile = await ImportCertificateSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
                 }
-                case LetsEncryptMode when string.IsNullOrEmpty(parameters.SetupInfoPath) == false:
+                case "lets-encrypt" when string.IsNullOrEmpty(parameters.SetupInfoPath) == false:
                 {
-                    zipFile = await LetsEncryptUtils.SetupLetsEncrypt(setupInfo, parameters.Progress, parameters.CancellationToken);
+                    zipFile = await LetsEncryptSetupUtils.Setup(setupInfo, parameters.Progress, parameters.CancellationToken);
                     break;
                 }
                 default:
@@ -169,8 +169,6 @@ namespace rvn
 
             try
             {
-                if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip") == false)
-                    return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extenstion", parameters.Command);
                 try
                 {
                     await File.WriteAllBytesAsync(parameters.PackageOutputPath!, zipFile, parameters.CancellationToken);

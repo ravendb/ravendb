@@ -1726,7 +1726,7 @@ namespace Raven.Server.Commercial
 
                     var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                    var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
+                    var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
                     SettingsZipFileHelper.WriteSettingsJsonLocally(settingsPath, indentedJson);
                 }
                 _eulaAcceptedButHasPendingRestart = true;

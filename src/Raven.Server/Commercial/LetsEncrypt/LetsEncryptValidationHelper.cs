@@ -145,7 +145,7 @@ public class LetsEncryptValidationHelper
         {
             case SetupMode.LetsEncrypt when setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false:
                 throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'. Nodes: " + setupInfo.NodeSetupInfos.Keys);
-            case SetupMode.LetsEncrypt when EmailValidator.IsValidEmail(setupInfo.Email) == false:
+            case SetupMode.LetsEncrypt when EmailValidator.IsValid(setupInfo.Email) == false:
                 throw new ArgumentException("Invalid email address: " + setupInfo.Email);
             case SetupMode.LetsEncrypt when IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false:
                 throw new ArgumentException("Invalid domain name: " + setupInfo.Domain);

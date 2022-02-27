@@ -4,7 +4,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class EmailValidator
 {
-    public static bool IsValidEmail(string email)
+    public static bool IsValid(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
             return false;

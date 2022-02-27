@@ -5,7 +5,7 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class JsonStringHelper
 {
-    public static string IndentJsonString(string json)
+    public static string Indent(string json)
     {
         using (var stringReader = new StringReader(json))
         using (var stringWriter = new StringWriter())

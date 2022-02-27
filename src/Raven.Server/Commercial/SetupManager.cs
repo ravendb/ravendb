@@ -42,7 +42,7 @@ namespace Raven.Server.Commercial
 
         public static async Task<string> LetsEncryptAgreement(string email, ServerStore serverStore)
         {
-            if (EmailValidator.IsValidEmail(email) == false)
+            if (EmailValidator.IsValid(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
 
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
@@ -118,7 +118,7 @@ namespace Raven.Server.Commercial
             var cacheKeys = setupInfo.NodeSetupInfos.Select(node => BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain)).ToList();
             acmeClient.ResetCachedCertificate(cacheKeys);
 
-            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
                 Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
@@ -315,7 +315,7 @@ namespace Raven.Server.Commercial
 
         var serverCert = setupInfo.GetX509Certificate();
 
-        var localServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
+        var localServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
 
         try
         {
@@ -388,7 +388,7 @@ namespace Raven.Server.Commercial
             var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
             await acmeClient.Init(setupInfo.Email, token);
 
-            var challengeResult = await LetsEncryptUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+            var challengeResult = await LetsEncryptSetupUtils.InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
 
             progress.Processed++;
             progress.AddInfo(challengeResult.Challenge != null ? "Successfully received challenge(s) information from Let's Encrypt." : "Using cached Let's Encrypt certificate.");
@@ -637,7 +637,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
                 onProgress(progress);
 
-                var indentedJson = JsonStringHelper.IndentJsonString(settingsJsonObject.ToString());
+                var indentedJson = JsonStringHelper.Indent(settingsJsonObject.ToString());
                 SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson);
             }
             catch (Exception e)

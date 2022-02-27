@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.ComponentModel;
+using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 
@@ -9,9 +10,10 @@ internal class CreateSetupPackageParameters
     public string SetupInfoPath;
     public string PackageOutputPath;
     public CommandLineApplication Command;
-    public string SetupMode;
+    public string Mode;
     public string CertificatePath;
-    public (string passFromCmd, string PassFromEnv) CertPassword;
+    public string CertPassword;
     public SetupProgressAndResult Progress;
     public CancellationToken CancellationToken;
 }
+

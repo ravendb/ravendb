@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide;
@@ -17,6 +18,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Config;
 using Raven.Server.Utils;
+using rvn.Server.SetupWizard;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Threading;
@@ -48,8 +50,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Domain = "localhost",
             Email = "suppport@ravendb.net",
             RootDomain = "development.run",
-            ModifyLocalServer = false, // N/A here
-            RegisterClientCert = false, // N/A here
             Password = null,
             Certificate = Convert.ToBase64String(selfSignedTestCertificate),
             LocalNodeTag = "A",
@@ -62,9 +62,10 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 ["C"] = new() {Port = 446, TcpPort = 38889, Addresses = new List<string> {"127.0.0.1"}}
             }
         };
+        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
 
 
-        var zipBytes = await LetsEncryptUtils.ImportCertificateSetup(setupInfo, new SetupProgressAndResult(tuple =>
+        var zipBytes = await ImportCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
         {
             if (tuple.Message != null)
             {
@@ -237,7 +238,6 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Domain = domain,
             RootDomain = rootDomain,
             LocalNodeTag = "A",
-            ModifyLocalServer = true,
             NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>
             {
                 {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
@@ -245,8 +245,9 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
                 {"C", new SetupInfo.NodeInfo {Port = 446, TcpPort = 38888, Addresses = new List<string> {"127.0.0.1"}}}
             }
         };
+        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
 
-        var zipBytes = await LetsEncryptUtils.SetupLetsEncrypt(setupInfo, new SetupProgressAndResult(tuple =>
+        var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
             {
                 if (tuple.Message != null)
                 {
