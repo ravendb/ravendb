@@ -10,10 +10,8 @@ using Newtonsoft.Json;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
@@ -56,7 +54,7 @@ public static class SettingsZipFileHelper
                         serverCert = new X509Certificate2(serverCertBytes, parameters.SetupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
                         var localNodeTag = parameters.SetupInfo.LocalNodeTag;
-                        publicServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert,
+                        publicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                             parameters.SetupInfo,
                             localNodeTag,
                             parameters.SetupInfo.NodeSetupInfos[localNodeTag].Port,
@@ -76,7 +74,7 @@ public static class SettingsZipFileHelper
                             parameters.OnProgress?.Invoke(parameters.Progress);
 
 
-                            parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert,
+                            parameters.SetupInfo.NodeSetupInfos[node.Key].PublicServerUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert,
                                 parameters.SetupInfo, node.Key,
                                 node.Value.Port,
                                 node.Value.TcpPort, out _, out _);
@@ -249,7 +247,7 @@ public static class SettingsZipFileHelper
                             currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
                         }
 
-                        var httpUrl = LetsEncryptCertificateUtil.GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort, out var tcpUrl, out var _);
+                        var httpUrl = CertificateUtils.GetServerUrlFromCertificate(serverCert, parameters.SetupInfo, node.Key, node.Value.Port, node.Value.TcpPort, out var tcpUrl, out var _);
 
                         if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
                             currentNodeSettingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
@@ -266,7 +264,7 @@ public static class SettingsZipFileHelper
 
                         var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
-                        var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
+                        var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
                         if (node.Key == parameters.SetupInfo.LocalNodeTag && parameters.SetupInfo.ModifyLocalServer)
                         {
                             try
@@ -346,7 +344,7 @@ public static class SettingsZipFileHelper
 
                         var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
 
-                        var indentedJson = JsonStringHelper.IndentJsonString(modifiedJsonObj.ToString());
+                        var indentedJson = JsonStringHelper.Indent(modifiedJsonObj.ToString());
 
                         var entry = archive.CreateEntry("setup.json");
                         entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;

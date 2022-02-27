@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
@@ -393,6 +396,77 @@ namespace Raven.Server.Utils
         public static SecureRandom GetSeededSecureRandom()
         {
             return new SecureRandom(new CryptoApiRandomGenerator());
+        }
+
+        public static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
+        {
+            publicTcpUrl = null;
+            var node = setupInfo.NodeSetupInfos[nodeTag];
+
+            var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
+            Debug.Assert(cn != null, nameof(cn) + " != null");
+            if (cn[0] == '*')
+            {
+                var parts = cn.Split("*.");
+                if (parts.Length != 2)
+                    throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
+
+                domain = parts[1];
+
+                publicTcpUrl = node.ExternalTcpPort != 0
+                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}"
+                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
+
+                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
+                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
+
+                return port == 443
+                    ? $"https://{nodeTag.ToLower()}.{domain}"
+                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
+            }
+
+            domain = cn; //default for one node case
+
+            foreach (var value in GetCertificateAlternativeNames(cert))
+            {
+                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                domain = value;
+                break;
+            }
+
+            var url = $"https://{domain}";
+
+            if (node.ExternalPort != 0)
+                url += ":" + node.ExternalPort;
+            else if (port != 443)
+                url += ":" + port;
+
+            publicTcpUrl = node.ExternalTcpPort != 0
+                ? $"tcp://{domain}:{node.ExternalTcpPort}"
+                : $"tcp://{domain}:{tcpPort}";
+
+            node.PublicServerUrl = url;
+            node.PublicTcpServerUrl = publicTcpUrl;
+
+            return url;
+        }
+
+        public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
+        {
+            // If we have alternative names, find the appropriate url using the node tag
+            var sanNames = cert.Extensions["2.5.29.17"];
+
+            if (sanNames == null)
+                yield break;
+
+            var generalNames = GeneralNames.GetInstance(Asn1Object.FromByteArray(sanNames.RawData));
+
+            foreach (var certHost in generalNames.GetNames())
+            {
+                yield return certHost.Name.ToString();
+            }
         }
     }
 

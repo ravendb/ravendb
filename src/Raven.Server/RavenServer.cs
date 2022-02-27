@@ -1309,7 +1309,7 @@ namespace Raven.Server
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}. " +
                                                     "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
-            var hosts = LetsEncryptCertificateUtil.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+            var hosts = CertificateUtils.GetCertificateAlternativeNames(existing.Certificate).ToArray();
 
             // cloud: *.free.iftah.ravendb.cloud => we extract the domain free.iftah
             // normal: *.iftah.development.run => we extract the domain iftah

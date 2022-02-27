@@ -130,6 +130,7 @@ namespace Raven.Server.Utils
                     }
                     catch (IOException)
                     {
+                        Console.WriteLine("Got to delete");
                     }
                     catch (UnauthorizedAccessException)
                     {
