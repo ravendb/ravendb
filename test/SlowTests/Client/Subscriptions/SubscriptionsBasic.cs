@@ -20,13 +20,13 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1220,7 +1220,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionName = await store.Subscriptions.CreateAsync(new() { Query = "from Users" });
+                var subscriptionName = await store.Subscriptions.CreateAsync(new() {Query = "from Users"});
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1233,7 +1233,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var firstCV = "";
 
-                using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) { MaxDocsPerBatch = 1 }))
+                using (var worker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName) {MaxDocsPerBatch = 1}))
                 {
                     _ = worker.Run(async batch =>
                     {
@@ -1248,7 +1248,7 @@ namespace SlowTests.Client.Subscriptions
                         await session.StoreAsync(new User());
                         await session.SaveChangesAsync();
                     }
-
+                    
                     var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
                     using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
@@ -1258,93 +1258,6 @@ namespace SlowTests.Client.Subscriptions
                         holdAck.Set();
                     }
                 }
-            }
-        }
-
-        [Fact]
-        public async Task WaitingSubscriptionShouldBeRegisteredInSubscriptionConnections()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = "Subscription0" });
-
-                List<Task> workerTasks = new List<Task>();
-                var finishedWorkersCde = new CountdownEvent(2);
-                var mreAck1 = new AsyncManualResetEvent();
-                var mreAck2 = new AsyncManualResetEvent();
-                using var subsWorker1 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
-                {
-                    Strategy = SubscriptionOpeningStrategy.WaitForFree
-                });
-                subsWorker1.AfterAcknowledgment += _ =>
-                {
-                    mreAck1.Set();
-                    return Task.CompletedTask;
-                };
-                var t1 = subsWorker1.Run(_ => { }).ContinueWith(res =>
-                {
-                    finishedWorkersCde.Signal();
-                });
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User());
-                    await session.SaveChangesAsync();
-                }
-
-                Assert.True(await mreAck1.WaitAsync(_reasonableWaitTime));
-
-                using var subsWorker2 = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
-                {
-                    Strategy = SubscriptionOpeningStrategy.WaitForFree
-                });
-                subsWorker2.AfterAcknowledgment += _ =>
-                {
-                    mreAck2.Set();
-                    return Task.CompletedTask;
-                };
-                var t2 = subsWorker2.Run(_ => { }).ContinueWith(res =>
-                {
-                    finishedWorkersCde.Signal();
-                });
-
-                // wait for 2nd worker to connect
-                await Task.Delay(3000);
-
-                workerTasks.Add(t1);
-                workerTasks.Add(t2);
-
-                await AssertRunningSubscriptionAndDrop(store);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User());
-                    await session.SaveChangesAsync();
-                }
-                // waiting subscription process document
-                Assert.True(await mreAck2.WaitAsync(_reasonableWaitTime));
-
-                await AssertRunningSubscriptionAndDrop(store);
-
-                // both workers should be disconnected
-                Assert.True(finishedWorkersCde.Wait(_reasonableWaitTime));
-                Assert.All(workerTasks, task => Assert.True(task.IsCompleted));
-            }
-        }
-
-        private async Task AssertRunningSubscriptionAndDrop(DocumentStore store)
-        {
-            DocumentDatabase db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var name = $"Subscription0";
-                var subscription = db
-                    .SubscriptionStorage
-                    .GetRunningSubscription(context, null, name, false);
-                Assert.NotNull(subscription);
-                db.SubscriptionStorage.DropSubscriptionConnections(subscription.SubscriptionId,
-                    new SubscriptionClosedException("Dropped by Test"));
             }
         }
 
