@@ -2121,6 +2121,7 @@ namespace Raven.Server.Documents
                             return 0;
 
                         using (var old = document)
+                        using (document.Data = document.Data.Clone(context))
                         {
                             _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, document.Data, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
                         }
