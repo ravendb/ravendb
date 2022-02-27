@@ -13,6 +13,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Config;
@@ -33,7 +34,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     }
 
     [LicenseRequiredFact]
-    public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn()
+    public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServer();
         
@@ -99,7 +100,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         var url2 = otherNodesUrls["B"];
         var url3 = otherNodesUrls["C"];
         const int numberOfExpectedNodes = 3;
-
+        
         using var server = GetNewServer(new ServerCreationOptions
         {
             CustomSettings = new ConcurrentDictionary<string, string>
@@ -207,9 +208,238 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         }
 
     }
+    
+    [LicenseRequiredFact]
+    public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_One_Node()
+    {
+        DoNotReuseServer();
+        
+        var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
+        Debug.Assert(license != null, nameof(license) + " != null");
+        var licenseObj = JsonConvert.DeserializeObject<License>(license);
+
+        byte[] selfSignedTestCertificate = CertificateUtils.CreateSelfSignedTestCertificate("localhost", "RavenTestsServer");
+
+        var setupInfo = new SetupInfo
+        {
+            Domain = "localhost",
+            Email = "suppport@ravendb.net",
+            RootDomain = "development.run",
+            Password = null,
+            Certificate = Convert.ToBase64String(selfSignedTestCertificate),
+            LocalNodeTag = "A",
+            Environment = StudioConfiguration.StudioEnvironment.None,
+            License = licenseObj,
+            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+            {
+                ["A"] = new() {Port = 443, TcpPort = 38887, Addresses = new List<string> {"127.0.0.1"}},
+            }
+        };
+        
+        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+
+
+        var zipBytes = await OwnCertificateSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
+        {
+            if (tuple.Message != null)
+            {
+                Output.WriteLine(tuple.Message);
+            }
+            if (tuple.Exception != null)
+            {
+                Output.WriteLine(tuple.Exception.Message);
+            }
+        }), CancellationToken.None);
+
+
+        var settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A",
+            new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None),
+            out var serverCertBytes,
+            out var serverCert,
+            out var clientCert,
+            out _,
+            out _,
+            out _);
+
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail), out string letsEncryptEmail);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string url1);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string _);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
+
+
+        var tempFileName = GetTempFileName();
+        await File.WriteAllBytesAsync(tempFileName, serverCertBytes);
+        const int numberOfExpectedNodes = 1;
+        
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new ConcurrentDictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
+                [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
+                [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url1,
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url1,
+                [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
+                [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
+            }
+        });
+        
+        var dbName = GetDatabaseName();
+        using (var store = new DocumentStore
+               {
+                   Urls = new[] {url1}, 
+                   Certificate = serverCert,
+               }.Initialize())
+        {
+            {
+                DatabaseRecord databaseRecord = new(dbName);
+                CreateDatabaseOperation createDatabaseOperation = new(databaseRecord);
+                store.Maintenance.Server.Send(createDatabaseOperation);
+                await store.Maintenance.Server.SendAsync(new PutClientCertificateOperation("client certificate", clientCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin));
+            }
+            using (var store1 = new DocumentStore
+                   {
+                       Urls = new [] { url1 },
+                       Certificate = clientCert,
+                       Database = dbName
+                   }.Initialize())
+
+         Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
+        }
+
+    }
 
     [LicenseRequiredFact]
-    public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode()
+    public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_One_Node()
+    {
+        DoNotReuseServer();
+
+        var license = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
+        Debug.Assert(license != null, nameof(license) + " != null");
+        var licenseObj = JsonConvert.DeserializeObject<License>(license);
+
+        const string domain = "rvnTest";
+        const string rootDomain = "development.run";
+        const string publicTcpServerUrl1 = $"tcp://a.{domain}.{rootDomain}:38879";
+        const string tcpServerUrl1 = "tcp://127.0.0.1:38879";
+        
+        
+        var setupInfo = new SetupInfo
+        {
+            Environment = StudioConfiguration.StudioEnvironment.None,
+            License = licenseObj,
+            Email = "support@ravendb.net",
+            Domain = domain,
+            RootDomain = rootDomain,
+            LocalNodeTag = "A",
+            NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>
+            {
+                {"A", new SetupInfo.NodeInfo {Port = 443, TcpPort = 38879, Addresses = new List<string> {"127.0.0.1"}}},
+            }
+        };
+        Debug.Assert(setupInfo.ModifyLocalServer, nameof(setupInfo.ModifyLocalServer) + " == true");
+
+        var zipBytes = await LetsEncryptSetupUtils.Setup(setupInfo, new SetupProgressAndResult(tuple =>
+            {
+                if (tuple.Message != null)
+                {
+                    Output.WriteLine(tuple.Message);
+                }
+
+                if (tuple.Exception != null)
+                {
+                    Output.WriteLine(tuple.Exception.Message);
+                }
+            })
+            {
+                Processed = 0,
+                Total = 4
+            },
+            CancellationToken.None);
+
+        X509Certificate2 serverCert;
+        X509Certificate2 clientCert;
+        byte[] serverCertBytes;
+        BlittableJsonReaderObject settingsJsonObject;
+        try
+        {
+            settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(
+                zipBytes,
+                "A",
+                new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None),
+                out serverCertBytes,
+                out serverCert,
+                out clientCert,
+                out var _,
+                out _,
+                out var _);
+            
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
+        }
+
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail), out string letsEncryptEmail);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string url1);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ServerUrls), out string serverUrl1);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupMode), out SetupMode setupMode);
+        settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.ExternalIp), out string externalIp);
+
+        var tempFileName = GetTempFileName();
+        await File.WriteAllBytesAsync(tempFileName, serverCertBytes);
+        
+        
+        const int numberOfExpectedNodes = 1;
+
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new ConcurrentDictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempFileName,
+                [RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = letsEncryptEmail,
+                [RavenConfiguration.GetKey(x => x.Security.CertificatePassword)] = certPassword,
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = url1,
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl1,
+                [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
+                [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
+                [RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = tcpServerUrl1,
+                [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = publicTcpServerUrl1,
+            }
+
+        });
+
+        var dbName = GetDatabaseName();
+
+        using (var store = new DocumentStore
+               {
+                   Urls = new [] { url1 },
+                   Certificate = serverCert
+               }.Initialize())
+        {
+            DatabaseRecord databaseRecord = new(dbName);
+            CreateDatabaseOperation createDatabaseOperation = new(databaseRecord);
+            store.Maintenance.Server.Send(createDatabaseOperation);
+            await store.Maintenance.Server.SendAsync(new PutClientCertificateOperation("client certificate", clientCert, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin));
+
+        }
+        
+        using (var store1 = new DocumentStore
+               {
+                   Urls = new [] { url1 },
+                   Certificate = clientCert,
+                   Database = dbName
+               }.Initialize())
+
+        Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
+    }
+    
+    [LicenseRequiredFact]
+    public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServer();
 

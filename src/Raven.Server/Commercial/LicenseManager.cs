@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -935,8 +936,16 @@ namespace Raven.Server.Commercial
 
         private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)
         {
-            var certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore; 
-            var certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter; 
+            DateTime certificateNotBefore = new();
+            DateTime certificateNotAfter = new();
+            X509Certificate2 certificate = null;
+            if (_serverStore.Server.Certificate.Certificate != null)
+            {
+                certificateNotBefore  = _serverStore.Server.Certificate.Certificate.NotBefore; 
+                certificateNotAfter  = _serverStore.Server.Certificate.Certificate.NotAfter; 
+                certificate = _serverStore.Server.Certificate.Certificate;   
+            }
+            
             var clusterSize = GetClusterSize();
             var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
@@ -963,7 +972,7 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.Snmp, message);
             }
             
-            SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore.GetLicenseType(), newLicenseStatus.Type, certificateNotBefore, certificateNotAfter);
+            SecretProtection.ValidateExpiration(nameof(LicenseManager), _serverStore.GetLicenseType(), newLicenseStatus.Type, certificate, certificateNotBefore, certificateNotAfter);
             
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
