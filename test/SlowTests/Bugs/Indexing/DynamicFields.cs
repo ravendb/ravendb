@@ -129,7 +129,6 @@ namespace SlowTests.Bugs.Indexing
             }
         }        
 
-        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
         [Theory]
         [JavaScriptEngineClassData]
         public void CanCreateCompletelyDynamicFieldsWithProjection(string jsEngineType)

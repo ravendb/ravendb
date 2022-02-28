@@ -319,7 +319,6 @@ namespace SlowTests.Client
             }
         }
 
-        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
         [Theory]
         [JavaScriptEngineClassData]
         public void Custom_Functions_Inside_Select_Nested(string jsEngineType)
@@ -358,7 +357,6 @@ namespace SlowTests.Client
             }
         }
 
-        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
         [Theory]
         [JavaScriptEngineClassData]
         public async Task Custom_Functions_Inside_Select_Nested_Async(string jsEngineType)

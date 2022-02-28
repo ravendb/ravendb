@@ -238,7 +238,6 @@ select {
         }
 
         
-        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
         [Theory]
         [JavaScriptEngineClassData]
         public async Task WithTransformer(string jsEngineType)

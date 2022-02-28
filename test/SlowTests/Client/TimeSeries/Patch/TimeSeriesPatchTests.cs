@@ -280,7 +280,6 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
         
-        // TODO [shlomo] temporary switched off the test as it causes segmentation fault on the server (but locally works)
         [Theory]
         [JavaScriptEngineClassData]
         public async Task RavenDB_15193(string jsEngineType)
