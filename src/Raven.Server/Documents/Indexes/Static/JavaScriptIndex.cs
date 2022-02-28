@@ -304,7 +304,7 @@ function map(name, lambda) {
                         var groupByKeyForParsingJint = reduceAsObjForParsingJint?.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
                         if (groupByKeyForParsingJint == null)
                         {
-                            throw new ArgumentException("Failed to get reduce key object" + JintEngineExForV8.JintStubInstruction);
+                            throw new ArgumentException("Failed to get reduce key object");
                         }
 
                         using (var groupByKey = reduceObj.GetProperty(KeyProperty))
@@ -314,7 +314,7 @@ function map(name, lambda) {
                         Reduce = ReduceOperation.IndexingFunction;
                     }
                     else
-                        throw new ArgumentException("Failed to get the reduce object: " + JintEngineExForV8.JintStubInstruction);
+                        throw new ArgumentException("Failed to get the reduce object: ");
                 }
             }
         }
@@ -358,7 +358,7 @@ function map(name, lambda) {
                     if (_jsEngineType == JavaScriptEngineType.V8)
                         _engineForParsing.ExecuteWithReset(script);
                     sb.Append(Environment.NewLine);
-                    sb.AppendLine(JintEngineExForV8.ProcessJintStub(script));
+                    sb.AppendLine(script);
                 }
             }
 
@@ -369,7 +369,7 @@ function map(name, lambda) {
                 EngineHandle.ExecuteWithReset(map, "map");
                 if (_jsEngineType == JavaScriptEngineType.V8)
                     _engineForParsing.ExecuteWithReset(map);
-                var result = CollectReferencedCollections(JintEngineExForV8.ProcessJintStub(map), additionalSources);
+                var result = CollectReferencedCollections(map, additionalSources);
                 mapReferencedCollections.Add(result);
             }
 
