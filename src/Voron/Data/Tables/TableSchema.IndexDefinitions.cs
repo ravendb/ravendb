@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using Sparrow;
 using Sparrow.Binary;
@@ -212,6 +213,8 @@ namespace Voron.Data.Tables
             {
                 using (context.Allocate(value.Size, out var buffer))
                 {
+                    // todo RavenDB-18105 : try to optimize this - avoid creating a copy of the value here
+
                     value.CopyTo(buffer.Ptr);
                     var reader = value.CreateReader(buffer.Ptr);
                     return GenerateKey(context, ref reader, out slice);
@@ -277,15 +280,18 @@ namespace Voron.Data.Tables
 
                 //var type = System.Type.GetType(declaringType);
                 var type = System.Type.GetType(declaringType);
-
-                Debug.Assert(type != null, $"Invalid data, failed to get {nameof(GenerateKey)}.Method.DeclaringType from deserialized value : {declaringType}");
+                if (type == null)
+                    throw new InvalidDataException($"Failed to get {nameof(GenerateKey)}.Method.DeclaringType from deserialized value : {declaringType}");
 
                 var method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+                if (method == null)
+                    throw new InvalidDataException($"Failed to get method-info from type : {type}, method name : {methodName}");
 
-                Debug.Assert(method != null, $"Invalid data, failed to get method-info from type : {type}, method name : {methodName}");
-                Debug.Assert(method.IsStatic, $"Invalid data, {nameof(GenerateKey)} must be a static method. method name : {methodName}");
-                Debug.Assert(method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() != null, 
-                    $"Invalid data, {nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
+                if (method.IsStatic == false)
+                    throw new InvalidDataException($"{nameof(GenerateKey)} must be a static method. method name : {methodName}");
+
+                if (method.GetCustomAttribute<IndexEntryKeyGeneratorAttribute>() == null)
+                    throw new InvalidDataException($"{nameof(GenerateKey)} must be marked with custom attribute '{nameof(IndexEntryKeyGeneratorAttribute)}'. method name : {methodName}");
 
                 var @delegate = Delegate.CreateDelegate(typeof(IndexEntryKeyGenerator), method);
                 indexDef.GenerateKey = (IndexEntryKeyGenerator)@delegate;
