@@ -16,47 +16,13 @@ namespace Voron.Data.Tables
             DynamicKeyValues = 0x2
         }
 
-        public abstract class AbstractTableIndexDef
-        {
-            public bool IsGlobal;
-
-            public Slice Name;
-
-            public abstract byte[] Serialize();
-
-            public virtual void Validate(AbstractTableIndexDef actual)
-            {
-                if (actual == null)
-                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
-
-                if (!SliceComparer.Equals(Name, actual.Name))
-                    throw new ArgumentException(
-                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
-                        nameof(actual));
-
-                if (IsGlobal != actual.IsGlobal)
-                    throw new ArgumentException(
-                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
-                        nameof(actual));
-            }
-
-            public virtual void Validate()
-            {
-                if (Name.HasValue == false || SliceComparer.Equals(Slices.Empty, Name))
-                    throw new ArgumentException("Index name must be non-empty", nameof(Name));
-            }
-        }
-
-        public abstract class AbstractTreeIndexDef : AbstractTableIndexDef
+        public abstract class AbstractTreeIndexDef
         {
             public abstract TreeIndexType Type { get; }
 
-            public abstract ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
-                out Slice slice);
+            public bool IsGlobal;
 
-            public abstract ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
-                out Slice slice);
-
+            public Slice Name;
         }
 
         public class IndexDef : AbstractTreeIndexDef
@@ -72,7 +38,7 @@ namespace Voron.Data.Tables
 
             public int Count = -1;
 
-            public override ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+            public ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
                 out Slice slice)
             {
                 var ptr = value.Read(StartIndex, out int totalSize);
@@ -100,7 +66,7 @@ namespace Voron.Data.Tables
                 return Slice.External(context, ptr, (ushort)totalSize, out slice);
             }
 
-            public override ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+            public ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
                 out Slice slice)
             {
                 if (Count == 1)
@@ -143,7 +109,7 @@ namespace Voron.Data.Tables
                 }
             }
 
-            public override byte[] Serialize()
+            public byte[] Serialize()
             {
                 // We serialize the Type enum as ulong to be "future-proof"
                 var castedType = (long)Type;
@@ -167,42 +133,48 @@ namespace Voron.Data.Tables
                 return serialized;
             }
 
-            public override void Validate(AbstractTableIndexDef actual)
+            public void EnsureIdentical(IndexDef actual)
             {
-                base.Validate(actual);
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (actual is not IndexDef indexDef)
+                if (!SliceComparer.Equals(Name, actual.Name))
                     throw new ArgumentException(
-                        $"Expected index {Name} to be an instance of type='{nameof(IndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));
 
-                if (Type != indexDef.Type)
+                if (IsGlobal != actual.IsGlobal)
                     throw new ArgumentException(
-                        $"Expected index {Name} to be have Type='{Type}', got Type='{indexDef.Type}' instead",
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
                         nameof(actual));
 
-                if (StartIndex != indexDef.StartIndex)
+                if (Type != actual.Type)
                     throw new ArgumentException(
-                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{indexDef.StartIndex}' instead",
+                        $"Expected index {Name} to be have Type='{Type}', got Type='{actual.Type}' instead",
                         nameof(actual));
 
-                if (Count != indexDef.Count)
+                if (StartIndex != actual.StartIndex)
                     throw new ArgumentException(
-                        $"Expected index {Name} to have Count='{Count}', got Count='{indexDef.Count}' instead",
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{actual.StartIndex}' instead",
+                        nameof(actual));
+
+                if (Count != actual.Count)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have Count='{Count}', got Count='{actual.Count}' instead",
                         nameof(actual));
             }
 
-            public override void Validate()
+            public void Validate()
             {
-                base.Validate();
+                if (Name.HasValue == false || SliceComparer.Equals(Slices.Empty, Name))
+                    throw new ArgumentException("Index name must be non-empty", nameof(Name));
 
                 if (StartIndex < 0)
                     throw new ArgumentOutOfRangeException(nameof(StartIndex), "StartIndex cannot be negative");
             }
 
-            public static IndexDef ReadFrom(ByteStringContext context, byte* location, int size)
+            public static IndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
             {
-                var input = new TableValueReader(location, size);
                 var indexDef = new IndexDef();
 
                 byte* currentPtr = input.Read(1, out int currentSize);
@@ -229,13 +201,13 @@ namespace Voron.Data.Tables
 
             public IndexEntryKeyGenerator GenerateKey;
 
-            public override ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
+            public ByteStringContext.Scope GetValue(ByteStringContext context, ref TableValueReader value,
                 out Slice slice)
             {
                 return GenerateKey(context, ref value, out slice);
             }
 
-            public override ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
+            public ByteStringContext.Scope GetValue(ByteStringContext context, TableValueBuilder value,
                 out Slice slice)
             {
                 using (context.Allocate(value.Size, out var buffer))
@@ -246,7 +218,7 @@ namespace Voron.Data.Tables
                 }
             }
 
-            public override byte[] Serialize()
+            public byte[] Serialize()
             {
                 // We serialize the Type enum as ulong to be "future-proof"
                 var castedType = (long)Type;
@@ -285,9 +257,8 @@ namespace Voron.Data.Tables
                 return serialized;
             }
 
-            public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, byte* location, int size)
+            public static DynamicKeyIndexDef ReadFrom(ByteStringContext context, ref TableValueReader input)
             {
-                var input = new TableValueReader(location, size);
                 var indexDef = new DynamicKeyIndexDef();
 
                 byte* currentPtr = input.Read(1, out _);
@@ -322,36 +293,43 @@ namespace Voron.Data.Tables
                 return indexDef;
             }
 
-            public override void Validate(AbstractTableIndexDef actual)
+            public void EnsureIdentical(DynamicKeyIndexDef actual)
             {
-                base.Validate(actual);
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (actual is not DynamicKeyIndexDef dynamicIndexDef)
+                if (!SliceComparer.Equals(Name, actual.Name))
                     throw new ArgumentException(
-                        $"Expected index {Name} to be an instance of type='{nameof(DynamicKeyIndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));
 
-                if (Type != dynamicIndexDef.Type)
+                if (IsGlobal != actual.IsGlobal)
                     throw new ArgumentException(
-                        $"Expected index {Name} to be have Type='{Type}', got Type='{dynamicIndexDef.Type}' instead",
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
                         nameof(actual));
 
-                if (GenerateKey.Method.Name != dynamicIndexDef.GenerateKey.Method.Name)
+                if (Type != actual.Type)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to be have Type='{Type}', got Type='{actual.Type}' instead",
+                        nameof(actual));
+
+                if (GenerateKey.Method.Name != actual.GenerateKey.Method.Name)
                     throw new ArgumentException(
                         $"Expected index {Name} to have {nameof(GenerateKey)}.Method.Name='{GenerateKey.Method.Name}', " +
-                        $"got {nameof(GenerateKey)}.Method.Name='{dynamicIndexDef.GenerateKey.Method.Name}' instead",
+                        $"got {nameof(GenerateKey)}.Method.Name='{actual.GenerateKey.Method.Name}' instead",
                         nameof(actual));
 
-                if (GenerateKey.Method.DeclaringType != dynamicIndexDef.GenerateKey.Method.DeclaringType)
+                if (GenerateKey.Method.DeclaringType != actual.GenerateKey.Method.DeclaringType)
                     throw new ArgumentException(
                         $"Expected index {Name} to have {nameof(GenerateKey)}.Method.DeclaringType='{GenerateKey.Method.DeclaringType}', " +
-                        $"got {nameof(GenerateKey)}.Method.DeclaringType='{dynamicIndexDef.GenerateKey.Method.DeclaringType}' instead",
+                        $"got {nameof(GenerateKey)}.Method.DeclaringType='{actual.GenerateKey.Method.DeclaringType}' instead",
                         nameof(actual));
             }
 
-            public override void Validate()
+            public void Validate()
             {
-                base.Validate();
+                if (Name.HasValue == false || SliceComparer.Equals(Slices.Empty, Name))
+                    throw new ArgumentException("Index name must be non-empty", nameof(Name));
 
                 if (GenerateKey == null)
                     throw new ArgumentOutOfRangeException(nameof(GenerateKey), $"{GenerateKey} delegate cannot be null");
@@ -367,8 +345,12 @@ namespace Voron.Data.Tables
             }
         }
 
-        public class FixedSizeKeyIndexDef : AbstractTableIndexDef
+        public class FixedSizeKeyIndexDef 
         {
+            public bool IsGlobal;
+
+            public Slice Name;
+
             public int StartIndex = -1;
 
             public long GetValue(ref TableValueReader value)
@@ -386,7 +368,7 @@ namespace Voron.Data.Tables
                 }
             }
 
-            public override byte[] Serialize()
+            public byte[] Serialize()
             {
                 var serializer = new TableValueBuilder
                 {
@@ -423,18 +405,24 @@ namespace Voron.Data.Tables
                 return output;
             }
 
-            public override void Validate(AbstractTableIndexDef actual)
+            public void EnsureIdentical(FixedSizeKeyIndexDef actual)
             {
-                base.Validate(actual);
+                if (actual == null)
+                    throw new ArgumentNullException(nameof(actual), "Expected an index but received null");
 
-                if (actual is not FixedSizeKeyIndexDef fixedSizeIndexDef)
+                if (!SliceComparer.Equals(Name, actual.Name))
                     throw new ArgumentException(
-                        $"Expected index {Name} to be an instance of type='{nameof(FixedSizeKeyIndexDef)}', got an instance of type='{actual.GetType().Name}' instead",
+                        $"Expected index to have Name='{Name}', got Name='{actual.Name}' instead",
                         nameof(actual));
 
-                if (StartIndex != fixedSizeIndexDef.StartIndex)
+                if (IsGlobal != actual.IsGlobal)
                     throw new ArgumentException(
-                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{fixedSizeIndexDef.StartIndex}' instead",
+                        $"Expected index {Name} to have IsGlobal='{IsGlobal}', got IsGlobal='{actual.IsGlobal}' instead",
+                        nameof(actual));
+
+                if (StartIndex != actual.StartIndex)
+                    throw new ArgumentException(
+                        $"Expected index {Name} to have StartIndex='{StartIndex}', got StartIndex='{actual.StartIndex}' instead",
                         nameof(actual));
 
             }
