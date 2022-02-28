@@ -86,6 +86,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool AddTimeSeriesNames;
 
+        public bool DisableAutoIndexCreation;
+
         public bool IsStream;
         public string ClientQueryId;
 
