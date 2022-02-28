@@ -11,6 +11,7 @@ namespace Voron.Benchmark.Table
         private static readonly Slice TableNameSlice;
         private static readonly Slice SchemaPKNameSlice;
         private static readonly TableSchema Schema;
+        private const string TableName = "TestTable1";
 
         /// <summary>
         /// We have one list per Transaction to carry out. Each one of these 
@@ -51,8 +52,7 @@ namespace Voron.Benchmark.Table
                 });
         }
 
-
-        [GlobalSetup]
+        [GlobalSetup(Targets = new []{nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public override void Setup()
         {
             base.Setup();
@@ -87,7 +87,7 @@ namespace Voron.Benchmark.Table
             }
         }
 
-        [IterationSetup]
+        [IterationSetup(Targets = new[] {nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public void ClearTable()
         {
             using (var tx = Env.WriteTransaction())
