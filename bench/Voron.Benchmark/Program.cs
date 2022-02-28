@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using Voron.Benchmark.BTree;
-using BenchmarkDotNet.Running;
-using Constants = Voron.Global.Constants;
+﻿using BenchmarkDotNet.Running;
 using BenchmarkDotNet.Configs;
 
 namespace Voron.Benchmark
