@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.ETL
             // already be calling that.
             var result = new ScriptRunnerResult(DocumentScript, new JsHandle(args[0]));
             LoadToFunction(name, result);
-            return new InternalHandle(ref result.Instance.V8.Item, true);
+            return result.Instance.V8.Item.Clone();
         }
 
         protected abstract void AddLoadedAttachmentV8(InternalHandle reference, string name, Attachment attachment);
