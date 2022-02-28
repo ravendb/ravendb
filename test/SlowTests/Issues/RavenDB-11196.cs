@@ -15,12 +15,12 @@ namespace SlowTests.Issues
         {
         }
         
-        // TODO [shlomo] temporary switched off the test as it hangs
-        //[Fact]
-        public void Should_be_James()
+        [Theory]
+        [JavaScriptEngineClassData]
+        public void Should_be_James(string jsEngineType)
         {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
+            using (var src = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
+            using (var dest = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             {
                 AddEtl(src, dest, "Users", script:
                     @"
