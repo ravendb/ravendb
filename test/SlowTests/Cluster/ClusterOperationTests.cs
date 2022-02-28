@@ -478,6 +478,8 @@ namespace SlowTests.Cluster
                 //trigger cert refresh
                 await requestExecutor.HttpClient.PostAsync(Uri.EscapeUriString($"{nodes[0].WebUrl}/admin/certificates/letsencrypt/force-renew"), null);
                 
+                var tries = 0;
+
                 await WaitAndAssertForValueAsync(async () =>
                 {
                     //simulate original problem where InstallUpdatedServerCertificateCommand happened lots of times and confirmations over-counted
@@ -494,9 +496,18 @@ namespace SlowTests.Cluster
                         var rawResponse = response.Content.ReadAsStringAsync().Result;
                         var cert = JsonConvert.DeserializeObject<CertificateReplacement>(rawResponse);
                         
-                        return cert?.Confirmations >= clusterSize;
+                        return cert?.Confirmations == clusterSize-1;
                     }, true, 3000, 500);
-                    return res;
+
+                    //count the tries to over confirm
+                    if(res)
+                        tries++;
+
+                    //we try to over confirm 3 times
+                    if (tries == 3 && res)
+                        return true;
+
+                    return false;
                 }, true, 40_000, 4000);
 
                 var response = await requestExecutor.HttpClient.GetAsync(Uri.EscapeUriString($"{nodes[0].WebUrl}/admin/certificates/replacement/status"));

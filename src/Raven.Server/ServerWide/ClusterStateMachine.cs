@@ -880,7 +880,8 @@ namespace Raven.Server.ServerWide
                     certInstallation.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
 
                     var newConfirmed = confirmedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
-                    newConfirmed.Add(string.IsNullOrEmpty(nodeTag) ? "*" : nodeTag);
+                    if(string.IsNullOrEmpty(nodeTag) == false)
+                        newConfirmed.Add(nodeTag);
                     confirmations++;
                     
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
@@ -1030,7 +1031,8 @@ namespace Raven.Server.ServerWide
                     }
 
                     var newReplaced = replacedNodesBlittable.Items.Select(n => n.ToString()).ToHashSet();
-                    newReplaced.Add(string.IsNullOrEmpty(nodeTag) ? "*" : nodeTag);
+                    if(string.IsNullOrEmpty(nodeTag) == false)
+                        newReplaced.Add(nodeTag);
                     replaced++;
                     
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
