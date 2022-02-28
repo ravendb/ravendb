@@ -153,10 +153,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
             while (TryMatchExistingIndexToQuery(map, out index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
-                    throw new IndexDoesNotExistException("Could not find an index for a given query.");
+                    throw new IndexDoesNotExistException("No Auto Index matching the given query was found.");
 
                 if (query.DisableAutoIndexCreation)
-                    throw new IndexDoesNotExistException("Could not find an index for a given query and creation of auto indexes was disabled");
+                    throw new InvalidOperationException("Creation of Auto Indexes was disabled and no Auto Index matching the given query was found.");
 
                 var definition = map.CreateAutoIndexDefinition();
                 index = await _indexStore.CreateIndex(definition, RaftIdGenerator.NewId());

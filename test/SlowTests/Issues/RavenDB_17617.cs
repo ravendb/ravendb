@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
@@ -22,7 +22,7 @@ public class RavenDB_17617 : RavenLowLevelTestBase
         {
             using (var context = QueryOperationContext.ShortTermSingleUse(database))
             {
-                var ex = await Assert.ThrowsAsync<IndexDoesNotExistException>(async () =>
+                var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 {
                     await database.QueryRunner.ExecuteQuery(new IndexQueryServerSide("from Users where LastName = 'Arek'")
                         {
@@ -31,10 +31,8 @@ public class RavenDB_17617 : RavenLowLevelTestBase
                         OperationCancelToken.None);
                 });
 
-                Assert.Equal("Could not find an index for a given query and creation of auto indexes was disabled", ex.Message);
+                Assert.Equal("Creation of Auto Indexes was disabled and no Auto Index matching the given query was found.", ex.Message);
             }
         }
     }
-
-    
 }
