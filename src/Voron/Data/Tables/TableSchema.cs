@@ -26,7 +26,9 @@ namespace Voron.Data.Tables
 
         public FixedSizeKeyIndexDef CompressedEtagSourceIndex;
 
-        private readonly Dictionary<Slice, AbstractTreeIndexDef> _indexes = new(SliceComparer.Instance);
+        private readonly Dictionary<Slice, IndexDef> _commonIndexes = new(SliceComparer.Instance);
+
+        private readonly Dictionary<Slice, DynamicKeyIndexDef> _dynamicKeyIndexes = new(SliceComparer.Instance);
 
         private readonly Dictionary<Slice, FixedSizeKeyIndexDef> _fixedSizeIndexes = new(SliceComparer.Instance);
 
@@ -57,7 +59,7 @@ namespace Voron.Data.Tables
         /// <summary>
         /// Indexes are conceptually Dictionary&lt;index name, Dictionary&lt;unique index value, HashSet&lt;storage id&gt;&gt;
         /// </summary>
-        public Dictionary<Slice, AbstractTreeIndexDef> Indexes => _indexes;
+        public Dictionary<Slice, IndexDef> Indexes => _commonIndexes;
 
         // FixedSizeIndexes are conceptually Dictionary<index name, Dictionary<long value, storage id>>
 
@@ -65,6 +67,9 @@ namespace Voron.Data.Tables
         /// FixedSizeIndexes are conceptually Dictionary&lt;index name, Dictionary&lt;long value, storage id&gt;&gt;
         /// </summary>
         public Dictionary<Slice, FixedSizeKeyIndexDef> FixedSizeIndexes => _fixedSizeIndexes;
+
+
+        public Dictionary<Slice, DynamicKeyIndexDef> DynamicKeyIndexes => _dynamicKeyIndexes;
 
 
         public TableSchema CompressValues(FixedSizeKeyIndexDef etagSource, bool compress)
@@ -80,11 +85,21 @@ namespace Voron.Data.Tables
             set => _compressed = value;
         }
 
-        public TableSchema DefineIndex(AbstractTreeIndexDef index)
+        public TableSchema DefineIndex(IndexDef index)
         {
             index.Validate();
 
-            _indexes[index.Name] = index;
+            _commonIndexes[index.Name] = index;
+
+            return this;
+        }
+
+
+        public TableSchema DefineIndex(DynamicKeyIndexDef index)
+        {
+            index.Validate();
+
+            _dynamicKeyIndexes[index.Name] = index;
 
             return this;
         }
@@ -140,11 +155,12 @@ namespace Voron.Data.Tables
         /// </summary>
         public void Create(Transaction tx, Slice name, ushort? sizeInPages)
         {
-            if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
+            if (_primaryKey == null && _commonIndexes.Count == 0 && _dynamicKeyIndexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
             if (_primaryKey?.IsGlobal != false &&
-                _indexes.All(x => x.Value.IsGlobal) &&
+                _commonIndexes.All(x => x.Value.IsGlobal) &&
+                _dynamicKeyIndexes.All(x => x.Value.IsGlobal) &&
                 _fixedSizeIndexes.All(x => x.Value.IsGlobal))
                 throw new InvalidOperationException($"Cannot create table {name} with a global primary key and without at least a single local index, " +
                                                     "otherwise we can't compact it, this is a bug in the table schema.");
@@ -196,7 +212,7 @@ namespace Voron.Data.Tables
                     }
                 }
 
-                foreach (var indexDef in _indexes.Values)
+                foreach (var indexDef in _commonIndexes.Values)
                 {
                     if (indexDef.IsGlobal == false)
                     {
@@ -209,6 +225,22 @@ namespace Voron.Data.Tables
                     else
                     {
                         tx.CreateTree(indexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
+                    }
+                }
+
+                foreach (var dynamicKeyIndexDef in _dynamicKeyIndexes.Values)
+                {
+                    if (dynamicKeyIndexDef.IsGlobal == false)
+                    {
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, dynamicKeyIndexDef.Name, isIndexTree: true, newPageAllocator: tablePageAllocator))
+                        using (tableTree.DirectAdd(dynamicKeyIndexDef.Name, sizeof(TreeRootHeader), out ptr))
+                        {
+                            indexTree.State.CopyTo((TreeRootHeader*)ptr);
+                        }
+                    }
+                    else
+                    {
+                        tx.CreateTree(dynamicKeyIndexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
                     }
                 }
 
@@ -265,8 +297,9 @@ namespace Voron.Data.Tables
             if (_primaryKey != null)
                 structure.Add(_primaryKey.Serialize());
 
-            structure.Add(BitConverter.GetBytes(_indexes.Count));
-            structure.AddRange(_indexes.Values.Select(index => index.Serialize()));
+            structure.Add(BitConverter.GetBytes(_commonIndexes.Count + _dynamicKeyIndexes.Count));
+            structure.AddRange(_commonIndexes.Values.Select(index => index.Serialize()));
+            structure.AddRange(_dynamicKeyIndexes.Values.Select(index => index.Serialize()));
 
             structure.Add(BitConverter.GetBytes(_fixedSizeIndexes.Count));
             structure.AddRange(_fixedSizeIndexes.Values.Select(index => index.Serialize()));
@@ -315,22 +348,21 @@ namespace Voron.Data.Tables
             if (hasPrimaryKey)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var pk = IndexDef.ReadFrom(context, currentPtr, currentSize);
+                var tvr = new TableValueReader(currentPtr, currentSize);
+                var pk = IndexDef.ReadFrom(context, ref tvr);
                 schema.DefineKey(pk);
             }
 
             schema._compressed = flags.HasFlag(TableSchemaSerializationFlag.IsCompressed);
 
-            // Read common schema indexes
+            // Read common schema indexes and dynamic key indexes
             currentPtr = input.Read(currentIndex++, out currentSize);
             int indexCount = *(int*)currentPtr;
 
             while (indexCount > 0)
             {
                 currentPtr = input.Read(currentIndex++, out currentSize);
-                var indexDef = ReadAbstractIndexDefinition(context, currentPtr, currentSize);
-
-                schema.DefineIndex(indexDef);
+                ReadTreeIndexDefinition(context, schema, currentPtr, currentSize);
 
                 indexCount--;
             }
@@ -361,18 +393,25 @@ namespace Voron.Data.Tables
             return schema;
         }
 
-        private static AbstractTreeIndexDef ReadAbstractIndexDefinition(ByteStringContext context, byte* currentPtr, int currentSize)
+        private static void ReadTreeIndexDefinition(ByteStringContext context, TableSchema schema, byte* currentPtr, int currentSize)
         {
             var reader = new TableValueReader(currentPtr, currentSize);
-            byte* typePtr = reader.Read(0, out _);
-            var type = (TreeIndexType)(*(ulong*)typePtr);
+            var type = (TreeIndexType)(*(ulong*)reader.Read(0, out _));
 
             switch (type)
             {
                 case TreeIndexType.Default:
-                    return IndexDef.ReadFrom(context, currentPtr, currentSize);
+                {
+                    var index = IndexDef.ReadFrom(context, ref reader);
+                    schema.DefineIndex(index);
+                    break;
+                }
                 case TreeIndexType.DynamicKeyValues:
-                    return DynamicKeyIndexDef.ReadFrom(context, currentPtr, currentSize);
+                {
+                    var index = DynamicKeyIndexDef.ReadFrom(context, ref reader);
+                    schema.DefineIndex(index);
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -384,25 +423,40 @@ namespace Voron.Data.Tables
                 throw new ArgumentNullException(nameof(actual), "Expected a schema but received null");
 
             if (_primaryKey != null)
-                _primaryKey.Validate(actual._primaryKey);
+                _primaryKey.EnsureIdentical(actual._primaryKey);
             else if (actual._primaryKey != null)
                 throw new ArgumentException(
                     "Expected schema not to have a primary key",
                     nameof(actual));
 
-            if (_indexes.Count != actual._indexes.Count)
+            if (_commonIndexes.Count != actual._commonIndexes.Count)
                 throw new ArgumentException(
                     "Expected schema to have the same number of variable size indexes, but it does not",
                     nameof(actual));
 
-            foreach (var entry in _indexes)
+            foreach (var entry in _commonIndexes)
             {
-                if (!actual._indexes.TryGetValue(entry.Key, out var index))
+                if (!actual._commonIndexes.TryGetValue(entry.Key, out var index))
                     throw new ArgumentException(
                         $"Expected schema to have an index named {entry.Key}",
                         nameof(actual));
 
-                entry.Value.Validate(index);
+                entry.Value.EnsureIdentical(index);
+            }
+
+            if (_dynamicKeyIndexes.Count != actual._dynamicKeyIndexes.Count)
+                throw new ArgumentException(
+                    "Expected schema to have the same number of dynamic-key indexes, but it does not",
+                    nameof(actual));
+
+            foreach (var entry in _dynamicKeyIndexes)
+            {
+                if (!actual._dynamicKeyIndexes.TryGetValue(entry.Key, out var index))
+                    throw new ArgumentException(
+                        $"Expected schema to have an dynamic-key index named {entry.Key}",
+                        nameof(actual));
+
+                entry.Value.EnsureIdentical(index);
             }
 
             if (_fixedSizeIndexes.Count != actual._fixedSizeIndexes.Count)
@@ -417,7 +471,7 @@ namespace Voron.Data.Tables
                         $"Expected schema to have an index named {entry.Key}",
                         nameof(actual));
 
-                entry.Value.Validate(index);
+                entry.Value.EnsureIdentical(index);
             }
         }
     }

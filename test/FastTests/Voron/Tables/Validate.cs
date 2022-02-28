@@ -33,8 +33,8 @@ namespace FastTests.Voron.Tables
                 };
                 Slice.From(tx.Allocator, "Bad Test Name", ByteStringType.Immutable, out actualIndex.Name);
 
-                Assert.Throws<ArgumentNullException>(delegate { expectedIndex.Validate(null); });
-                Assert.Throws<ArgumentException>(delegate { expectedIndex.Validate(actualIndex); });
+                Assert.Throws<ArgumentNullException>(delegate { expectedIndex.EnsureIdentical(null); });
+                Assert.Throws<ArgumentException>(delegate { expectedIndex.EnsureIdentical(actualIndex); });
             }
         }
 
@@ -55,8 +55,8 @@ namespace FastTests.Voron.Tables
                 };
                 Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out actualIndex.Name);
 
-                Assert.Throws<ArgumentNullException>(delegate { expectedIndex.Validate(null); });
-                Assert.Throws<ArgumentException>(delegate { expectedIndex.Validate(actualIndex); });
+                Assert.Throws<ArgumentNullException>(delegate { expectedIndex.EnsureIdentical(null); });
+                Assert.Throws<ArgumentException>(delegate { expectedIndex.EnsureIdentical(actualIndex); });
             }
         }
 
