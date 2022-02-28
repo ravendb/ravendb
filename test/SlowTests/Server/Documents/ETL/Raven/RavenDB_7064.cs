@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 AddEtl(src, dest, "Users", script:
                     @"
-var attachments = this['@metadata']['@attachments'];
+var attachments = this['@metadata']?.['@attachments'];
 
 this.Name = 'James';
 
@@ -34,7 +34,7 @@ this.Name = 'James';
 
 var doc = loadToUsers(this);
 
-for (var i = 0; i < attachments.length; i++) {
+for (var i = 0; i < attachments?.length ?? 0; i++) {
     doc.addAttachment(attachments[i].Name + '-etl', loadAttachment(attachments[i].Name));
 }
 
