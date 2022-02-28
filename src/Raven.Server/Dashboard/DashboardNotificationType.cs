@@ -4,6 +4,7 @@
     {
         TrafficWatch,
         DatabasesInfo,
+        OngoingTasks,
         IndexingSpeed,
         MachineResources,
         DriveUsage

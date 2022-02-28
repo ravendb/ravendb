@@ -56,6 +56,10 @@ class addWidgetModal extends dialogViewModelBase {
             name: "Database Overview",
             icon: "list-icon",
             type: "DatabaseOverview"
+        }, {
+            name: "Ongoing Tasks",
+            icon: "list-icon",
+            type: "OngoingTasks"
         }
     ]
     
