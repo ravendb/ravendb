@@ -7,11 +7,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -58,6 +62,11 @@ namespace Raven.Server.Dashboard
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DatabasesInfo>().First();
         }
 
+        public DatabasesOngoingTasksInfo GetDatabasesOngoingTasksInfo()
+        {
+            return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<DatabasesOngoingTasksInfo>().First();
+        }
+        
         public IndexingSpeed GetIndexingSpeed()
         {
             return GetValue<List<AbstractDashboardNotification>>(DatabasesInfoKey).OfType<IndexingSpeed>().First();
@@ -76,6 +85,7 @@ namespace Raven.Server.Dashboard
         public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CanAccessDatabase isValidFor, CancellationToken token)
         {
             var databasesInfo = new DatabasesInfo();
+            var databasesOngoingTasksInfo = new DatabasesOngoingTasksInfo();
             var indexingSpeed = new IndexingSpeed();
             var trafficWatch = new TrafficWatch();
             var drivesUsage = new DrivesUsage();
@@ -85,6 +95,15 @@ namespace Raven.Server.Dashboard
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
+                long extRepCountAllDbs = 0;
+                long replicationHubCountAllDbs = 0;
+                long replicationSinkCountAllDbs = 0;
+                long ravenEtlCountAllDbs = 0;
+                long sqlEtlCountAllDbs = 0;
+                long olapEtlCountAllDbs = 0;
+                long periodicBackupCountAllDbs = 0;
+                long subscriptionCountAllDbs = 0;
+                
                 // 1. Fetch databases info
                 foreach (var databaseTuple in serverStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, 0, long.MaxValue))
                 {
@@ -142,10 +161,109 @@ namespace Raven.Server.Dashboard
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
                         
-                        // TODO: RavenDB-17004 - hash should report on all relevant info 
-                        var currentEnvironmentsHash = database.GetEnvironmentsHash(); 
-                        var ongoingTasksCount = GetOngoingTasksCount(database);
+                        var dbRecord = database.ReadDatabaseRecord();
+                        var topology = dbRecord.Topology;
+                        var serverTag = serverStore.NodeTag;
                         
+                        // External Replication
+                        foreach (var extRepTask in dbRecord.ExternalReplications)
+                        {
+                            if (extRepTask.Name.StartsWith("Server Wide") == false)
+                            {
+                                var taskStatus = ReplicationLoader.GetExternalReplicationState(serverStore, database.Name, extRepTask.TaskId);
+                                var taskTag = database.WhoseTaskIsIt(topology, extRepTask, taskStatus);
+                                if (serverTag == taskTag)
+                                {
+                                    extRepCountAllDbs++;
+                                }
+                            }
+                        }
+                        var extRepCount = dbRecord.ExternalReplications.Count;
+                        
+                        // Replication Hub
+                        var replicationHubCount = database.ReplicationLoader.OutgoingHandlers.Count(x => x.IsPullReplicationAsHub);
+                        replicationHubCountAllDbs += replicationHubCount;
+
+                        // Replication Sink
+                        foreach (var repSinkTask in dbRecord.SinkPullReplications)
+                        {
+                            var taskTag = database.WhoseTaskIsIt(topology, repSinkTask, null);
+                            if (serverTag == taskTag)
+                            {
+                                replicationSinkCountAllDbs++;
+                            }
+                        }
+                        var replicationSinkCount = dbRecord.SinkPullReplications.Count;
+                        
+                        // RavenDB ETL
+                        foreach (var ravenEtlTask in database.EtlLoader.RavenDestinations)
+                        {
+                            var processState = EtlLoader.GetProcessState(ravenEtlTask.Transforms, database, ravenEtlTask.Name);
+                            var taskTag = database.WhoseTaskIsIt(topology, ravenEtlTask, processState);
+                            if (serverTag == taskTag)
+                            {
+                                ravenEtlCountAllDbs++;
+                            }
+                        }
+                        var ravenEtlCount = database.EtlLoader.RavenDestinations.Count;
+                        
+                        // SQL ETL
+                        foreach (var sqlEtlTask in database.EtlLoader.SqlDestinations)
+                        {
+                            var processState = EtlLoader.GetProcessState(sqlEtlTask.Transforms, database, sqlEtlTask.Name);
+                            var taskTag = database.WhoseTaskIsIt(topology, sqlEtlTask, processState);
+                            if (serverTag == taskTag)
+                            {
+                                sqlEtlCountAllDbs++;
+                            }
+                        }
+                        var sqlEtlCount = database.EtlLoader.SqlDestinations.Count;
+                        
+                        // OLAP ETL
+                        foreach (var olapEtlTask in database.EtlLoader.OlapDestinations)
+                        {
+                            var processState = EtlLoader.GetProcessState(olapEtlTask.Transforms, database, olapEtlTask.Name);
+                            var taskTag = database.WhoseTaskIsIt(topology, olapEtlTask, processState);
+                            if (serverTag == taskTag)
+                            {
+                                olapEtlCountAllDbs++;
+                            }
+                        }
+                        var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
+                        
+                        // Backup
+                        foreach (var backupTask in database.PeriodicBackupRunner.PeriodicBackups)
+                        {
+                            if (backupTask.Configuration.Name.StartsWith("Server Wide") == false)
+                            {
+                                var backupState = database.PeriodicBackupRunner.GetBackupStatus(backupTask.Configuration.TaskId);
+                                var taskTag = database.WhoseTaskIsIt(topology, backupTask.Configuration, backupState);
+                                if (serverTag == taskTag)
+                                {
+                                    periodicBackupCountAllDbs++;
+                                }
+                            }
+                        }
+                        var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
+                        
+                        // Subscription
+                        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(database.Name)))
+                        {
+                            var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+                            var taskTag = database.WhoseTaskIsIt(topology, subscriptionState, subscriptionState);
+                            if (serverTag == taskTag)
+                            {
+                                subscriptionCountAllDbs++;
+                            }
+                        }
+                        var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
+
+                        var ongoingTasksCount = extRepCount + replicationHubCount + replicationSinkCount + 
+                                                ravenEtlCount + sqlEtlCount + olapEtlCount + periodicBackupCount + subscriptionCount;
+
+                        // TODO: RavenDB-17004 - hash should report on all relevant info 
+                        var currentEnvironmentsHash = database.GetEnvironmentsHash();
+
                         if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) &&
                             item.Hash == currentEnvironmentsHash &&
                             item.Item.OngoingTasksCount == ongoingTasksCount)
@@ -184,7 +302,9 @@ namespace Raven.Server.Dashboard
                                     OngoingTasksCount = ongoingTasksCount,
                                     Online = true
                                 };
+                                
                                 databasesInfo.Items.Add(databaseInfoItem);
+                                
                                 CachedDatabaseInfo[database.Name] = item = new DatabaseInfoCache
                                 {
                                     Hash = currentEnvironmentsHash,
@@ -200,6 +320,20 @@ namespace Raven.Server.Dashboard
                         SetOfflineDatabaseInfo(serverStore, context, databaseName, databasesInfo, drivesUsage, disabled: false);
                     }
                 }
+                
+                var ongoingTasksItemAllDbs = new DatabaseOngoingTasksInfoItem()
+                {
+                    Database = "All",
+                    ExternalReplicationCount = extRepCountAllDbs,
+                    ReplicationHubCount = replicationHubCountAllDbs,
+                    ReplicationSinkCount = replicationSinkCountAllDbs,
+                    RavenEtlCount = ravenEtlCountAllDbs,
+                    SqlEtlCount = sqlEtlCountAllDbs,
+                    OlapEtlCount = olapEtlCountAllDbs,
+                    PeriodicBackupCount = periodicBackupCountAllDbs,
+                    SubscriptionCount = subscriptionCountAllDbs
+                };
+                databasesOngoingTasksInfo.Items.Add(ongoingTasksItemAllDbs);
 
                 // 2. Fetch <system> info
                 if (isValidFor == null)
@@ -241,27 +375,10 @@ namespace Raven.Server.Dashboard
             }
 
             yield return databasesInfo;
+            yield return databasesOngoingTasksInfo;
             yield return indexingSpeed;
             yield return trafficWatch;
             yield return drivesUsage;
-        }
-
-        private static long GetOngoingTasksCount(DocumentDatabase database)
-        {
-            // TODO - RavenDB-17004
-            var dbRecord = database.ReadDatabaseRecord();
-            
-            var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();
-            var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
-            var olapEtlCount = database.EtlLoader.OlapDestinations.Count;
-            var sqlEtlCount = database.EtlLoader.SqlDestinations.Count;
-            var ravenEtlCount = database.EtlLoader.RavenDestinations.Count;
-            var hubCount = database.ReplicationLoader.OutgoingHandlers.Count(x => x.IsPullReplicationAsHub);
-            var sinkCount = dbRecord.SinkPullReplications.Count;
-            var extRepCount = dbRecord.ExternalReplications.Count;
-            
-            var total = subscriptionCount + periodicBackupCount + olapEtlCount + sqlEtlCount + ravenEtlCount + hubCount + sinkCount + extRepCount;
-            return total;
         }
 
         private static readonly ConcurrentDictionary<string, DatabaseInfoCache> CachedDatabaseInfo =
