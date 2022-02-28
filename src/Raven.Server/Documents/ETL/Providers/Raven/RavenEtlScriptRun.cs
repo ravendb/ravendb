@@ -5,6 +5,7 @@ using V8.Net;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private EtlStatsScope _stats;
         private List<ICommandData> _deletes = new List<ICommandData>();
 
+        private int _putByJsReferenceIdV8 = 0;
         private DictionaryCloningKeyJH<(string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
         
         private DictionaryCloningKeyJH<List<(string Name, Attachment Attachment)>> _addAttachments;
@@ -61,6 +63,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes?.Clear();
             _deletes = null;
 
+            _putByJsReferenceIdV8 = 0;
             _putsByJsReference?.Dispose();
             _addAttachments?.Clear();
             _loadedAttachments?.Clear();
@@ -143,6 +146,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Debug.Assert(!instance.IsEmpty);
 
             _putsByJsReference ??= new DictionaryCloningKeyJH<(string Id, BlittableJsonReaderObject)>();
+
+            if (instance.EngineType == JavaScriptEngineType.V8)
+            {
+                var instanceV8 = instance.V8.Item;
+                var engine = instanceV8.Engine;
+                if (instanceV8.IsObject && instanceV8.ObjectID < 0)
+                {
+                    instanceV8.SetPropertyOrThrow("$putsByJsReferenceId", engine.CreateValue(_putByJsReferenceIdV8++));
+                }
+            }
 
             _putsByJsReference.Add(instance, (id, doc));
             _stats.IncrementBatchSize(doc.Size);
@@ -328,6 +341,30 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return timeSeriesOperation;
         }
 
+        private T GetItemBuyPutKey<T>(JsHandle putKey, int putId, DictionaryCloningKeyJH<T> items)
+        where T : class
+        {
+            T res = null;
+            if (!items.TryGetValue(putKey, out res) && putId >= 0)
+            {
+                foreach (var item in items)
+                {
+                    var jsItemId = item.Key.GetProperty("$putsByJsReferenceId");
+                    if (jsItemId.IsInt32)
+                    {
+                        var itemId = jsItemId.AsInt32;
+                        if (putId == itemId)
+                        {
+                            res = item.Value;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return res;
+        }
+
         public List<ICommandData> GetCommands()
         {
             // let's send deletions first
@@ -348,27 +385,51 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, null, put.Value.Document));
 
                     var putKey = put.Key;
-                    if (_addAttachments != null && _addAttachments.TryGetValue(putKey, out var putAttachments))
+                    var jsPutId = putKey.GetProperty("$putsByJsReferenceId");
+                    int putId = -1;
+                    if (jsPutId.IsInt32)
                     {
-                        foreach (var addAttachment in putAttachments)
+                        putId = jsPutId.AsInt32;
+                    }
+
+                    if (_addAttachments != null)
+                    {
+                        var putAttachments = GetItemBuyPutKey<List<(string Name, Attachment Attachment)>>(putKey, putId, _addAttachments);                        
+                        if (putAttachments != null)
                         {
-                            commands.Add(new PutAttachmentCommandData(put.Value.Id, addAttachment.Name, addAttachment.Attachment.Stream,
-                                addAttachment.Attachment.ContentType,
-                                null));
+                            foreach (var addAttachment in putAttachments)
+                            {
+                                commands.Add(new PutAttachmentCommandData(put.Value.Id, addAttachment.Name, addAttachment.Attachment.Stream,
+                                    addAttachment.Attachment.ContentType,
+                                    null));
+                            }
                         }
                     }
 
-                    if (_countersByJsReference != null && _countersByJsReference.TryGetValue(putKey, out var counterOperations))
+                    if (_countersByJsReference != null)
                     {
-                        commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations) {FromEtl = true});
+                        var counterOperations = GetItemBuyPutKey<List<CounterOperation>>(putKey, putId, _countersByJsReference);
+                        if (counterOperations != null)
+                        {
+                            commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations) {FromEtl = true});
+                        }
                     }
 
-                    if (_timeSeriesByJsReference != null && _timeSeriesByJsReference.TryGetValue(putKey, out var timeSeriesOperations))
+                    if (_timeSeriesByJsReference != null)
                     {
-                        foreach (var (_, operation) in timeSeriesOperations)
+                        var timeSeriesOperations = GetItemBuyPutKey<Dictionary<string, TimeSeriesOperation>>(putKey, putId, _timeSeriesByJsReference);
+                        if (timeSeriesOperations != null)
                         {
-                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes) {FromEtl = true});
+                            foreach (var (_, operation) in timeSeriesOperations)
+                            {
+                                commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes) {FromEtl = true});
+                            }
                         }
+                    }
+
+                    if (putId >= 0)
+                    {
+                        putKey.DeleteProperty("$putsByJsReferenceId", throwOnError: true);
                     }
                 }
             }
