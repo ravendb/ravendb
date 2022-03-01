@@ -1517,29 +1517,7 @@ namespace Raven.Server.Documents
 
         public Table GetCountersTable(Transaction tx, CollectionName collection)
         {
-            var tableName = collection.GetTableName(CollectionTableType.CounterGroups);
-
-            if (tx.IsWriteTransaction && _tableCreated.Contains(collection.Name) == false)
-            {
-                // RavenDB-11705: It is possible that this will revert if the transaction
-                // aborts, so we must record this only after the transaction has been committed
-                // note that calling the Create() method multiple times is a noop
-                CountersSchema.Create(tx, tableName, 16);
-                tx.LowLevelTransaction.OnDispose += _ =>
-                {
-                    if (tx.LowLevelTransaction.Committed == false)
-                        return;
-
-                    // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
-                    // a new instance, just in case
-                    _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
-                     {
-                         collection.Name
-                     };
-                };
-            }
-
-            return tx.OpenTable(CountersSchema, tableName);
+            return GetOrCreateTable(tx, CountersSchema, collection, CollectionTableType.CounterGroups);
         }
 
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
