@@ -23,120 +23,9 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    writer.WriteStartObject();
-
-                    WriteDatabaseStatisticsInternal(writer, statistics);
-
-                    writer.WriteEndObject();
+                    Json.BlittableJsonTextWriterExtensions.WriteDatabaseStatistics(writer, null, statistics);
                 }
             }
-        }
-
-        private static void WriteDatabaseStatisticsInternal(AbstractBlittableJsonTextWriter writer, DatabaseStatistics statistics)
-        {
-            writer.WritePropertyName(nameof(statistics.CountOfIndexes));
-            writer.WriteInteger(statistics.CountOfIndexes);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfDocuments));
-            writer.WriteInteger(statistics.CountOfDocuments);
-            writer.WriteComma();
-
-            if (statistics.CountOfRevisionDocuments > 0)
-            {
-                writer.WritePropertyName(nameof(statistics.CountOfRevisionDocuments));
-                writer.WriteInteger(statistics.CountOfRevisionDocuments);
-                writer.WriteComma();
-            }
-
-            writer.WritePropertyName(nameof(statistics.CountOfTombstones));
-            writer.WriteInteger(statistics.CountOfTombstones);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
-            writer.WriteInteger(statistics.CountOfDocumentsConflicts);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfConflicts));
-            writer.WriteInteger(statistics.CountOfConflicts);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfAttachments));
-            writer.WriteInteger(statistics.CountOfAttachments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfCounterEntries));
-            writer.WriteInteger(statistics.CountOfCounterEntries);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfTimeSeriesSegments));
-            writer.WriteInteger(statistics.CountOfTimeSeriesSegments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
-            writer.WriteInteger(statistics.CountOfUniqueAttachments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.DatabaseId));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.NumberOfTransactionMergerQueueOperations));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.Is64Bit));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.Pager));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.LastDocEtag));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.LastDatabaseEtag));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.LastIndexingTime));
-            writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk));
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk.HumaneSize));
-            writer.WriteString(statistics.SizeOnDisk.HumaneSize);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk.SizeInBytes));
-            writer.WriteInteger(statistics.SizeOnDisk.SizeInBytes);
-
-            writer.WriteEndObject();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk));
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk.HumaneSize));
-            writer.WriteString(statistics.TempBuffersSizeOnDisk.HumaneSize);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.TempBuffersSizeOnDisk.SizeInBytes));
-            writer.WriteInteger(statistics.TempBuffersSizeOnDisk.SizeInBytes);
-
-            writer.WriteEndObject();
         }
 
         private readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
@@ -147,7 +36,10 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 var combined = new DatabaseStatistics
                 {
-                    CountOfIndexes = -1
+                    CountOfIndexes = -1,
+                    DatabaseChangeVector = null,
+                    DatabaseId = null,
+                    Indexes = Array.Empty<IndexInformation>()
                 };
 
                 long totalSizeOnDisk = 0;
