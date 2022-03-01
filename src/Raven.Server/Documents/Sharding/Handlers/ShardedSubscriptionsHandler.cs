@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions.DeleteSubscriptionCommand;
 
 namespace Raven.Server.Documents.ShardedHandlers
@@ -405,7 +406,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     writer.WriteEndArray();
                     writer.WriteComma();
                     writer.WritePropertyName("Includes");
-                    //TODO: egor https://issues.hibernatingrhinos.com/issue/RavenDB-16279
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
                     writer.WriteStartObject();
                     writer.WriteEndObject();
                     writer.WriteEndObject();

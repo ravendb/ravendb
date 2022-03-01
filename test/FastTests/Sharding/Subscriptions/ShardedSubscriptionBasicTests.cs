@@ -12,6 +12,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -165,6 +166,8 @@ namespace FastTests.Sharding.Subscriptions
                     Assert.Empty(names);
                 }
             }
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "RavenDB-16279");
         }
 
         //TODO: egor RavenDB-16279

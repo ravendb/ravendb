@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -449,6 +450,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     using (var session = store.OpenSession())
                     {
+                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Normal, "some why they all go to 1 shard");
                         //// here we have to make sure that at least 10 docs saved to each shard
                         // TODO: egor some why they all go to 1 shard
                         //using (var session = store.OpenSession())
