@@ -553,8 +553,8 @@ namespace Raven.Server.Documents.Patch
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
                             {
-                                var jsStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]);
-                                var argStr = jsStr.IsUndefined ? "undefined" : jsStr.AsString;
+                                var jsArgStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]);
+                                var argStr = jsArgStr.IsUndefined ? "undefined" : jsArgStr.AsString;
                                 argsStr += argStr + "\n\n";
                             }
 #endif
@@ -573,7 +573,8 @@ namespace Raven.Server.Documents.Patch
                                     }
                                 }
 #if DEBUG
-                                var resStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes).AsString;
+                                var jsResStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes);
+                                var resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
 #endif
                                 return new ScriptRunnerResult(this, jsRes);
                             }
