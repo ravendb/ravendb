@@ -58,7 +58,7 @@ namespace Raven.Client
 
             public const string IncrementalTimeSeriesPrefix = "INC:";
 
-            internal const string MissingIncludes = "Missing-Includes";
+            internal const string Sharded = "Sharded";
         }
 
         public class Platform

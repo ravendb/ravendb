@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Sharding
         private readonly ConcurrentDictionary<string, IndexDefinition> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, AutoIndexDefinition> _cachedAutoMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         public readonly ScriptRunnerCache ScriptRunnerCache;
-        private readonly RavenConfiguration _ravenConfiguration;
+        private readonly RavenConfiguration _configuration;
 
         private ShardExecutor _shardExecutor;
         public ShardExecutor ShardExecutor => _shardExecutor;
@@ -50,27 +50,25 @@ namespace Raven.Server.Documents.Sharding
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "reduce the record to the needed fields");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Need to refresh all this in case we will add/remove new shard");
 
-            //TODO: update the record when it's updated
-
             _serverStore = serverStore;
             _record = record;
 
             UpdateMapReduceIndexes(record.Indexes
-                .Where(x => x.Value.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce)
+                .Where(x => x.Value.Type.IsStaticMapReduce())
                 .ToDictionary(x => x.Key, x => x.Value));
 
             UpdateAutoMapReduceIndexes(record.AutoIndexes
-                .Where(x => x.Value.Type is IndexType.AutoMapReduce)
+                .Where(x => x.Value.Type.IsAutoMapReduce())
                 .ToDictionary(x => x.Key, x => x.Value));
 
-            _ravenConfiguration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
+            _configuration = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, DatabaseName);
 
             foreach ((string key, string value) in _record.Settings)
-                _ravenConfiguration.SetSetting(key, value);
+                _configuration.SetSetting(key, value);
 
-            _ravenConfiguration.Initialize();
+            _configuration.Initialize();
 
-            ScriptRunnerCache = new ScriptRunnerCache(null, _ravenConfiguration);
+            ScriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);
 
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
@@ -193,23 +191,36 @@ namespace Raven.Server.Documents.Sharding
             return actual > clientConfigurationEtag;
         }
 
-        public void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> mapReduceIndexes)
+        public void UpdateIndexes(RawDatabaseRecord record)
         {
-            //TODO: remove the deleted map reduce indexes from cache
-            foreach ((string indexName, IndexDefinition definition) in mapReduceIndexes)
+            UpdateMapReduceIndexes(record.MapReduceIndexes());
+            UpdateAutoMapReduceIndexes(record.AutoMapReduceIndexes());
+        }
+
+        private void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> indexDefinitions)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
+                "remove the deleted map reduce indexes from cache");
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Major,
+                "handle side-by-side");
+
+            foreach ((string indexName, IndexDefinition definition) in indexDefinitions)
             {
-                Debug.Assert(definition.Type is IndexType.MapReduce or IndexType.JavaScriptMapReduce);
+                Debug.Assert(definition.Type.IsStaticMapReduce());
 
                 _cachedMapReduceIndexDefinitions[indexName] = definition;
             }
         }
 
-        public void UpdateAutoMapReduceIndexes(Dictionary<string, AutoIndexDefinition> autoMapReduceIndexes)
+        private void UpdateAutoMapReduceIndexes(Dictionary<string, AutoIndexDefinition> autoIndexDefinitions)
         {
-            //TODO: remove the deleted map reduce indexes from cache
-            foreach ((string indexName, AutoIndexDefinition definition) in autoMapReduceIndexes)
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
+                "remove the deleted auto map-reduce indexes from cache");
+
+            foreach ((string indexName, AutoIndexDefinition definition) in autoIndexDefinitions)
             {
-                Debug.Assert(definition.Type is IndexType.AutoMapReduce);
+                Debug.Assert(definition.Type.IsAutoMapReduce());
 
                 _cachedAutoMapReduceIndexDefinitions[indexName] = definition;
             }
@@ -217,10 +228,12 @@ namespace Raven.Server.Documents.Sharding
 
         public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
         {
-            //TODO: cache the compiled JavaScript indexes
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+                "cache the compiled JavaScript indexes - concurrent queue since they are single threaded");
+
             return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false 
                 ? null 
-                : IndexCompilationCache.GetIndexInstance(indexDefinition, _ravenConfiguration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+                : IndexCompilationCache.GetIndexInstance(indexDefinition, _configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
         public bool TryGetAutoIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)

@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
         {
             EnsureLine();
-            _sb.Append("DECLARE ").AppendLine(func).AppendLine();
+            _sb.Append("DECLARE function ").Append(name.Value).AppendLine(func).AppendLine();
         }
 
         public override void VisitWhereClause(QueryExpression where)

@@ -10,7 +10,6 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -48,11 +47,6 @@ namespace Raven.Server.Documents.Queries
                     TimeSeriesFields.Add(field.Key);
                 }
             }
-        }
-
-        public virtual void AddResult(T result)
-        {
-            Results.Add(result);
         }
 
         /// <summary>
@@ -114,78 +108,5 @@ namespace Raven.Server.Documents.Queries
         public abstract Dictionary<string, Document> GetRevisionIncludesByChangeVector();
 
         public abstract Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime();
-    }
-
-    public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
-    {
-        public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void AddExplanation(ExplanationResult explanationResult)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool SupportsExceptionHandling => true;
-        public override bool SupportsInclude  => true;
-        public override bool SupportsHighlighting  => true;
-        public override bool SupportsExplanations  => true;
-
-        public override void AddCounterIncludes(IncludeCountersCommand command)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
-        {
-            return null;
-        }
-
-        public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand command)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
-        {
-            return null;
-        }
-
-        public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
-        {
-            return null;
-        }
-
-        public override void AddRevisionIncludes(IncludeRevisionsCommand command)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override Dictionary<string, Document> GetRevisionIncludesByChangeVector()
-        {
-            return null;
-        }
-
-        public override Dictionary<string, Dictionary<DateTime, Document>> GetRevisionIncludesIdByDateTime()
-        {
-            return null;
-        }
     }
 }

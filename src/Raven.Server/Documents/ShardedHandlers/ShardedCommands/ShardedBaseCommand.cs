@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
-    public abstract class ShardedBaseCommand<T> : RavenCommand<T>, IDisposable
+    public abstract class ShardedBaseCommand<T> : RavenCommand<T>
     {
         protected readonly ShardedRequestHandler Handler;
         public BlittableJsonReaderObject Content;
@@ -19,15 +17,11 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
         public readonly HttpMethod Method;
 
         public HttpResponseMessage Response;
-        private readonly IDisposable _disposable;
-        public TransactionOperationContext Context;
 
         public override bool IsReadRequest => false;
 
         protected ShardedBaseCommand(ShardedRequestHandler handler, Headers headers, BlittableJsonReaderObject content = null)
         {
-            _disposable = handler.ContextPool.AllocateOperationContext(out Context);
-
             Handler = handler;
             Method = handler.Method;
             Url = handler.RelativeShardUrl;
@@ -60,11 +54,6 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
             Response = response;
             return base.ProcessResponse(context, cache, response, url);
         }
-
-        public void Dispose()
-        {
-            _disposable?.Dispose();
-        }
     }
     
     public enum Headers
@@ -72,5 +61,6 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
         None,
         IfMatch,
         IfNoneMatch,
+        Sharded
     }
 }

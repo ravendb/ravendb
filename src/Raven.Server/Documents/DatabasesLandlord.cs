@@ -118,13 +118,6 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded())
                         {
-                            foreach (var db in _shardedDatabases)
-                            {
-                                var shardedContext = db.Value.Result;
-                                shardedContext?.UpdateMapReduceIndexes(rawRecord.MapReduceIndexes);
-                                shardedContext?.UpdateAutoMapReduceIndexes(rawRecord.AutoMapReduceIndexes);
-                            }
-
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(
@@ -136,6 +129,7 @@ namespace Raven.Server.Documents
                             if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var shardedContextTask))
                             {
                                 var shardedContext = shardedContextTask.Result; // this isn't really a task
+                                shardedContext.UpdateIndexes(rawRecord);
                                 shardedContext.UpdateDatabaseRecord(rawRecord);
                             }
                         }
@@ -1223,32 +1217,6 @@ namespace Raven.Server.Documents
             }
 
             database.DatabaseShutdownCompleted.Set();
-        }
-
-        public bool IsShardedDatabase(StringSegment databaseName)
-        {
-            if (IsDatabaseLoaded(databaseName))
-                return false;
-
-            if (_shardedDatabases.TryGetValue(databaseName, out _))
-                return true;
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName.Value);
-                if (rawRecord == null)
-                    return false;
-
-                if (rawRecord.IsSharded())
-                {
-                    var shardedContext = new ShardedContext(_serverStore, rawRecord);
-                    _shardedDatabases.GetOrAdd(databaseName, Task.FromResult(shardedContext));
-                    return true;
-                }
-
-                return false;
-            }
         }
 
         private void CheckDatabasePathsIntersection(string databaseName, RavenConfiguration configuration)

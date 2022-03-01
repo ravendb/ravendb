@@ -1,9 +1,7 @@
 ﻿using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 

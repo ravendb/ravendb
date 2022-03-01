@@ -38,8 +38,11 @@ namespace Raven.Server.Documents.ShardedHandlers
                 throw new ArgumentNullException(nameof(args.IndexDefinition));
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
-                "Validate the index definition and take the configuration from the database record");
-            //TODO: ValidateStaticIndex(definition);
+                "implement ValidateStaticIndex(definition)");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+                "take the _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber configuration from the database record");
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
+                "take the _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode configuration from the database record");
 
             var command = new PutIndexCommand(
                 args.IndexDefinition,
@@ -47,8 +50,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                 args.Source,
                 ServerStore.Server.Time.GetUtcNow(),
                 args.RaftRequestId,
-                10,//TODO: _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber,
-                IndexDeploymentMode.Parallel//TODO: _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode
+                10,
+                IndexDeploymentMode.Parallel 
             );
 
             long index = 0;

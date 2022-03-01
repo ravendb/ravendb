@@ -57,82 +57,81 @@ namespace Raven.Server.Documents.ShardedHandlers
 
         public async Task HandleQuery(HttpMethod httpMethod)
         {
-            // TODO: Sharding - figure out how to report this
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RequestTimeTracker reporting in traffic watch");
+
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, null, "Query"))
             {
                 try
                 {
-                    //using (var token = CreateTimeLimitedQueryToken())
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "CreateTimeLimitedQueryToken here or per each shard?");
+                    var debug = GetStringQueryString("debug", required: false);
+                    if (string.IsNullOrWhiteSpace(debug) == false)
                     {
-                        var debug = GetStringQueryString("debug", required: false);
-                        if (string.IsNullOrWhiteSpace(debug) == false)
+                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement debug");
+                        throw new NotImplementedException("Not yet done");
+                    }
+
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
+                        @"what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
+
+                    var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(),
+                        ShardedContext.QueryMetadataCache, database: null);
+
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    {
+                        var indexQuery = await indexQueryReader.GetIndexQueryAsync(context, Method, tracker);
+
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            TrafficWatchQuery(indexQuery);
+
+                        var queryProcessor = new ShardedQueryProcessor(context, this, indexQuery);
+
+                        queryProcessor.Initialize();
+                        await queryProcessor.ExecuteShardedOperations();
+
+                        var existingResultEtag = GetLongFromHeaders("If-None-Match");
+                        if (existingResultEtag != null && indexQuery.Metadata.HasOrderByRandom == false)
                         {
-                            throw new NotImplementedException("Not yet done");
+                            if (existingResultEtag == queryProcessor.ResultsEtag)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                                return;
+                            }
                         }
 
-                        // TODO: Sharding
-                        //var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
-                        
-                        var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), 
-                            ShardedContext.QueryMetadataCache, database: null);
-
-                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        // * For includes, we send the includes to all shards, then we merge them together. We do explicitly
+                        //   support including from another shard, so we'll need to do that again for missing includes
+                        //   That means also recording the include() call from JS on missing values that we'll need to rerun on
+                        //   other shards
+                        var includeTask = queryProcessor.HandleIncludes();
+                        if (includeTask.IsCompleted == false)
                         {
-                            var indexQuery = await indexQueryReader.GetIndexQueryAsync(context, Method, tracker);
-                            
-                            if (TrafficWatchManager.HasRegisteredClients)
-                                TrafficWatchQuery(indexQuery);
-                            
-                            var queryProcessor = new ShardedQueryProcessor(context, this, indexQuery);
-                            
-                            queryProcessor.Initialize();
-                            await queryProcessor.ExecuteShardedOperations();
-                            
-                            var existingResultEtag = GetLongFromHeaders("If-None-Match");
-                            if (existingResultEtag != null && indexQuery.Metadata.HasOrderByRandom == false)
-                            {
-                                if (existingResultEtag == queryProcessor.ResultsEtag)
-                                {
-                                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                                    return;
-                                }
-                            }
-                            
-                            // * For includes, we send the includes to all shards, then we merge them together. We do explicitly
-                            //   support including from another shard, so we'll need to do that again for missing includes
-                            //   That means also recording the include() call from JS on missing values that we'll need to rerun on
-                            //   other shards
-                            var includeTask = queryProcessor.HandleIncludes();
-                            if (includeTask.IsCompleted == false)
-                            {
-                                await includeTask.AsTask();
-                            }
-                            
-                            queryProcessor.MergeResults();
-                            
-                            // * For map/reduce - we need to re-run the reduce portion of the index again on the results
-                            queryProcessor.ReduceResults();
-
-                            // * For order by, we need to merge the results and compute the order again 
-                            queryProcessor.OrderResults();
-
-                            // * For map-reduce indexes we project the results after the reduce part 
-                            queryProcessor.ProjectAfterMapReduce();
-
-                            var result = queryProcessor.GetResult();
-                            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
-                            {
-                                result.Timings = indexQuery.Timings?.ToTimings();
-                                await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly); 
-                                await writer.OuterFlushAsync();
-                            }
-
-
-                            // * For JS projections and load clauses, we don't support calling load() on a
-                            //   document that is not on the same shard
+                            await includeTask.AsTask();
                         }
 
+                        queryProcessor.MergeResults();
+
+                        // * For map/reduce - we need to re-run the reduce portion of the index again on the results
+                        queryProcessor.ReduceResults();
+
+                        // * For order by, we need to merge the results and compute the order again 
+                        queryProcessor.ApplyOrdering();
+
+                        // * For map-reduce indexes we project the results after the reduce part 
+                        queryProcessor.ProjectAfterMapReduce();
+
+                        var result = queryProcessor.GetResult();
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
+                        {
+                            result.Timings = indexQuery.Timings?.ToTimings();
+                            await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
+                            await writer.OuterFlushAsync();
+                        }
+
+
+                        // * For JS projections and load clauses, we don't support calling load() on a
+                        //   document that is not on the same shard
                     }
                 }
                 catch (Exception e)
@@ -196,9 +195,10 @@ namespace Raven.Server.Documents.ShardedHandlers
             // want to run a query and knows what shards it is on. Such as:
             // from Orders where State = $state and User = $user where all the orders are on the same share as the user
 
-            // - TODO: Sharding - etag handling!
             public ShardedQueryProcessor(TransactionOperationContext context, ShardedQueriesHandler parent, IndexQueryServerSide query)
             {
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Etag handling");
+
                 _context = context;
                 _result = new ShardedQueryResult();
                 _parent = parent;
@@ -224,12 +224,6 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             public void Initialize()
             {
-                if (_query.Metadata.IsGraph)
-                {
-                    // * Graph queries - not supported for sharding
-                    throw new NotSupportedException("Graph queries aren't supported for sharding");
-                }
-
                 // now we have the index query, we need to process that and decide how to handle this.
                 // There are a few different modes to handle:
                 var queryTemplate = _query.ToJson(_context);
@@ -311,7 +305,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 if (query.Load is { Count: > 0 })
                 {
-                    // https://issues.hibernatingrhinos.com/issue/RavenDB-17887
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17887");
                     throw new NotSupportedException("Loading a document inside a projection from a map-reduce index isn't supported");
                 }
 
@@ -356,27 +350,36 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             private void GenerateLoadByIdQueries(IEnumerable<string> ids, Dictionary<int, ShardedQueryCommand> cmds)
             {
+                const string listParameterName = "List";
+                
                 var shards = ShardLocator.GroupIdsByShardIndex(ids, _parent.ShardedContext, _context);
                 var sb = new StringBuilder();
                 sb.Append("from '").Append(_query.Metadata.CollectionName).AppendLine("'")
-                    .AppendLine("where id() in ($list)");
+                    .AppendLine($"where id() in (${listParameterName})");
+
                 if (_query.Metadata.Includes?.Length > 0)
                 {
                     sb.Append("include ").AppendJoin(", ", _query.Metadata.Includes).AppendLine();
                 }
 
-                foreach (var (shardId, list) in shards)
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Minor, "use DocumentQuery from Client API to build the query");
+
+                var query = sb.ToString();
+
+                foreach ((int shardId, List<string> documentIds) in shards)
                 {
                     if (_filteredShardIndexes?.Contains(shardId) == false)
                         continue;
-                    //TODO: have a way to turn the _query into a json file and then we'll modify that, instead of building it manually
+
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "have a way to turn the _query into a json file and then we'll modify that, instead of building it manually");
+
                     var q = new DynamicJsonValue
                     {
                         [nameof(IndexQuery.QueryParameters)] = new DynamicJsonValue
                         {
-                            ["list"] = list,
+                            [listParameterName] = documentIds
                         }, 
-                        [nameof(IndexQuery.Query)] = sb.ToString(),
+                        [nameof(IndexQuery.Query)] = query
                     };
                     cmds[shardId] = new ShardedQueryCommand(_parent, _context.ReadObject(q, "query"), null);
                 }
@@ -458,7 +461,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
             }
 
-            public void OrderResults()
+            public void ApplyOrdering()
             {
                 if (_query.Metadata.OrderBy?.Length > 0)
                 {
@@ -633,16 +636,16 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 if (propertyAccessor == null)
                 {
-                    // TODO: test this
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "test this");
                     _result.Results.Clear();
                     return;
                 }
 
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "handle metadata merge, score, distance");
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "test this");
+
                 var objects = new AggregatedAnonymousObjects(results, propertyAccessor, _context, djv =>
                 {
-                    // TODO: handle metadata merge
-                    // TODO: score, distance
-
                     djv[Constants.Documents.Metadata.Key] = DummyDynamicJsonValue;
                 });
 

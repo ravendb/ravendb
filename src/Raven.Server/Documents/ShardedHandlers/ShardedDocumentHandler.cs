@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private async Task FetchDocumentsFromShards(IList<string> ids,bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
+        private async Task FetchDocumentsFromShards(IList<string> ids, bool metadataOnly, TransactionOperationContext context, StringBuilder sb, StringValues includePaths,
             List<FetchDocumentsFromShardsCommand> cmds, List<Task> tasks, bool ignoreIncludes = false)
         {
             var shards = ShardLocator.GetDocumentIdsShards(ids, ShardedContext, context);
