@@ -14,7 +14,4 @@
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="JunitXml.TestLogger" Version="3.0.110" />
-  </ItemGroup>
 </Project>
