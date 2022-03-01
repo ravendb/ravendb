@@ -15,6 +15,7 @@ using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 
@@ -214,8 +215,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             // we need to take each database id of shard's local CV
             // then check if the sub-CV with this database id is equal in both CVs
 
-            //TODO: egor CV persistence will have to be changed because of the resharding 
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-13106
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "CV persistence will have to be changed because of the resharding (https://issues.hibernatingrhinos.com/issue/RavenDB-13106)");
             foreach (var entry in currentLocalShardCv)
             {
                 var lastStorageCv = currentCvInStorage.FirstOrDefault(x => x.DbId == entry.DbId);

@@ -341,8 +341,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     sendingCurrentBatchStopwatch.Restart();
                 }
 
-                //TODO: egor https://issues.hibernatingrhinos.com/issue/RavenDB-16279
-
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Major, "https://issues.hibernatingrhinos.com/issue/RavenDB-16279");
                 SubscriptionConnection.WriteEndOfBatch(writer);
 
                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{shard}'"));
