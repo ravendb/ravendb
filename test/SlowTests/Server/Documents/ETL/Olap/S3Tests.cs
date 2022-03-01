@@ -527,10 +527,11 @@ loadToOrders(partitionBy(['order_date', key]),
                 using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
                 {
                     var baseline = new DateTime(2020, 1, 1).ToUniversalTime();
+                    var ordersCount = 100;
 
                     using (var session = store.OpenAsyncSession())
                     {
-                        for (int i = 0; i < 100; i++)
+                        for (int i = 0; i < ordersCount; i++)
                         {
                             await session.StoreAsync(new Order
                             {
@@ -549,7 +550,7 @@ loadToOrders(partitionBy(['order_date', key]),
                     var script = @"
 loadToOrders(noPartition(),
     {
-        OrderDate : this.OrderedAt
+        OrderDate : this.OrderedAt,
         Company : this.Company,
         ShipVia : this.ShipVia
     });
@@ -584,7 +585,7 @@ loadToOrders(noPartition(),
                                 Assert.True(field.Name.In(expectedFields));
 
                                 var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                                Assert.True(data.Length == 100);
+                                Assert.True(data.Length == ordersCount);
 
                                 if (field.Name == ParquetTransformedItems.LastModifiedColumn)
                                     continue;
