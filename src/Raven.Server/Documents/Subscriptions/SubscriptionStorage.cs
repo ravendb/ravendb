@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionStorage : IDisposable, ILowMemoryHandler
     {
-        private readonly DocumentDatabase _db;
+        internal readonly DocumentDatabase _db;
         private readonly ServerStore _serverStore;
         
         private readonly ConcurrentDictionary<long, SubscriptionConnectionsState> _subscriptions = new ();
@@ -101,8 +101,8 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionsState OpenSubscription(SubscriptionConnection connection)
         {
-            var subscriptionState = _subscriptions.GetOrAdd(connection.SubscriptionId,
-                subscriptionId => new SubscriptionConnectionsState(connection.Options.SubscriptionName, subscriptionId ,this, connection));
+            var subscriptionState = _subscriptions.GetOrAdd(connection.SubscriptionId, subId => new SubscriptionConnectionsState(subId, this));
+            subscriptionState.Initialize(connection);
             return subscriptionState;
         }
 
