@@ -962,7 +962,7 @@ namespace Raven.Server.Documents
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
             {
-                Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice slice);
+                Slice.From(context.Allocator, id == null ? string.Empty : id.ToLowerInvariant(), out Slice slice);
                 listOfIds.Add(slice);
             }
 
