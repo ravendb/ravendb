@@ -143,13 +143,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public unsafe void ReadStream(DocumentsOperationContext context, StreamsTempFile attachmentStreamsTempFile)
         {
-            var base64HashSize = *Reader.ReadExactly(sizeof(byte));
-            ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
+            try
+            {
+                var base64HashSize = *Reader.ReadExactly(sizeof(byte));
+                ToDispose(Slice.From(context.Allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
-            var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
-            Stream = attachmentStreamsTempFile.StartNewStream();
-            Reader.ReadExactly(streamLength, Stream);
-            Stream.Flush();
+                var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
+                Stream = attachmentStreamsTempFile.StartNewStream();
+                Reader.ReadExactly(streamLength, Stream);
+                Stream.Flush();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to read the stream for attachment with hash: {Base64Hash}", e);
+            }
         }
         public unsafe void WriteStream(Stream stream, byte[] tempBuffer)
         {
