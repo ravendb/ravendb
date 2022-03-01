@@ -184,11 +184,21 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public DynamicJsonValue GetConnectionStats()
         {
+            string clientUri;
+            try
+            {
+                clientUri = TcpClient?.Client?.RemoteEndPoint?.ToString();
+            }
+            catch (ObjectDisposedException)
+            {
+                clientUri = "N/A";
+            }
+
             var stats = new DynamicJsonValue
             {
                 ["Id"] = Id,
                 ["Operation"] = Operation.ToString(),
-                ["ClientUri"] = TcpClient?.Client?.RemoteEndPoint?.ToString(),
+                ["ClientUri"] = clientUri,
                 ["ConnectedAt"] = _connectedAt,
                 ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString(),
                 ["LastEtagReceived"] = _lastEtagReceived,
