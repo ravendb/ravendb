@@ -10,6 +10,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 using Raven.Server.Documents.Patch;
+using Spatial4n.Core.Exceptions;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -18,18 +19,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private EtlStatsScope _stats;
         private List<ICommandData> _deletes = new List<ICommandData>();
 
-        private int _putByJsReferenceIdV8 = 0;
+        private const int _putByJsReferenceUndefinedId = Int32.MinValue;
+        private int _putByJsReferencePrevId = _putByJsReferenceUndefinedId;
         private DictionaryCloningKeyJH<(string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
+        private DictionaryCloningKeyJH<int> _putsById;
         
-        private DictionaryCloningKeyJH<List<(string Name, Attachment Attachment)>> _addAttachments;
+        private DictionaryCloningKeyJH<List<(string Name, Attachment Attachment)>> _addAttachmentsByJsReference;
+        private Dictionary<int, List<(string Name, Attachment Attachment)>> _addAttachmentsById;
 
         private Dictionary<string, Attachment> _loadedAttachments;
 
         private DictionaryCloningKeyJH<List<CounterOperation>> _countersByJsReference;
+        private Dictionary<int, List<CounterOperation>> _countersById;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
         
         private DictionaryCloningKeyJH<Dictionary<string, TimeSeriesOperation>> _timeSeriesByJsReference;
+        private Dictionary<int, Dictionary<string, TimeSeriesOperation>> _timeSeriesById;
 
         private Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>> _timeSeriesByDocumentId;
 
@@ -63,16 +69,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes?.Clear();
             _deletes = null;
 
-            _putByJsReferenceIdV8 = 0;
+            _putByJsReferencePrevId = _putByJsReferenceUndefinedId;
             _putsByJsReference?.Dispose();
-            _addAttachments?.Clear();
+            _addAttachmentsByJsReference?.Clear();
+            _addAttachmentsById?.Clear();
             _loadedAttachments?.Clear();
+
             _countersByJsReference?.Clear();
+            _countersById?.Clear();
 
             _countersByDocumentId?.Clear();
             _countersByDocumentId = null;
 
             _timeSeriesByJsReference?.Clear();
+            _timeSeriesById?.Clear();
 
             _timeSeriesByDocumentId?.Clear();
             _timeSeriesByDocumentId = null;
@@ -153,7 +163,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 var engine = instanceV8.Engine;
                 if (instanceV8.IsObject && instanceV8.ObjectID < 0)
                 {
-                    instanceV8.SetPropertyOrThrow("$putsByJsReferenceId", engine.CreateValue(_putByJsReferenceIdV8++));
+                    // RavenDB_7064.Should_handle_attachments
+                    // native objects (having instanceV8.ObjectID < -1) used as keys in *ByJsReference in case of V8 they get different handle and object ids in sequential call backs
+                    // so they get to be not equal (they are compared on handle id) and can not be used as keys 
+                    // while for managed objects (having instanceV8.ObjectID >= 0) handle id remains the same
+                    // thus, for native objects we store special $putsByJsReferenceId property and use it as key in dictionaries *ById
+                    // in the end we remove this property
+                    if (_putByJsReferencePrevId == Int32.MaxValue)
+                    {
+                        throw new RuntimeException("_putByJsReferenceCurrentId has maximum value and can not be increased any more");
+                    }
+
+                    _putByJsReferencePrevId += 1;
+                    instanceV8.SetPropertyOrThrow("$putsByJsReferenceId", engine.CreateValue(_putByJsReferencePrevId));
                 }
             }
 
@@ -195,15 +217,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             
             var attachment = _loadedAttachments[attachmentReference.AsString];
 
-            _addAttachments ??= new DictionaryCloningKeyJH<List<(string Name, Attachment Attachment)>>(); //Dictionary<string, List<(string Name, Attachment Attachment)>>(); //
+            _addAttachmentsByJsReference ??= new DictionaryCloningKeyJH<List<(string Name, Attachment Attachment)>>();
+            _addAttachmentsById ??= new Dictionary<int, List<(string Name, Attachment Attachment)>>();
 
-            var key = instance;
-            if (_addAttachments.TryGetValue(key, out var attachments) == false)
-            {
-                attachments = new List<(string, Attachment)>();
-                _addAttachments.Add(key, attachments);
-            }
-
+            var attachments = AddItemBuyPutKeyOrId(instance, _addAttachmentsByJsReference, _addAttachmentsById);
             attachments.Add((name ?? attachment.Name, attachment));
             _stats.IncrementBatchSize(attachment.Stream.Length);
         }
@@ -220,15 +237,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             
             var counter = _loadedCountersByJsReference[counterReference.AsString];
 
-            if (_countersByJsReference == null)
-                _countersByJsReference = new DictionaryCloningKeyJH<List<CounterOperation>>();
+            _countersByJsReference ??= new DictionaryCloningKeyJH<List<CounterOperation>>();
+            _countersById ??= new Dictionary<int, List<CounterOperation>>();
 
-            if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
-            {
-                operations = new List<CounterOperation>();
-                _countersByJsReference.Add(instance, operations);
-            }
-
+            var operations = AddItemBuyPutKeyOrId(instance, _countersByJsReference, _countersById);
             operations.Add(new CounterOperation
             {
                 CounterName = counter.Name,
@@ -281,13 +293,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             
             var (name, entries) = _loadedTimeSeriesByJsReference[timeSeriesReference.AsString];
 
-            _timeSeriesByJsReference ??= new DictionaryCloningKeyJH<Dictionary<string, TimeSeriesOperation>>(); //Dictionary<string, Dictionary<string, TimeSeriesOperation>>();
-            if (_timeSeriesByJsReference.TryGetValue(instance, out var timeSeriesOperations) == false)
-            {
-                timeSeriesOperations = new Dictionary<string, TimeSeriesOperation>();
-                _timeSeriesByJsReference.Add(instance, timeSeriesOperations);
-            }
+            _timeSeriesByJsReference ??= new DictionaryCloningKeyJH<Dictionary<string, TimeSeriesOperation>>();
+            _timeSeriesById ??= new Dictionary<int, Dictionary<string, TimeSeriesOperation>>();
 
+            var timeSeriesOperations = AddItemBuyPutKeyOrId(instance, _timeSeriesByJsReference, _timeSeriesById);
             if (timeSeriesOperations.TryGetValue(name, out var timeSeriesOperation) == false)
             {
                 timeSeriesOperation = new TimeSeriesOperation {Name = name};
@@ -341,27 +350,61 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return timeSeriesOperation;
         }
 
-        private T GetItemBuyPutKey<T>(JsHandle putKey, int putId, DictionaryCloningKeyJH<T> items)
-        where T : class
+
+        private T AddItemBuyPutKeyOrId<T>(JsHandle putKey, DictionaryCloningKeyJH<T> _itemsByPutKey, Dictionary<int, T> _itemsById)
+        where T : new()
         {
-            T res = null;
-            if (!items.TryGetValue(putKey, out res) && putId >= 0)
+            int putId = _putByJsReferenceUndefinedId;
+            if (putKey.EngineType == JavaScriptEngineType.V8)
             {
-                foreach (var item in items)
+                var instanceV8 = putKey.V8.Item;
+                if (instanceV8.IsObject && instanceV8.ObjectID < 0)
                 {
-                    var jsItemId = item.Key.GetProperty("$putsByJsReferenceId");
-                    if (jsItemId.IsInt32)
+                    var jsId = instanceV8.GetProperty("$putsByJsReferenceId");
+                    if (jsId.IsInt32)
                     {
-                        var itemId = jsItemId.AsInt32;
-                        if (putId == itemId)
-                        {
-                            res = item.Value;
-                            break;
-                        }
+                        putId = jsId.AsInt32;
+                    }
+                    else
+                    {
+                        throw new RuntimeException("Property $putsByJsReferenceId has not been found on the V8 instance"); 
                     }
                 }
             }
 
+            T items;
+            if (putId > _putByJsReferenceUndefinedId)
+            {
+                if (_itemsById.TryGetValue(putId, out items) == false)
+                {
+                    items = new T();
+                    _itemsById.Add(putId, items);
+                }
+            }
+            else
+            {
+                if (_itemsByPutKey.TryGetValue(putKey, out items) == false)
+                {
+                    items = new T();
+                    _itemsByPutKey.Add(putKey, items);
+                }
+            }
+
+            return items;
+        }
+
+        private T GetItemBuyPutKeyOrId<T>(JsHandle putKey, int putId, DictionaryCloningKeyJH<T> items, Dictionary<int, T> _itemsById)
+        where T : class
+        {
+            T res = null;
+            if (putId > _putByJsReferenceUndefinedId)
+            {
+                _itemsById.TryGetValue(putId, out res);
+            }
+            else
+            {
+                items.TryGetValue(putKey, out res);
+            }
             return res;
         }
 
@@ -385,16 +428,27 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, null, put.Value.Document));
 
                     var putKey = put.Key;
-                    var jsPutId = putKey.GetProperty("$putsByJsReferenceId");
-                    int putId = -1;
-                    if (jsPutId.IsInt32)
+                    var putId = _putByJsReferenceUndefinedId;
+                    if (putKey.EngineType == JavaScriptEngineType.V8)
                     {
-                        putId = jsPutId.AsInt32;
+                        var instanceV8 = putKey.V8.Item;
+                        if (instanceV8.IsObject && instanceV8.ObjectID < 0)
+                        {
+                            var jsId = instanceV8.GetProperty("$putsByJsReferenceId");
+                            if (jsId.IsInt32)
+                            {
+                                putId = jsId.AsInt32;
+                            }
+                            else
+                            {
+                                throw new RuntimeException("Property $putsByJsReferenceId has not been found on the V8 instance"); 
+                            }
+                        }
                     }
 
-                    if (_addAttachments != null)
+                    if (_addAttachmentsByJsReference != null)
                     {
-                        var putAttachments = GetItemBuyPutKey<List<(string Name, Attachment Attachment)>>(putKey, putId, _addAttachments);                        
+                        var putAttachments = GetItemBuyPutKeyOrId<List<(string Name, Attachment Attachment)>>(putKey, putId, _addAttachmentsByJsReference, _addAttachmentsById);                        
                         if (putAttachments != null)
                         {
                             foreach (var addAttachment in putAttachments)
@@ -408,7 +462,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                     if (_countersByJsReference != null)
                     {
-                        var counterOperations = GetItemBuyPutKey<List<CounterOperation>>(putKey, putId, _countersByJsReference);
+                        var counterOperations = GetItemBuyPutKeyOrId<List<CounterOperation>>(putKey, putId, _countersByJsReference, _countersById);
                         if (counterOperations != null)
                         {
                             commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations) {FromEtl = true});
@@ -417,7 +471,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                     if (_timeSeriesByJsReference != null)
                     {
-                        var timeSeriesOperations = GetItemBuyPutKey<Dictionary<string, TimeSeriesOperation>>(putKey, putId, _timeSeriesByJsReference);
+                        var timeSeriesOperations = GetItemBuyPutKeyOrId<Dictionary<string, TimeSeriesOperation>>(putKey, putId, _timeSeriesByJsReference, _timeSeriesById);
                         if (timeSeriesOperations != null)
                         {
                             foreach (var (_, operation) in timeSeriesOperations)
@@ -427,7 +481,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         }
                     }
 
-                    if (putId >= 0)
+                    if (putId > _putByJsReferenceUndefinedId)
                     {
                         putKey.DeleteProperty("$putsByJsReferenceId", throwOnError: true);
                     }
