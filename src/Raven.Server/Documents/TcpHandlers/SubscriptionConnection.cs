@@ -227,6 +227,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
             Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
 
+            // update the state if above data changed
+            _subscriptionConnectionsState.Initialize(this, afterSubscribe: true);
+
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
                 SubscriptionState.SubscriptionName, SubscriptionState.MentorNode);
 
