@@ -172,10 +172,10 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 {
                     var engineEx = (V8EngineEx)engine;
                     _noPartition = engineEx.CreateObject();
-                    _noPartition.V8.FastAddProperty(PartitionKeys, engineEx.CreateNullValue(), false, true, false);
+                    _noPartition.V8.Item.FastAddProperty(PartitionKeys, engine.CreateNullValue(), false, true, false);
                 }
 
-                return _noPartition.V8.Item;
+                return _noPartition.V8.Item.Clone();
             }
             catch (Exception e) 
             {
