@@ -71,6 +71,9 @@ namespace Raven.Server.Documents.Sharding
 
             if (header.HasFlag(Headers.IfNoneMatch))
                 command.Headers["If-None-Match"] = GetStringFromHeaders("If-None-Match");
+
+            if (header.HasFlag(Headers.Sharded))
+                command.Headers[Constants.Headers.Sharded] = "true";
         }
 
         public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)

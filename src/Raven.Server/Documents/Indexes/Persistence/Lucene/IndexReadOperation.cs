@@ -3,7 +3,6 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Lucene.Net.Index;
@@ -21,7 +20,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Highlightings;
 using Raven.Server.Documents.Indexes.Static.Spatial;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Explanation;
@@ -37,14 +35,13 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public sealed class IndexReadOperation : IndexOperationBase
+    public sealed partial class IndexReadOperation : IndexOperationBase
     {
         private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
 
@@ -240,23 +237,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     }
                                 }
 
-                                // * for sharded queries, we'll send the order by fields separately
-                                // * for a map-reduce index it's fields are the ones that are used for sorting
-                                if (_index.DocumentDatabase.IsSharded && query.Metadata.OrderBy?.Length > 0 && _indexType.IsMapReduce() == false)
-                                {
-                                    var documentWithOrderByFields = DocumentWithOrderByFields.From(d);
-
-                                    foreach (var field in query.Metadata.OrderBy)
-                                    {
-                                        // https://issues.hibernatingrhinos.com/issue/RavenDB-17888
-                                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "make it work without storing the fields in the index");
-
-                                        var fieldValue = document.GetField(field.Name.Value).StringValue(_state);
-                                        documentWithOrderByFields.AddOrderByField(field.Name.Value, fieldValue);
-                                    }
-
-                                    d = documentWithOrderByFields;
-                                }
+                                AddOrderByFields(query, document, ref d);
 
                                 return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
                             }
@@ -359,6 +340,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             return results;
         }
+
+        partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, ref Document d);
 
         private void SetupHighlighter(IndexQueryServerSide query, Query luceneQuery, JsonOperationContext context)
         {

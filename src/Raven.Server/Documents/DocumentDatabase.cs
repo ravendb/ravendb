@@ -48,7 +48,6 @@ using Sparrow.Json.Sync;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
-using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -57,7 +56,6 @@ using Voron.Exceptions;
 using Voron.Impl.Backup;
 using Constants = Raven.Client.Constants;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
-using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents
@@ -121,8 +119,7 @@ namespace Raven.Server.Documents
                     throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
 
                 var databaseName = Name;
-                ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName);
-                IsSharded = _serverStore.DatabasesLandlord.IsShardedDatabase(databaseName);
+                IsSharded = ShardHelper.TryGetShardIndexAndDatabaseName(ref databaseName) != -1;
 
                 if (Configuration.Core.RunInMemory == false)
                 {
