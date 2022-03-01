@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +12,7 @@ namespace Raven.Server.Documents
         public IEnumerable<DynamicJsonValue> TimeSeries;
         public string Key;
     }
+
     public class Document : IDisposable
     {
         public static readonly Document ExplicitNull = new Document();
@@ -36,8 +36,6 @@ namespace Raven.Server.Documents
 
         private bool _metadataEnsured;
         private bool _disposed;
-
-        public List<(string Field, string Value)> OrderByFields;
 
         public unsafe ulong DataHash
         {
@@ -95,12 +93,6 @@ namespace Raven.Server.Documents
         {
             _metadataEnsured = false;
             Data.Modifications = null;
-        }
-
-        public void AddOrderByField(string fieldName, string value)
-        {
-            OrderByFields ??= new List<(string Field, string Value)>();
-            OrderByFields.Add((fieldName, value));
         }
 
         public Document Clone(JsonOperationContext context)

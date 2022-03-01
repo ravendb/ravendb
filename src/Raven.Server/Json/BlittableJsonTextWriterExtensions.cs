@@ -1991,7 +1991,7 @@ namespace Raven.Server.Json
                 writer.WriteDateTime(document.LastModified, isUtc: true);
             }
 
-            if (document.OrderByFields != null)
+            if (document is DocumentWithOrderByFields documentForQuery && documentForQuery.OrderByFields != null)
             {
                 writer.WriteComma();
 
@@ -1999,7 +1999,7 @@ namespace Raven.Server.Json
                 writer.WriteStartObject();
 
                 var firstOrderByField = true;
-                foreach (var orderByField in document.OrderByFields)
+                foreach (var orderByField in documentForQuery.OrderByFields)
                 {
                     if (firstOrderByField == false)
                         writer.WriteComma();

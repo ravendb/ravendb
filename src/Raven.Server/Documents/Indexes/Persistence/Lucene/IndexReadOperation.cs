@@ -37,6 +37,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
@@ -243,13 +244,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 // * for a map-reduce index it's fields are the ones that are used for sorting
                                 if (_index.DocumentDatabase.IsSharded && query.Metadata.OrderBy?.Length > 0 && _indexType.IsMapReduce() == false)
                                 {
+                                    var documentWithOrderByFields = DocumentWithOrderByFields.From(d);
+
                                     foreach (var field in query.Metadata.OrderBy)
                                     {
-                                        // TODO: make it work without storing the fields in the index
                                         // https://issues.hibernatingrhinos.com/issue/RavenDB-17888
+                                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "make it work without storing the fields in the index");
+
                                         var fieldValue = document.GetField(field.Name.Value).StringValue(_state);
-                                        d.AddOrderByField(field.Name.Value, fieldValue);
+                                        documentWithOrderByFields.AddOrderByField(field.Name.Value, fieldValue);
                                     }
+
+                                    d = documentWithOrderByFields;
                                 }
 
                                 return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };

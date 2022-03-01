@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.Queries
 
                 using (closeServerTransaction)
                 {
-                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext,serverStore, databaseName,  Metadata);
+                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata);
 
                     idsRetriever.Visit(Metadata.Query.Where, QueryParameters);
 
