@@ -35,7 +35,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory64Bit]
+        [NightlyBuildMultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(10_000)]
         [InlineData(100_000)]
         public void StressPutLotOfAttachments(int count)
@@ -46,7 +46,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory32Bit]
+        [NightlyBuildMultiplatformTheory(RavenArchitecture.AllX86)]
         [InlineData(10_000)]
         public void StressPutLotOfAttachments32(int count)
         {
@@ -56,7 +56,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory64Bit]
+        [NightlyBuildMultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(10_000)]
         [InlineData(100_000)]
         public async Task StressPutLotOfAttachmentsAsync(int count)
@@ -67,7 +67,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory32Bit]
+        [NightlyBuildMultiplatformTheory(RavenArchitecture.AllX86)]
         [InlineData(10_000)]
         public async Task StressPutLotOfAttachmentsAsync32(int count)
         {
