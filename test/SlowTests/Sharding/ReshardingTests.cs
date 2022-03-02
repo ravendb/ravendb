@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests.Sharding;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Xunit;
@@ -125,6 +126,56 @@ namespace SlowTests.Sharding
                     var user = await session.LoadAsync<BasicSharding.User>(id);
                     Assert.Equal("Original shard", user.Name);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetShardedDatabaseStats()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var id = $"foo/bar/{i}";
+                        var user = new BasicSharding.User
+                        {
+                            Name = "Original shard"
+                        };
+                        await session.StoreAsync(user, id);
+                        await session.SaveChangesAsync();
+
+                        var baseline = DateTime.Today;
+                        var ts = session.TimeSeriesFor(id, "HeartRates");
+                        var cf = session.CountersFor(id);
+                        for (var j = 0; j < 20; j++)
+                        {
+                            ts.Append(baseline.AddMinutes(j), j, "watches/apple");
+                            cf.Increment("Likes", j);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                var databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.NotNull(databaseStatistics);
+                Assert.Equal(10, databaseStatistics.CountOfDocuments);
+                Assert.Equal(10, databaseStatistics.CountOfCounterEntries);
+                Assert.Equal(10, databaseStatistics.CountOfTimeSeriesSegments);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete("foo/bar/0");
+                    await session.SaveChangesAsync();
+                }
+
+                databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                Assert.Equal(9, databaseStatistics.CountOfDocuments);
+                Assert.Equal(1, databaseStatistics.CountOfTombstones);
             }
         }
     }

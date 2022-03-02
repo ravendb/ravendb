@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -18,6 +19,8 @@ namespace Raven.Server.Documents.ShardedHandlers
             var op = new ShardedStatsOperation();
 
             var statistics = await ShardExecutor.ExecuteParallelForAllAsync(op);
+            statistics.Indexes = GetDatabaseIndexesFromRecord();
+            statistics.CountOfIndexes = statistics.Indexes.Length;
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -28,6 +31,33 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
+        private IndexInformation[] GetDatabaseIndexesFromRecord()
+        {
+            var record = ShardedContext.DatabaseRecord;
+            var indexes = record.Indexes;
+            var indexInformation = new IndexInformation[indexes.Count];
+
+            int i = 0;
+            foreach (var key in indexes.Keys)
+            {
+                var index = indexes[key];
+
+                indexInformation[i] = new IndexInformation
+                {
+                    State = index.State ?? IndexState.Error,
+                    Name = index.Name,
+                    LockMode = index.LockMode ?? IndexLockMode.LockedError,
+                    Priority = index.Priority ?? new IndexPriority(),
+                    Type = index.Type,
+                    SourceType = index.SourceType
+                };
+
+                i++;
+            }
+
+            return indexInformation;
+        }
+
         private readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
         {
             public DatabaseStatistics Combine(Memory<DatabaseStatistics> results)
@@ -36,7 +66,6 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 var combined = new DatabaseStatistics
                 {
-                    CountOfIndexes = -1,
                     DatabaseChangeVector = null,
                     DatabaseId = null,
                     Indexes = Array.Empty<IndexInformation>()
@@ -57,9 +86,6 @@ namespace Raven.Server.Documents.ShardedHandlers
                     combined.CountOfTombstones += result.CountOfTombstones;
                     totalSizeOnDisk += result.SizeOnDisk.SizeInBytes;
                     totalTempBuffersSizeOnDisk += result.TempBuffersSizeOnDisk.SizeInBytes;
-
-                    if (combined.CountOfIndexes == -1)
-                        combined.CountOfIndexes = result.CountOfIndexes;
                 }
 
                 combined.SizeOnDisk = new Size(totalSizeOnDisk);
@@ -68,7 +94,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 return combined;
             }
 
-            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(null, null);
+            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
         }
     }
 
