@@ -1,4 +1,6 @@
 ﻿using System;
+using Sparrow.Server;
+using Voron;
 
 namespace Corax
 {
@@ -13,6 +15,23 @@ namespace Corax
         {
             public const int TakeAll = -1;
             public const int NonAnalyzer = -1;
+        }
+
+        public static class IndexWriter
+        {
+            public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
+
+            static IndexWriter()
+            {
+                using (StorageEnvironment.GetStaticContext(out var ctx))
+                {
+                    Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
+                    Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
+                    Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
+                    Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
+                    Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
+                }
+            }
         }
 
         public static class StorageMask
@@ -44,8 +63,8 @@ namespace Corax
         {
             public const int DefaultNGramSize = 4;
 
-            public const float JaroWinklerThreshold = 0.7f;
-            
+            public const float DefaultAccuracy = 0.7f;
+
             public enum Algorithm
             {
                 NGram,

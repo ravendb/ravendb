@@ -70,7 +70,7 @@ public partial class IndexSearcher
     public MultiTermMatch InQuery(string field, List<string> inTerms)
     {
         // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
-        var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
@@ -111,7 +111,7 @@ public partial class IndexSearcher
     public MultiTermMatch InQuery<TScoreFunction>(string field, List<string> inTerms, TScoreFunction scoreFunction)
         where TScoreFunction : IQueryScoreFunction
     {
-        var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);
@@ -162,7 +162,7 @@ public partial class IndexSearcher
         where TTermProvider : ITermProvider
     {
         // TODO: The IEnumerable<string> will die eventually, this is for prototyping only. 
-        var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         var terms = fields.CompactTreeFor(field);
         if (terms == null)
             return MultiTermMatch.CreateEmpty(_transaction.Allocator);

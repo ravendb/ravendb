@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Voron;
 
-namespace Corax.Queries
+namespace Sparrow.Server.Strings
 {
     public interface IStringDistance
     {
-        float GetDistance(Slice target, Slice other);
+        float GetDistance(ReadOnlySpan<byte> target, ReadOnlySpan<byte> other);
     }
 }

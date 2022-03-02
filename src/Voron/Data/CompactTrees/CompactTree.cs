@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
@@ -67,13 +67,6 @@ namespace Voron.Data.CompactTrees
             public readonly ReadOnlySpan<byte> Key;
             public readonly ReadOnlySpan<byte> Encoded;
             public readonly long Dictionary;
-
-            private EncodedKey(ByteString key, ByteString encodedKey, long dictionary)
-            {
-                Key = key.ToReadOnlySpan();
-                Encoded = encodedKey.ToReadOnlySpan();
-                Dictionary = dictionary;
-            }
 
             private EncodedKey(ReadOnlySpan<byte> key, ReadOnlySpan<byte> encodedKey, long dictionary)
             {
@@ -1134,8 +1127,11 @@ namespace Voron.Data.CompactTrees
             EncodedKey encodedKey = EncodedKey.From(key, tree, ((CompactPageHeader*)page.Pointer)->DictionaryId);
 
             tree.Llt.Allocator.Allocate(encodedKey.Key.Length, out var output);
+            
             encodedKey.Key.CopyTo(output.ToSpan());
-            key = output.ToSpan();
+
+            var outputSpan = output.ToSpan();
+            key = output[^1] == 0 ? outputSpan : outputSpan.Slice(0, outputSpan.Length - 1);
             return result;
         }
 
@@ -1148,7 +1144,7 @@ namespace Voron.Data.CompactTrees
         }
 
         private void SearchInCurrentPage(in EncodedKey key, ref CursorState state)
-        {            
+        {
             // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
             // It is the responsibility of the caller to ensure that is the case. 
             Debug.Assert(key.Dictionary == state.Header->DictionaryId);
@@ -1187,6 +1183,129 @@ namespace Voron.Data.CompactTrees
             if (match > 0)
                 mid++;
             state.LastSearchPosition = ~mid;
+        }
+
+        private static int DictionaryOrder(ReadOnlySpan<byte> s1, ReadOnlySpan<byte> s2)
+        {
+            // Bed - Tree: An All-Purpose Index Structure for String Similarity Search Based on Edit Distance
+            // https://event.cwi.nl/SIGMOD-RWE/2010/12-16bf4c/paper.pdf
+
+            //  Intuitively, such a sorting counts the total number of strings with length smaller than |s|
+            //  plus the number of string with length equal to |s| preceding s in dictionary order.
+
+            int len1 = s1.Length;
+            int len2 = s2.Length;
+
+            if (len1 == 0 && len2 == 0)
+                return 0;
+
+            if (len1 == 0)
+                return -1;
+
+            if (len2 == 0)
+                return 1;
+
+            //  Given two strings si and sj, it is sufficient to find the most significant position p where the two string differ
+            int minLength = len1 < len2 ? len1 : len2;
+
+            // If π(si[p]) < π(sj[p]), we can assert that si precedes sj in dictionary order φd, and viceversa.
+            int i;
+            for (i = 0; i < minLength; i++)
+            {
+                if (s1[i] < s2[i])
+                    return -1;
+                else if (s2[i] < s1[i])
+                    return 1;
+            }
+
+            if (len1 < len2)
+                return -1;
+
+            return 1;
+        }
+
+        private void FuzzySearchInCurrentPage(in EncodedKey key, ref CursorState state)
+        {
+            // Ensure that the key has already been 'updated' this is internal and shouldn't check explicitly that.
+            // It is the responsibility of the caller to ensure that is the case. 
+            Debug.Assert(key.Dictionary == state.Header->DictionaryId);
+
+            var encodedKey = key.Encoded;
+
+            int high = state.Header->NumberOfEntries - 1, low = 0;
+            int match = -1;
+            int mid = 0;
+            while (low <= high)
+            {
+                mid = (high + low) / 2;
+                var cur = GetEncodedKey(state.Page, state.EntriesOffsets[mid]);
+
+                match = DictionaryOrder(key.Key, cur);
+
+                if (match == 0)
+                {
+                    state.LastMatch = 0;
+                    state.LastSearchPosition = mid;
+                    return;
+                }
+
+                if (match > 0)
+                {
+                    low = mid + 1;
+                    match = 1;
+                }
+                else
+                {
+                    high = mid - 1;
+                    match = -1;
+                }
+            }
+            state.LastMatch = match > 0 ? 1 : -1;
+            if (match > 0)
+                mid++;
+            state.LastSearchPosition = ~mid;
+        }
+
+        private EncodedKey FuzzySearchPageAndPushNext(in EncodedKey key, ref IteratorCursorState cstate)
+        {
+            FuzzySearchInCurrentPage(key, ref cstate._stk[cstate._pos]);
+
+            ref var state = ref cstate._stk[cstate._pos];
+            if (state.LastSearchPosition < 0)
+                state.LastSearchPosition = ~state.LastSearchPosition;
+            if (state.LastMatch != 0 && state.LastSearchPosition > 0)
+                state.LastSearchPosition--; // went too far
+
+            int actualPos = Math.Min(state.Header->NumberOfEntries - 1, state.LastSearchPosition);
+            var nextPage = GetValue(ref state, actualPos);
+
+            PushPage(nextPage, ref cstate);
+
+            return EncodedKey.Get(key, this, cstate._stk[cstate._pos].Header->DictionaryId);
+        }
+
+        private EncodedKey FuzzyFindPageFor(ReadOnlySpan<byte> key, ref IteratorCursorState cstate)
+        {
+            // Algorithm 2: Find Node
+
+            cstate._pos = -1;
+            cstate._len = 0;
+            PushPage(_state.RootPage, ref cstate);
+
+            ref var state = ref cstate._stk[cstate._pos];
+            var encodedKey = EncodedKey.Get(key, this, state.Header->DictionaryId);
+
+            while (state.Header->PageFlags.HasFlag(CompactPageFlags.Branch))
+            {
+                encodedKey = FuzzySearchPageAndPushNext(encodedKey, ref cstate);
+                state = ref cstate._stk[cstate._pos];
+            }
+                        
+            // if N is the leaf node then
+            //    Return N
+            state.LastMatch = 1;
+            state.LastSearchPosition = 0;       
+            return encodedKey;
         }
     }
 }

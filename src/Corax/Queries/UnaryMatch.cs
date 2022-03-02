@@ -126,11 +126,10 @@ namespace Corax.Queries
                     { "FieldId", $"{_fieldId}" },
                     { "Value", GetValue()},
                     { "AuxValue", GetAuxValue()}
-
                 });
         }
 
-        public string GetValue()
+        private string GetValue()
         {
             return ((object)_value) switch
             {
@@ -140,7 +139,7 @@ namespace Corax.Queries
                 _ => "Unknown type of value"
             };
         }
-        public string GetAuxValue()
+        private string GetAuxValue()
         {
             return ((object)_value) switch
             {
