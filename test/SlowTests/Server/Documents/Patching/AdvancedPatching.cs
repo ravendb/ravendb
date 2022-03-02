@@ -684,6 +684,32 @@ this.Value = another.Value;
         }
 
         [Fact]
+        public async Task CanSkipBeyondCountForLargeIterator()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new CustomType { Id = "Items/1", Value = 10, Comments = new List<string>(Enumerable.Range(0, 100).Select(i=>i.ToString()) )});
+                    await session.SaveChangesAsync();
+                }
+
+                await store.Operations.SendAsync(new PatchOperation("Items/1", null, new PatchRequest
+                {
+                    Script = @"this.Comments.map(function(comment){
+                                     put('Comments/' + comment, { 'Comment':comment });
+                                 })",
+                }));
+
+                using (var commands = store.Commands())
+                {
+                    var docs = await commands.GetAsync(101, 10);
+                    Assert.Equal(0, docs.Count());
+                }
+            }
+        }
+
+        [Fact]
         public async Task CreateDocumentWillNotThrowIfEmptyKeyProvided()
         {
             using (var store = GetDocumentStore())
