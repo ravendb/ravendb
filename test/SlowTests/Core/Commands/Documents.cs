@@ -116,6 +116,38 @@ namespace SlowTests.Core.Commands
         }
 
         [Fact]
+        public async Task CanSkipBeyondCountForEmbeddedIterator()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var commands = store.Commands())
+                {
+                    var putResult = await commands.PutAsync(
+                        "companies/1",
+                        null,
+                        new Company
+                        {
+                            Name = "testname",
+                            Phone = 1,
+                            Contacts = new List<Contact> { new Contact { }, new Contact { } },
+                            Address1 = "To be removed.",
+                            Address2 = "Address2"
+                        },
+                        new Dictionary<string, object>
+                        {
+                            {"SomeMetadataKey", "SomeMetadataValue"}
+                        });
+
+                    await commands.PutAsync("users/2", null, new User { Name = "testname2" }, null);
+                    
+                    var documents = await commands.GetAsync(10, 25);
+                    Assert.Equal(0, documents.Count());
+
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanDeleteAndUpdateDocumentByIndex()
         {
             using (var store = GetDocumentStore())

@@ -1242,6 +1242,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case ITombstoneAware.TombstoneType.TimeSeries:
                     result.Add(Constants.TimeSeries.All, minLastEtag);
                     break;
+                case ITombstoneAware.TombstoneType.Counters:
+                    result.Add(Constants.Counters.All, minLastEtag);
+                    break;
                 default:
                     throw new NotSupportedException($"Tombstone type '{tombstoneType}' is not supported.");
             }

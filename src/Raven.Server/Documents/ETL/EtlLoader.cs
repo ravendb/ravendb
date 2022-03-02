@@ -719,6 +719,11 @@ namespace Raven.Server.Documents.ETL
                 foreach (var config in ravenEtls)
                     MarkTimeSeriesTombstonesForDeletion(config, lastProcessedTombstones);
             }
+            else if (tombstoneType == ITombstoneAware.TombstoneType.Counters)
+            {
+                foreach (var config in ravenEtls)
+                    MarkCounterTombstonesForDeletion(config, lastProcessedTombstones);
+            }
             else
             {
                 var sqlEtls = _databaseRecord.SqlEtls;
@@ -769,6 +774,17 @@ namespace Raven.Server.Documents.ETL
                 var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
 
                 AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
+            }
+        }
+
+        private void MarkCounterTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        {
+            foreach (var transform in config.Transforms)
+            {
+                var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
+                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+
+                AddOrUpdate(lastProcessedTombstones, Constants.Counters.All, etag);
             }
         }
 
