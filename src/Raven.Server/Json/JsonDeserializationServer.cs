@@ -25,6 +25,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
+using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
@@ -34,6 +35,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Studio;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
@@ -48,8 +50,6 @@ using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
-using Raven.Server.Documents.ETL.Providers.OLAP.Test;
-using Raven.Server.Documents.Sharding;
 
 namespace Raven.Server.Json
 {
@@ -216,10 +216,12 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, WaitForCommandsRequest> WaitForRaftCommands = GenerateJsonDeserializationRoutine<WaitForCommandsRequest>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, GetIndexErrorsCountCommand.IndexErrorsCount> IndexErrorsCount = GenerateJsonDeserializationRoutine<GetIndexErrorsCountCommand.IndexErrorsCount>();
 
         internal static readonly Func<BlittableJsonReaderObject, IndexesProgress> IndexesProgress = GenerateJsonDeserializationRoutine<IndexesProgress>();
+
+        public static readonly Func<BlittableJsonReaderObject, LastChangeVectorForCollectionResult> LastChangeVectorForCollectionResult = GenerateJsonDeserializationRoutine<LastChangeVectorForCollectionResult>();
 
         public class Parameters
         {

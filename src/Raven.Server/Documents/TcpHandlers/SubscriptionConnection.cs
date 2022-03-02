@@ -56,7 +56,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
     public class SubscriptionConnection : SubscriptionConnectionBase, IDisposable
     {
-        private const int WaitForChangedDocumentsTimeoutInMs = 3000;
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
         private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
@@ -126,7 +125,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task InitAsync()
         {
-            Shard = TcpConnection.DocumentDatabase.Parent == null 
+            Shard = TcpConnection.DocumentDatabase.ShardedDatabaseName == null 
                 ? null 
                 : new ShardData { ShardName = TcpConnection.DocumentDatabase.Name, DatabaseId = TcpConnection.DocumentDatabase.DbBase64Id };
 
@@ -205,7 +204,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         var timeout = TimeSpan.FromMilliseconds(Math.Max(250, (long)_options.TimeToWaitBeforeConnectionRetry.TotalMilliseconds / 2) + random.Next(15, 50));
                         await Task.Delay(timeout);
-                        await SendHeartBeat(
+                        await SendHeartBeatAsync(
                             $"A connection from IP {TcpConnection.TcpClient.Client.RemoteEndPoint} is waiting for Subscription Task that is serving a connection from IP " +
                             $"{_subscriptionConnectionsState.GetConnectionsAsString()} to be released");
                     }
@@ -246,7 +245,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        internal static async Task FlushBufferToNetwork(MemoryStream buffer, TcpConnectionOptions tcpConnection, CancellationToken token = default)
+        internal static async Task FlushBufferToNetworkAsync(MemoryStream buffer, TcpConnectionOptions tcpConnection, CancellationToken token = default)
         {
             buffer.TryGetBuffer(out ArraySegment<byte> bytes);
             await tcpConnection.Stream.WriteAsync(bytes.Array, bytes.Offset, bytes.Count, token);
@@ -296,15 +295,15 @@ namespace Raven.Server.Documents.TcpHandlers
                 catch (SubscriptionChangeVectorUpdateConcurrencyException e)
                 {
                     _subscriptionConnectionsState.DropSubscription(e);
-                    await ReportException(SubscriptionError.Error, e);
+                    await ReportExceptionAsync(SubscriptionError.Error, e);
                 }
                 catch (SubscriptionInUseException e)
                 {
-                    await ReportException(SubscriptionError.ConnectionRejected, e);
+                    await ReportExceptionAsync(SubscriptionError.ConnectionRejected, e);
                 }
                 catch (Exception e)
                 {
-                    await ReportException(SubscriptionError.Error, e);
+                    await ReportExceptionAsync(SubscriptionError.Error, e);
                 }
                 finally
                 {
@@ -360,7 +359,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_processor = SubscriptionProcessor.Create(this))
             {
-                var replyFromClientTask = GetReplyFromClientAsync();
+                var replyFromClientTask = GetReplyFromClientInternalAsync();
 
                 _processor.AddScript(SetupFilterAndProjectionScript());
 
@@ -395,7 +394,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                     UpdateBatchPerformanceStats(0, false);
 
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                        await SendHeartBeat("Didn't find any documents to send and more then 1000ms passed");
+                                        await SendHeartBeatAsync("Didn't find any documents to send and more then 1000ms passed");
 
                                     using (docsContext.OpenReadTransaction())
                                     {
@@ -408,14 +407,14 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     AssertCloseWhenNoDocsLeft();
 
-                                    if (await WaitForChangedDocs(replyFromClientTask))
+                                    if (await WaitForChangedDocsAsync(replyFromClientTask))
                                         continue;
                                 }
                             }
 
                             using (batchScope.For(SubscriptionOperationScope.BatchWaitForAcknowledge))
                             {
-                                replyFromClientTask = await WaitForClientAck(replyFromClientTask, sharded: false);
+                                replyFromClientTask = await WaitForClientAck(replyFromClientTask);
                             }
 
                             UpdateBatchPerformanceStats(batchScope.GetBatchSize());
@@ -524,7 +523,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                     {
-                                        await SendHeartBeat("Skipping docs for more than 1000ms without sending any data");
+                                        await SendHeartBeatAsync("Skipping docs for more than 1000ms without sending any data");
                                         sendingCurrentBatchStopwatch.Restart();
                                     }
 
@@ -555,7 +554,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 TcpConnection._lastEtagSent = -1;
                                 // perform flush for current batch after 1000ms of running or 1 MB
-                                if (await FlushBatchIfNeeded(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, CancellationTokenSource.Token))
+                                if (await FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, CancellationTokenSource.Token))
                                 {
                                     docsToFlush = 0;
                                     sendingCurrentBatchStopwatch.Restart();
@@ -633,7 +632,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Flushing sent docs to client"));
 
-                                await FlushDocsToClient(SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, true, CancellationTokenSource.Token);
+                                await FlushDocsToClientAsync(SubscriptionId, writer, _buffer, TcpConnection, Stats, _logger, docsToFlush, true, CancellationTokenSource.Token);
                             }
 
                             if (lastChangeVectorSentInThisBatch != null)
@@ -703,20 +702,20 @@ namespace Raven.Server.Documents.TcpHandlers
             writer.WriteString(nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch));
             writer.WriteEndObject();
         }
-        internal static async Task<bool> FlushBatchIfNeeded(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int docsToFlush, CancellationToken token = default)
+        internal static async Task<bool> FlushBatchIfNeededAsync(Stopwatch sendingCurrentBatchStopwatch, long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int docsToFlush, CancellationToken token = default)
         {
             // perform flush for current batch after 1000ms of running or 1 MB
             if (buffer.Length < Constants.Size.Megabyte && sendingCurrentBatchStopwatch.ElapsedMilliseconds < 1000)
                 return false;
 
-            await FlushDocsToClient(subscriptionId, writer, buffer, tcpConnection, stats, logger, docsToFlush, endOfBatch: false, token: token);
+            await FlushDocsToClientAsync(subscriptionId, writer, buffer, tcpConnection, stats, logger, docsToFlush, endOfBatch: false, token: token);
             if (logger.IsInfoEnabled)
             {
                 logger.Info($"Finished flushing a batch with {docsToFlush} documents for subscription {subscriptionId}");
             }
             return true;
         }
-        internal static async Task FlushDocsToClient(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int flushedDocs, bool endOfBatch = false, CancellationToken token = default)
+        internal static async Task FlushDocsToClientAsync(long subscriptionId, AsyncBlittableJsonTextWriter writer, MemoryStream buffer, TcpConnectionOptions tcpConnection, SubscriptionConnectionStats stats, Logger logger, int flushedDocs, bool endOfBatch = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
 
@@ -725,7 +724,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             await writer.FlushAsync(token);
             var bufferSize = buffer.Length;
-            await FlushBufferToNetwork(buffer, tcpConnection, token);
+            await FlushBufferToNetworkAsync(buffer, tcpConnection, token);
 
             tcpConnection.RegisterBytesSent(bufferSize);
 
@@ -737,7 +736,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task<bool> WaitForChangedDocs(Task pendingReply)
+        private async Task<bool> WaitForChangedDocsAsync(Task pendingReply)
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Start waiting for changed documents"));
             do
@@ -761,7 +760,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     return true;
                 }
 
-                await SendHeartBeat("Waiting for changed documents");
+                await SendHeartBeatAsync("Waiting for changed documents");
                 await SendNoopAck();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
@@ -778,7 +777,7 @@ namespace Raven.Server.Documents.TcpHandlers
             return patch;
         }
 
-        public new void Dispose()
+        public override void Dispose()
         {
             if (_isDisposed)
                 return;
@@ -1082,7 +1081,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _lastBatchesStats.TryDequeue(out batchStats);
         }
 
-        protected override async Task ReportException(SubscriptionError error, Exception e)
+        protected override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
             _connectionScope.RecordException(error, e.ToString());
             if (ConnectionException == null && e is SubscriptionException se)
@@ -1092,7 +1091,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                await LogExceptionAndReportToClient(ConnectionException ?? e);
+                await LogExceptionAndReportToClientAsync(ConnectionException ?? e);
             }
             catch (Exception)
             {
@@ -1100,7 +1099,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        protected override async Task OnClientAck()
+        protected override async Task OnClientAckAsync()
         {
             await _processor.AcknowledgeBatch(CurrentBatchId);
 
@@ -1110,6 +1109,17 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
             });
+        }
+
+        protected override Task SendNoopAck()
+        {
+            return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Shard, SubscriptionId, Options.SubscriptionName,
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), NonExistentBatch, docsToResend: null);
+        }
+
+        internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
+        {
+            return GetReplyFromClientInternalAsync();
         }
     }
 

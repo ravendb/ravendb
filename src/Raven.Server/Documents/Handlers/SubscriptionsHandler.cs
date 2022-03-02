@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var mentor = options.MentorNode;
-            (long subscriptionId, long index) = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor);
+            (long index, long subscriptionId) = await Database.SubscriptionStorage.PutSubscription(options, GetRaftRequestIdFromQuery(), id, disabled, mentor);
 
             var name = options.Name ?? subscriptionId.ToString();
 
@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Handlers
                 context.Write(writer, new DynamicJsonValue
                 {
                     [nameof(CreateSubscriptionResult.Name)] = name,
-                    [nameof(CreateSubscriptionResult.RaftIndex)] = index
+                    [nameof(CreateSubscriptionResult.RaftCommandIndex)] = index
                 });
             }
         }

@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -92,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/collections/last-change-vector", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetLastDocumentChangeVectorForCollection()
         {
-            var collection = GetStringQueryString("collection");
+            var collection = GetStringQueryString("name");
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -100,9 +101,9 @@ namespace Raven.Server.Documents.Handlers
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Collection");
+                    writer.WritePropertyName(nameof(LastChangeVectorForCollectionResult.Collection));
                     writer.WriteString(collection);
-                    writer.WritePropertyName("LastChangeVector");
+                    writer.WritePropertyName(nameof(LastChangeVectorForCollectionResult.LastChangeVector));
                     writer.WriteString(result);
                     writer.WriteEndObject();
                 }

@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (processDocuments == null)
                 throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (null, processDocuments);
-            return RunInternal(ct);
+            return RunInternalAsync(ct);
         }
 
         public Task Run(Func<SubscriptionBatch<T>, Task> processDocuments, CancellationToken ct = default)
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Subscriptions
             if (processDocuments == null)
                 throw new ArgumentNullException(nameof(processDocuments));
             _subscriber = (processDocuments, null);
-            return RunInternal(ct);
+            return RunInternalAsync(ct);
         }
 
         internal override RequestExecutor GetRequestExecutor()
@@ -60,25 +60,16 @@ namespace Raven.Client.Documents.Subscriptions
             return _store.GetRequestExecutor(_dbName);
         }
 
-        internal override void GetLocalRequestExecutor(string url, X509Certificate2 cert)
+        internal override void SetLocalRequestExecutor(string url, X509Certificate2 cert)
         {
-            _subscriptionLocalRequestExecutor?.Dispose();
-            _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _dbName, cert, _store.Conventions);
-            _store.RegisterEvents(_subscriptionLocalRequestExecutor);
+            using (var old = _subscriptionLocalRequestExecutor)
+            {
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _dbName, cert, _store.Conventions);
+                _store.RegisterEvents(_subscriptionLocalRequestExecutor);
+            }
         }
 
-        internal override bool ShouldUseCompression()
-        {
-            bool compressionSupport = false;
-#if NETCOREAPP3_1_OR_GREATER
-            var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
-            if (version >= 53_000 && (_store.Conventions.DisableTcpCompression == false))
-                compressionSupport = true;
-#endif
-            return compressionSupport;
-        }
-
-        internal override async Task ProcessSubscriptionInternal(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
+        internal override async Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer, JsonOperationContext context)
         {
             Task notifiedSubscriber = Task.CompletedTask;
 
@@ -87,7 +78,7 @@ namespace Raven.Client.Documents.Subscriptions
             while (_processingCts.IsCancellationRequested == false)
             {
                 // start reading next batch from server on 1'st thread (can be before client started processing)
-                var readFromServer = ReadSingleSubscriptionBatchFromServer(contextPool, tcpStreamCopy, buffer, batch);
+                var readFromServer = ReadSingleSubscriptionBatchFromServerAsync(contextPool, tcpStreamCopy, buffer, batch);
                 try
                 {
                     // wait for the subscriber to complete processing on 2'nd thread

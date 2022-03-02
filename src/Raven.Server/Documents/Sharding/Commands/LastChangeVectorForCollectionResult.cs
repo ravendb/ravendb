@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.Documents.Commands;
+﻿namespace Raven.Server.Documents.Sharding.Commands;
 
 public class LastChangeVectorForCollectionResult
 {

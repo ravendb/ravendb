@@ -140,7 +140,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal Task RunInternal(CancellationToken ct)
+        internal Task RunInternalAsync(CancellationToken ct)
         {
             if (_subscriptionTask != null)
                 throw new InvalidOperationException("The subscription is already running");
@@ -164,12 +164,22 @@ namespace Raven.Client.Documents.Subscriptions
         internal int? SubscriptionTcpVersion;
 
         internal abstract RequestExecutor GetRequestExecutor();
-        internal abstract Task ProcessSubscriptionInternal(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
+        internal abstract Task ProcessSubscriptionInternalAsync(JsonContextPool contextPool, Stream tcpStreamCopy, JsonOperationContext.MemoryBuffer buffer,
             JsonOperationContext context);
-        internal abstract void GetLocalRequestExecutor(string url, X509Certificate2 cert);
-        internal abstract bool ShouldUseCompression();
+        internal abstract void SetLocalRequestExecutor(string url, X509Certificate2 cert);
 
-        internal async Task<Stream> ConnectToServer(CancellationToken token)
+        internal bool ShouldUseCompression()
+        {
+            bool compressionSupport = false;
+#if NETCOREAPP3_1_OR_GREATER
+            var version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion;
+            if (version >= 53_000 && (GetRequestExecutor().Conventions.DisableTcpCompression == false))
+                compressionSupport = true;
+#endif
+            return compressionSupport;
+        }
+
+        internal async Task<Stream> ConnectToServerAsync(CancellationToken token)
         {
             var command = new GetTcpInfoForRemoteTaskCommand("Subscription/" + _dbName, _dbName, _options?.SubscriptionName, verifyDatabase: true);
 
@@ -188,7 +198,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (ClientVersionMismatchException)
                     {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, _redirectNode, token).ConfigureAwait(false);
+                        tcpInfo = await LegacyTryGetTcpInfoAsync(requestExecutor, context, _redirectNode, token).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -211,7 +221,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (ClientVersionMismatchException)
                     {
-                        tcpInfo = await LegacyTryGetTcpInfo(requestExecutor, context, token).ConfigureAwait(false);
+                        tcpInfo = await LegacyTryGetTcpInfoAsync(requestExecutor, context, token).ConfigureAwait(false);
                     }
                 }
 
@@ -257,7 +267,7 @@ namespace Raven.Client.Documents.Subscriptions
                     await _stream.FlushAsync(token).ConfigureAwait(false);
                 }
 
-                GetLocalRequestExecutor(command.RequestedNode.Url, requestExecutor.Certificate);
+                SetLocalRequestExecutor(command.RequestedNode.Url, requestExecutor.Certificate);
 
                 return _stream;
             }
@@ -283,7 +293,7 @@ namespace Raven.Client.Documents.Subscriptions
             return await TcpNegotiation.NegotiateProtocolVersionAsync(context, stream, parameters).ConfigureAwait(false);
         }
 
-        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
+        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfoAsync(RequestExecutor requestExecutor, JsonOperationContext context, CancellationToken token)
         {
             var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
             try
@@ -300,7 +310,7 @@ namespace Raven.Client.Documents.Subscriptions
             return tcpCommand.Result;
         }
 
-        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfo(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
+        private async Task<TcpConnectionInfo> LegacyTryGetTcpInfoAsync(RequestExecutor requestExecutor, JsonOperationContext context, ServerNode node, CancellationToken token)
         {
             var tcpCommand = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
             try
@@ -461,7 +471,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-
         internal async Task ProcessSubscriptionAsync()
         {
             try
@@ -472,13 +481,13 @@ namespace Raven.Client.Documents.Subscriptions
 
                 using (contextPool.AllocateOperationContext(out JsonOperationContext context))
                 using (context.GetMemoryBuffer(out var buffer))
-                using (var tcpStream = await ConnectToServer(_processingCts.Token).ConfigureAwait(false))
+                using (var tcpStream = await ConnectToServerAsync(_processingCts.Token).ConfigureAwait(false))
                 {
                     _processingCts.Token.ThrowIfCancellationRequested();
                     var tcpStreamCopy = tcpStream;
                     using (contextPool.AllocateOperationContext(out JsonOperationContext handshakeContext))
                     {
-                        var connectionStatus = await ReadNextObject(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
+                        var connectionStatus = await ReadNextObjectAsync(handshakeContext, tcpStreamCopy, buffer).ConfigureAwait(false);
                         if (_processingCts.IsCancellationRequested)
                             return;
 
@@ -492,7 +501,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                     OnEstablishedSubscriptionConnection?.Invoke();
 
-                    await ProcessSubscriptionInternal(contextPool, tcpStreamCopy, buffer, context).ConfigureAwait(false);
+                    await ProcessSubscriptionInternalAsync(contextPool, tcpStreamCopy, buffer, context).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -505,7 +514,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        internal async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServer(JsonContextPool contextPool, Stream tcpStream,
+        internal async Task<BatchFromServer> ReadSingleSubscriptionBatchFromServerAsync(JsonContextPool contextPool, Stream tcpStream,
             JsonOperationContext.MemoryBuffer buffer, SubscriptionBatch<T> batch)
         {
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
@@ -518,7 +527,7 @@ namespace Raven.Client.Documents.Subscriptions
                 bool endOfBatch = false;
                 while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
                 {
-                    SubscriptionConnectionServerMessage receivedMessage = await ReadNextObject(context, tcpStream, buffer).ConfigureAwait(false);
+                    SubscriptionConnectionServerMessage receivedMessage = await ReadNextObjectAsync(context, tcpStream, buffer).ConfigureAwait(false);
                     if (receivedMessage == null || _processingCts.IsCancellationRequested)
                     {
                         break;
@@ -598,7 +607,7 @@ namespace Raven.Client.Documents.Subscriptions
             throw new InvalidOperationException($"Connection terminated by server. Exception: {receivedMessage.Exception ?? "None"}");
         }
 
-        internal async Task<SubscriptionConnectionServerMessage> ReadNextObject(JsonOperationContext context, Stream stream, JsonOperationContext.MemoryBuffer buffer)
+        internal async Task<SubscriptionConnectionServerMessage> ReadNextObjectAsync(JsonOperationContext context, Stream stream, JsonOperationContext.MemoryBuffer buffer)
         {
             if (_processingCts.IsCancellationRequested || _tcpClient.Connected == false)
                 return null;
@@ -748,6 +757,9 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (ex is AggregateException ae)
             {
+                if (ex is ShardingSubscriptionException)
+                    return (false, null);
+
                 foreach (var exception in ae.InnerExceptions)
                 {
                     if (CheckIfShouldReconnectWorker(exception, processingCts, assertLastConnectionFailure, onUnexpectedSubscriptionError).ShouldTryToReconnect)

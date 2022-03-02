@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 context.Write(writer, new DynamicJsonValue
                 {
                     [nameof(CreateSubscriptionResult.Name)] = name,
-                    [nameof(CreateSubscriptionResult.RaftIndex)] = index
+                    [nameof(CreateSubscriptionResult.RaftCommandIndex)] = index
                 });
             }
         }
