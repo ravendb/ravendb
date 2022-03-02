@@ -127,6 +127,8 @@ namespace Raven.Server.Documents.Patch.V8
             public TypeBinder? TypeBinderAttachmentNameObjectInstance;
             public TypeBinder? TypeBinderAttachmentObjectInstance;
             public TypeBinder? TypeBinderLazyNumberValue;
+            public TypeBinder? TypeBinderLazyStringValue;
+            public TypeBinder? TypeBinderLazyCompressedStringValue;
             public TypeBinder? TypeBinderRavenServer;
             public TypeBinder? TypeBinderDocumentDatabase;
             
@@ -179,6 +181,16 @@ namespace Raven.Server.Documents.Patch.V8
                 TypeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
                     => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
                 Engine.GlobalObject.SetProperty(typeof(LazyNumberValue));
+
+                TypeBinderLazyStringValue = Engine.RegisterType<LazyStringValue>(null, false);
+                TypeBinderLazyStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, LazyStringValue>((LazyStringValue)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(LazyStringValue));
+
+                TypeBinderLazyCompressedStringValue = Engine.RegisterType<LazyCompressedStringValue>(null, false);
+                TypeBinderLazyCompressedStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                    => tb.CreateObjectBinder<ObjectBinder, LazyCompressedStringValue>((LazyCompressedStringValue)obj, initializeBinder, keepAlive: true);
+                Engine.GlobalObject.SetProperty(typeof(LazyCompressedStringValue));
 
                 TypeBinderRavenServer = Engine.RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite);
                 TypeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
