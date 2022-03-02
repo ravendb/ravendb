@@ -33,6 +33,8 @@ public class MultiplatformFactAttribute : FactAttribute
     private readonly RavenPlatform _platform;
     private readonly RavenArchitecture _architecture;
 
+    private string _skip;
+
     static MultiplatformFactAttribute()
     {
         if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
@@ -55,7 +57,18 @@ public class MultiplatformFactAttribute : FactAttribute
         _architecture = architecture;
     }
 
-    public override string Skip => ShouldSkip(_platform, _architecture);
+    public override string Skip
+    {
+        get
+        {
+            var skip = _skip;
+            if (skip != null)
+                return skip;
+
+            return ShouldSkip(_platform, _architecture);
+        }
+        set => _skip = value;
+    }
 
     internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture)
     {
