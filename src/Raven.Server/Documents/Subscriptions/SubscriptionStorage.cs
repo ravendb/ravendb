@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
             _db = db;
-            _databaseName = db.Parent ?? db.Name;
+            _databaseName = db.ShardedDatabaseName ?? db.Name;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
 
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<(long SubscriptionId, long Index)> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
+        public async Task<(long Index, long SubscriptionId)> PutSubscription(SubscriptionCreationOptions options, string raftRequestId, long? subscriptionId = null, bool? disabled = false, string mentor = null)
         {
             var command = new PutSubscriptionCommand(_databaseName, options.Query, mentor, raftRequestId)
             {
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionId != null)
             {
                 // updated existing subscription
-                return (subscriptionId.Value, etag);
+                return (etag, subscriptionId.Value);
             }
             
             _db.SubscriptionStorage.RaiseNotificationForTaskAdded(options.Name);
@@ -108,13 +108,13 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task<long> RecordBatchRevisions(ShardData shardData, long subscriptionId, string subscriptionName, List<RevisionRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchRevisions(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string subscriptionName, List<RevisionRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(_databaseName, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
             return await RecordBatchInternal(shardData, command);
         }
 
-        public async Task<long> RecordBatchDocuments(ShardData shardData, long subscriptionId, string subscriptionName, List<DocumentRecord> list, List<string> deleted, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchDocuments(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string subscriptionName, List<DocumentRecord> list, List<string> deleted, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(_databaseName, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId())
             {
@@ -123,15 +123,15 @@ namespace Raven.Server.Documents.Subscriptions
             return await RecordBatchInternal(shardData, command);
         }
 
-        private async Task<long> RecordBatchInternal(ShardData shardData, RecordBatchSubscriptionDocumentsCommand command)
+        private async Task<long> RecordBatchInternal(SubscriptionConnectionBase.ShardData shardData, RecordBatchSubscriptionDocumentsCommand command)
         {
-            await PopulateShardDataIfNeeded(shardData, command);
+            PopulateShardDataIfNeeded(shardData, command);
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             return etag;
         }
 
-        public async Task AcknowledgeBatchProcessed(ShardData shardData, long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        public async Task AcknowledgeBatchProcessed(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_databaseName, RaftIdGenerator.NewId())
             {
@@ -145,13 +145,13 @@ namespace Raven.Server.Documents.Subscriptions
                 DocumentsToResend = docsToResend,
             };
 
-            await PopulateShardDataIfNeeded(shardData, command);
+            PopulateShardDataIfNeeded(shardData, command);
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public async Task UpdateClientConnectionTime(long id, string name, string database, ShardData shardData, string mentorNode = null)
+        public async Task UpdateClientConnectionTime(long id, string name, string database, SubscriptionConnectionBase.ShardData shardData, string mentorNode = null)
         {
             var command = new UpdateSubscriptionClientConnectionTime(database, RaftIdGenerator.NewId())
             {
@@ -161,12 +161,12 @@ namespace Raven.Server.Documents.Subscriptions
                 LastClientConnectionTime = DateTime.UtcNow,
             };
 
-            await PopulateShardDataIfNeeded(shardData, command);
+            PopulateShardDataIfNeeded(shardData, command);
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        private static async Task PopulateShardDataIfNeeded(ShardData shardData, UpdateValueForShardCommand command)
+        private static void PopulateShardDataIfNeeded(SubscriptionConnectionBase.ShardData shardData, UpdateValueForShardCommand command)
         {
             if (shardData == null)
                 return;
@@ -645,7 +645,6 @@ namespace Raven.Server.Documents.Subscriptions
                     if (subscriptionName == null)
                         continue;
 
-                    //var database = ShardHelper.IsShardedName(databaseRecord.DatabaseName) ? ShardHelper.ToDatabaseName(databaseRecord.DatabaseName) : databaseRecord.DatabaseName;
                     using var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, subscriptionName));
                     if (subscriptionBlittable == null)
                     {

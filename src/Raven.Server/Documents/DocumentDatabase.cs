@@ -107,7 +107,7 @@ namespace Raven.Server.Documents
             // check if sharded 
             string originalName = Name;
             var index = ShardHelper.TryGetShardIndexAndDatabaseName(ref originalName);
-            Parent = index != -1 ? originalName : null;
+            ShardedDatabaseName = index != -1 ? originalName : null;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents
 
         public SubscriptionStorage SubscriptionStorage { get; }
 
-        public string Parent { get; }
+        public string ShardedDatabaseName { get; }
         public string Name { get; }
 
         private class ShardProperties

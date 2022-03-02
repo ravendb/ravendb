@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Subscriptions
     {
         private static readonly byte[] Heartbeat = Encoding.UTF8.GetBytes("\r\n");
         public const long NonExistentBatch = -1;
+        public const int WaitForChangedDocumentsTimeoutInMs = 3000;
 
         protected readonly ServerStore _serverStore;
         private readonly IDisposable _tcpConnectionDisposable;
@@ -48,9 +49,10 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         public readonly string ClientUri;
 
-        protected abstract Task ReportException(SubscriptionError error, Exception e);
-        protected abstract Task OnClientAck();
-
+        protected abstract Task ReportExceptionAsync(SubscriptionError error, Exception e);
+        protected abstract Task OnClientAckAsync();
+        protected abstract Task SendNoopAck();
+        internal abstract Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync();
 
         protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer, IDisposable tcpConnectionDisposable,
             string database, CancellationTokenSource cts)
@@ -67,18 +69,17 @@ namespace Raven.Server.Documents.Subscriptions
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
         }
 
-
-        protected async Task LogExceptionAndReportToClient(Exception e)
+        protected async Task LogExceptionAndReportToClientAsync(Exception e)
         {
             var errorMessage = CreateStatusMessage(ConnectionStatus.Fail);
             AddToStatusDescription($"{errorMessage}. Sending response to client");
             if (_logger.IsOperationsEnabled)
                 _logger.Info(errorMessage, e);
 
-            await ReportExceptionToClient(e);
+            await ReportExceptionToClientAsync(e);
         }
 
-        protected async Task ReportExceptionToClient(Exception ex, int recursionDepth = 0)
+        protected async Task ReportExceptionToClientAsync(Exception ex, int recursionDepth = 0)
         {
             if (recursionDepth == 2)
                 return;
@@ -202,7 +203,7 @@ namespace Raven.Server.Documents.Subscriptions
                         });
                         break;
                     case RachisApplyException commandExecution when commandExecution.InnerException is SubscriptionException:
-                        await ReportExceptionToClient(commandExecution.InnerException, recursionDepth - 1);
+                        await ReportExceptionToClientAsync(commandExecution.InnerException, recursionDepth - 1);
                         break;
                     default:
                         AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Fail, $"Subscription error on subscription {ex}"));
@@ -234,7 +235,7 @@ namespace Raven.Server.Documents.Subscriptions
             Info
         }
 
-        public string CreateStatusMessage(ConnectionStatus status, string info = null)
+        protected string CreateStatusMessage(ConnectionStatus status, string info = null)
         {
             var dbNameStr = Shard == null ? $"for database '{Database}'" : $"for shard '{Shard.ShardName}'";
             dbNameStr = $"{dbNameStr} on '{_serverStore.NodeTag}'";
@@ -270,7 +271,7 @@ namespace Raven.Server.Documents.Subscriptions
             RecentSubscriptionStatuses.Enqueue(message);
         }
 
-        protected async Task ParseSubscriptionOptionsAsync()
+        public virtual async Task ParseSubscriptionOptionsAsync()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (BlittableJsonReaderObject subscriptionCommandOptions = await context.ParseToMemoryAsync(
@@ -313,7 +314,7 @@ namespace Raven.Server.Documents.Subscriptions
             TcpConnection.RegisterBytesSent(writtenBytes);
         }
 
-        internal async Task SendHeartBeat(string reason)
+        internal async Task SendHeartBeatAsync(string reason)
         {
             try
             {
@@ -333,7 +334,7 @@ namespace Raven.Server.Documents.Subscriptions
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
-        internal async Task<Task<SubscriptionConnectionClientMessage>> WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask, bool sharded)
+        internal async Task<Task<SubscriptionConnectionClientMessage>> WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask)
         {
             SubscriptionConnectionClientMessage clientReply;
             while (true)
@@ -350,15 +351,12 @@ namespace Raven.Server.Documents.Subscriptions
                         break;
                     }
 
-                    replyFromClientTask = sharded ? null : GetReplyFromClientAsync();
+                    replyFromClientTask = GetReplyFromClientAsync();
                     break;
                 }
 
-                await SendHeartBeat("Waiting for client ACK");
-                if (sharded == false)
-                {
-                    await SendNoopAck();
-                }
+                await SendHeartBeatAsync("Waiting for client ACK");
+                await SendNoopAck();
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
@@ -367,7 +365,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                     {
-                        await OnClientAck();
+                        await OnClientAckAsync();
                         break;
                     }
                 //precaution, should not reach this case...
@@ -383,17 +381,7 @@ namespace Raven.Server.Documents.Subscriptions
             return replyFromClientTask;
         }
 
-
-        protected Task SendNoopAck()
-        {
-                return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Shard,
-                    SubscriptionId,
-                    Options.SubscriptionName,
-                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
-                    NonExistentBatch, docsToResend: null);
-        }
-
-        internal async Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
+        internal async Task<SubscriptionConnectionClientMessage> GetReplyFromClientInternalAsync()
         {
             try
             {
@@ -434,8 +422,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-
-        public void Dispose()
+        public virtual void Dispose()
         {
             using (_copiedBuffer.ReleaseBuffer)
             {
@@ -479,12 +466,12 @@ namespace Raven.Server.Documents.Subscriptions
                 RecentSubscriptionStatuses?.Clear();
             }
         }
-    }
 
-    public class ShardData
-    {
-        public string DatabaseId;
-        public string ShardName;
-        public string LocalChangeVector;
+        public class ShardData
+        {
+            public string DatabaseId;
+            public string ShardName;
+            public string LocalChangeVector;
+        }
     }
 }

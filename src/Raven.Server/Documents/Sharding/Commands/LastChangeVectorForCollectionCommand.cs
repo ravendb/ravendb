@@ -1,7 +1,7 @@
-﻿using System.Net.Http;
-using Raven.Client.Documents.Commands;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Commands
@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Sharding.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/collections/last-change-vector?collection={UrlEncode(_collection)}";
+            url = $"{node.Url}/databases/{node.Database}/collections/last-change-vector?name={Uri.EscapeDataString(_collection)}";
 
             var request = new HttpRequestMessage
             {
@@ -34,7 +34,8 @@ namespace Raven.Server.Documents.Sharding.Commands
                 Result = null;
                 return;
             }
-            Result = JsonDeserializationClient.LastChangeVectorForCollectionResult(response);
+
+            Result = JsonDeserializationServer.LastChangeVectorForCollectionResult(response);
         }
 
         public override bool IsReadRequest => true;

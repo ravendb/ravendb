@@ -12,6 +12,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -37,11 +38,11 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
        /*
         * The subscription worker (client) connects to an orchestrator (SendShardedSubscriptionDocuments). 
-        * The orchestrator initializes shard subscription workers (StartShardSubscriptionWorkers).
+        * The orchestrator initializes shard subscription workers (StartShardSubscriptionWorkersAsync).
         * ShardedSubscriptionWorkers are maintaining the connection with subscription on each shard.
-        * The orchestrator maintains the connection with the client and checks if there is an available batch on each Sharded Worker (MaintainConnectionWithClientWorker).
+        * The orchestrator maintains the connection with the client and checks if there is an available batch on each Sharded Worker (MaintainConnectionWithClientWorkerAsync).
         * Handle batch flow:
-        * Orchestrator sends the batch to the client (WriteBatchToClientAndAck).
+        * Orchestrator sends the batch to the client (WriteBatchToClientAndAckAsync).
         * Orchestrator receive batch ACK request from client.
         * Orchestrator advances the sharded worker and waits for the sharded worker.
         * Sharded worker sends an ACK to the shard and waits for CONFIRM from shard (ACK command in cluster)
@@ -54,7 +55,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             try
             {
                 var connection = new ShardedSubscriptionConnection(server, tcpConnectionOptions, tcpConnectionDisposable, buffer);
-                _ = connection.Run();
+                _ = connection.RunAsync();
             }
             catch (Exception)
             {
@@ -63,17 +64,17 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        public async Task Run()
+        public async Task RunAsync()
         {
             try
             {
                 await ParseSubscriptionOptionsAsync();
-                await StartShardSubscriptionWorkers();
-                await MaintainConnectionWithClientWorker();
+                await StartShardSubscriptionWorkersAsync();
+                await MaintainConnectionWithClientWorkerAsync();
             }
             catch (Exception e)
             {
-                await ReportException(SubscriptionError.Error, ConnectionException ?? e);
+                await ReportExceptionAsync(SubscriptionError.Error, ConnectionException ?? e);
             }
             finally
             {
@@ -86,9 +87,15 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        private new async Task ParseSubscriptionOptionsAsync()
+        public override async Task ParseSubscriptionOptionsAsync()
         {
             await base.ParseSubscriptionOptionsAsync();
+
+            // old client connected
+            if (_options.ShardedConnectionMaxErroneousPeriod == default)
+            {
+                _options.ShardedConnectionMaxErroneousPeriod = TimeSpan.FromMinutes(5);
+            }
 
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
             _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.ShardedContext.ShardCount, _options.MaxDocsPerBatch);
@@ -101,11 +108,11 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             } 
         }
 
-        protected override async Task ReportException(SubscriptionError error, Exception e)
+        protected override async Task ReportExceptionAsync(SubscriptionError error, Exception e)
         {
             try
             {
-                await LogExceptionAndReportToClient(ConnectionException ?? e);
+                await LogExceptionAndReportToClientAsync(ConnectionException ?? e);
             }
             catch (Exception)
             {
@@ -113,12 +120,22 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        protected override Task OnClientAck()
+        protected override Task OnClientAckAsync()
         {
             return Task.CompletedTask;
         }
 
-        private async Task StartShardSubscriptionWorkers()
+        protected override Task SendNoopAck()
+        {
+            return Task.CompletedTask;
+        }
+
+        internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
+        {
+            return null;
+        }
+
+        private async Task StartShardSubscriptionWorkersAsync()
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Create));
 
@@ -126,14 +143,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             {
                 var re = TcpConnection.ShardedContext.RequestExecutors[i];
                 var shard = TcpConnection.ShardedContext.GetShardedDatabaseName(i);
-                var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, parent: this);
-
-                var worker = new SubscriptionShardHolder
-                {
-                    Worker = shardWorker,
-                    PullingTask = shardWorker.RunInternal(CancellationTokenSource.Token),
-                    RequestExecutor = re
-                };
+                SubscriptionShardHolder worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
 
                 _shardWorkers.Add(shard, worker);
             }
@@ -145,24 +155,39 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             });
         }
 
-        private async Task MaintainConnectionWithClientWorker()
+        private SubscriptionShardHolder CreateShardedWorkerHolder(string shard, RequestExecutor re, DateTime? lastErrorDateTime)
+        {
+            var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, parent: this);
+
+            var holder = new SubscriptionShardHolder
+            {
+                Worker = shardWorker, 
+                PullingTask = shardWorker.RunInternalAsync(CancellationTokenSource.Token), 
+                RequestExecutor = re,
+                LastErrorDateTime = lastErrorDateTime
+            };
+
+            return holder;
+        }
+
+        private async Task MaintainConnectionWithClientWorkerAsync()
         {
             var hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
             while (CancellationTokenSource.IsCancellationRequested == false)
             {
-                var whenAny = await Task.WhenAny(TimeoutManager.WaitFor(TimeSpan.FromSeconds(3), CancellationTokenSource.Token), hasBatch);
+                var whenAny = await Task.WhenAny(TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(WaitForChangedDocumentsTimeoutInMs), CancellationTokenSource.Token), hasBatch);
                 CancellationTokenSource.Token.ThrowIfCancellationRequested();
                 HandleBatchFromWorkersResult result;
                 if (whenAny == hasBatch)
                 {
                     Interlocked.Exchange(ref _mre, new AsyncManualResetEvent());
                     hasBatch = _mre.WaitAsync(CancellationTokenSource.Token);
-                    result = await TryHandleBatchFromWorkersAndCheckReconnect(redirectBatch: true);
+                    result = await TryHandleBatchFromWorkersAndCheckReconnectAsync(redirectBatch: true);
                 }
                 else
                 {
-                    await SendHeartBeat("Waited for 3000ms for batch from shard workers");
-                    result = await TryHandleBatchFromWorkersAndCheckReconnect(redirectBatch: false);
+                    await SendHeartBeatAsync("Waited for 3000ms for batch from shard workers");
+                    result = await TryHandleBatchFromWorkersAndCheckReconnectAsync(redirectBatch: false);
                 }
 
                 if (result.Stopping)
@@ -176,8 +201,11 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         private void ThrowStoppingSubscriptionException(HandleBatchFromWorkersResult result)
         {
-            throw new AggregateException(
-                $"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' for database '{TcpConnection.ShardedContext.DatabaseName}' because shard {string.Join(", ", result.Exceptions.Keys)} workers failed.",
+            throw new ShardingSubscriptionException(
+                $"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' " +
+                $"for database '{TcpConnection.ShardedContext.DatabaseName}' because " +
+                $"shard {string.Join(", ", result.Exceptions.Keys)} workers failed. " +
+                $"Additional Reason: {result.StoppingReason ?? string.Empty}",
                 result.Exceptions.Values);
         }
 
@@ -193,23 +221,15 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 if (_shardWorkers.ContainsKey(shard) == false)
                     continue;
 
-                using (var old = _shardWorkers[shard].Worker)
+                using (var old = _shardWorkers[shard])
                 {
-                    _shardWorkers[shard].Worker = new ShardedSubscriptionWorker(_options, shard, _shardWorkers[shard].RequestExecutor, parent: this);
-                    var t = _shardWorkers[shard].Worker.RunInternal(CancellationTokenSource.Token);
-                    _shardWorkers[shard].PullingTask = t;
+                    var holder = CreateShardedWorkerHolder(shard, _shardWorkers[shard].RequestExecutor, old.LastErrorDateTime);
+                    _shardWorkers[shard] = holder;
                 }
             }
         }
 
-        private class HandleBatchFromWorkersResult
-        {
-            public Dictionary<string, Exception> Exceptions;
-            public List<string> ShardsToReconnect;
-            public bool Stopping;
-        }
-
-        private async Task<HandleBatchFromWorkersResult> TryHandleBatchFromWorkersAndCheckReconnect(bool redirectBatch)
+        private async Task<HandleBatchFromWorkersResult> TryHandleBatchFromWorkersAndCheckReconnectAsync(bool redirectBatch)
         {
             var result = new HandleBatchFromWorkersResult
             {
@@ -224,20 +244,20 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 if (result.Stopping)
                     continue;
 
-                if (shardHolder.PullingTask.IsFaulted == false)
+                if (shardHolder.PullingTask.IsFaulted == false && shardHolder.PullingTask.IsCanceled == false)
                 {
                     if (redirectBatch == false)
                         continue;
 
-                    var batch = shardHolder.Worker.PublishedBatchItem;
+                    var batch = shardHolder.Worker.PublishedShardBatchItem;
                     if (batch == null)
                         continue;
 
-                    await RedirectBatchAndConfirm(batch, shard);
+                    await RedirectBatchAndConfirmAsync(batch, shard);
                     continue;
                 }
 
-                result.Exceptions.Add(shard, shardHolder.PullingTask.Exception);
+                result.Exceptions.Add(shard, shardHolder.PullingTask.IsCanceled ? new TaskCanceledException() : shardHolder.PullingTask.Exception);
                 result.ShardsToReconnect.Add(shard);
 
                 if (CanContinueSubscription(shardHolder))
@@ -245,6 +265,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
                 // we are stopping this subscription
                 result.Stopping = true;
+                result.StoppingReason = $"Hit {nameof(SubscriptionWorkerOptions.ShardedConnectionMaxErroneousPeriod)}.";
             }
 
             if (result.Exceptions.Count == _shardWorkers.Count && result.Stopping == false)
@@ -264,7 +285,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 var ex = exceptions[worker.Key];
                 Debug.Assert(ex != null, "ex != null");
 
-                (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, null, null, throwOnRedirectNodeNotFound: false);
+                (bool shouldTryToReconnect, _) = worker.Value.Worker.CheckIfShouldReconnectWorker(ex, CancellationTokenSource, assertLastConnectionFailure: null, onUnexpectedSubscriptionError: null, throwOnRedirectNodeNotFound: false);
                 if (shouldTryToReconnect)
                 {
                     // we have at least one worker to try to reconnect
@@ -275,12 +296,12 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             return stopping;
         }
 
-        private async Task RedirectBatchAndConfirm(ShardedSubscriptionWorker.PublishedBatch batch, string shard)
+        private async Task RedirectBatchAndConfirmAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shard)
         {
             try
             {
                 // Send to client
-                await WriteBatchToClientAndAck(batch, shard);
+                await WriteBatchToClientAndAckAsync(batch, shard);
 
                 // let sharded subscription worker know that we sent the batch to the client and received an ack request from it
                 batch.SendBatchToClientTcs.SetResult();
@@ -314,9 +335,9 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             return false;
         }
 
-        private async Task WriteBatchToClientAndAck(ShardedSubscriptionWorker.PublishedBatch batch, string shard)
+        private async Task WriteBatchToClientAndAckAsync(ShardedSubscriptionWorker.PublishedShardBatch batch, string shard)
         {
-            var replyFromClientTask = GetReplyFromClientAsync();
+            var replyFromClientTask = GetReplyFromClientInternalAsync();
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Starting to send documents."));
             int docsToFlush = 0;
             string lastReceivedChangeVector = null;
@@ -334,7 +355,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     SubscriptionConnection.WriteDocumentOrException(context, writer, document: null, doc.Data, metadata, doc.Exception, id, null, null, null);
                     docsToFlush++;
 
-                    if (await SubscriptionConnection.FlushBatchIfNeeded(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, CancellationTokenSource.Token) == false)
+                    if (await SubscriptionConnection.FlushBatchIfNeededAsync(sendingCurrentBatchStopwatch, SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, CancellationTokenSource.Token) == false)
                         continue;
 
                     docsToFlush = 0;
@@ -345,11 +366,11 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 SubscriptionConnection.WriteEndOfBatch(writer);
 
                 AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Flushing docs collected from shard '{shard}'"));
-                await SubscriptionConnection.FlushDocsToClient(SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
+                await SubscriptionConnection.FlushDocsToClientAsync(SubscriptionId, writer, buffer, TcpConnection, stats: null, _logger, docsToFlush, endOfBatch: true, CancellationTokenSource.Token);
             }
 
             batch.LastSentChangeVectorInBatch = lastReceivedChangeVector;
-            await WaitForClientAck(replyFromClientTask, sharded: true);
+            await WaitForClientAck(replyFromClientTask);
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard '{shard}' got ack from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
         }
 
@@ -362,7 +383,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             });
         }
 
-        public new void Dispose()
+        public override void Dispose()
         {
             if (_isDisposed)
                 return;
@@ -388,6 +409,14 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             {
                 Worker.Dispose();
             }
+        }
+
+        private class HandleBatchFromWorkersResult
+        {
+            public Dictionary<string, Exception> Exceptions;
+            public List<string> ShardsToReconnect;
+            public bool Stopping;
+            public string StoppingReason;
         }
     }
 }
