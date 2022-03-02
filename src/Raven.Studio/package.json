@@ -55,6 +55,7 @@
         "less": "^3.7.1",
         "less-loader": "^10.2.0",
         "mini-css-extract-plugin": "^2.5.3",
+        "postcss": "^8.4.7",
         "raw-loader": "^4.0.1",
         "resolve-url-loader": "^4.0.0",
         "terser-webpack-plugin": "^5.3.1",
