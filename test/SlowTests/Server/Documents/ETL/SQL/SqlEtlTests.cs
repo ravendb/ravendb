@@ -349,11 +349,12 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, @"var orderData = {
+                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
-    OrderLinesCount: this.OrderLines_Missing.length,
+    OrderLinesCount: this.OrderLines_Missing{optChaining}.length,
     TotalCost: 0
-};
+}};
 loadToOrders(orderData);");
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
