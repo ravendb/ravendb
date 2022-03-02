@@ -7,6 +7,8 @@ public class MultiplatformTheoryAttribute : TheoryAttribute
     private readonly RavenPlatform _platform;
     private readonly RavenArchitecture _architecture;
 
+    private string _skip;
+
     public MultiplatformTheoryAttribute(RavenPlatform platform = RavenPlatform.All)
         : this(platform, RavenArchitecture.All)
     {
@@ -23,5 +25,16 @@ public class MultiplatformTheoryAttribute : TheoryAttribute
         _architecture = architecture;
     }
 
-    public override string Skip => MultiplatformFactAttribute.ShouldSkip(_platform, _architecture);
+    public override string Skip
+    {
+        get
+        {
+            var skip = _skip;
+            if (skip != null)
+                return skip;
+
+            return MultiplatformFactAttribute.ShouldSkip(_platform, _architecture);
+        }
+        set => _skip = value;
+    }
 }
