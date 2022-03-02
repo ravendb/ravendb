@@ -33,7 +33,7 @@ namespace StressTests.Voron
 
         public static Random Rand = new Random(123);
 
-        [Theory64Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(2)]
         [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
         public void CanWriteBigTransactions(int transactionSizeInGb)

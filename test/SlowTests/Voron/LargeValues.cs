@@ -16,7 +16,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void ShouldProperlyRecover()
         {
             var sequentialLargeIds = TestDataUtil.ReadData("non-leaf-page-seq-id-large-values-2.txt");

@@ -237,7 +237,7 @@ namespace RachisTests
             }
         }
 
-        [Theory64Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
@@ -352,7 +352,7 @@ namespace RachisTests
             }
         }
 
-        [Fact32Bit]
+        [MultiplatformFact(RavenArchitecture.AllX86)]
         public async Task DistributedRevisionsSubscription32Bit()
         {
             await DistributedRevisionsSubscription(3);

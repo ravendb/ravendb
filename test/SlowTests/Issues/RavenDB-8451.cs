@@ -25,19 +25,19 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit(Skip = "RavenDB-13765")]
+        [MultiplatformFact(RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase()
         {
             await CanRecoverEncryptedDatabaseInternal();
         }
 
-        [Fact64Bit(Skip = "RavenDB-13765")]
+        [MultiplatformFact(RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase_Compressed()
         {
             await CanRecoverEncryptedDatabaseInternal(compressDocuments: true);
         }
 
-        [Fact64Bit(Skip = "RavenDB-13765")]
+        [MultiplatformFact(RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
         public async Task RecoveryOfEncryptedDatabaseWithoutMasterKeyShouldThrow()
         {
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
