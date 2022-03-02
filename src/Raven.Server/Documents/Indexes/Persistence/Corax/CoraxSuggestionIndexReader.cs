@@ -26,7 +26,6 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
     private readonly IndexFieldsMapping _fieldMappings;
     private readonly IndexSearcher _indexSearcher;
     private readonly IndexFieldBinding _binding;
-    private readonly int BufferSize = 1024 * 8;
 
     public CoraxSuggestionReader(Index index, Logger logger, IndexFieldBinding binding, Transaction readTransaction) : base(index, logger)
     {
@@ -52,8 +51,6 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
 
     private string[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
     {
-        options.SortMode = SuggestionSortMode.None;
-
         var result = new HashSet<string>();
 
         var pageSize = options.PageSize;
@@ -76,27 +73,35 @@ public class CoraxSuggestionReader : SuggestionIndexReaderBase
         return result.ToArray();
     }
 
+
+    private const int MaxTermSize = 128;
+
     private unsafe string[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
     {
         var sortByPopularity = options.SortMode == SuggestionSortMode.Popularity;
         var match = options.Distance switch
         {
-            StringDistanceTypes.JaroWinkler => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity,
-                StringDistanceAlgorithm.JaroWinkler,
+            StringDistanceTypes.JaroWinkler => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.JaroWinkler,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize),
             StringDistanceTypes.NGram => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.NGram,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize),
             _ => _indexSearcher.Suggest(_binding.FieldId, word, sortByPopularity, StringDistanceAlgorithm.Levenshtein,
                 options.Accuracy ?? SuggestionOptions.DefaultAccuracy, options.PageSize)
         };
+        
+        int minSize = options.PageSize * (Unsafe.SizeOf<Token>() + sizeof(float) + MaxTermSize);
+        var buffer = ArrayPool<byte>.Shared.Rent(minSize);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
-        var tokenSize = Unsafe.SizeOf<Token>();
+        var bufferSpan = buffer.AsSpan();
+        
+        var terms = bufferSpan.Slice(0, MaxTermSize * options.PageSize);
+        int position = terms.Length;
+        var score = MemoryMarshal.Cast<byte, float>(bufferSpan.Slice(position, sizeof(float) * options.PageSize));
+        position += sizeof(float) * options.PageSize;
+        var tokens = MemoryMarshal.Cast<byte, Token>(bufferSpan.Slice(position, options.PageSize * Unsafe.SizeOf<Token>()));                       
 
-        var tokens = MemoryMarshal.Cast<byte, Token>(buffer.AsSpan().Slice(0, 10 * tokenSize));
-        var terms = buffer.AsSpan().Slice(tokens.Length * tokenSize);
+        match.Next(ref terms, ref tokens, ref score);
 
-        match.Next(ref terms, ref tokens);
         var list = new List<string>();
         foreach (var token in tokens)
         {

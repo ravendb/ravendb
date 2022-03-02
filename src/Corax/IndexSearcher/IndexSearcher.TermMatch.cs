@@ -12,7 +12,7 @@ public unsafe partial class IndexSearcher
 {
     public TermMatch TermQuery(string field, string term, int fieldId = Constants.IndexSearcher.NonAnalyzer)
     {
-        var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         if (fields == null)
             return TermMatch.CreateEmpty();
         var terms = fields.CompactTreeFor(field);
@@ -32,7 +32,7 @@ public unsafe partial class IndexSearcher
 
     internal TermMatch TermQuery(string field, Slice term)
     {
-        var fields = _transaction.ReadTree(IndexWriter.FieldsSlice);
+        var fields = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
         if (fields == null)
             return TermMatch.CreateEmpty();
         var terms = fields.CompactTreeFor(field);

@@ -29,7 +29,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     public bool IsAccelerated => Avx2.IsSupported && !ForceNonAccelerated;
 
-    public long NumberOfEntries => _transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
+    public long NumberOfEntries => _transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
     internal ByteStringContext Allocator => _transaction.Allocator;
 

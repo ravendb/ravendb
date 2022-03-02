@@ -45,21 +45,43 @@ namespace FastTests.Corax
 
                 var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0);
 
-                Span<byte> terms = new byte[1024];
-                Span<Token> tokens = new Token[16];
-                match.Next(ref terms, ref tokens);
+                Span<byte> terms = stackalloc byte[1024];
+                Span<Token> tokens = stackalloc Token[16];
+                Span<float> scores = stackalloc float[16];
+                match.Next(ref terms, ref tokens, ref scores);
 
-                var ngrams = new System.Collections.Generic.HashSet<string>();
+                var ngrams = new HashSet<string>();
                 foreach (var token in tokens)
                 {
                     var term = terms.Slice(token.Offset, (int)token.Length);
                     var asString = Encoding.UTF8.GetString(term);
                     ngrams.Add(asString);
-                    Assert.True(asString.Contains("road"));
                 }
 
                 Assert.Equal(3, ngrams.Count);
-                
+                Assert.Equal(tokens.Length, scores.Length);
+            }
+
+            {
+                using var searcher = new IndexSearcher(Env, mapping);
+
+                var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.NGram, 0.35f);
+
+                Span<byte> terms = stackalloc byte[1024];
+                Span<Token> tokens = stackalloc Token[16];
+                Span<float> scores = stackalloc float[16];
+                match.Next(ref terms, ref tokens, ref scores);
+
+                var ngrams = new HashSet<string>();
+                foreach (var token in tokens)
+                {
+                    var term = terms.Slice(token.Offset, (int)token.Length);
+                    var asString = Encoding.UTF8.GetString(term);
+                    ngrams.Add(asString);
+                }
+
+                Assert.Equal(1, ngrams.Count);
+                Assert.Equal(tokens.Length, scores.Length);
             }
 
         }
@@ -84,15 +106,17 @@ namespace FastTests.Corax
             }
 
             {
-                using var searcher = new IndexSearcher(Env);
+                using var searcher = new IndexSearcher(Env, mapping);
 
                 var match = searcher.Suggest(ContentId, "road", false, StringDistanceAlgorithm.None, 0f);
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
+                Span<float> scores = stackalloc float[16];
 
-                match.Next(ref terms, ref tokens);
+                match.Next(ref terms, ref tokens, ref scores);
                 Assert.Equal(2, tokens.Length);
+                Assert.Equal(tokens.Length, scores.Length);
             }
         }
 
@@ -118,11 +142,12 @@ namespace FastTests.Corax
 
                 Span<byte> terms = stackalloc byte[1024];
                 Span<Token> tokens = stackalloc Token[16];
+                Span<float> scores = stackalloc float[16];
 
-                match.Next(ref terms, ref tokens);
+                match.Next(ref terms, ref tokens, ref scores);
                 Assert.Equal(1, tokens.Length);
                 Assert.Equal("road lake", Encoding.UTF8.GetString(terms));
-                
+                Assert.Equal(tokens.Length, scores.Length);
             }
         }
         

@@ -153,6 +153,7 @@ namespace SlowTests.Corax
         }
         
         [Theory]
+        [SearchEngineClassData(SearchEngineType.Lucene)]
         [SearchEngineClassData(SearchEngineType.Corax)]
         public void NgramSuggestionTest(string searchEngine)
         {
@@ -172,13 +173,13 @@ namespace SlowTests.Corax
                         .SuggestUsing(x => x.ByField(y => y.Name, "Mett").WithOptions(new SuggestionOptions
                         {
                             PageSize = 10,
-                            Accuracy = 0.1f,
+                            Accuracy = 0.25f,
                             Distance = StringDistanceTypes.NGram
                         }))
                         .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
-                    Assert.Equal("matt", suggestionQueryResult["Name"].Suggestions[0]);
+                    Assert.True(suggestionQueryResult["Name"].Suggestions.Count >= 1);
+                    Assert.Contains("matt", suggestionQueryResult["Name"].Suggestions);
                 }
             }
         }
@@ -198,9 +199,9 @@ namespace SlowTests.Corax
                         .SuggestUsing(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
                         {
                             PageSize = 5,
-                            Distance = StringDistanceTypes.JaroWinkler,
+                            Distance = StringDistanceTypes.NGram,
                             SortMode = SuggestionSortMode.Popularity,
-                            Accuracy = 0.4f
+                            Accuracy = 0.5f
                         }))
                         .Execute();
 

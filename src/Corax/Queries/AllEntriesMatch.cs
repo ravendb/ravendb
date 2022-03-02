@@ -25,7 +25,7 @@ namespace Corax.Queries
         public unsafe AllEntriesMatch(Transaction tx)
         {
             _tx = tx;
-            _count = tx.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
+            _count = tx.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             if (_count == 0)
             {
                 Unsafe.SkipInit(out _currentPage);
@@ -37,7 +37,7 @@ namespace Corax.Queries
                 return;
             }
             
-            _entriesContainerId = tx.OpenContainer(IndexWriter.EntriesContainerSlice);
+            _entriesContainerId = tx.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
             _entriesPagesIt = Container.GetAllPagesSet(tx.LowLevelTransaction, _entriesContainerId).Iterate();
             _offset = 0;
             _itemsLeftOnCurrentPage = 0;

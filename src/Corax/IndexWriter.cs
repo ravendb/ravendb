@@ -163,7 +163,7 @@ namespace Corax
         public readonly Transaction Transaction;
         private readonly TransactionPersistentContext _transactionPersistentContext;
 
-        public static readonly Slice PostingListsSlice, EntriesContainerSlice, FieldsSlice, NumberOfEntriesSlice, SuggestionsFieldsSlice;
+
 
         // CPU bound - embarassingly parallel
         // 
@@ -182,18 +182,6 @@ namespace Corax
 
         private Queue<long> _lastEntries; // keep last 256 items
 
-        static IndexWriter()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "Fields", ByteStringType.Immutable, out FieldsSlice);
-                Slice.From(ctx, "PostingLists", ByteStringType.Immutable, out PostingListsSlice);
-                Slice.From(ctx, "Entries", ByteStringType.Immutable, out EntriesContainerSlice);
-                Slice.From(ctx, "NumberOfEntries", ByteStringType.Immutable, out NumberOfEntriesSlice);
-                Slice.From(ctx, "SuggestionFields", ByteStringType.Immutable, out SuggestionsFieldsSlice);
-            }
-        }
-
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new
         // writer becomes essentially a unit of work which makes reusing assets tracking more explicit.
@@ -204,8 +192,8 @@ namespace Corax
             Transaction = _environment.WriteTransaction(_transactionPersistentContext);
 
             _ownsTransaction = true;
-            _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
-            _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
+            _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
+            _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
 
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
         }
@@ -215,8 +203,8 @@ namespace Corax
             Transaction = tx;
 
             _ownsTransaction = false;
-            _postingListContainerId = Transaction.OpenContainer(PostingListsSlice);
-            _entriesContainerId = Transaction.OpenContainer(EntriesContainerSlice);
+            _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
+            _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
 
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
         }
@@ -230,8 +218,8 @@ namespace Corax
 
         public long Index(Slice id, Span<byte> data, IndexFieldsMapping knownFields)
         {
-            long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
-            Transaction.LowLevelTransaction.RootObjects.Add(NumberOfEntriesSlice, entriesCount + 1);
+            long entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
+            Transaction.LowLevelTransaction.RootObjects.Add(Constants.IndexWriter.NumberOfEntriesSlice, entriesCount + 1);
 
             Span<byte> buf = stackalloc byte[10];
             var idLen = ZigZagEncoding.Encode(buf, id.Size);
@@ -266,7 +254,7 @@ namespace Corax
 
         public long GetNumberOfEntries()
         {
-            return Transaction.LowLevelTransaction.RootObjects.ReadInt64(IndexWriter.NumberOfEntriesSlice) ?? 0;
+            return Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
         }
 
         [SkipLocalsInit]
@@ -552,8 +540,8 @@ namespace Corax
 
                 ids?.Clear();
                 Container.Delete(llt, _entriesContainerId, id);
-                llt.RootObjects.Increment(NumberOfEntriesSlice, -1);
-                var numberOfEntries = llt.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
+                llt.RootObjects.Increment(Constants.IndexWriter.NumberOfEntriesSlice, -1);
+                var numberOfEntries = llt.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
                 Debug.Assert(numberOfEntries >= 0);
             }
 
@@ -608,12 +596,12 @@ namespace Corax
 
         public bool TryDeleteEntry(string key, string term)
         {
-            var fieldsTree = Transaction.ReadTree(FieldsSlice);
+            var fieldsTree = Transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
             if (fieldsTree == null)
                 return false;
 
             var fieldTree = fieldsTree.CompactTreeFor(key);
-            var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(NumberOfEntriesSlice) ?? 0;
+            var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 1);
             
             if (fieldTree.TryGetValue(term, out long id) == false)
@@ -632,7 +620,7 @@ namespace Corax
         public void Commit()
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
-            Tree fieldsTree = Transaction.CreateTree(FieldsSlice);
+            Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
             
             if(_fieldsMapping.Count != 0)
                 DeleteCommit(tmpBuf, fieldsTree);
