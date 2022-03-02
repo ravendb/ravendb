@@ -1750,10 +1750,54 @@ namespace Raven.Server.Documents.Patch
                     var firstParam = args[0];
                     if (firstParam.IsBinder && firstParam.BoundObject is BlittableObjectInstanceV8 selfInstance)
                     {
+                        // we don't have access to declaration of the second parameter, so we expect it to contain the property name, but not the lambda expression as in Jint vase
+                        // TODO [shlomo] RavenDB-18121
                         var secondParam = args[1];
-                        if (secondParam.IsFunction)
+                        if (secondParam.IsString)
                         {
-                            // we don't have access to AST so we just call the function 
+                            string propName = secondParam.AsString;
+
+                            IBlittableObjectProperty existingValue = default;
+                            if (selfInstance.TryGetValue(propName, out existingValue, out var isDeleted) && existingValue != null && !isDeleted)
+                            {
+                                if (existingValue.Changed)
+                                {
+                                    return existingValue.ValueHandle.V8.Item;
+                                }
+                            }
+
+                            var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
+
+                            if (propertyIndex == -1)
+                            {
+                                return selfInstance.EngineV8.CreateObject();
+                            }
+
+                            BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                            selfInstance.Blittable.GetPropertyByIndex(propertyIndex, ref propDetails);
+                            var value = propDetails.Value;
+
+                            var engineEx = (V8EngineEx)engine;
+                            switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
+                            {
+                                case BlittableJsonToken.Null:
+                                    return engine.CreateNullValue();
+                                case BlittableJsonToken.Boolean:
+                                    return engine.CreateValue((bool)value);
+                                case BlittableJsonToken.Integer:
+                                    return engine.CreateValue((long)value); //engineEx.CreateObjectBinder(value); // TODO [shlomo] in Jint we create wrapper object, maybe here we need to do the same - the question is to which type the value should be cast 
+                                 case BlittableJsonToken.LazyNumber:
+                                    return engineEx.CreateObjectBinder((LazyNumberValue)value);
+                                case BlittableJsonToken.String:
+                                    return engineEx.CreateObjectBinder((LazyStringValue)value);
+                                case BlittableJsonToken.CompressedString:
+                                    return engineEx.CreateObjectBinder((LazyCompressedStringValue)value);
+                                default:
+                                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+                            }
+                        }
+                        else if (secondParam.IsFunction)
+                        {
                             var res = secondParam.StaticCall(firstParam);
                             if (res.IsUndefined)
                             {
