@@ -20,13 +20,24 @@ public enum RavenArchitecture
     Arm64 = 1 << 2,
     X64 = 1 << 3,
     X86 = 1 << 4,
-    All = Arm | Arm64 | X64 | X86
+    AllArm = Arm | Arm64,
+    AllX64 = Arm64 | X64,
+    AllX86 = Arm | X86,
+    All = AllX64 | AllX86
 }
 
 public class MultiplatformFactAttribute : FactAttribute
 {
+    private static readonly bool ForceUsing32BitsPager;
+
     private readonly RavenPlatform _platform;
     private readonly RavenArchitecture _architecture;
+
+    static MultiplatformFactAttribute()
+    {
+        if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
+            ForceUsing32BitsPager = result;
+    }
 
     public MultiplatformFactAttribute(RavenPlatform platform = RavenPlatform.All)
      : this(platform, RavenArchitecture.All)
@@ -79,18 +90,16 @@ public class MultiplatformFactAttribute : FactAttribute
         if (architecture == RavenArchitecture.All)
             return true;
 
-        switch (RuntimeInformation.ProcessArchitecture)
+        if (ForceUsing32BitsPager)
+            return architecture.HasFlag(RavenArchitecture.Arm) || architecture.HasFlag(RavenArchitecture.X86);
+
+        return RuntimeInformation.ProcessArchitecture switch
         {
-            case Architecture.X86:
-                return architecture.HasFlag(RavenArchitecture.X86);
-            case Architecture.X64:
-                return architecture.HasFlag(RavenArchitecture.X64);
-            case Architecture.Arm:
-                return architecture.HasFlag(RavenArchitecture.Arm);
-            case Architecture.Arm64:
-                return architecture.HasFlag(RavenArchitecture.Arm64);
-            default:
-                throw new ArgumentOutOfRangeException(nameof(architecture), architecture, $"Invalid architecture ({architecture})");
-        }
+            Architecture.X86 => architecture.HasFlag(RavenArchitecture.X86),
+            Architecture.X64 => architecture.HasFlag(RavenArchitecture.X64),
+            Architecture.Arm => architecture.HasFlag(RavenArchitecture.Arm),
+            Architecture.Arm64 => architecture.HasFlag(RavenArchitecture.Arm64),
+            _ => throw new ArgumentOutOfRangeException(nameof(architecture), architecture, $"Invalid architecture ({architecture})")
+        };
     }
 }

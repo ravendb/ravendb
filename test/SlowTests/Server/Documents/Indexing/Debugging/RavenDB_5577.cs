@@ -103,14 +103,14 @@ select new
             }
         }
 
-        [Theory32Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX86)]
         [InlineData(10, 1, 1)]
         public void Getting_trees32(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)
         {
             Getting_trees(numberOfDocs, expectedTreeDepth, expectedPageCount);
         }
 
-        [Theory64Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(1000, 2, 3)]
         [InlineData(10, 1, 1)] // nested section
         public void Getting_trees(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)

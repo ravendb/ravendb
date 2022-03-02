@@ -22,7 +22,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Theory64Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(6)]
         [InlineData(100)]
         [InlineData(600)]
@@ -47,7 +47,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Theory32Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX86)]
         [InlineData(6)]
         [InlineData(10)]
         public async Task SendingDocumentWithLargeFieldInBulkInsert_32bit(int sizeInMb)
