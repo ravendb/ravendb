@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.Sharding
 
         private ShardExecutor _shardExecutor;
         public ShardExecutor ShardExecutor => _shardExecutor;
+        public DatabaseRecord DatabaseRecord => _record;
 
         public int[] FullRange;
 
