@@ -350,9 +350,10 @@ loadToOrDerS(orderData); // note 'OrDerS' here vs 'Orders' defined in the config
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                     var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
                     SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
-    OrderLinesCount: this.OrderLines_Missing{optChaining}.length,
+    OrderLinesCount: this.OrderLines_Missing{optChaining}.length{zeroIfNull},
     TotalCost: 0
 }};
 loadToOrders(orderData);");
@@ -401,11 +402,12 @@ loadToOrders(orderData);");
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                    SetupSqlEtl(store, connectionString, @"var orderData = {
+                    var optChaining = jsEngineType == "Jint" ? "" : "?";
+                    SetupSqlEtl(store, connectionString, @$"var orderData = {{
     Id: id(this),
-    City: this.Address.City,
+    City: this.Address{optChaining}.City,
     TotalCost: 0
-};
+}};
 loadToOrders(orderData);");
 
                     etlDone.Wait(TimeSpan.FromMinutes(5));
