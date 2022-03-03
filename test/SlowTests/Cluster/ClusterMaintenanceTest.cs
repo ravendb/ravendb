@@ -39,7 +39,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task RavenDB_14044()
         {
             DoNotReuseServer();

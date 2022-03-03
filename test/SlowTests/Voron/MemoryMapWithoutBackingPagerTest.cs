@@ -33,7 +33,7 @@ namespace SlowTests.Voron
                 yield return new KeyValuePair<string, string>("Key " + i, "Data:" + dummyData);
         }
 
-        [Theory64Bit]
+        [MultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(15)]
@@ -56,7 +56,7 @@ namespace SlowTests.Voron
             Env.FlushLogToDataFile();
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void Should_be_able_to_read_and_write_lots_of_data()
         {
             CreatTestSchema();

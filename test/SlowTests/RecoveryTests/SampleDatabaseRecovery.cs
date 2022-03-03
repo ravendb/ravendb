@@ -16,7 +16,7 @@ namespace SlowTests.RecoveryTests
         {
         }
 
-        [Fact64Bit(Skip = "RavenDB-13765")]
+        [MultiplatformFact(RavenArchitecture.AllX64, Skip = "RavenDB-13765")]
         public async Task CanRecoverSampleData()
         {
             var rootPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -49,7 +49,7 @@ namespace SlowTests.RecoveryTests
             }
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task CanRecoverTimeSeries()
         {
             var rootPath = NewDataPath(prefix: Guid.NewGuid().ToString());
