@@ -34,9 +34,11 @@ namespace Voron.Benchmark.Table
         [Params(-1)]
         public int RandomSeed { get; set; } = -1;
 
+        private const string TableName = "TestTable1";
+
         static TableFillRandom()
         {
-            Slice.From(Configuration.Allocator, "TestTable1", ByteStringType.Immutable, out TableNameSlice);
+            Slice.From(Configuration.Allocator, TableName, ByteStringType.Immutable, out TableNameSlice);
             Slice.From(Configuration.Allocator, "TestSchema1", ByteStringType.Immutable, out SchemaPKNameSlice);
 
             Schema = new TableSchema()
@@ -49,6 +51,7 @@ namespace Voron.Benchmark.Table
                     Type = TableIndexType.BTree
                 });
         }
+
 
         [GlobalSetup]
         public override void Setup()
@@ -82,6 +85,22 @@ namespace Voron.Benchmark.Table
                 }
 
                 totalPairs.RemoveRange(0, NumberOfRecordsPerTransaction);
+            }
+        }
+
+        [IterationSetup]
+        public void ClearTable()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.DeleteTable(TableName);
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Schema.Create(tx, TableNameSlice, 16);
+                tx.Commit();
             }
         }
 
