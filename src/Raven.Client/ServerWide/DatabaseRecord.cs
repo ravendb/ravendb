@@ -48,6 +48,8 @@ namespace Raven.Client.ServerWide
 
         public long EtagForBackup;
 
+        public long EtagForRollingIndex;
+
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public Dictionary<string, RollingIndex> RollingIndexes;
@@ -193,6 +195,7 @@ namespace Raven.Client.ServerWide
                 definition.ReduceOutputIndex = version;
             }
 
+            definition.ClusterState.LastRollingDeploymentIndex = EtagForRollingIndex;
             Indexes[definition.Name] = definition;
             List<IndexHistoryEntry> history;
             if (IndexesHistory == null)
@@ -290,6 +293,7 @@ namespace Raven.Client.ServerWide
                 }
 
                 rollingIndex.ActiveDeployments[node] = deployment;
+                rollingIndex.RaftIndex = EtagForRollingIndex;
             }
         }
 
