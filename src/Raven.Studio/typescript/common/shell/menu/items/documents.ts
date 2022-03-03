@@ -36,6 +36,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/query/index(/:indexNameOrRecentQueryIndex)",
             moduleId: require("viewmodels/database/query/query"),
+            shardingMode: "both",
             title: "Query",
             nav: true,
             css: "icon-documents-query",

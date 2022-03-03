@@ -6,10 +6,6 @@ const DatabaseSwitcher = {
     ItemSelected: 'DatabaseSwitcher.ItemSelected'
 };
 
-const ShardSwitcher = {
-    ItemSelected: 'ShardSwitcher.ItemSelected'
-};
-
 const SearchBox = {
     Input: 'SearchBox.ItemSelected'
 };
@@ -30,7 +26,6 @@ const NotificationCenter = {
 export = {
     Menu,
     DatabaseSwitcher,
-    ShardSwitcher,
     SearchBox,
     Database,
     ChangesApi,

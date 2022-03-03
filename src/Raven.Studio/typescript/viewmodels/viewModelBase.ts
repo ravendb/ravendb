@@ -12,16 +12,15 @@ import viewHelpers = require("common/helpers/view/viewHelpers");
 import accessManager = require("common/shell/accessManager");
 import messagePublisher = require("common/messagePublisher");
 import { jwerty } from "jwerty";
-import shardedDatabase from "models/resources/shardedDatabase";
 
 /*
  * Base view model class that provides basic view model services, such as tracking the active database and providing a means to add keyboard shortcuts.
 */
 abstract class viewModelBase {
 
-    shardContextNotSupportedView = require("views/common/shardContextNotSupported.html");
-    
-    protected activeDatabase = activeDatabaseTracker.default.database;
+    protected get activeDatabase() {
+        return activeDatabaseTracker.default.database;
+    }
     
     protected isReadOnlyAccess =  ko.pureComputed(() => accessManager.default.readOnlyOrAboveForDatabase(this.activeDatabase()));
     protected isReadWriteAccessOrAbove = ko.pureComputed(() => accessManager.default.readWriteAccessOrAboveForDatabase(this.activeDatabase()));
@@ -62,8 +61,6 @@ abstract class viewModelBase {
 
     protected changesContext = changesContext.default;
 
-    supportsShardContext: KnockoutObservable<boolean>;
-    
     dirtyFlag = new ko.DirtyFlag([]);
 
     currentHelpLink = ko.observable<string>().subscribeTo('globalHelpLink', true);
@@ -73,18 +70,10 @@ abstract class viewModelBase {
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
-        this.supportsShardContext = ko.observable(true);
 
         eventsCollector.default.reportViewModel(this);
     }
     
-    protected viewNotSupportedInAllShardsContext() {
-        this.supportsShardContext = ko.pureComputed<boolean>(() => {
-            const db = this.activeDatabase();
-            return db && !(db instanceof shardedDatabase);
-        });
-    }
-
     protected bindToCurrentInstance(...methods: Array<keyof this & string>) {
         _.bindAll(this, ...methods);
     }

@@ -28,6 +28,20 @@ function getRouterConfiguration(): Array<DurandalRouteConfiguration> {
 }
 
 function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration {
+    if (leaf.shardingMode) {
+        return {
+            route: leaf.route,
+            title: leaf.title,
+            moduleId: function () {
+                const item = leaf.moduleId;
+                const container = require('viewmodels/common/sharding/shardAwareContainer');
+                return new container(leaf.shardingMode, item);
+            },
+            nav: leaf.nav,
+            dynamicHash: leaf.dynamicHash,
+            requiredAccess: leaf.requiredAccess
+        };
+    }
     return {
         route: leaf.route,
         title: leaf.title,

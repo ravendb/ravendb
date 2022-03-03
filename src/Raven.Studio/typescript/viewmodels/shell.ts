@@ -7,7 +7,6 @@ import menu = require("common/shell/menu");
 import generateMenuItems = require("common/shell/menu/generateMenuItems");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import databaseSwitcher = require("common/shell/databaseSwitcher");
-import shardSwitcher = require("common/shell/shardSwitcher");
 import accessManager = require("common/shell/accessManager");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import favNodeBadge = require("common/shell/favNodeBadge");
@@ -105,7 +104,6 @@ class shell extends viewModelBase {
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
-    shardSwitcher = new shardSwitcher();
     favNodeBadge = new favNodeBadge();
 
     smallScreen = ko.observable<boolean>(false);
@@ -359,7 +357,6 @@ class shell extends viewModelBase {
         activeDatabaseTracker.default.database.subscribe(updateMenu);
 
         this.databaseSwitcher.initialize();
-        this.shardSwitcher.initialize();
         this.searchBox.initialize();
         this.favNodeBadge.initialize(); 
         
