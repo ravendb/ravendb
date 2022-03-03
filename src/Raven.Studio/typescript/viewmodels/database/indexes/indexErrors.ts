@@ -1,5 +1,4 @@
 import app = require("durandal/app");
-import viewModelBase = require("viewmodels/viewModelBase");
 import moment = require("moment");
 import getIndexesErrorCommand = require("commands/database/index/getIndexesErrorCommand");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
@@ -13,6 +12,8 @@ import awesomeMultiselect = require("common/awesomeMultiselect");
 import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 import generalUtils = require("common/generalUtils");
 import clearIndexErrorsConfirm = require("viewmodels/database/indexes/clearIndexErrorsConfirm");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type indexNameAndCount = {
     indexName: string;
@@ -24,7 +25,7 @@ type indexActionAndCount = {
     count: number;
 }
 
-class indexErrors extends viewModelBase {
+class indexErrors extends shardViewModelBase {
     
     view = require("views/database/indexes/indexErrors.html");
 
@@ -49,8 +50,8 @@ class indexErrors extends viewModelBase {
     clearErrorsBtnText: KnockoutComputed<string>;
     clearErrorsBtnTooltip: KnockoutComputed<string>;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.initObservables();
         this.bindToCurrentInstance("clearIndexErrors");
     }
@@ -125,7 +126,7 @@ class indexErrors extends viewModelBase {
         });
     }
 
-    private syncMultiSelect() {
+    private static syncMultiSelect() {
         awesomeMultiselect.rebuild($("#visibleIndexesSelector"));
         awesomeMultiselect.rebuild($("#visibleActionsSelector"));
     }
@@ -138,17 +139,17 @@ class indexErrors extends viewModelBase {
         super.compositionComplete();
         const grid = this.gridController();
         grid.headerVisible(true);
-        grid.init((s, t) => this.fetchIndexErrors(s, t), () =>
+        grid.init(() => this.fetchIndexErrors(), () =>
             [
                 new actionColumn<IndexErrorPerDocument>(grid, (error, index) => this.showErrorDetails(index), "Show", `<i class="icon-preview"></i>`, "72px",
                     {
                         title: () => 'Show indexing error details'
                     }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.activeDatabase()), "Index name", "25%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.db), "Index name", "25%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%", {
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.db), "Document Id", "20%", {
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
                 }),
@@ -179,7 +180,7 @@ class indexErrors extends viewModelBase {
             }
         });
         this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
-        this.syncMultiSelect();
+        indexErrors.syncMultiSelect();
     }
 
     private showErrorDetails(errorIdx: number) {
@@ -197,7 +198,7 @@ class indexErrors extends viewModelBase {
         this.gridController().reset(false);
     }
 
-    private fetchIndexErrors(start: number, take: number): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
+    private fetchIndexErrors(): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
         if (this.allIndexErrors === null) {
             return this.fetchRemoteIndexesError().then(list => {
                 this.allIndexErrors = list;
@@ -209,12 +210,12 @@ class indexErrors extends viewModelBase {
     }
 
     private fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
-        return new getIndexesErrorCommand(this.activeDatabase())
+        return new getIndexesErrorCommand(this.db)
             .execute()
             .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => {
                 this.ignoreSearchCriteriaUpdatesMode = true;
 
-                const indexNamesAndCount = this.extractIndexNamesAndCount(result);
+                const indexNamesAndCount = indexErrors.extractIndexNamesAndCount(result);
                 const actionNamesAndCount = this.extractActionNamesAndCount(result);
 
                 this.allErroredIndexNames(indexNamesAndCount);
@@ -222,7 +223,7 @@ class indexErrors extends viewModelBase {
                 this.selectedIndexNames(this.allErroredIndexNames().map(x => x.indexName));
                 this.selectedActionNames(this.allErroredActionNames().map(x => x.actionName));
 
-                this.syncMultiSelect();
+                indexErrors.syncMultiSelect();
 
                 this.ignoreSearchCriteriaUpdatesMode = false;
 
@@ -262,7 +263,7 @@ class indexErrors extends viewModelBase {
         });
     }
 
-    private extractIndexNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexNameAndCount> {
+    private static extractIndexNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexNameAndCount> {
         const array = indexErrors.filter(error => error.Errors.length > 0).map(errors => {
             return {
                 indexName: errors.Name,
@@ -321,7 +322,7 @@ class indexErrors extends viewModelBase {
     }
 
     clearIndexErrors() {
-        const clearErrorsDialog = new clearIndexErrorsConfirm(this.allIndexesSelected() ? null : this.selectedIndexNames(), this.activeDatabase());
+        const clearErrorsDialog = new clearIndexErrorsConfirm(this.allIndexesSelected() ? null : this.selectedIndexNames(), this.db);
         app.showBootstrapDialog(clearErrorsDialog);
             
         clearErrorsDialog.clearErrorsTask

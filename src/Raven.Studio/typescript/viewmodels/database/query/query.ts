@@ -46,6 +46,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import shardedDatabase from "models/resources/shardedDatabase";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -125,7 +126,7 @@ class includedRevisions {
     items: Array<includedRevisionItem> = [];
 }
 
-class query extends viewModelBase {
+class query extends shardViewModelBase {
 
     static readonly dateTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
 
@@ -375,16 +376,16 @@ class query extends viewModelBase {
         });
 
         this.editIndexUrl = ko.pureComputed(() =>
-            this.queriedIndex() ? appUrl.forEditIndex(this.queriedIndex(), this.activeDatabase()) : null);
+            this.queriedIndex() ? appUrl.forEditIndex(this.queriedIndex(), this.db) : null);
 
         this.indexPerformanceUrl = ko.pureComputed(() =>
-            this.queriedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.queriedIndex()) : null);
+            this.queriedIndex() ? appUrl.forIndexPerformance(this.db, this.queriedIndex()) : null);
 
         this.termsUrl = ko.pureComputed(() =>
-            this.queriedIndex() ? appUrl.forTerms(this.queriedIndex(), this.activeDatabase()) : null);
+            this.queriedIndex() ? appUrl.forTerms(this.queriedIndex(), this.db) : null);
 
         this.visualizerUrl = ko.pureComputed(() =>
-            this.queriedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.queriedIndex()) : null);
+            this.queriedIndex() ? appUrl.forVisualizer(this.db, this.queriedIndex()) : null);
 
         this.isMapReduceIndex = ko.pureComputed(() => {
             const currentIndex = this.queriedIndexInfo();
@@ -577,7 +578,7 @@ class query extends viewModelBase {
         
         this.updateHelpLink('KCIMJK');
         
-        const db = this.activeDatabase();
+        const db = this.db;
 
         return this.fetchAllIndexes(db)
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
@@ -589,7 +590,7 @@ class query extends viewModelBase {
         const currentQueryText = this.criteria().queryText();
         
         if (currentQueryText !== this.lastCriteriaExecuted.queryText()) {
-            query.lastQueryNotExecuted.set(this.activeDatabase().name, currentQueryText);
+            query.lastQueryNotExecuted.set(this.db.name, currentQueryText);
         }
     }
 
@@ -627,7 +628,7 @@ class query extends viewModelBase {
 
         const grid = this.gridController();
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
+        const documentsProvider = new documentBasedColumnsProvider(this.db, grid, {
             enableInlinePreview: true,
             detectTimeSeries: true,
             timeSeriesActionHandler: (type, documentId, name, value, event) => {
@@ -657,7 +658,7 @@ class query extends viewModelBase {
             }
         });
 
-        const highlightingProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
+        const highlightingProvider = new documentBasedColumnsProvider(this.db, grid, {
             enableInlinePreview: false
         });
 
@@ -790,7 +791,7 @@ class query extends viewModelBase {
                 this.queriedIndexInfo(currentIndex);
             } else {
                 // fetch indexes since this view may not be up-to-date if index was defined outside of studio
-                this.fetchAllIndexes(this.activeDatabase())
+                this.fetchAllIndexes(this.db)
                     .done(() => {
                         this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
                     })
@@ -854,7 +855,7 @@ class query extends viewModelBase {
                     title: () => 'Show revision preview'
                 }),
             new textColumn<includedRevisionItem>(grid, x => x.revision, "Revision", "15%"),
-            new hyperlinkColumn<includedRevisionItem>(grid, x => x.sourceDocument, x => appUrl.forEditDoc(x.sourceDocument, this.activeDatabase()), "Source Document", "25%", {
+            new hyperlinkColumn<includedRevisionItem>(grid, x => x.sourceDocument, x => appUrl.forEditDoc(x.sourceDocument, this.db), "Source Document", "25%", {
                     sortable: "string"
                 }),
             new textColumn<includedRevisionItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.lastModified, query.dateTimeFormat), "Last Modified", "25%", {
@@ -874,7 +875,7 @@ class query extends viewModelBase {
     }
 
     private loadSavedQueries(): void {
-        const db = this.activeDatabase();
+        const db = this.db;
 
         this.savedQueries(savedQueriesStorage.getSavedQueries(db));
         
@@ -882,7 +883,7 @@ class query extends viewModelBase {
 
         if (lastQueryThatWasNotExecuted) {
             this.criteria().queryText(lastQueryThatWasNotExecuted);
-            query.lastQueryNotExecuted.set(this.activeDatabase().name, "");
+            query.lastQueryNotExecuted.set(this.db.name, "");
         }
     }
 
@@ -909,7 +910,7 @@ class query extends viewModelBase {
             if (matchingQuery) {
                 this.runRecentQuery(matchingQuery);
             } else {
-                this.navigate(appUrl.forQuery(this.activeDatabase()));
+                this.navigate(appUrl.forQuery(this.db));
             }
         } else if (indexNameOrRecentQueryHash) {
             messagePublisher.reportError(`Could not find index or recent query: ${indexNameOrRecentQueryHash}`);
@@ -933,7 +934,7 @@ class query extends viewModelBase {
 
         this.runQuery();
 
-        const url = appUrl.forQuery(this.activeDatabase(), indexName);
+        const url = appUrl.forQuery(this.db, indexName);
         this.updateUrl(url);
     }
 
@@ -971,7 +972,7 @@ class query extends viewModelBase {
         if (criteria.queryText()) {
             this.spinners.isLoading(true);
 
-            const database = this.activeDatabase();
+            const database = this.db;
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
@@ -1153,7 +1154,7 @@ class query extends viewModelBase {
     }
     
     explainIndex(): void {
-        new explainQueryCommand(this.criteria().queryText(), this.activeDatabase())
+        new explainQueryCommand(this.criteria().queryText(), this.db)
             .execute()
             .done(explanationResult => {
                 app.showBootstrapDialog(new explainQueryDialog(explanationResult));
@@ -1167,7 +1168,7 @@ class query extends viewModelBase {
             if (this.isValid(this.saveQueryValidationGroup)) {
                 
                 // Verify if name already exists
-                if (_.find(savedQueriesStorage.getSavedQueries(this.activeDatabase()), x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
+                if (_.find(savedQueriesStorage.getSavedQueries(this.db), x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
                     this.confirmationMessage(`Query ${generalUtils.escapeHtml(this.querySaveName())} already exists`, `Overwrite existing query?`, {
                         buttons: ["No", "Overwrite"],
                         html: true
@@ -1212,14 +1213,14 @@ class query extends viewModelBase {
     private saveToStorage(criteria: storedQueryDto, isRecent: boolean): void {
         criteria.recentQuery = isRecent;
         this.appendQuery(criteria);
-        savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
+        savedQueriesStorage.storeSavedQueries(this.db, this.savedQueries());
 
         this.criteria().name("");
         this.loadSavedQueries();
     }
 
     showFirstItemInPreviewArea(): void {
-        this.previewItem(savedQueriesStorage.getSavedQueries(this.activeDatabase())[0]);
+        this.previewItem(savedQueriesStorage.getSavedQueries(this.db)[0]);
     }
     
     appendQuery(criteria: storedQueryDto): void {
@@ -1290,7 +1291,7 @@ class query extends viewModelBase {
                         this.previewItem(null);
                     }
 
-                    savedQueriesStorage.removeSavedQueryByHash(this.activeDatabase(), item.hash);
+                    savedQueriesStorage.removeSavedQueryByHash(this.db, item.hash);
                     this.loadSavedQueries();
                 }
             });
@@ -1455,14 +1456,14 @@ class query extends viewModelBase {
         //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
         const totalResultsFormatted = this.totalResultsForUi().toLocaleString() + (this.hasMoreUnboundedResults() ? "+" : "");
-        const viewModel = new queryStatsDialog(this.queryStats(), totalResultsFormatted, this.activeDatabase());
+        const viewModel = new queryStatsDialog(this.queryStats(), totalResultsFormatted, this.db);
         app.showBootstrapDialog(viewModel);
     }
 
     private updateBrowserUrl(criteria: queryCriteria): void {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
-        const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
+        const queryUrl = appUrl.forQuery(this.db, newQuery.hash);
         this.updateUrl(queryUrl);
     }
 
@@ -1489,13 +1490,13 @@ class query extends viewModelBase {
     deleteDocsMatchingQuery(): void {
         eventsCollector.default.reportEvent("query", "delete-documents");
 
-        const db = this.activeDatabase();
+        const db = this.db;
         const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), this.lastCriteriaExecuted.queryText(), this.totalResultsForUi(), db, this.hasMoreUnboundedResults());
 
         app.showBootstrapDialog(viewModel)
             .done((result) => {
                 if (result) {
-                    new deleteDocsMatchingQueryCommand(this.lastCriteriaExecuted.queryText(), this.activeDatabase())
+                    new deleteDocsMatchingQueryCommand(this.lastCriteriaExecuted.queryText(), this.db)
                         .execute()
                         .done((operationId: operationIdDto) => {
                             this.monitorDeleteOperation(db, operationId.OperationId);
@@ -1595,7 +1596,7 @@ class query extends viewModelBase {
         if (this.graphTabIsDirty()) {
             this.graphQueryResults.clear();
             
-            new debugGraphOutputCommand(this.activeDatabase(), this.criteria().queryText())
+            new debugGraphOutputCommand(this.db, this.criteria().queryText())
                 .execute()
                 .done((result) => {
                     this.graphTabIsDirty(false);
@@ -1614,7 +1615,7 @@ class query extends viewModelBase {
         this.spinners.isLoadingSpatialResults(true);
         this.failedToGetResultsForSpatial(false);
 
-        const command = new queryCommand(this.activeDatabase(),
+        const command = new queryCommand(this.db,
                                          this.allSpatialResultsItems().length,
                                          query.maxSpatialResultsToFetch + 1,
                                          this.criteria().clone(),

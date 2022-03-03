@@ -7,7 +7,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
-            shardingMode: "all",
+            shardingMode: "both",
             moduleId: require('viewmodels/database/query/query'),
             title: 'Query',
             nav: true,
@@ -24,7 +24,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
-            shardingMode: "single",
+            shardingMode: "singleShardOnly",
             moduleId: require('viewmodels/database/indexes/indexPerformance'),
             title: 'Indexing Performance',
             tooltip: "Shows details about indexing performance",
@@ -34,6 +34,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/visualizer',
+            shardingMode: "singleShardOnly",
             moduleId: require('viewmodels/database/indexes/visualizer/visualizer'),
             title: 'Map-Reduce Visualizer',
             nav: true,

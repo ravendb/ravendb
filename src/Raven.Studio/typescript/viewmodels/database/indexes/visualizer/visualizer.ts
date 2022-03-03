@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import visualizerGraphGlobal = require("viewmodels/database/indexes/visualizer/visualizerGraphGlobal");
 import visualizerGraphDetails = require("viewmodels/database/indexes/visualizer/visualizerGraphDetails");
 
@@ -6,13 +5,15 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import getIndexMapReduceTreeCommand = require("commands/database/index/getIndexMapReduceTreeCommand");
 import getIndexDebugSourceDocumentsCommand = require("commands/database/index/getIndexDebugSourceDocumentsCommand");
 import eventsCollector = require("common/eventsCollector");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type autoCompleteItem = {
     label: string;
     alreadyAdded: boolean;
 }
 
-class visualizer extends viewModelBase {
+class visualizer extends shardViewModelBase {
 
     view = require("views/database/indexes/visualizer/visualizer.html");
 
@@ -42,14 +43,12 @@ class visualizer extends viewModelBase {
     private globalGraph = new visualizerGraphGlobal();
     private detailsGraph = new visualizerGraphDetails();
 
-    constructor() {
-        super();
-
+    constructor(db: database) {
+        super(db);
+        
         this.bindToCurrentInstance("setSelectedIndex", "selectDocumentId", "addCurrentDocumentId");
 
         this.initObservables();
-        
-        this.viewNotSupportedInAllShardsContext();
     }
 
     private initObservables() {
@@ -71,11 +70,7 @@ class visualizer extends viewModelBase {
     }
 
     activate(args: { index: string }) {
-        if (!this.supportsShardContext()) {
-            return true;
-        }
-        
-        return new getIndexesStatsCommand(this.activeDatabase())
+        return new getIndexesStatsCommand(this.db)
             .execute()
             .done(result => {
                 this.onIndexesLoaded(result);
@@ -88,10 +83,6 @@ class visualizer extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        if (!this.supportsShardContext()) {
-            return;
-        }
-
         this.globalGraph.init((treeName: string) => this.detailsGraph.openFor(treeName), doc => this.removeDocument(doc.name));
         this.detailsGraph.init(() => this.globalGraph.restoreView(), this.trees);
     }
@@ -137,7 +128,7 @@ class visualizer extends viewModelBase {
         if (documentsToFetch.length) {
             this.spinners.addDocument(true);
 
-            new getIndexMapReduceTreeCommand(this.activeDatabase(), this.currentIndex(), documentsToFetch)
+            new getIndexMapReduceTreeCommand(this.db, this.currentIndex(), documentsToFetch)
                 .execute()
                 .done((mapReduceTrees) => {
                     if (mapReduceTrees.length) {
@@ -301,7 +292,7 @@ class visualizer extends viewModelBase {
 
         const currentDocumentIds = this.documents.documentIds();
 
-        new getIndexDebugSourceDocumentsCommand(this.activeDatabase(), this.currentIndex(), query, 0, 10)
+        new getIndexDebugSourceDocumentsCommand(this.db, this.currentIndex(), query, 0, 10)
             .execute()
             .done(result => {
                 if (this.documents.documentId() === query) {
