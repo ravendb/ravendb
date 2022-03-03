@@ -11,8 +11,6 @@ class ioStats extends viewModelBase {
     
     constructor() {
         super();
-        
-        this.viewNotSupportedInAllShardsContext();
 
         this.graph = new ioStatsGraph(
             () => `database-${this.activeDatabase().name}`,

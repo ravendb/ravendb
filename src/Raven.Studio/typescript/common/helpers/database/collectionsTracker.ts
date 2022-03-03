@@ -30,11 +30,9 @@ class collectionsTracker {
     onDatabaseChanged(db: database) {
         this.db = db;
         
-        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
-        
-        this.loadStatsTask = new getCollectionsStatsCommand(dbToUse)
+        this.loadStatsTask = new getCollectionsStatsCommand(db)
             .execute()
-            .done(stats => this.collectionsLoaded(stats, dbToUse));
+            .done(stats => this.collectionsLoaded(stats, db));
 
         this.configureRevisions(db);
 

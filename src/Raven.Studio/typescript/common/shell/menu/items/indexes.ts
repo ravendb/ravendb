@@ -7,6 +7,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
+            shardingMode: "all",
             moduleId: require('viewmodels/database/query/query'),
             title: 'Query',
             nav: true,
@@ -23,9 +24,10 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/indexes/performance',
+            shardingMode: "single",
             moduleId: require('viewmodels/database/indexes/indexPerformance'),
             title: 'Indexing Performance',
-            tooltip: "Shows details about indexing peformance",
+            tooltip: "Shows details about indexing performance",
             nav: true,
             css: 'icon-index-batch-size',
             dynamicHash: appUrls.indexPerformance

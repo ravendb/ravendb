@@ -15,6 +15,7 @@ class leafMenuItem implements menuItem {
     path: KnockoutComputed<string>;
     parent: KnockoutObservable<intermediateMenuItem> = ko.observable(null);
     disableWithReason?: KnockoutObservable<string>;
+    shardingMode: shardingMode;
     type: menuItemType = "leaf";
     itemRouteToHighlight: string;
     alias: boolean;
@@ -24,7 +25,7 @@ class leafMenuItem implements menuItem {
     countPrefix: KnockoutComputed<string>;
     sizeClass: KnockoutComputed<string>;
 
-    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, badgeData, alias, requiredAccess }: {
+    constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, disableWithReason, openAsDialog, itemRouteToHighlight, shardingMode, badgeData, alias, requiredAccess }: {
         title: string,
         route: string | Array<string>,
         moduleId: Function,
@@ -35,6 +36,7 @@ class leafMenuItem implements menuItem {
         css?: string,
         openAsDialog?: boolean,
         disableWithReason?: KnockoutObservable<string>;
+        shardingMode?: shardingMode;
         itemRouteToHighlight?: string;
         badgeData?: KnockoutObservable<number>;
         alias?: boolean;
@@ -54,6 +56,7 @@ class leafMenuItem implements menuItem {
         this.dynamicHash = dynamicHash;
         this.css = css;
         this.disableWithReason = disableWithReason;
+        this.shardingMode = shardingMode;
         this.openAsDialog = openAsDialog;
         this.alias = alias || false;
         this.requiredAccess = requiredAccess;

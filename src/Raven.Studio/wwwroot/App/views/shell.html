@@ -73,31 +73,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="shard-switcher-container" data-bind="with: shardSwitcher, visible: shardSwitcher.shardedDatabaseGroup">
-                    <div class="form-control btn-toggle shard-switcher">
-                        <span class="database on-base-background" data-bind="text: activeItemName"></span>
-                    </div>
-                    <div class="box-container">
-                        <div class="scroller">
-                            <section>
-                                <ul class="database-list">
-                                    <li data-bind="visible: shardedDatabaseGroup() && !shardedDatabaseGroup().disabled() && shardedDatabaseGroup().relevant(), with: shardedDatabaseGroup">
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem(), database: true }">
-                                            <div class="name" data-bind="text: $parent.constructor.allShards"></div>
-                                        </a>
-                                    </li>
-                                    <!-- ko foreach: shards-->
-                                    <li data-bind="visible: !disabled() && relevant()">
-                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: shardName}, css: { active: name === $parent.highlightedItem(), database: true }">
-                                            <div class="name" data-bind="text: shardName"></div>
-                                        </a>
-                                    </li>
-                                    <!-- /ko -->
-                                </ul>
-                            </section>
-                        </div>
-                    </div>
-                </div>
                 <div class="search-container" data-bind="visible: $root.activeDatabase">
                     <input type="search" class="form-control omnisearch on-base-background" autocomplete="off" placeholder="go to document" id="search-box-input" data-bind="textInput: $root.searchBox.searchQuery, hasFocus: $root.searchBox.searchQueryHasFocus" />
                     <label for="search-box-input" class="icon-search"></label>

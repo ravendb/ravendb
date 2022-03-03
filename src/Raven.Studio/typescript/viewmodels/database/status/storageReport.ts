@@ -54,8 +54,6 @@ class storageReport extends viewModelBase {
     constructor() {
         super();
         this.bindToCurrentInstance("onClick");
-        
-        this.viewNotSupportedInAllShardsContext();
     }
 
     activate(args: any) {
