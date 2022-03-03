@@ -6,6 +6,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
@@ -58,11 +59,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                     else if (v is DateOnly dateOnly)
                     {
-                        writer.WriteValue(dateOnly.ToString(Sparrow.DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                        writer.WriteValue(dateOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
                     }
                     else if (v is TimeOnly timeOnly)
                     {
-                        writer.WriteValue(timeOnly.ToString(Sparrow.DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                        writer.WriteValue(timeOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
                     }
 #endif
                     else if (v is IEnumerable enumerable)

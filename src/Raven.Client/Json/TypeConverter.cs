@@ -2,8 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using Raven.Client.Documents.Conventions;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -173,10 +173,10 @@ namespace Raven.Client.Json
                     break;
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                 case DateOnly dateOnly:
-                    kvpKeyAsString = dateOnly.ToString(Sparrow.DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    kvpKeyAsString = dateOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                     break;
                 case TimeOnly timeOnly:
-                    kvpKeyAsString = timeOnly.ToString(Sparrow.DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    kvpKeyAsString = timeOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                     break;
  #endif              
                 default:
