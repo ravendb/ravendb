@@ -7,8 +7,8 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.ShardedTcpHandlers;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -50,7 +50,6 @@ namespace Raven.Server.Documents.Sharding
             _record = record;
             Indexes = new ShardedIndexesCache(this, serverStore, record);
             _logger = LoggingSource.Instance.GetLogger<ShardedContext>(DatabaseName);
-            _serverStore = server;
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 
             RequestExecutors = new RequestExecutor[record.Shards.Length];
@@ -192,14 +191,8 @@ namespace Raven.Server.Documents.Sharding
 
         public async Task<string> GetLastDocumentChangeVectorForCollection(string collection)
         {
-            using var result = await TryExecuteCommandOnShards(() => new LastChangeVectorForCollectionCommand(collection));
-            var cvs = new List<string>();
-            foreach (var cmd in result.ShardCommandResults)
-            {
-                cvs.Add(cmd.Command.Result.LastChangeVector);
-            }
-
-            return ChangeVectorUtils.MergeVectors(cvs);
+            var res = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(collection));
+            return res.LastChangeVector;
         }
 
         public void Dispose()
@@ -227,42 +220,6 @@ namespace Raven.Server.Documents.Sharding
             }
 
             _databaseShutdown.Dispose();
-        }
-
-        private static readonly TimeSpan _reasonableWaitTime = TimeSpan.FromMilliseconds(1500000);
-        private readonly ServerStore _serverStore;
-
-        public async Task<ExecuteCommandOnShardsResult<TResult>> TryExecuteCommandOnShards<TResult>(Func<RavenCommand<TResult>> func)
-        {
-            var result = new ExecuteCommandOnShardsResult<TResult>();
-            result.ShardCommandResults = new List<ShardCommandResult<TResult>>();
-            try
-            {
-                for (var i = 0; i < RequestExecutors.Length; i++)
-                {
-                    var re = RequestExecutors[i];
-                    result.AddDisposable(_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx));
-                    var cmd = func.Invoke();
-                    var t = re.ExecuteAsync(cmd, ctx/*, token: _databaseShutdown.Token*/);
-                    result.ShardCommandResults.Add(new ShardCommandResult<TResult>() { Command = cmd, ExecuteTask = t, Shard = GetShardedDatabaseName(i) });
-                }
-
-                var whenAll = Task.WhenAll(result.ShardCommandResults.Select(x => x.ExecuteTask));
-                var waitFor = TimeoutManager.WaitFor(_reasonableWaitTime/*, _databaseShutdown.Token*/);
-                var completed = await Task.WhenAny(whenAll, waitFor);
-                if (completed == waitFor)
-                {
-                    // TODO: we can add failover strategy
-                    throw new TimeoutException($"Could not execute {func.Invoke().GetType().Name} in reasonable time: {_reasonableWaitTime}");
-                }
-            }
-            catch
-            {
-                result.Dispose();
-                throw;
-            }
-
-            return result;
         }
     }
 }

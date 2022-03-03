@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public const string BatchWaitForAcknowledge = "BatchWaitForAcknowledge";
     }
 
-    public class SubscriptionConnection : SubscriptionConnectionBase, IDisposable
+    public class SubscriptionConnection : SubscriptionConnectionBase
     {
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));

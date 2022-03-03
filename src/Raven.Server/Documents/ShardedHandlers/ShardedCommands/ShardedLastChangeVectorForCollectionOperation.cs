@@ -1,11 +1,34 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Server.Json;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Sharding.Commands
+namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
+    public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult>
+    {
+        private readonly string _collection;
+
+        public ShardedLastChangeVectorForCollectionOperation(string collection)
+        {
+            _collection = collection;
+        }
+
+        public LastChangeVectorForCollectionResult Combine(Memory<LastChangeVectorForCollectionResult> results)
+        {
+            return new LastChangeVectorForCollectionResult
+            {
+                Collection = _collection,
+                LastChangeVector = ChangeVectorUtils.MergeVectors(results.ToArray().Select(x => x.LastChangeVector).ToArray())
+            };
+        }
+
+        public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shard) => new LastChangeVectorForCollectionCommand(_collection);
+    }
+
     public class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
     {
         private readonly string _collection;
@@ -39,5 +62,11 @@ namespace Raven.Server.Documents.Sharding.Commands
         }
 
         public override bool IsReadRequest => true;
+    }
+
+    public class LastChangeVectorForCollectionResult
+    {
+        public string Collection { get; set; }
+        public string LastChangeVector { get; set; }
     }
 }
