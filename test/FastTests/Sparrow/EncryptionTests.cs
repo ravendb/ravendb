@@ -11,7 +11,6 @@ using Sparrow;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
 using Voron.Impl.Paging;
@@ -27,7 +26,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public unsafe void WriteAndReadPageUsingCryptoPager()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -111,7 +110,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public unsafe void StreamsTempFile_With_Encryption_ShouldNotThrow_When_NotAllStreamsWereRead()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -152,7 +151,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public unsafe void StreamsTempFile_With_Encryption_ShouldThrow_When_SeekAndWrite_AreMixed_Without_ExecutingReset()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
@@ -190,7 +189,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public unsafe void RavenDB_15975()
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))

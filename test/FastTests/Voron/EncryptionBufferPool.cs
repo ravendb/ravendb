@@ -5,7 +5,6 @@ using System.Threading;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +17,7 @@ namespace FastTests.Voron
         {
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public void dont_pool_buffers_larger_than_8Mb()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -57,7 +56,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformTheory(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Theory]
         [InlineData(LowMemorySeverity.Low)]
         [InlineData(LowMemorySeverity.ExtremelyLow)]
         public void clear_all_buffers_from_current_generation_on_low_memory(LowMemorySeverity lowMemorySeverity)
@@ -106,7 +105,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public void clear_all_buffers_on_extremely_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -137,7 +136,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public void can_save_buffers_after_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -171,7 +170,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public void clear_buffers_only_when_in_extremely_low_memory()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
@@ -191,7 +190,7 @@ namespace FastTests.Voron
             ClearMemory(encryptionBuffersPool);
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
+        [Fact]
         public void properly_calculate_thread_total_allocations_when_we_cant_put_buffer_in_pool()
         {
             var encryptionBuffersPool = new EncryptionBuffersPool(registerLowMemory: false, registerCleanup: false);
