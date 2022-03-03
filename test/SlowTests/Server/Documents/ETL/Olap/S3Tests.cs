@@ -839,7 +839,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
             }
         }
 
-        [AmazonS3Theory (Skip = "TODO [shlomo] temporary switched off the test as it brokes the test session")]
+        [AmazonS3Theory]
         [JavaScriptEngineClassData]
         public async Task CanHandleSpecialCharsInEtlName(string jsEngineType)
         {
