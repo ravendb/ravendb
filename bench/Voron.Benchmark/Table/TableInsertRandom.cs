@@ -52,9 +52,11 @@ namespace Voron.Benchmark.Table
         [Params(-1)]
         public int RandomSeed { get; set; } = -1;
 
+        private const string TableName = "TestTable2";
+
         static TableInsertRandom()
         {
-            Slice.From(Configuration.Allocator, "TestTable2", ByteStringType.Immutable, out TableNameSlice);
+            Slice.From(Configuration.Allocator, TableName, ByteStringType.Immutable, out TableNameSlice);
             Slice.From(Configuration.Allocator, "TestSchema2", ByteStringType.Immutable, out SchemaPKNameSlice);
 
             Schema = new TableSchema()
@@ -73,22 +75,16 @@ namespace Voron.Benchmark.Table
         {
             base.Setup();
 
-            var randomSeed = RandomSeed == -1 ? null : RandomSeed as int?;
-
-            Utils.GenerateWornoutTable(
-                Env,
-                TableNameSlice,
-                Schema,
-                GenerationTableSize,
-                GenerationBatchSize,
-                KeyLength,
-                GenerationDeletionProbability,
-                randomSeed);
+            using (var tx = Env.WriteTransaction())
+            {
+                Schema.Create(tx, TableNameSlice, 16);
+                tx.Commit();
+            }
 
             var totalPairs = Utils.GenerateUniqueRandomSlicePairs(
                 NumberOfTransactions * NumberOfRecordsPerTransaction,
                 KeyLength,
-                randomSeed);
+                RandomSeed == -1 ? null as int? : RandomSeed);
 
             _valueBuilders = new List<TableValueBuilder>[NumberOfTransactions];
 
@@ -108,6 +104,23 @@ namespace Voron.Benchmark.Table
                 totalPairs.RemoveRange(0, NumberOfRecordsPerTransaction);
             }
         }
+
+        [IterationSetup]
+        public void ClearTable()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.DeleteTable(TableName);
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                Schema.Create(tx, TableNameSlice, 16);
+                tx.Commit();
+            }
+        }
+
 
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions)]
         public void InsertRandomOneTransaction()

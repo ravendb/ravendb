@@ -191,104 +191,98 @@ namespace Voron.Benchmark
             {
                 try
                 {
-                    tx.OpenTable(schema, tableNameSlice);
-                    hasTable = true;
+                    var table = tx.OpenTable(schema, tableNameSlice);
+                    hasTable = table != null;
                 }
                 catch (Exception)
                 {
                     hasTable = false;
                 }
-
-                tx.Commit();
             }
 
             if (hasTable)
             {
-                using (var tx = env.ReadTransaction())
-                {
-                    var table = tx.OpenTable(schema, tableNameSlice);
-
-                    foreach (var reader in table.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
-                    {
-                        Slice key;
-                        schema.Key.GetSlice(Configuration.Allocator, ref reader.Reader, out key);
-                        tableKeys.Add(key);
-                    }
-
-                    tx.Commit();
-                }
-            }
-            else
-            {
-                // Create a table with enough wearing
                 using (var tx = env.WriteTransaction())
                 {
-                    var values = new List<Tuple<Slice, Slice>>();
+                    tx.DeleteTable(tableNameSlice.ToString());
+                    tx.Commit();
+                }
+
+                using (var tx = env.WriteTransaction())
+                {
                     schema.Create(tx, tableNameSlice, 16);
-                    var table = tx.OpenTable(schema, tableNameSlice);
+                    tx.Commit();
+                }              
+            }
 
-                    while (table.NumberOfEntries < generationTableSize)
+            // Create a table with enough wearing
+            using (var tx = env.WriteTransaction())
+            {
+                var values = new List<Tuple<Slice, Slice>>();
+                schema.Create(tx, tableNameSlice, 16);
+                var table = tx.OpenTable(schema, tableNameSlice);
+
+                while (table.NumberOfEntries < generationTableSize)
+                {
+                    int deletions = 0;
+
+                    // Add BatchSize new keys
+                    for (int i = 0; i < generationBatchSize; i++)
                     {
-                        int deletions = 0;
-
-                        // Add BatchSize new keys
-                        for (int i = 0; i < generationBatchSize; i++)
+                        // We might run out of values while creating the table, generate more.
+                        if (values.Count == 0)
                         {
-                            // We might run out of values while creating the table, generate more.
-                            if (values.Count == 0)
-                            {
-                                values = GenerateUniqueRandomSlicePairs(
-                                    generationTableSize,
-                                    keyLength,
-                                    randomSeed);
-                            }
+                            values = GenerateUniqueRandomSlicePairs(
+                                generationTableSize,
+                                keyLength,
+                                randomSeed);
+                        }
 
-                            var pair = values[0];
-                            values.RemoveAt(0);
+                        var pair = values[0];
+                        values.RemoveAt(0);
 
-                            // Add it to the table key set
-                            tableKeys.Add(pair.Item1);
+                        // Add it to the table key set
+                        tableKeys.Add(pair.Item1);
 
-                            // Add it to the table
-                            table.Insert(new TableValueBuilder
+                        // Add it to the table
+                        table.Insert(new TableValueBuilder
                                 {
                                     pair.Item1,
                                     pair.Item2
                                 });
 
-                            // Simulate a binomial rv in the mean time
-                            if (generator.NextDouble() < generationDeletionProbability)
-                            {
-                                deletions++;
-                            }
-                        }
-
-                        // Delete the number of deletions given by the binomial rv
-                        // We may have gone a little bit over the limit during
-                        // insertion, but we rebalance here.
-                        if (table.NumberOfEntries > generationTableSize)
+                        // Simulate a binomial rv in the mean time
+                        if (generator.NextDouble() < generationDeletionProbability)
                         {
-                            while (table.NumberOfEntries > generationTableSize)
-                            {
-                                var keyIndex = generator.Next(tableKeys.Count);
-                                table.DeleteByKey(tableKeys[keyIndex]);
-                                tableKeys.RemoveAt(keyIndex);
-                            }
-                        }
-                        else
-                        {
-                            while (deletions > 0 && table.NumberOfEntries > 0)
-                            {
-                                var keyIndex = generator.Next(tableKeys.Count);
-                                table.DeleteByKey(tableKeys[keyIndex]);
-                                tableKeys.RemoveAt(keyIndex);
-                                deletions--;
-                            }
+                            deletions++;
                         }
                     }
 
-                    tx.Commit();
+                    // Delete the number of deletions given by the binomial rv
+                    // We may have gone a little bit over the limit during
+                    // insertion, but we rebalance here.
+                    if (table.NumberOfEntries > generationTableSize)
+                    {
+                        while (table.NumberOfEntries > generationTableSize)
+                        {
+                            var keyIndex = generator.Next(tableKeys.Count);
+                            table.DeleteByKey(tableKeys[keyIndex]);
+                            tableKeys.RemoveAt(keyIndex);
+                        }
+                    }
+                    else
+                    {
+                        while (deletions > 0 && table.NumberOfEntries > 0)
+                        {
+                            var keyIndex = generator.Next(tableKeys.Count);
+                            table.DeleteByKey(tableKeys[keyIndex]);
+                            tableKeys.RemoveAt(keyIndex);
+                            deletions--;
+                        }
+                    }
                 }
+
+                tx.Commit();
             }
 
             return tableKeys;
