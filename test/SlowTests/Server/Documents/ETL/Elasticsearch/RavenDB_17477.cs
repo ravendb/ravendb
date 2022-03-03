@@ -30,12 +30,14 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                             .MatchOnlyText(t => t
                                 .Name("Id")))));
 
-                var config = SetupElasticEtl(store, @"
-var orderData = {
+                var optChaining = jsEngineType == "Jint" ? "" : "?";
+                var zeroIfNull = jsEngineType == "Jint" ? "" : " ?? 0";
+                var config = SetupElasticEtl(store, @$"
+var orderData = {{
     Id: id(this),
-    OrderLinesCount: this.Lines?.length ?? 0,
+    OrderLinesCount: this.Lines{optChaining}.length{zeroIfNull},
     TotalCost: 0
-};
+}};
 
 loadTo" + OrdersIndexName + @"(orderData);", 
                     new []{ new ElasticSearchIndex { IndexName = OrdersIndexName, DocumentIdProperty = "Id" } },
