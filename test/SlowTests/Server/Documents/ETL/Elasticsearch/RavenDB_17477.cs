@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.JavaScript;
 using Orders;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Tests.Infrastructure;
@@ -17,9 +18,10 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
         }
 
         [RequiresElasticSearchTheory]
-        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic()
+        [JavaScriptEngineClassData]
+        public async Task ShouldErrorAndAlertOnInvalidIndexSetupInElastic(string jsEngineType)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
             using (GetElasticClient(out var client))
             {
                 client.Indices.Create(OrdersIndexName, c => c
@@ -31,7 +33,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 var config = SetupElasticEtl(store, @"
 var orderData = {
     Id: id(this),
-    OrderLinesCount: this.Lines.length,
+    OrderLinesCount: this.Lines?.length ?? 0,
     TotalCost: 0
 };
 
