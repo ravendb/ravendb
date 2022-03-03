@@ -24,7 +24,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedTcpHandlers
 {
-    public class ShardedSubscriptionConnection : SubscriptionConnectionBase, IDisposable
+    public class ShardedSubscriptionConnection : SubscriptionConnectionBase
     {
         private readonly Dictionary<string, SubscriptionShardHolder> _shardWorkers = new Dictionary<string, SubscriptionShardHolder>();
         public static ConcurrentDictionary<string, ShardedSubscriptionConnection> Connections = new ConcurrentDictionary<string, ShardedSubscriptionConnection>();

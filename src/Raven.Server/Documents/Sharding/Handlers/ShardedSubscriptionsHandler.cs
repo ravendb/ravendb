@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -299,9 +297,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             var workerId = GetStringQueryString("workerId", required: false);
             try
             {
-                using var result = await ShardedContext.TryExecuteCommandOnShards<object>(string.IsNullOrEmpty(workerId)
-                 ? () => new DropSubscriptionConnectionCommand(subscriptionName)
-                 : () => new DropSubscriptionConnectionCommand(subscriptionName, workerId));
+                await ShardExecutor.ExecuteParallelForAllAsync(new ShardedDropSubscriptionConnectionOperation(subscriptionName, workerId));
             }
             finally
             {
@@ -363,44 +359,32 @@ namespace Raven.Server.Documents.ShardedHandlers
                     throw new ArgumentException($"Cannot gather more than {maxPageSize} results during tryouts, but requested number was {pageSize}.");
 
                 var timeLimit = GetIntValueQueryString("timeLimit", false);
-                using var result = await ShardedContext.TryExecuteCommandOnShards(() => new SubscriptionTryoutCommand(tryout, pageSize, timeLimit));
+                var result = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedSubscriptionTryoutOperation(context, tryout, pageSize, timeLimit));
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
                     writer.WriteStartArray();
                     var numberOfDocs = 0;
-                    string lastId = null;
                     var f = true;
 
-                    foreach (var cmd in result.ShardCommandResults)
+                    foreach (var res in result.Results)
                     {
-                        foreach (var res in cmd.Command.Result.Results)
-                        {
-                            if (numberOfDocs == pageSize)
-                                break;
-
-                            if (res is not BlittableJsonReaderObject bjro)
-                                continue;
-
-                            using (bjro)
-                            {
-                                if (f == false)
-                                    writer.WriteComma();
-
-                                f = false;
-                                WriteBlittable(bjro, writer);
-                                if (bjro.TryGetMember(nameof(Constants.Documents.Metadata.Key), out var obj) && obj is BlittableJsonReaderObject metadata
-                                                                                                   && metadata.TryGetMember(nameof(Constants.Documents.Metadata.Id), out var obj2) && obj2 is string id)
-                                {
-                                    lastId = id;
-                                }
-
-                                numberOfDocs++;
-                            }
-                        }
                         if (numberOfDocs == pageSize)
                             break;
+
+                        if (res is not BlittableJsonReaderObject bjro)
+                            continue;
+
+                        using (bjro)
+                        {
+                            if (f == false)
+                                writer.WriteComma();
+
+                            f = false;
+                            WriteBlittable(bjro, writer);
+                            numberOfDocs++;
+                        }
                     }
 
                     writer.WriteEndArray();
