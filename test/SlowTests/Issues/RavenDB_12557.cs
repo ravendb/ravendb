@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void ShouldNotAllowToIncreaseFileSizeWhenUsingCopyOnWriteMode()
         {
             // we must not increase file size during the recovery process because we create new MMF view but we don't see the already applied changes

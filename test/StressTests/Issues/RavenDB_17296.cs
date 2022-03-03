@@ -14,7 +14,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Windows64BitTheory]
+        [MultiplatformTheory(RavenPlatform.Windows, RavenArchitecture.AllX64)]
         [InlineData(3_000)]
         [InlineData(10_000)]
         public void Should_Not_Kill_Server_Because_Of_Insufficient_Execution_Stack(int numberOfExpressions)

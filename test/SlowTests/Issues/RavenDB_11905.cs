@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task CanUseVoronRecoveryOnEmptyDatabase()
         {
             var dbPath = NewDataPath();
