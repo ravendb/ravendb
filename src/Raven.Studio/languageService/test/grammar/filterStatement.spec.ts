@@ -134,9 +134,23 @@ describe("Filter statement parser", function () {
     });
 
     it("binary and function with filterLimit", function () {
-        const { parser } = parseRql("from test filter x = 5 and function(y) filter_limit 1 limit 1");
+        const { parser } = parseRql("from test filter x = 5 and function(y) limit 1 filter_limit 1 ");
 
         expect(parser.numberOfSyntaxErrors)
             .toEqual(0);
+    });
+
+    it("binary and function with only filterLimit", function () {
+        const { parser } = parseRql("from test filter x = 5 and function(y) filter_limit 1 ");
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(0);
+    });
+
+    it("binary and function with limit and the end", function () {
+        const { parser } = parseRql("from test filter x = 5 and function(y) filter_limit 1 limit 1 ");
+
+        expect(parser.numberOfSyntaxErrors)
+            .toEqual(1);
     });
 });
