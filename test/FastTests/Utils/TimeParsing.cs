@@ -91,9 +91,7 @@ namespace FastTests.Utils
                 Assert.Equal(expected, dto);
             }
         }
-
-
-
+        
         [Theory]
         [InlineData("2016-10-05T")]
         [InlineData("2016-10-05T21:17:32.2082285+01:00,ad")]
@@ -129,7 +127,9 @@ namespace FastTests.Utils
 
         [Theory]
         [InlineData("20:59:12.9990000", 20, 59, 12, 999)]
-        [InlineData("21:37:00.0000000", 21, 37, 0, 0)]
+        [InlineData("21:38:32.9120000", 21, 38, 32, 912)]
+        [InlineData("23:59:00", 23, 59,0,0)]
+        [InlineData("23:01:09", 23, 1,9,0)]
         public void TimeOnly(string date, int hh, int mm, int ss, int ms)
         {
             var bytes = date.AsSpan();

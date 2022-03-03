@@ -289,7 +289,7 @@ namespace Sparrow.Json
         
         public static bool TryParseTimeOnly(char* buffer, int len, out TimeOnly timeOnly)
         {
-            if (len is not (8 or 16) || buffer[2] is not ':' || buffer[5] is not ':' || buffer[8] is not '.')
+            if (len is not (8 or 16) || buffer[2] is not ':' || buffer[5] is not ':')
                 goto Failed;
 
             if (TryParseNumber2(buffer, 0, out int hours) == false)
@@ -318,7 +318,6 @@ namespace Sparrow.Json
                     goto Failed;
             }
 
-
             timeOnly = new TimeOnly(hours, minutes, seconds, milliseconds);
             return true;
 
@@ -340,8 +339,8 @@ namespace Sparrow.Json
 
             if (TryParseNumber2(buffer, 8, out int day) == false)
                 goto Failed;
-
-            dateOnly = new DateOnly(year, month, day);
+            
+            dateOnly = DateOnly.FromDayNumber((int)(DateToTicks(year, month, day, 0, 0, 0, 0)/TicksPerDay));
             return true;
 
             Failed:
@@ -363,7 +362,7 @@ namespace Sparrow.Json
             if (TryParseNumber2(buffer, 8, out int day) == false)
                 goto Failed;
 
-            dateOnly = new DateOnly(year, month, day);
+            dateOnly = DateOnly.FromDayNumber((int)(DateToTicks(year, month, day, 0, 0, 0, 0) / TicksPerDay));
             return true;
 
             Failed:
