@@ -245,7 +245,7 @@ includeStatement
    
 limitStatement
    : LIMIT variable ((COMMA | OFFSET) variable)? (FILTER_LIMIT variable)?
-   | (FILTER_LIMIT variable) (LIMIT variable ((COMMA | OFFSET) variable)? )?
+   | FILTER_LIMIT variable
    ;
    //          UTILS SEGMENT           //
    
