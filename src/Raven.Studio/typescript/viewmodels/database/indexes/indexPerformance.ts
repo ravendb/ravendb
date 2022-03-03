@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import fileDownloader = require("common/fileDownloader");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import d3 = require("d3");
@@ -13,8 +12,8 @@ import getIndexesStatsCommand = require("commands/database/index/getIndexesStats
 import colorsManager = require("common/colorsManager");
 import fileImporter = require("common/fileImporter");
 import moment = require("moment");
-import shardedDatabase from "models/resources/shardedDatabase";
-import databasesManager from "common/shell/databasesManager";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type rTreeLeaf = {
     minX: number;
@@ -151,7 +150,7 @@ class hitTest {
     }
 }
 
-class indexPerformance extends viewModelBase {
+class indexPerformance extends shardViewModelBase {
 
     /* static */
     
@@ -295,8 +294,8 @@ class indexPerformance extends viewModelBase {
         }
     };
     
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         
         this.bindToCurrentInstance("toggleScroll", "clearGraphWithConfirm");
 
@@ -326,22 +325,16 @@ class indexPerformance extends viewModelBase {
             const client = this.liveViewClient();
             return client ? client.loading() : true;
         });
-        
-        this.viewNotSupportedInAllShardsContext();
     }
 
     activate(args: { indexName: string, database: string}) {
         super.activate(args);
         
-        if (!this.supportsShardContext()) {
-            return true;
-        }
-        
         if (args.indexName) {
             this.expandedTracks.push(args.indexName);
         }
         
-        return new getIndexesStatsCommand(this.activeDatabase())
+        return new getIndexesStatsCommand(this.db)
             .execute()
             .done((stats) => {
                 this.faultyIndexes(stats.filter(x => x.Type === "Faulty").map(x => x.Name));
@@ -359,10 +352,6 @@ class indexPerformance extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        if (!this.supportsShardContext()) {
-            return;
-        }
-
         colorsManager.setup("#indexingPerformance", this.colors);
         
         this.scrollConfig = graphHelper.readScrollConfig();
@@ -524,7 +513,7 @@ class indexPerformance extends viewModelBase {
             }
         };
 
-        this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
+        this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.db, onDataUpdate, this.dateCutoff));
     }
 
     isConnectedToWebSocket() {
@@ -1461,7 +1450,7 @@ class indexPerformance extends viewModelBase {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `indexPerf of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
+            exportFileName = `indexPerf of ${this.db.name} ${moment().format("YYYY-MM-DD HH-mm")}`; 
         }
 
         const keysToIgnore: Array<keyof IndexingPerformanceStatsWithCache | keyof IndexingPerformanceOperationWithParent> = [

@@ -22,10 +22,6 @@ class ioStats extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        if (!this.supportsShardContext()) {
-            return;
-        }
-
         const [width, height] = this.getPageHostDimenensions();
         this.graph.init(width, height);
     }

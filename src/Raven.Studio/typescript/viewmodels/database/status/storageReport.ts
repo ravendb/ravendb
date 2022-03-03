@@ -59,10 +59,6 @@ class storageReport extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
-        if (!this.supportsShardContext()) {
-            return true;
-        }
-
         this.initObservables();
 
         return new getStorageReportCommand(this.activeDatabase())
@@ -76,10 +72,6 @@ class storageReport extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        if (!this.supportsShardContext()) {
-            return;
-        }
-        
         this.processData();
         this.initGraph();
         this.draw(undefined);
