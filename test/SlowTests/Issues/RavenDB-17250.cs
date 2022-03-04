@@ -43,7 +43,7 @@ public class RavenDB_17250 : RavenTestBase
             WaitForUserToContinueTheTest(store);
         }
     }
-    
+
     [Fact]
     public void IndexWithLetQueries()
     {
@@ -63,10 +63,9 @@ public class RavenDB_17250 : RavenTestBase
             {
                 Assert.Equal(5, i.DateOnly.Year);
             });
-            
         }
     }
-    
+
     [Fact]
     public void DateTimeToDateOnlyWithLet()
     {
@@ -80,7 +79,8 @@ public class RavenDB_17250 : RavenTestBase
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
             using var session = store.OpenSession();
 
-            var resultRaw2 = session.Query<IndexWithDateTimeAndDateOnly.IndexEntry, IndexWithDateTimeAndDateOnly>().Where(p => p.Year == 5).ProjectInto<DateAndTimeOnly>();
+            var resultRaw2 = session.Query<IndexWithDateTimeAndDateOnly.IndexEntry, IndexWithDateTimeAndDateOnly>().Where(p => p.Year == 5)
+                .ProjectInto<DateAndTimeOnly>();
             var result = resultRaw2.ToList();
             result.ForEach(i =>
             {
@@ -89,7 +89,7 @@ public class RavenDB_17250 : RavenTestBase
             WaitForUserToContinueTheTest(store);
         }
     }
-    
+
     [Fact]
     public void TransformDateInJsPatch()
     {
@@ -194,7 +194,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         using var store = GetDocumentStore();
         var data = CreateDatabaseData(store);
 
-        {            
+        {
             using var session = store.OpenSession();
             var after = new TimeOnly(15, 00);
             var before = new TimeOnly(17, 00);
@@ -204,8 +204,8 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
                 Assert.True(i.TimeOnly > after && i.TimeOnly < before);
             });
         }
-        
-        {            
+
+        {
             using var session = store.OpenSession();
             var after = new DateOnly(1, 9, 1);
             var before = new DateOnly(2, 6, 17);
@@ -218,15 +218,39 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
     }
 
     [Fact]
+    public void MinMaxValueInProjections()
+    {
+        using var store = GetDocumentStore();
+        {
+            using var session = store.OpenSession();
+            session.Store(new ProjectionTestWithDefaultValues { Min = DateOnly.MaxValue, Max = DateOnly.MinValue }
+            );
+            session.SaveChanges();
+        }
+        {
+            using var session = store.OpenSession();
+            var result = session.Query<ProjectionTestWithDefaultValues>().Select(p => new ProjectionTestWithDefaultValues
+            {
+                Min = DateOnly.MinValue, Max = DateOnly.MaxValue
+            }).Single();
+            Assert.Equal(DateOnly.MinValue, result.Min);
+            Assert.Equal(DateOnly.MaxValue, result.Max);
+        }
+    }
+
+    private class ProjectionTestWithDefaultValues
+    {
+        public DateOnly Min { get; set; }
+        public DateOnly Max { get; set; }
+    }
+
+    [Fact]
     public void ProjectionJobsWithDateTimeDateOnly()
     {
         using var store = GetDocumentStore();
         {
             using var s = store.OpenSession();
-            s.Store(new DateAndTimeOnly()
-            {
-                DateOnly = new DateOnly(1947, 12, 21)
-            });
+            s.Store(new DateAndTimeOnly() { DateOnly = new DateOnly(1947, 12, 21) });
             s.SaveChanges();
         }
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -236,7 +260,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
             Assert.Equal(today.Year - 1947, q.Age);
         }
     }
-    
+
     private List<DateAndTimeOnly> CreateDatabaseData(IDocumentStore store)
     {
         TimeOnly timeOnly = new TimeOnly(0, 0, 0, 234);
@@ -254,7 +278,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         public DateOnly DateOnly { get; set; }
         public TimeOnly TimeOnly { get; set; }
         public DateTime DateTime { get; set; }
-        
+
         public int? Age { get; set; }
     }
 
@@ -275,13 +299,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         public DateAndTimeOnlyIndex()
         {
             Map = dates => from date in dates
-
-                
-                select new IndexEntry()
-                {
-                    DateOnly = date.DateOnly , 
-                    TimeOnly = date.TimeOnly
-                };
+                select new IndexEntry() { DateOnly = date.DateOnly, TimeOnly = date.TimeOnly };
         }
     }
 
@@ -301,7 +319,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
                 select new IndexEntry() { Year = x.Year, DateOnly = new DateOnly(2020, 12, 24), TimeOnly = date.TimeOnly, };
         }
     }
-    
+
     private class IndexWithDateTimeAndDateOnly : AbstractIndexCreationTask<DateAndTimeOnly, DateAndTimeOnlyIndex.IndexEntry>
     {
         public class IndexEntry
@@ -315,7 +333,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         {
             Map = dates => from date in dates
                 let x = date.DateTime
-                select new IndexEntry() { Year = x.Year, DateOnly = DateOnly.FromDateTime(x), DateTime = x};
+                select new IndexEntry() { Year = x.Year, DateOnly = DateOnly.FromDateTime(x), DateTime = x };
         }
     }
 }

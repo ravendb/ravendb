@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+using System;
 using System.Globalization;
 using Newtonsoft.Json;
 using Sparrow;
@@ -6,7 +7,6 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
     internal sealed class DateOnlyConverter : JsonConverter
     {
         // ISO 8601 standard
@@ -17,11 +17,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         {
             if (value is null)
             {
-                throw new NullReferenceException(nameof(value));
+                throw new ArgumentNullException(nameof(value));
             }
 
             var @do = (DateOnly)value;
-            writer.WriteValue(@do.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+            writer.WriteValue(@do.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
         }
 
         public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
@@ -41,7 +41,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             {
                 if (LazyStringParser.TryParseDateOnly(buffer, value.Length, out var dateOnly) == false)
                 {
-                    throw new InvalidOperationException("Expected DateOnly, Got " + value);
+                    if (LazyStringParser.TryParseDateTime(buffer, value.Length, out var dt, out var _, true) is LazyStringParser.Result.Failed or LazyStringParser.Result.DateTimeOffset)
+                    {
+                        throw new InvalidOperationException("Expected DateOnly, Got " + value);
+                    }
+
+                    return DateOnly.FromDateTime(dt);
                 }
 
                 return dateOnly;
@@ -53,6 +58,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
             return objectType == typeof(DateOnly);
         }
     }
-#endif
-
 }
+
+#endif
