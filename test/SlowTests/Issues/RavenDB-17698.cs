@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 string lastDocumentId = null;
                 using (var bulkInsert = source.BulkInsert())
                 {
-                    for (var i = 0; i < 10; i++)
+                    for (var i = 0; i < 5; i++)
                     {
                         lastDocumentId = i.ToString();
                         await bulkInsert.StoreAsync(new User(), lastDocumentId);
