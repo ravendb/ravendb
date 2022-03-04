@@ -89,7 +89,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [LicenseRequiredFact]
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
         public void Can_compact_from_compression_to_not_compressed()
         {
             var path = NewDataPath();
