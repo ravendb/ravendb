@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -352,7 +353,7 @@ namespace Raven.Client.Documents.BulkInsert
                     WriteString(id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
-                    await FlushIfNeeded().ConfigureAwait(false);
+                    await FlushIfNeeded(id).ConfigureAwait(false);
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
@@ -364,6 +365,11 @@ namespace Raven.Client.Documents.BulkInsert
                 }
                 catch (Exception e)
                 {
+                    if (_forTestingPurposes?.ConsoleWritelineDebugging == true)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Bulk insert store (id: {id}) - exception: {e}");
+                    }
+
                     await HandleErrors(id, e).ConfigureAwait(false);
                 }
             }
@@ -395,13 +401,36 @@ namespace Raven.Client.Documents.BulkInsert
             return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
         }
 
-        private async Task FlushIfNeeded()
+        private async Task FlushIfNeeded(string id = null)
         {
             _currentWriter.Flush();
 
             if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
                 _asyncWrite.IsCompleted)
             {
+                if (_forTestingPurposes?.ConsoleWritelineDebugging == true)
+                {
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Bulk insert flush - doc id: {id}, _asyncWrite.IsCompleted {_asyncWrite.IsCompleted}");
+
+                    if (_asyncWrite.IsCompleted == false)
+                    {
+                        var sw = Stopwatch.StartNew();
+
+                        try
+                        {
+                            await _asyncWrite.ConfigureAwait(false);
+
+                            Console.WriteLine($"DEBUG: {DateTime.UtcNow} Bulk insert flush. It took {sw.Elapsed} to wait for _asyncTask");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($"DEBUG: {DateTime.UtcNow} Bulk insert flush. Exception on  await _asyncWrite: {e}");
+
+                            throw;
+                        }
+                    }
+                }
+
                 await _asyncWrite.ConfigureAwait(false);
 
                 var tmp = _currentWriter;
@@ -547,6 +576,16 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
         {
+            if (_forTestingPurposes?.ConsoleWritelineDebugging == true)
+            {
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} ThrowOnUnavailableStream - _streamExposerContent.OutputStream: completed {_streamExposerContent.OutputStream.IsCompleted} and {_streamExposerContent.OutputStream.IsFaulted}, inner exception: {innerEx}");
+
+                if (_streamExposerContent.OutputStream.IsFaulted)
+                {
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Faulted stream exposer content stream {_streamExposerContent.OutputStream.Exception}");
+                }
+            }
+
             _streamExposerContent.ErrorOnProcessingRequest(
                 new BulkInsertAbortedException($"Write to stream failed at document with id {id}.", innerEx));
             await _bulkInsertExecuteTask.ConfigureAwait(false);
@@ -1020,6 +1059,21 @@ namespace Raven.Client.Documents.BulkInsert
                     }
                 }
             }
+        }
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            public bool ConsoleWritelineDebugging = true;
         }
     }
 }

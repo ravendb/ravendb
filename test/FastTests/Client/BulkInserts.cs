@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -43,7 +44,6 @@ namespace FastTests.Client
                 });
 
                 Console.WriteLine($"DEBUG: {DateTime.UtcNow} SSL setup for {nameof(Simple_Bulk_Insert)} test completed");
-
             }
 
             using (var store = GetDocumentStore(new Options
@@ -53,8 +53,17 @@ namespace FastTests.Client
                 ModifyDatabaseName = s => dbName
             }))
             {
+                if (useSsl)
+                {
+                    DatabaseStatistics databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
+
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Managed to get stats of {dbName}. {databaseStatistics.DatabaseId}");
+                }
+
                 using (var bulkInsert = store.BulkInsert())
                 {
+                    bulkInsert.ForTestingPurposesOnly().ConsoleWritelineDebugging = useSsl;
+
                     for (int i = 0; i < 1000; i++)
                     {
                         await bulkInsert.StoreAsync(new FooBar()
