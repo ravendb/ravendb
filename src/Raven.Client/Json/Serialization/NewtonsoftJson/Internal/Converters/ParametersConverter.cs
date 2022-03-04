@@ -59,11 +59,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                     else if (v is DateOnly dateOnly)
                     {
-                        writer.WriteValue(dateOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                        writer.WriteValue(dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
                     }
                     else if (v is TimeOnly timeOnly)
                     {
-                        writer.WriteValue(timeOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                        writer.WriteValue(timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
                     }
 #endif
                     else if (v is IEnumerable enumerable)

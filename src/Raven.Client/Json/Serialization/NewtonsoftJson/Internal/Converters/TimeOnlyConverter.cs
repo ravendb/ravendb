@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.IO;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -13,15 +14,15 @@ internal sealed class TimeOnlyConverter : JsonConverter
 {
     public static readonly TimeOnlyConverter Instance = new();
 
-    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
+    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
     {
         if (value is null)
         {
-            throw new NullReferenceException(nameof(value));
+            throw new ArgumentNullException(nameof(value));
         }
 
         var to = (TimeOnly)value;
-        writer.WriteValue(to.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+        writer.WriteValue(to.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
     }
 
     public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)

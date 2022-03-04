@@ -1454,17 +1454,13 @@ namespace Raven.Client.Util
             }
         }
 
-        public class DateTimeSupport : JavascriptConversionExtension
+        public abstract class DateSupportBase<TDate> : JavascriptConversionExtension
         {
-            public static DateTimeSupport Instance = new DateTimeSupport();
-
-            private DateTimeSupport()
-            {
-            }
-
+            public abstract void ObjectParameterTranslator(string name, JavascriptWriter writer);
+            
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node is NewExpression newExp && newExp.Type == typeof(DateTime))
+                if (context.Node is NewExpression newExp && newExp.Type == typeof(TDate))
                 {
                     context.PreventDefault();
                     var writer = context.GetWriter();
@@ -1496,7 +1492,7 @@ namespace Raven.Client.Util
                 }
 
                 if (context.Node is BinaryExpression binaryExpression &&
-                    binaryExpression.Left.Type == typeof(DateTime))
+                    binaryExpression.Left.Type == typeof(TDate))
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1524,7 +1520,7 @@ namespace Raven.Client.Util
                 if (!(context.Node is MemberExpression node))
                     return;
 
-                if (node.Type == typeof(DateTime) && node.Expression == null)
+                if (node.Type == typeof(TDate) && node.Expression == null)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1532,35 +1528,13 @@ namespace Raven.Client.Util
                     using (writer.Operation(node))
                     {
                         //match DateTime.Now , DateTime.UtcNow, DateTime.Today
-                        switch (node.Member.Name)
-                        {
-                            case "MinValue":
-                                writer.Write("new Date(-62135596800000)");
-                                break;
-
-                            case "MaxValue":
-                                writer.Write("new Date(253402297199999)");
-                                break;
-
-                            case "Now":
-                                writer.Write("new Date(Date.now())");
-                                break;
-
-                            case "UtcNow":
-                                writer.Write(
-                                    @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date())");
-                                break;
-
-                            case "Today":
-                                writer.Write("new Date(new Date().setHours(0,0,0,0))");
-                                break;
-                        }
+                        ObjectParameterTranslator(node.Member.Name, writer);
                     }
 
                     return;
                 }
 
-                if (node.Expression?.Type == typeof(DateTime) && node.Expression is MemberExpression memberExpression)
+                if (node.Expression?.Type == typeof(TDate) && node.Expression is MemberExpression memberExpression)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1571,7 +1545,7 @@ namespace Raven.Client.Util
 
                         writer.Write("new Date(");
 
-                        if (memberExpression.Member.DeclaringType != typeof(DateTime))
+                        if (memberExpression.Member.DeclaringType != typeof(TDate))
                         {
                             writer.Write("Date.parse(");
                             context.Visitor.Visit(memberExpression.Expression);
@@ -1627,163 +1601,67 @@ namespace Raven.Client.Util
         }
         
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
-        public class DateOnlySupport : JavascriptConversionExtension
+        public class DateOnlySupport : DateSupportBase<DateOnly>
         {
-            public static readonly DateOnlySupport Instance = new DateOnlySupport();
-
+            public static DateOnlySupport Instance = new DateOnlySupport();
+            
             private DateOnlySupport()
             {
             }
-
-            public override void ConvertToJavascript(JavascriptConversionContext context)
+            
+            public override void ObjectParameterTranslator(string name, JavascriptWriter writer)
             {
-                if (context.Node is NewExpression newExp && newExp.Type == typeof(DateOnly))
+                // Default values from DateOnly struct.
+                switch (name)
                 {
-                    context.PreventDefault();
-                    var writer = context.GetWriter();
-                    using (writer.Operation(newExp))
-                    {
-                        writer.Write("new Date(");
+                    case "MinValue":
+                        writer.Write($"new Date(-62135596800000)");
+                        break;
 
-                        for (int i = 0; i < newExp.Arguments.Count; i++)
-                        {
-                            var value = ((ConstantExpression)newExp.Arguments[i]).Value;
-                            if (i == 1)
-                            {
-                                var month = (int)value;
-                                writer.Write(month - 1);
-                            }
-                            else
-                            {
-                                writer.Write(value);
-                            }
-                            if (i < newExp.Arguments.Count - 1)
-                            {
-                                writer.Write(", ");
-                            }
-                        }
-                        writer.Write(")");
-                    }
-
-                    return;
-                }
-
-                if (context.Node is BinaryExpression binaryExpression &&
-                    binaryExpression.Left.Type == typeof(DateOnly))
-                {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    using (writer.Operation(context.Node))
-                    {
-                        writer.Write("compareDates(");
-
-                        context.Visitor.Visit(binaryExpression.Left);
-                        writer.Write(", ");
-
-                        context.Visitor.Visit(binaryExpression.Right);
-
-                        if (context.Node.NodeType != ExpressionType.Subtract)
-                        {
-                            writer.Write($", '{context.Node.NodeType}'");
-                        }
-
-                        writer.Write(")");
-                    }
-
-                    return;
-                }
-
-                if (!(context.Node is MemberExpression node))
-                    return;
-                if (node.Type == typeof(DateOnly) && node.Expression == null)
-                {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    using (writer.Operation(node))
-                    {
-                        switch (node.Member.Name)
-                        {
-                            case "MinValue":
-                                writer.Write($"new Date(1, 1, 1)");
-                                break;
-
-                            case "MaxValue":
-                                writer.Write("new Date(5999, 12, 31)");
-                                break;
-                        }
-                    }
-
-                    return;
-                }
-
-                if (node.Expression?.Type == typeof(DateOnly) && node.Expression is MemberExpression memberExpression)
-                {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    using (writer.Operation(node))
-                    {
-                        //match expressions like : DateTime.Today.Year , DateTime.Now.Day , user.Birthday.Month , etc
-
-                        writer.Write("new Date(");
-
-                        if (memberExpression.Member.DeclaringType != typeof(DateOnly))
-                        {
-                            writer.Write("Date.parse(");
-                            context.Visitor.Visit(memberExpression.Expression);
-                            if (memberExpression.Expression.Type.IsNullableType() == false)
-                                writer.Write($".{memberExpression.Member.Name}");
-                            writer.Write(")");
-                        }
-
-                        writer.Write(")");
-
-                        switch (node.Member.Name)
-                        {
-                            case "Year":
-                                writer.Write(IsUtc() ? ".getUTCFullYear()" : ".getFullYear()");
-                                break;
-
-                            case "Month":
-                                writer.Write(IsUtc() ? ".getUTCMonth()+1" : ".getMonth()+1");
-                                break;
-
-                            case "Day":
-                                writer.Write(IsUtc() ? ".getUTCDate()" : ".getDate()");
-                                break;
-
-                            case "Hour":
-                                writer.Write(IsUtc() ? ".getUTCHours()" : ".getHours()");
-                                break;
-
-                            case "Minute":
-                                writer.Write(IsUtc() ? ".getUTCMinutes()" : ".getMinutes()");
-                                break;
-
-                            case "Second":
-                                writer.Write(IsUtc() ? ".getUTCSeconds()" : ".getSeconds()");
-                                break;
-
-                            case "Millisecond":
-                                writer.Write(IsUtc() ? ".getUTCMilliseconds()" : ".getMilliseconds()");
-                                break;
-
-                            case "Ticks":
-                                writer.Write(".getTime()*10000");
-                                break;
-                        }
-
-                        bool IsUtc()
-                        {
-                            return memberExpression.Member.Name == "UtcNow";
-                        }
-                    }
+                    case "MaxValue":
+                        writer.Write("new Date('9999, 12, 31')");
+                        break;
                 }
             }
         }
 #endif
+        
+        public class DateTimeSupport : DateSupportBase<DateTime>
+        {
+            public static DateTimeSupport Instance = new DateTimeSupport();
+
+            private DateTimeSupport()
+            {
+            }
+            
+            public override void ObjectParameterTranslator(string name, JavascriptWriter writer)
+            {
+                switch (name)
+                {
+                    case "MinValue":
+                        writer.Write("new Date(-62135596800000)");
+                        break;
+
+                    case "MaxValue":
+                        writer.Write("new Date(253402297199999)");
+                        break;
+
+                    case "Now":
+                        writer.Write("new Date(Date.now())");
+                        break;
+
+                    case "UtcNow":
+                        writer.Write(
+                            @"(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date())");
+                        break;
+
+                    case "Today":
+                        writer.Write("new Date(new Date().setHours(0,0,0,0))");
+                        break;
+                }
+            }
+        }
+        
         public class TimeSpanSupport : JavascriptConversionExtension
         {
             public static TimeSpanSupport Instance = new TimeSpanSupport();

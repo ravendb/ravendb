@@ -1800,9 +1800,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
             if (type == typeof(DateOnly))
-                return ((DateOnly)whereParams.Value).ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                return ((DateOnly)whereParams.Value).ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
             if (type == typeof(TimeOnly))
-                return ((TimeOnly)whereParams.Value).ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                return ((TimeOnly)whereParams.Value).ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
 #endif
             if (type == typeof(string))
                 return (string)whereParams.Value;

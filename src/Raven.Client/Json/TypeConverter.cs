@@ -173,10 +173,10 @@ namespace Raven.Client.Json
                     break;
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                 case DateOnly dateOnly:
-                    kvpKeyAsString = dateOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    kvpKeyAsString = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
                     break;
                 case TimeOnly timeOnly:
-                    kvpKeyAsString = timeOnly.ToString(DefaultFormat.TimeOnlyAndDateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    kvpKeyAsString = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
                     break;
  #endif              
                 default:

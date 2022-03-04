@@ -460,14 +460,23 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             
             if (field is DateTime dt)
+            {
                 return DateOnly.FromDateTime(dt);
+            }
 
             if (field is DateOnly dtO)
-                return dtO;
-
-            if (field is DynamicNullObject or null)
             {
-                return DynamicNullObject.Null;
+                return dtO;
+            }
+
+            if (field is null)
+            {
+                return DynamicNullObject.ExplicitNull;
+            }
+            
+            if (field is DynamicNullObject dno)
+            {
+                return dno;
             }
             
             throw new InvalidDataException($"Expected {nameof(DateTime)}, {nameof(DateOnly)}, null, string or JSON value.");
@@ -500,11 +509,18 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             if (field is TimeOnly toF)
-                return toF;
-
-            if (field is DynamicNullObject or null)
             {
-                return DynamicNullObject.Null;
+                return toF;
+            }
+
+            if (field is null)
+            {
+                return DynamicNullObject.ExplicitNull;
+            }
+            
+            if (field is DynamicNullObject dno)
+            {
+                return dno;
             }
             
             throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)}, null, string or JSON value.");
