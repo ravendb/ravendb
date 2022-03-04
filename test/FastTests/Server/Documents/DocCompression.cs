@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
+        [LicenseRequiredFact]
         public void Can_compact_from_no_compression_to_compressed()
         {
             var path = NewDataPath();
@@ -89,7 +89,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
+        [LicenseRequiredFact]
         public void Can_compact_from_compression_to_not_compressed()
         {
             var path = NewDataPath();
