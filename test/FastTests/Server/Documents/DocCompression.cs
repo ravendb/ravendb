@@ -41,7 +41,7 @@ namespace FastTests.Server.Documents
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        [LicenseRequiredFact]
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux, LicenseRequired = true)]
         public void Can_compact_from_no_compression_to_compressed()
         {
             var path = NewDataPath();
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents
                 Path = path,
                 RunInMemory = false,
                 ModifyDatabaseRecord = r => r.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders")
-        });
+            });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -142,18 +142,19 @@ namespace FastTests.Server.Documents
         public void Can_compact_db_with_compressed_collections()
         {
             var path = NewDataPath();
-            if(Directory.Exists(path))
+            if (Directory.Exists(path))
                 Directory.Delete(path, true);
             using var store = GetDocumentStore(new Options
             {
                 Path = path,
                 RunInMemory = false,
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Orders")
-        });
+            });
 
             store.Maintenance.Send(new CreateSampleDataOperation());
 
-            var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings{
+            var op = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+            {
                 DatabaseName = store.Database,
                 Documents = true,
             }));
@@ -184,7 +185,7 @@ namespace FastTests.Server.Documents
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
-        });
+            });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))
@@ -208,7 +209,7 @@ namespace FastTests.Server.Documents
             using var store = GetDocumentStore();
 
             var rnd = Enumerable.Range(1, 10)
-                .Select(i => new string((char)(65+i), 256))
+                .Select(i => new string((char)(65 + i), 256))
                 .ToList();
 
             using (var s = store.OpenSession())
@@ -218,7 +219,7 @@ namespace FastTests.Server.Documents
                     s.Store(new User
                     {
                         Items = Enumerable.Range(1, random.Next(1, 10))
-                            .Select(x=>rnd[x])
+                            .Select(x => rnd[x])
                             .ToList()
                     }, "users/" + i);
                 }
@@ -239,7 +240,7 @@ namespace FastTests.Server.Documents
                         Items = Enumerable.Range(1, random.Next(1, 10))
                             .Select(x => rnd[x])
                             .ToList()
-                    },"users/" +i);
+                    }, "users/" + i);
                 }
 
                 s.SaveChanges();
@@ -295,7 +296,7 @@ namespace FastTests.Server.Documents
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
-        });
+            });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))
@@ -339,7 +340,7 @@ namespace FastTests.Server.Documents
             using var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users")
-        });
+            });
 
             var rnd = Enumerable.Range(1, 10)
                 .Select(i => RandomString(random, 16))
@@ -394,7 +395,7 @@ namespace FastTests.Server.Documents
                     s.Store(new User
                     {
                         Desc = string.Join("-", Enumerable.Range(1, random.Next(1, 64)).Select(xi => rnd[xi]))
-                    }, "users/" + i+900);
+                    }, "users/" + i + 900);
                 }
 
                 s.SaveChanges();
