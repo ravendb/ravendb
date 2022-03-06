@@ -53,7 +53,7 @@ public static class SettingsZipFileHelper
                         else
                             await entryStream.WriteAsync(export, CancellationToken.None);
                     }
-
+                    
                     await LetsEncryptCertificateUtil.WriteCertificateAsPemAsync(
                         $"admin.client.certificate.{parameters.CompleteClusterConfigurationResult.Domain}",
                         parameters.CompleteClusterConfigurationResult.CertBytes,

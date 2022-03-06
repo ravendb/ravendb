@@ -1,13 +1,15 @@
 using System;
+using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
-public class SetupWizardUtils
+public static class SetupWizardUtils
 { 
     public static async Task<CompleteClusterConfigurationResult> CompleteClusterConfiguration(CompleteClusterConfigurationParameters parameters)
     {
@@ -40,6 +42,9 @@ public class SetupWizardUtils
                 if (parameters.OnBeforeAddingNodesToCluster != null)
                     await parameters.OnBeforeAddingNodesToCluster(publicServerUrl, localNodeTag);
 
+                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
+                    parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
+                
                 foreach (var node in parameters.SetupInfo.NodeSetupInfos)
                 {
                     if (node.Key == parameters.SetupInfo.LocalNodeTag)
@@ -57,9 +62,6 @@ public class SetupWizardUtils
                     if (parameters.AddNodeToCluster != null)
                         await parameters.AddNodeToCluster(node.Key);
                 }
-
-                serverCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes,
-                    parameters.SetupInfo.Password, parameters.LicenseType, parameters.CertificateValidationKeyUsages, parameters.Progress);
             }
             catch (Exception e)
             {
@@ -76,15 +78,18 @@ public class SetupWizardUtils
                 : parameters.SetupInfo.Domain.ToLower();
 
             byte[] certBytes;
+            CertificateDefinition certificateDefinition;
+            X509Certificate2 selfSignedCertificate;
             try
             {
                 // requires server certificate to be loaded
                 var clientCertificateName = $"{domain}.client.certificate";
-                var result = LetsEncryptCertificateUtil.GenerateCertificate(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
-                certBytes = result.CertBytes;
-
-                if (parameters.PutCertificate != null)
-                    await parameters.PutCertificate(result.CertificateDefinition);
+                (certBytes, certificateDefinition, selfSignedCertificate) = LetsEncryptCertificateUtil.GenerateCertificateTask(serverCertificateHolder, clientCertificateName, parameters.SetupInfo);
+                
+                Debug.Assert(selfSignedCertificate != null);
+                
+                if (parameters.PutCertificateInCluster != null)
+                    await parameters.PutCertificateInCluster(selfSignedCertificate,certificateDefinition);
 
                 clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
             }
@@ -102,7 +107,9 @@ public class SetupWizardUtils
                 ServerCertBytes = serverCertBytes,
                 ServerCert = serverCertificateHolder.Certificate,
                 PublicServerUrl = publicServerUrl,
-                ClientCert = clientCert
+                ClientCert = clientCert,
+                CertificateDefinition = certificateDefinition
+                
             };
         }
         catch (Exception e)

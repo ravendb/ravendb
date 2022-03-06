@@ -10,6 +10,7 @@ public class GetSetupZipFileParameters
 {
     public CompleteClusterConfigurationResult CompleteClusterConfigurationResult; 
     public SetupProgressAndResult Progress;
+    public bool ModifyLocalServer;
     public Action<IOperationProgress> OnProgress;
     public Func<string> OnSettingsPath;
     public SetupInfo SetupInfo;
