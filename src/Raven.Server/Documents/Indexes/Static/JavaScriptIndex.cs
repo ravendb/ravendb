@@ -84,9 +84,8 @@ function map(name, lambda) {
                 collectionFunctions = new Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>>();
                 for (int i = 0; i < mapCount; i++)
                 {
-                    // with the outdated Jint's Eprima map return statements analysis is available in the case of modern JS script by means of a jint stub with the corresposnding return statements structures
                     if (i >= mapsJint.Length)
-                        ThrowIndexCreationException($"JavaScript: Jint: maps length is less then #{i}");
+                        ThrowIndexCreationException($"JavaScript: Jint: maps length is less or equal then #{i}");
                     var mapForParsingJint = mapsJint.Get(i.ToString());
                     if (mapForParsingJint.IsUndefined())
                         ThrowIndexCreationException($"JavaScript: Jint: map #{i} is null");
