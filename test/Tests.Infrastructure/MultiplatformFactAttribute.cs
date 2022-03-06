@@ -57,6 +57,8 @@ public class MultiplatformFactAttribute : FactAttribute
         _architecture = architecture;
     }
 
+    public bool LicenseRequired { get; set; }
+
     public override string Skip
     {
         get
@@ -65,13 +67,16 @@ public class MultiplatformFactAttribute : FactAttribute
             if (skip != null)
                 return skip;
 
-            return ShouldSkip(_platform, _architecture);
+            return ShouldSkip(_platform, _architecture, LicenseRequired);
         }
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture)
+    internal static string ShouldSkip(RavenPlatform platform, RavenArchitecture architecture, bool licenseRequired)
     {
+        if (licenseRequired && LicenseRequiredFactAttribute.ShouldSkip(licenseRequired: true))
+            return LicenseRequiredFactAttribute.SkipMessage;
+
         var matchesPlatform = Match(platform);
         var matchesArchitecture = Match(architecture);
 

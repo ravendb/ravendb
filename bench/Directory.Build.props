@@ -15,6 +15,6 @@
 
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
-
+    <AssemblyOriginatorKeyFile Condition="EXISTS('.\..\..\..\..\..\..\RavenDB.snk')">.\..\..\..\..\..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 </Project>

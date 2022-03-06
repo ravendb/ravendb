@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Sparrow.Threading;
 
 namespace Voron.Benchmark
@@ -6,7 +6,7 @@ namespace Voron.Benchmark
     public class Configuration
     {
         public const int RecordsPerTransaction = 1000;
-        public const int Transactions = 1000;
+        public const int Transactions = 100;
         public const string Path = @"D:\Scratch\bench.data";
 
         /// <summary>

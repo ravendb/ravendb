@@ -21,6 +21,8 @@
             _architecture = architecture;
         }
 
+        public bool LicenseRequired { get; set; }
+
         public override string Skip
         {
             get
@@ -29,7 +31,7 @@
                 if (skip != null)
                     return skip;
 
-                return MultiplatformFactAttribute.ShouldSkip(_platform, _architecture);
+                return MultiplatformFactAttribute.ShouldSkip(_platform, _architecture, LicenseRequired);
             }
         }
     }
