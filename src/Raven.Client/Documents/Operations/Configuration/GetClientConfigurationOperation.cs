@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         internal class GetClientConfigurationCommand : RavenCommand<Result>
         {
-            public override bool IsReadRequest => false;
+            public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
