@@ -608,8 +608,6 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
-            _jsOptions = new JavaScriptOptions(configuration, documentDatabase.Configuration); // TODO [shlomo] check if this is correct: new SingleIndexConfiguration(definition.Configuration, configuration)?
-            
             InitializeMetrics(configuration);
 
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -764,6 +762,8 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
 
+                _jsOptions = new JavaScriptOptions(configuration, documentDatabase.Configuration); // TODO [shlomo] check if this is correct: new SingleIndexConfiguration(definition.Configuration, configuration)?
+            
                 InitializeComponentsUsingEnvironment(documentDatabase, _environment);
 
                 LoadValues();
