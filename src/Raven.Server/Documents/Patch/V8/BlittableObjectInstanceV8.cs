@@ -278,31 +278,26 @@ namespace Raven.Server.Documents.Patch.V8
             if (_disposed)
                 return;
 
-            if (_deletes != null)
-            {
-                _deletes.Clear();
-            }
+            _disposed = true;
+            
+            _deletes?.Clear();
 
             if (_ownValues != null)
             {
-                foreach (var val in _ownValues.Values)
+                foreach (var val in _ownValues?.Values)
                 {
-                    val.Dispose();
+                    val?.Dispose();
                 }
-                _ownValues.Clear();
+                _ownValues?.Clear();
             }
 
 
-            if (_originalPropertiesTypes != null)
-            {
-                _originalPropertiesTypes.Clear();
-            }
+            _originalPropertiesTypes?.Clear();
 
             _luceneDocument = null;
             _luceneState = null;
 
-            if (_luceneIndexFields != null)
-                _luceneIndexFields.Clear();
+            _luceneIndexFields?.Clear();
 
             if (disposing)
             {
@@ -322,8 +317,6 @@ namespace Raven.Server.Documents.Patch.V8
                 _deletes = null;
                 _ownValues = null;
             }
-
-            _disposed = true;
         }
 
 
