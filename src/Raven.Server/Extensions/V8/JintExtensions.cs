@@ -13,6 +13,20 @@ namespace Raven.Server.Extensions.V8
 {
     public class JintEngineExForV8 : Engine, IJavaScriptEngineForParsing
     {
+        public const string ExecEnvCodeJint = @"
+var process = {
+    env: {
+        EXEC_ENV: 'RavenDB',
+        ENGINE: 'Jint'
+    }
+}
+";
+        public JintEngineExForV8()
+        {
+            ExecuteWithReset(ExecEnvCodeJint, "ExecEnvCode");
+        }
+
+
         public IDisposable DisableConstraints()
         {
             var disposeMaxStatements = ChangeMaxStatements(0);
@@ -98,9 +112,9 @@ namespace Raven.Server.Extensions.V8
             {
                 Execute(source);
             }
-            catch (JintException) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
+            /*catch (JintException) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
             {
-            }
+            }*/
             finally
             {
                 ResetCallStack();
@@ -114,9 +128,9 @@ namespace Raven.Server.Extensions.V8
             {
                 Execute(script);
             }
-            catch (JintException) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
+            /*catch (JintException) // all Jint errors can be ignored as we still may have access to AST (if we don't then we will detect it later)
             {
-            }
+            }*/
             finally
             {
                 ResetCallStack();
