@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
-    internal class ShardedGetStudioConfigurationHandler : ShardedRequestHandler
+    public class ShardedGetStudioConfigurationHandler : ShardedRequestHandler
     {
         [RavenShardedAction("/databases/*/configuration/studio", "GET")]
         public async Task GetStudioConfiguration()
