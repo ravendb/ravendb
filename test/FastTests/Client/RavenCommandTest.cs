@@ -52,7 +52,7 @@ namespace FastTests.Client
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand", "GetRevisionsResultCommand", "SetIndexStateCommand",
                 "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand", "GetServerWideExternalReplicationsCommand", 
-                "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
+                "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand", "GetStudioConfigurationCommand",
 
                 "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand", "GetRevisionsCountCommand",
                 "JsonPatchCommand",
@@ -72,7 +72,7 @@ namespace FastTests.Client
             var actual = results.Select(r => r.Name).OrderBy(t => t);
             var didntCheck = actual.Except(expected).ToArray();
             Assert.False(didntCheck.Any(),
-                $"The following `{nameof(RavenCommand)}`s where not added to checked list: {string.Join(", ", didntCheck.Select(n => $"'{n}'"))}{Environment.NewLine}" +
+                $"The following `{nameof(RavenCommand)}`s were not added to checked list: {string.Join(", ", didntCheck.Select(n => $"'{n}'"))}{Environment.NewLine}" +
                 $"You should check if the commands can run in `{nameof(ReadBalanceBehavior.FastestNode)}` mode (checked in RequestExecutor.ShouldExecuteOnAll) " +
                 $"and if it can so it can also run in parallel{Environment.NewLine}" +
                 $"For more information look at - https://issues.hibernatingrhinos.com/issue/RavenDB-14286");
