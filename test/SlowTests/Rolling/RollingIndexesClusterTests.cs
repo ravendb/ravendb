@@ -376,7 +376,7 @@ namespace SlowTests.Rolling
 
                             return Task.FromResult(deployment.Any(x => x.Value.State == RollingIndexState.Done));
                         }
-                    }, false);
+                    }, false, 5000);
                 }
                 finally
                 {

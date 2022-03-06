@@ -48,8 +48,6 @@ namespace Raven.Client.ServerWide
 
         public long EtagForBackup;
 
-        public long EtagForRollingIndex;
-
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public Dictionary<string, RollingIndex> RollingIndexes;
@@ -195,7 +193,6 @@ namespace Raven.Client.ServerWide
                 definition.ReduceOutputIndex = version;
             }
 
-            definition.ClusterState.LastRollingDeploymentIndex = EtagForRollingIndex;
             Indexes[definition.Name] = definition;
             List<IndexHistoryEntry> history;
             if (IndexesHistory == null)
@@ -218,9 +215,11 @@ namespace Raven.Client.ServerWide
 
             if (IsRolling(definition.DeploymentMode, globalDeploymentMode))
             {
+                definition.ClusterState ??= new ClusterState();
+                definition.ClusterState.LastRollingDeploymentIndex = raftIndex;
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                 {
-                    InitializeRollingDeployment(definition.Name, createdAt);
+                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
                     definition.DeploymentMode = IndexDeploymentMode.Rolling;
                 }
             }
@@ -254,7 +253,7 @@ namespace Raven.Client.ServerWide
             if (globalDeploymentMode == IndexDeploymentMode.Rolling)
             {
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
-                    InitializeRollingDeployment(definition.Name, createdAt);
+                    InitializeRollingDeployment(definition.Name, createdAt, raftIndex);
             }
         }
 
@@ -266,7 +265,7 @@ namespace Raven.Client.ServerWide
             return fromDefinition == IndexDeploymentMode.Rolling;
         }
 
-        private void InitializeRollingDeployment(string indexName, DateTime createdAt)
+        private void InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
         {
             RollingIndexes ??= new Dictionary<string, RollingIndex>();
             
@@ -293,7 +292,7 @@ namespace Raven.Client.ServerWide
                 }
 
                 rollingIndex.ActiveDeployments[node] = deployment;
-                rollingIndex.RaftIndex = EtagForRollingIndex;
+                rollingIndex.RaftCommandIndex = raftIndex;
             }
         }
 

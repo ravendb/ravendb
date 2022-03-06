@@ -2349,7 +2349,6 @@ namespace Raven.Server.ServerWide
                     }
 
                     UpdateEtagForBackup(databaseRecord, type, index);
-                    UpdateEtagForRollingIndex(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
@@ -2430,20 +2429,6 @@ namespace Raven.Server.ServerWide
                     break;
             }
         }
-
-        private void UpdateEtagForRollingIndex(DatabaseRecord databaseRecord, string type, long index)
-        {
-            switch (type)
-            {
-
-                case nameof(PutIndexCommand):
-                case nameof(PutAutoIndexCommand):
-                case nameof(PutRollingIndexCommand):
-                    databaseRecord.EtagForRollingIndex = index;
-                    break;
-            }
-        }
-
 
         private enum SnapshotEntryType
         {

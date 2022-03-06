@@ -832,7 +832,7 @@ namespace Raven.Server.Documents.Indexes
             return _indexes.TryGetByName(replacementName, out _);
         }
 
-        public bool MaybeFinishRollingDeployment(string index)
+        public bool MaybeFinishRollingDeployment(string index, long? lastRollingDeploymentIndex)
         {
             var nodeTag = _serverStore.NodeTag;
 
@@ -848,11 +848,8 @@ namespace Raven.Server.Documents.Indexes
                 if (rollingIndexes.TryGetValue(index, out var rollingIndex) == false)
                     return false;
 
-                if (_indexes.TryGetByName(index, out Index currentIndex))
-                {
-                    if (rollingIndex.RaftIndex != currentIndex.Definition.ClusterState?.LastRollingDeploymentIndex)
-                        return false;
-                }
+                if (rollingIndex.RaftCommandIndex != lastRollingDeploymentIndex)
+                    return false;
 
                 if (rollingIndex.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
                     return false;
