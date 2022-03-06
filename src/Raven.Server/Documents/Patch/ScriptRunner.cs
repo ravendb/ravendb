@@ -326,7 +326,7 @@ namespace Raven.Server.Documents.Patch
                             throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
                     }
                     
-                    /*ScriptEngineHandle.SetGlobalClrCallBack("getMetadata",
+                    ScriptEngineHandle.SetGlobalClrCallBack("getMetadata",
                         (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, GetMetadataV8));
                     ScriptEngineHandle.SetGlobalClrCallBack("metadataFor",
                         (JsUtilsJint != null ? JsUtilsJint.GetMetadata : DummyJsCallbackJint, GetMetadataV8));
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Patch
                     ScriptEngineHandle.SetGlobalClrCallBack("scalarToRawString", (ScalarToRawStringJint, ScalarToRawStringV8));
 
                     //TimeSeries
-                    ScriptEngineHandle.SetGlobalClrCallBack("timeseries", (TimeSeriesJint, TimeSeriesV8));*/
+                    ScriptEngineHandle.SetGlobalClrCallBack("timeseries", (TimeSeriesJint, TimeSeriesV8));
                     ScriptEngineHandle.Execute(ScriptRunnerCache.PolyfillJs, "polyfill.js");
 
                     AppendTimeSeries = CreateJsHandle((null, AppendTimeSeriesV8));
