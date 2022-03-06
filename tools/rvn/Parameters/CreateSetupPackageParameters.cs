@@ -7,7 +7,7 @@ namespace rvn.Parameters;
 
 internal class CreateSetupPackageParameters
 {
-    public string SetupInfoPath;
+    public string SetupJsonPath;
     public string PackageOutputPath;
     public CommandLineApplication Command;
     public string Mode;

@@ -14,9 +14,9 @@ namespace Raven.Server.Commercial.LetsEncrypt;
 
 public class LetsEncryptCertificateUtil
 {
-    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition) GenerateCertificate(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
+    internal static (byte[] CertBytes, CertificateDefinition CertificateDefinition, X509Certificate2 SelfSignedCertificate) GenerateCertificateTask(CertificateUtils.CertificateHolder certificateHolder, string certificateName, SetupInfo setupInfo)
     {
-        if (certificateHolder == null)
+        if (certificateHolder.Certificate == null)
             throw new InvalidOperationException($"Cannot generate the client certificate '{certificateName}' because the server certificate is not loaded.");
 
         // this creates a client certificate which is signed by the current server certificate
@@ -34,7 +34,7 @@ public class LetsEncryptCertificateUtil
             NotAfter = selfSignedCertificate.NotAfter
         };
 
-        return (certBytes, newCertDef);
+        return (certBytes, newCertDef, selfSignedCertificate);
     }
 
     public static async Task WriteCertificateAsPemAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)

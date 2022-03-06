@@ -9,7 +9,7 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Commercial.SetupWizard;
 
-public class LetsEncryptSetupUtils
+public static class LetsEncryptSetupUtils
 {
         private const string AcmeClientUrl = "https://acme-v02.api.letsencrypt.org/directory";
 
@@ -17,7 +17,7 @@ public class LetsEncryptSetupUtils
         {
             progress.Processed++;
             progress?.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
-
+            
             if (EmailValidator.IsValid(setupInfo.Email) == false)
                 throw new ArgumentException("Invalid e-mail format" + setupInfo.Email);
 
@@ -28,7 +28,7 @@ public class LetsEncryptSetupUtils
             progress.Processed++;
             progress?.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            (string Challenge, LetsEncryptClient.CachedCertificateResult Cache) challengeResult;
+            (string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult) challengeResult;
             try
             {
                 challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
@@ -83,7 +83,7 @@ public class LetsEncryptSetupUtils
             progress?.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
             progress?.AddInfo("Completing Let's Encrypt challenge(s)...");
 
-            await CertificateUtils.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
+           await CertificateUtils.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
             {
                 OnValidationSuccessful = () =>
                 {
@@ -94,7 +94,8 @@ public class LetsEncryptSetupUtils
                 SetupInfo = setupInfo,
                 Client = acmeClient,
                 ChallengeResult = challengeResult,
-                Token = CancellationToken.None,
+                Token = CancellationToken.None
+                
             });
 
             progress.Processed++;
@@ -110,7 +111,8 @@ public class LetsEncryptSetupUtils
                     SetupMode = SetupMode.None,
                     LicenseType = LicenseType.None,
                     Token = token,
-                    CertificateValidationKeyUsages = true
+                    RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) => CertificateUtils.RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert),
+                    CertificateValidationKeyUsages = true,
                 });
 
                 var zipFile = await SettingsZipFileHelper.GetSetupZipFile(new GetSetupZipFileParameters
@@ -134,7 +136,7 @@ public class LetsEncryptSetupUtils
             }
         }
 
-        public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult Cache)> InitialLetsEncryptChallenge(
+        public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult)> InitialLetsEncryptChallenge(
             SetupInfo setupInfo,
             LetsEncryptClient client,
             CancellationToken token)

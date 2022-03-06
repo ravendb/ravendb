@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ public class CompleteClusterConfigurationParameters
     public Func<StudioConfiguration.StudioEnvironment, Task> OnPutServerWideStudioConfigurationValues;
     public Action<string> OnWriteSettingsJsonLocally;
     public Func<string, string> OnGetCertificatePath;
-    public Func<CertificateDefinition, Task> PutCertificate;
+    public Func<X509Certificate2,CertificateDefinition, Task> PutCertificateInCluster;
     public SetupMode SetupMode;
     public bool CertificateValidationKeyUsages;
     public LicenseType LicenseType;

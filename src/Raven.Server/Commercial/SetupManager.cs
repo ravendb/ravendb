@@ -22,9 +22,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Cli;
-using Raven.Server.Utils.Features;
-using Raven.Server.Web.Authentication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -333,7 +330,7 @@ namespace Raven.Server.Commercial
                 continue;
             }
 
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp, token))
             {
                 localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
             }
@@ -492,7 +489,7 @@ namespace Raven.Server.Commercial
                     OnSettingsPath = () => serverStore.Configuration.ConfigPath,
                     SetupInfo = setupInfo,
                     SetupMode = SetupMode.LetsEncrypt,
-                    Token = token,
+                    ModifyLocalServer = true,
                     OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                     OnGetCertificatePath = certificateFileName =>
                     {
@@ -508,7 +505,8 @@ namespace Raven.Server.Commercial
                         }, RaftIdGenerator.DontCareId));
                         
                         await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                    }
+                    },
+                    Token = token
                 });
             }
             catch (Exception e)
@@ -635,7 +633,7 @@ namespace Raven.Server.Commercial
 
             if (continueSetupInfo.RegisterClientCert)
             {
-                RegisterClientCertInOs(onProgress, progress, clientCert);
+                CertificateUtils.RegisterClientCertInOs(onProgress, progress, clientCert);
                 progress.AddInfo("Registering admin client certificate in the OS personal store.");
                 onProgress(progress);
             }
@@ -759,6 +757,18 @@ namespace Raven.Server.Commercial
 
                     serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },
+                PutCertificateInCluster = async (selfSignedCertificate, newCertDef) =>
+                {
+                    try
+                    {
+                        var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef, RaftIdGenerator.DontCareId));
+                        await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to to put certificate in cluster. self signed certificate thumbprint'{selfSignedCertificate.Thumbprint}'.", e);
+                    }
+                },
                 AddNodeToCluster = async nodeTag =>
                 {
                     try
@@ -770,28 +780,10 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
                     }
                 },
-                RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) => RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert)
+                RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) => CertificateUtils.RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert)
             });
         }
 
-        private static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
-        {
-            using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
-            {
-                try
-                {
-                    userPersonalStore.Add(clientCert);
-                    progress.AddInfo($"Successfully registered the admin client certificate in the OS Personal CurrentUser Store '{userPersonalStore.Name}'.");
-                    onProgress(progress);
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to register client certificate in the current user personal store '{userPersonalStore.Name}'.", e);
-                }
-            }
-        }
-        
         public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore, SetupInfo setupInfo)
         {
             if (serverStore.Server.Certificate?.Certificate == null)

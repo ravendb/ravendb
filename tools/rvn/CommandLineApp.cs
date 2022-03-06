@@ -66,7 +66,11 @@ namespace rvn
         {
             _app.Command("create-setup-package", cmd =>
             {
-                cmd.Description = "This command creates RavenDB setup ZIP file";
+                cmd.Description = "This command creates a RavenDB setup ZIP file";
+                cmd.ExtendedHelpText = "Usage example:" +
+                                       Environment.NewLine + 
+                                       "rvn create-setup-package -m=\"lets-encrypt\" -s=\"json-file-path\" -o=\"output-zip-file-name\"" + Environment.NewLine;
+                
                 cmd.HelpOption(HelpOptionString);
 
                 var mode = ConfigureModeOption(cmd);
@@ -85,7 +89,7 @@ namespace rvn
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
-                        SetupInfoPath = setupParamVal,
+                        SetupJsonPath = setupParamVal,
                         PackageOutputPath = packageOutPathVal,
                         Command = cmd,
                         Mode = modeVal,
@@ -114,37 +118,28 @@ namespace rvn
             byte[] zipFile;
             SetupInfo setupInfo;
 
-            if (File.Exists(parameters.SetupInfoPath) == false)
-            {
-                return ExitWithError($"{nameof(parameters.SetupInfoPath)} does not exits", parameters.Command);
-            }
-
             if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
             {
-                return ExitWithError($"'{parameters.PackageOutputPath}' file name must end with ZIP extension", parameters.Command);
+                return ExitWithError($"'{nameof(parameters.PackageOutputPath)}' file name must end with an extension of .zip", parameters.Command);
             }
 
             try
             {
-                using (StreamReader file = File.OpenText(parameters.SetupInfoPath))
-                {
-                    JsonSerializer serializer = new();
-                    setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
-                }
+                ExtractSetupInfoObjectFromFile(parameters, out setupInfo);
             }
             catch (Exception e)
             {
-                return ExitWithError($"Failed to load RavenDB Setup parameters from file: {parameters.SetupInfoPath}{Environment.NewLine}Error: {e}", parameters.Command);
+                return ExitWithError($"Failed to load RavenDB Setup parameters from file: {parameters.SetupJsonPath}{Environment.NewLine}Error: {e}", parameters.Command);
             }
 
-            if (string.IsNullOrEmpty(setupInfo?.Domain))
-                return ExitWithError($"{nameof(setupInfo.Domain)} cannot be empty", parameters.Command);
-
-            parameters.PackageOutputPath ??= setupInfo.Domain;
-
-            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
+            try
             {
-                setupInfo.Password = parameters.CertPassword;
+                ValidateSetupInfo(setupInfo, parameters);
+            }
+            
+            catch (InvalidOperationException e)
+            {
+                return ExitWithError(e.Message, parameters.Command);
             }
 
             try
@@ -175,11 +170,16 @@ namespace rvn
                     return ExitWithError($"Invalid mode provided.", parameters.Command);
             }
 
+            if (Path.HasExtension(parameters.PackageOutputPath) == false)
+            {
+                parameters.PackageOutputPath += ".zip";
+            }
+            
             parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
 
             try
             {
-                await File.WriteAllBytesAsync(parameters.PackageOutputPath!, zipFile, parameters.CancellationToken);
+                await File.WriteAllBytesAsync(parameters.PackageOutputPath, zipFile, parameters.CancellationToken);
             }
             catch (Exception e)
             {
@@ -189,6 +189,55 @@ namespace rvn
             parameters.Progress.AddInfo($"ZIP file was successfully added to this location: {parameters.PackageOutputPath}");
 
             return 0;
+        }
+
+        private static void ExtractSetupInfoObjectFromFile(CreateSetupPackageParameters parameters, out SetupInfo setupInfo)
+        {
+            if (string.IsNullOrEmpty(parameters.SetupJsonPath))
+            {
+                ExitWithError($"{nameof(parameters.SetupJsonPath)} cannot be empty", parameters.Command);
+            }
+
+            if (File.Exists(parameters.SetupJsonPath) == false)
+            {
+                ExitWithError($"{nameof(parameters.SetupJsonPath)} was not provided", parameters.Command);
+            }
+
+            using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
+            {
+                JsonSerializer serializer = new();
+                setupInfo = (SetupInfo)serializer.Deserialize(file, typeof(SetupInfo));
+            }
+        }
+
+        private static void ValidateSetupInfo(SetupInfo setupInfo, CreateSetupPackageParameters parameters)
+        {
+            if (setupInfo.License == null)
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.License)} must be set");
+            }
+            
+            if (string.IsNullOrEmpty(setupInfo.Email))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.Email)} must be set");
+            }
+            
+            if (string.IsNullOrEmpty(setupInfo.Domain))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.Domain)} must be set");
+            }
+            
+            if (string.IsNullOrEmpty(setupInfo.RootDomain))
+            {
+                throw new InvalidOperationException($"{nameof(setupInfo.RootDomain)} must be set");
+            }
+            
+            parameters.PackageOutputPath ??= setupInfo.Domain;
+
+            if (string.IsNullOrEmpty(parameters.CertPassword) == false)
+            {
+                setupInfo.Password = parameters.CertPassword;
+            }
         }
 
         private static void ConfigureLogsCommand()
@@ -490,12 +539,12 @@ namespace rvn
 
         private static CommandOption ConfigureModeOption(CommandLineApplication cmd)
         {
-            return cmd.Option("-m|--mode", "Option to choose setup from either lets encrypt or importing certificate", CommandOptionType.SingleValue);
+            return cmd.Option("-m|--mode", "Specify setup mode to use: 'lets-encrypt' or 'own-certificate'", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureSetupParameters(CommandLineApplication cmd)
         {
-            return cmd.Option("-s|--setup-parameters-path", "Path to JSON file including setup attributes", CommandOptionType.SingleValue);
+            return cmd.Option("-s|--setup-json-path", "Path to JSON file which includes the setup attributes", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
@@ -505,12 +554,12 @@ namespace rvn
 
         private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
         {
-            return cmd.Option("--cert-path", "Certificate path", CommandOptionType.SingleValue);
+            return cmd.Option("-c|--cert-path", "Certificate path", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureCertPassword(CommandLineApplication cmd)
         {
-            return cmd.Option("--password", $"Certificate password.{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
+            return cmd.Option("-p|--password", $"Certificate password{Environment.NewLine}Password can be set from ENV:{Environment.NewLine}Windows - $env:RVN_CERT_PASS=password\nLinux - export RVN_CERT_PASS=password", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
@@ -564,13 +613,17 @@ namespace rvn
         {
             switch (parameters.Mode)
             {
-                case null: throw new InvalidOperationException("-m|--mode cannot be null.");
-                
                 case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
-                    throw new InvalidOperationException($"--path option must be set when using {OwnCertificate} mode.");
+                    throw new InvalidOperationException($"--path option must be set when using '{OwnCertificate}' mode.");
                 
-                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupInfoPath):
-                    throw new InvalidOperationException($"-s|--setup-params-path option must be set when using {LetsEncrypt} mode.");
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupJsonPath):
+                    throw new InvalidOperationException($"-s|--setup-params-path option must be set when using '{LetsEncrypt}' mode.");
+
+                case LetsEncrypt when string.IsNullOrEmpty(parameters.CertificatePath) == false:
+                    throw new InvalidOperationException($"-c|--cert-path option must be set only when using '{OwnCertificate}' mode.");
+                
+                case null:
+                case "": throw new InvalidOperationException($"-m|--mode option must be set. Please use either of the two '{OwnCertificate}' or '{LetsEncrypt}'");
             }
         }
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
