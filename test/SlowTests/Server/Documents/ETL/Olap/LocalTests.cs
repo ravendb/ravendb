@@ -2031,7 +2031,13 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 var result = AddEtl(store, configuration, connectionString);
                 var taskId = result.TaskId;
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                var database = await GetDatabase(store.Database);
+                var timeout = database.DocumentsStorage.Environment.Options.RunningOn32Bits
+                    ? TimeSpan.FromMinutes(2)
+                    : TimeSpan.FromMinutes(1);
+
+                Assert.True(etlDone.Wait(timeout), 
+                    $"olap etl to local machine did not finish in {timeout.TotalMinutes} minutes. stats : {S3Tests.GetPerformanceStats(database)}");
 
                 var files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
 
@@ -2071,7 +2077,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 }
 
                 etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
-                Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
+                Assert.True(etlDone.Wait(timeout), 
+                    $"olap etl to local machine did not finish in {timeout.TotalMinutes} minutes. stats : {S3Tests.GetPerformanceStats(database)}");
 
                 files = Directory.GetFiles(path, searchPattern: AllFilesPattern, SearchOption.AllDirectories).OrderBy(x => x).ToList();
                 Assert.Equal(10, files.Count);
