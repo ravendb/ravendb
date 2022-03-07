@@ -454,7 +454,8 @@ namespace Raven.Server.Documents.TimeSeries
                                 RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                             }
 
-                            return true;
+                            changeVector = holder.ChangeVector;
+                            return end < to;
                         }
 
                         var segmentChanged = false;
@@ -709,7 +710,7 @@ namespace Raven.Server.Documents.TimeSeries
             // if this segment isn't overlap with any other we can put it directly
             using (var holder = new TimeSeriesSegmentHolder(this, context, documentId, name, collectionName, fromReplicationChangeVector: changeVector, timeStamp: baseline))
             {
-                if (holder.LoadCurrentSegment())
+                if (holder.LoadClosestSegment())
                 {
                     // if we got here it means that `IsOverlapping` is false
                     // but a segment with matching ranges exists 
