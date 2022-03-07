@@ -410,7 +410,7 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        private static string GetPerformanceStats(DocumentDatabase database)
+        internal static string GetPerformanceStats(DocumentDatabase database)
         {
             var process = database.EtlLoader.Processes.First();
             var stats = process?.GetLatestPerformanceStats().ToPerformanceStats();
