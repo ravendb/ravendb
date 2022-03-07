@@ -117,7 +117,8 @@ namespace Raven.Client.Documents.BulkInsert
                     Content = _stream,
                     Headers =
                     {
-                        TransferEncodingChunked = true
+                        TransferEncodingChunked = true,
+                        ExpectContinue = true,
                     }
                 };
 
