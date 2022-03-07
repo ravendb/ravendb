@@ -309,18 +309,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var routes = DebugInfoPackageUtils.GetAuthorizedRoutes(Server, HttpContext, databaseName).Where(x => x.TypeOfRoute == routeType);
 
+            var GUID = Guid.NewGuid();
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Creating Debug Package '{GUID}' for '{databaseName ?? "Server"}'");
+
+
             foreach (var route in routes)
             {
                 Exception ex = null;
                 var sw = Stopwatch.StartNew();
 
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Starting '{route.Path}'...");
+                    _logger.Operations($"Started gathering debug info from '{route.Path}' for Debug Package '{GUID}'");
 
                 try
                 {
-                    using (var newToken = CreateOperationToken(TimeSpan.FromMinutes(5)))
-                    using (var mergedToken = CancellationTokenSource.CreateLinkedTokenSource(new[] {newToken.Token, token}))
+                    using (var operationToken = CreateOperationToken(TimeSpan.FromMinutes(5)))
+                    using (var mergedToken = CancellationTokenSource.CreateLinkedTokenSource(operationToken.Token, token))
                     {
                         await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, mergedToken.Token);
                         debugInfoDict[route.Path] = sw.Elapsed;
@@ -333,7 +338,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 finally
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Elapsed time for '{route.Path}': {sw.Elapsed} ", ex);
+                        _logger.Operations($"Finished gathering debug info from '{route.Path}' for Debug Package '{GUID}'. Took: {sw.Elapsed} ms", ex);
                 }
             }
 
