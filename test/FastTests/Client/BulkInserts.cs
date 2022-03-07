@@ -27,8 +27,8 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [InlineData(false)]
-        public async Task Simple_Bulk_Insert(bool useSsl)
+        [InlineData(false, "1.1")]
+        public async Task Simple_Bulk_Insert(bool useSsl, string httpVersion)
         {
             string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
@@ -50,7 +50,8 @@ namespace FastTests.Client
             {
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
-                ModifyDatabaseName = s => dbName
+                ModifyDatabaseName = s => dbName,
+                ModifyDocumentStore = x => x.Conventions.HttpVersion = new Version(httpVersion)
             }))
             {
                 if (useSsl)
