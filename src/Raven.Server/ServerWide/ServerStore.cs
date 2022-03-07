@@ -2593,14 +2593,24 @@ namespace Raven.Server.ServerWide
 
         public LicenseLimits LoadLicenseLimits()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            try
             {
-                var licenseLimitsBlittable = Cluster.Read(context, LicenseLimitsStorageKey);
-                if (licenseLimitsBlittable == null)
-                    return null;
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var licenseLimitsBlittable = Cluster.Read(context, LicenseLimitsStorageKey);
+                    if (licenseLimitsBlittable == null)
+                        return null;
 
-                return JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+                    return JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to load license limits", e);
+
+                return null;
             }
         }
 
