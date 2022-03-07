@@ -339,44 +339,51 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions, TransactionOperationContext context)
+        internal static void WriteGetAllResult(AsyncBlittableJsonTextWriter writer, IEnumerable<SubscriptionState> subscriptions, TransactionOperationContext context)
         {
             writer.WriteStartObject();
-
-            var subscriptionsAsBlittable = subscriptions.Select(x => new DynamicJsonValue()
-            {
-                [nameof(SubscriptionState.SubscriptionId)] = x.SubscriptionId,
-                [nameof(SubscriptionState.SubscriptionName)] = x.SubscriptionName,
-                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = x.ChangeVectorForNextBatchStartingPoint,
-                [nameof(SubscriptionState.Query)] = x.Query,
-                [nameof(SubscriptionState.Disabled)] = x.Disabled,
-                [nameof(SubscriptionState.LastClientConnectionTime)] = x.LastClientConnectionTime,
-                [nameof(SubscriptionState.LastBatchAckTime)] = x.LastBatchAckTime,
-                ["Connection"] = GetSubscriptionConnectionJson(x.Connection),
-                ["Connections"] = GetSubscriptionConnectionsJson(x.Connections),
-                ["RecentConnections"] = x.RecentConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                }),
-                ["FailedConnections"] = x.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
-                {
-                    ["State"] = new DynamicJsonValue()
-                    {
-                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["Query"] = r.SubscriptionState.Query
-                    },
-                    ["Connection"] = GetSubscriptionConnectionJson(r)
-                }).ToList()
-            });
-
-            writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) => c.Write(w, subscription));
-
+            writer.WriteArray(context, "Results", subscriptions.Select(SubscriptionStateAsJson), (w, c, subscription) => c.Write(w, subscription));
             writer.WriteEndObject();
+        }
+
+        private static DynamicJsonValue SubscriptionStateAsJson(SubscriptionState state)
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(SubscriptionState.SubscriptionId)] = state.SubscriptionId,
+                [nameof(SubscriptionState.SubscriptionName)] = state.SubscriptionName,
+                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = state.ChangeVectorForNextBatchStartingPoint,
+                [nameof(SubscriptionState.Query)] = state.Query,
+                [nameof(SubscriptionState.Disabled)] = state.Disabled,
+                [nameof(SubscriptionState.LastClientConnectionTime)] = state.LastClientConnectionTime,
+                [nameof(SubscriptionState.LastBatchAckTime)] = state.LastBatchAckTime
+            };
+
+            if (state is SubscriptionStorage.SubscriptionGeneralDataAndStats stateAndStats)
+            {
+                json["Connection"] = GetSubscriptionConnectionJson(stateAndStats.Connection);
+                json["Connections"] = GetSubscriptionConnectionsJson(stateAndStats.Connections);
+                json["RecentConnections"] = stateAndStats.RecentConnections?.Select(r => new DynamicJsonValue()
+                {
+                    ["State"] = new DynamicJsonValue()
+                    {
+                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["Query"] = r.SubscriptionState.Query
+                    },
+                    ["Connection"] = GetSubscriptionConnectionJson(r)
+                });
+                json["FailedConnections"] = stateAndStats.RecentRejectedConnections?.Select(r => new DynamicJsonValue()
+                {
+                    ["State"] = new DynamicJsonValue()
+                    {
+                        ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["Query"] = r.SubscriptionState.Query
+                    },
+                    ["Connection"] = GetSubscriptionConnectionJson(r)
+                });
+            }
+
+            return json;
         }
 
         [RavenAction("/databases/*/subscriptions/performance/live", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]

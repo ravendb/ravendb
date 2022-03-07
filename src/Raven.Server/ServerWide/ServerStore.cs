@@ -1849,12 +1849,12 @@ namespace Raven.Server.ServerWide
                 case OngoingTaskType.Subscription:
                     if (taskName == null)
                     {
-                        if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var databaseTask) == false)
+                        if (_server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out _) == false)
                             throw new DatabaseDoesNotExistException($"Can't get subscription name because The database {dbName} does not exists");
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            taskName = databaseTask.Result.SubscriptionStorage.GetSubscriptionNameById(ctx, taskId);
+                            taskName = Cluster.Subscriptions.GetSubscriptionNameById(ctx, dbName, taskId);
                         }
                     }
                     disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);

@@ -1235,22 +1235,24 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.Subscription:
-                            string itemKey;
+                            SubscriptionState subscriptionState = null;
                             if (name == null)
                             {
-                                name = Database.SubscriptionStorage.GetSubscriptionNameById(context, key);
-                                if (name == null)
-                                    throw new SubscriptionDoesNotExistException($"Subscription with id '{key}' was not found in server store");
+                                subscriptionState = ServerStore.Cluster.Subscriptions.ReadById(context, Database.Name, key);
                             }
-                            itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, name);
-                            var doc = ServerStore.Cluster.Read(context, itemKey);
-                            if (doc == null)
+                            else
                             {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                break;
+                                try
+                                {
+                                    subscriptionState = ServerStore.Cluster.Subscriptions.Read(context, Database.Name, name);
+                                }
+                                catch (SubscriptionDoesNotExistException)
+                                {
+                                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                    break;
+                                }
                             }
 
-                            var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                             var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
                             OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;
                             if (tag != ServerStore.NodeTag)

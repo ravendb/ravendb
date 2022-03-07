@@ -4604,6 +4604,13 @@ namespace Raven.Server.ServerWide
 
             return false;
         }
+
+        public ClusterStateMachine()
+        {
+            Subscriptions = new SubscriptionsClusterStorage(this);
+        }
+
+        public SubscriptionsClusterStorage Subscriptions;
     }
 
     public class RachisLogIndexNotifications : IDisposable

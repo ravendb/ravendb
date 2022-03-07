@@ -60,12 +60,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     if (id == null)
                     {
-                        state = SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, options.Name);
+                        state = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, options.Name);
                         id = state.SubscriptionId;
                     }
                     else
                     {
-                        state = SubscriptionStorage.GetSubscriptionFromServerStoreById(ServerStore, ShardedContext.DatabaseName, id.Value);
+                        state = ServerStore.Cluster.Subscriptions.ReadById(context, ShardedContext.DatabaseName, id.Value);
 
                         // keep the old subscription name
                         if (options.Name == null)
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         try
                         {
                             // check the name
-                            state = SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, options.Name);
+                            state = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, options.Name);
                             id = state.SubscriptionId;
                         }
                         catch (SubscriptionDoesNotExistException)
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, name);
+                var subscription = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, name);
 
                 foreach (var topology in ShardedContext.ShardsTopology)
                 {
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                List<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions = new List<SubscriptionStorage.SubscriptionGeneralDataAndStats>();
+                var subscriptions = new List<SubscriptionState>();
                 if (string.IsNullOrEmpty(name) && id == null)
                 {
                     var allSubs = SubscriptionStorage.GetAllSubscriptionsWithoutState(context, ShardedContext.DatabaseName, start, pageSize);
@@ -258,7 +258,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                 }
                 else
                 {
-                    var subscription = id == null ? SubscriptionStorage.GetSubscriptionFromServerStore(ServerStore, context, ShardedContext.DatabaseName, name) : (SubscriptionStorage.SubscriptionGeneralDataAndStats)SubscriptionStorage.GetSubscriptionFromServerStoreById(ServerStore, ShardedContext.DatabaseName, id.Value);
+                    var subscription = id == null 
+                        ? ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, name)
+                        : ServerStore.Cluster.Subscriptions.ReadById(context, ShardedContext.DatabaseName, id.Value);
 
                     if (subscription == null)
                     {
@@ -275,7 +277,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         }
                     }
 
-                    subscriptions = new List<SubscriptionStorage.SubscriptionGeneralDataAndStats> { subscription };
+                    subscriptions = new List<SubscriptionState> { subscription };
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))

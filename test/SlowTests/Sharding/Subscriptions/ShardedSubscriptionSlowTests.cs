@@ -430,11 +430,11 @@ namespace SlowTests.Sharding.Subscriptions
                     Assert.Equal(DatabasesLandlord.DatabaseSearchResult.Status.Sharded, result.DatabaseStatus);
                     Assert.NotNull(result.ShardedContext);
 
-                    SubscriptionStorage.SubscriptionGeneralDataAndStats subscriptionState;
+                    SubscriptionState subscriptionState;
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        subscriptionState = SubscriptionStorage.GetSubscriptionFromServerStore(Server.ServerStore, context, store.Database, subscriptionId);
+                        subscriptionState = Server.ServerStore.Cluster.Subscriptions.Read(context, store.Database, subscriptionId);
                     }
                     foreach (var db in shards)
                     {

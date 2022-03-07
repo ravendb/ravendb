@@ -178,10 +178,10 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionState GetSubscriptionFromServerStore(string name)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            using (serverStoreContext.OpenReadTransaction())
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                return GetSubscriptionFromServerStore(serverStoreContext, name);
+                return _serverStore.Cluster.Subscriptions.Read(context, _databaseName, name);
             }
         }
 
@@ -190,17 +190,14 @@ namespace Raven.Server.Documents.Subscriptions
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
             {
-                var name = GetSubscriptionNameById(serverStoreContext, id);
-                if (string.IsNullOrEmpty(name))
-                    throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
-
-                return GetSubscriptionFromServerStore(serverStoreContext, name);
+                var subscriptionState = _serverStore.Cluster.Subscriptions.ReadById(serverStoreContext, _databaseName, id);
+                return subscriptionState;
             }
         }
 
         public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
-            var subscription = GetSubscriptionFromServerStore(serverContext, name);
+            var subscription = _serverStore.Cluster.Subscriptions.Read(serverContext, _databaseName, name);
             var topology = _serverStore.Cluster.ReadDatabaseTopology(serverContext, _db.Name);
             return _db.WhoseTaskIsIt(topology, subscription, subscription);
         }
@@ -213,7 +210,7 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(serverStoreContext, _db.Name))
             {
-                var subscription = GetSubscriptionFromServerStore(_serverStore, serverStoreContext, _databaseName, name);
+                var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
                 var topology = record.Topology;
 
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
@@ -373,7 +370,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public static IEnumerable<SubscriptionGeneralDataAndStats> GetAllSubscriptionsWithoutState(TransactionOperationContext serverStoreContext, string database, int start, int take)
+        public static IEnumerable<SubscriptionState> GetAllSubscriptionsWithoutState(TransactionOperationContext serverStoreContext, string database, int start, int take)
         {
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(database)))
             {
@@ -387,8 +384,7 @@ namespace Raven.Server.Documents.Subscriptions
                     yield break;
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var subscriptionGeneralData = new SubscriptionGeneralDataAndStats(subscriptionState);
-                yield return subscriptionGeneralData;
+                yield return subscriptionState;
             }
         }
 
@@ -559,7 +555,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionConnectionsState GetSubscriptionConnectionsState<T>(TransactionOperationContext<T> context, string subscriptionName) where T : RavenTransaction
         {
-            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName , subscriptionName));
+            using var subscriptionBlittable = _serverStore.Cluster.Subscriptions.ReadBlittable(context, _databaseName, subscriptionName);
             if (subscriptionBlittable == null)
                 return null;
 
@@ -645,7 +641,7 @@ namespace Raven.Server.Documents.Subscriptions
                     if (subscriptionName == null)
                         continue;
 
-                    using var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_databaseName, subscriptionName));
+                    using var subscriptionBlittable = _serverStore.Cluster.Subscriptions.ReadBlittable(context, _databaseName, subscriptionName);
                     if (subscriptionBlittable == null)
                     {
                         DropSubscriptionConnections(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
@@ -754,48 +750,6 @@ namespace Raven.Server.Documents.Subscriptions
         public void RaiseNotificationForBatchEnded(string subscriptionName, SubscriptionBatchStatsAggregator batchAggregator)
         {
             OnEndBatch?.Invoke(subscriptionName, batchAggregator);
-        }
-
-        public static SubscriptionGeneralDataAndStats GetSubscriptionFromServerStore(ServerStore serverStore, TransactionOperationContext context, string databaseName, string name)
-        {
-            var subscriptionBlittable = serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
-
-            if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
-
-            var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
-            var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
-            return subscriptionJsonValue;
-        }
-
-        public static SubscriptionState GetSubscriptionFromServerStoreById(ServerStore serverStore, string databaseName, long id)
-        {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            using (serverStoreContext.OpenReadTransaction())
-            {
-                var name = GetSubscriptionNameById(serverStoreContext, databaseName, id);
-                if (string.IsNullOrEmpty(name))
-                    throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
-
-                return GetSubscriptionFromServerStore(serverStore, serverStoreContext, databaseName, name);
-            }
-        }
-
-        public static string GetSubscriptionNameById(TransactionOperationContext serverStoreContext, string databaseName, long id)
-        {
-            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext,
-                         SubscriptionState.SubscriptionPrefix(databaseName)))
-            {
-                if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionId), out long _id) == false)
-                    continue;
-                if (_id == id)
-                {
-                    if (keyValue.Value.TryGet(nameof(SubscriptionState.SubscriptionName), out string name))
-                        return name;
-                }
-            }
-
-            return null;
         }
     }
 }
