@@ -7,6 +7,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedHandlers
@@ -26,7 +27,33 @@ namespace Raven.Server.Documents.ShardedHandlers
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    Json.BlittableJsonTextWriterExtensions.WriteDatabaseStatistics(writer, null, statistics);
+                    Json.BlittableJsonTextWriterExtensions.WriteDatabaseStatistics(writer, context, statistics);
+                }
+            }
+        }
+
+        [RavenShardedAction("/databases/*/stats/detailed", "GET")]
+        public async Task DetailedStats()
+        {
+            var op = new ShardedDetailedStatsOperation();
+
+            var detailedStatistics = await ShardExecutor.ExecuteParallelForAllAsync(op);
+            detailedStatistics.Indexes = GetDatabaseIndexesFromRecord();
+            detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+            using (serverContext.OpenReadTransaction())
+            {
+                detailedStatistics.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, ShardedContext.DatabaseName);
+                detailedStatistics.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, ShardedContext.DatabaseName);
+                detailedStatistics.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, ShardedContext.DatabaseName);
+            }
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    Json.BlittableJsonTextWriterExtensions.WriteDetailedDatabaseStatistics(writer, context, detailedStatistics);
                 }
             }
         }
@@ -47,7 +74,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     State = index.State ?? IndexState.Error,
                     Name = index.Name,
                     LockMode = index.LockMode ?? IndexLockMode.LockedError,
-                    Priority = index.Priority ?? new IndexPriority(),
+                    Priority = index.Priority ?? IndexPriority.Normal,
                     Type = index.Type,
                     SourceType = index.SourceType
                 };
@@ -56,6 +83,20 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
 
             return indexInformation;
+        }
+
+        private static void FillDatabaseStatistics(DatabaseStatistics combined, DatabaseStatistics result, ref long totalSizeOnDisk, ref long totalTempBuffersSizeOnDisk)
+        {
+            combined.CountOfDocuments += result.CountOfDocuments;
+            combined.CountOfAttachments += result.CountOfAttachments;
+            combined.CountOfConflicts += result.CountOfConflicts;
+            combined.CountOfCounterEntries += result.CountOfCounterEntries;
+            combined.CountOfDocumentsConflicts += result.CountOfDocumentsConflicts;
+            combined.CountOfRevisionDocuments += result.CountOfRevisionDocuments;
+            combined.CountOfTimeSeriesSegments += result.CountOfTimeSeriesSegments;
+            combined.CountOfTombstones += result.CountOfTombstones;
+            totalSizeOnDisk += result.SizeOnDisk.SizeInBytes;
+            totalTempBuffersSizeOnDisk += result.TempBuffersSizeOnDisk.SizeInBytes;
         }
 
         private readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
@@ -73,19 +114,9 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 long totalSizeOnDisk = 0;
                 long totalTempBuffersSizeOnDisk = 0;
-                for (int i = 0; i < span.Length; i++)
+                foreach (var result in span)
                 {
-                    var result = span[i];
-                    combined.CountOfDocuments += result.CountOfDocuments;
-                    combined.CountOfAttachments += result.CountOfAttachments;
-                    combined.CountOfConflicts += result.CountOfConflicts;
-                    combined.CountOfCounterEntries += result.CountOfCounterEntries;
-                    combined.CountOfDocumentsConflicts += result.CountOfDocumentsConflicts;
-                    combined.CountOfRevisionDocuments += result.CountOfRevisionDocuments;
-                    combined.CountOfTimeSeriesSegments += result.CountOfTimeSeriesSegments;
-                    combined.CountOfTombstones += result.CountOfTombstones;
-                    totalSizeOnDisk += result.SizeOnDisk.SizeInBytes;
-                    totalTempBuffersSizeOnDisk += result.TempBuffersSizeOnDisk.SizeInBytes;
+                    FillDatabaseStatistics(combined, result, ref totalSizeOnDisk, ref totalTempBuffersSizeOnDisk);
                 }
 
                 combined.SizeOnDisk = new Size(totalSizeOnDisk);
@@ -95,6 +126,38 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
 
             public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
+        }
+
+        private readonly struct ShardedDetailedStatsOperation : IShardedOperation<DetailedDatabaseStatistics>
+        {
+            public DetailedDatabaseStatistics Combine(Memory<DetailedDatabaseStatistics> results)
+            {
+                var span = results.Span;
+                if (span.Length == 0)
+                    return null;
+
+                var combined = new DetailedDatabaseStatistics
+                {
+                    DatabaseChangeVector = null,
+                    DatabaseId = null,
+                    Indexes = Array.Empty<IndexInformation>()
+                };
+
+                long totalSizeOnDisk = 0;
+                long totalTempBuffersSizeOnDisk = 0;
+                foreach (var result in span)
+                {
+                    FillDatabaseStatistics(combined, result, ref totalSizeOnDisk, ref totalTempBuffersSizeOnDisk);
+                    combined.CountOfTimeSeriesDeletedRanges += result.CountOfTimeSeriesDeletedRanges;
+                }
+
+                combined.SizeOnDisk = new Size(totalSizeOnDisk);
+                combined.TempBuffersSizeOnDisk = new Size(totalTempBuffersSizeOnDisk);
+
+                return combined;
+            }
+
+            public RavenCommand<DetailedDatabaseStatistics> CreateCommandForShard(int shard) => new GetDetailedStatisticsOperation.DetailedDatabaseStatisticsCommand(debugTag: null);
         }
     }
 
