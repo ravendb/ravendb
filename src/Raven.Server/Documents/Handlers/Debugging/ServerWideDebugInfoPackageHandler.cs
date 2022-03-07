@@ -320,11 +320,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     using (var newToken = CreateOperationToken(TimeSpan.FromMinutes(5)))
-                    using (var tokenn = CancellationTokenSource.CreateLinkedTokenSource(new[] {newToken.Token, token}))
+                    using (var mergedToken = CancellationTokenSource.CreateLinkedTokenSource(new[] {newToken.Token, token}))
                     {
-                        token.ThrowIfCancellationRequested();
-
-                        await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, tokenn.Token);
+                        await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, mergedToken.Token);
                         debugInfoDict[route.Path] = sw.Elapsed;
                     }
                 }
