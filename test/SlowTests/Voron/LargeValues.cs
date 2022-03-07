@@ -37,7 +37,7 @@ namespace SlowTests.Voron
                         {
                             enumerator.MoveNext();
 
-                            tree.Add			(enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
+                            tree.Add            (enumerator.Current.Key.ToString("0000000000000000"), new MemoryStream(enumerator.Current.Value));
                         }
 
                         tx.Commit();

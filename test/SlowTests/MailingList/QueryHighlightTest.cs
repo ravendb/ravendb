@@ -5,27 +5,28 @@ using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
-    public class LuceneQueryHighlightTest : RavenTestBase
+    public class QueryHighlightTest : RavenTestBase
     {
-        public LuceneQueryHighlightTest(ITestOutputHelper output) : base(output)
+        public QueryHighlightTest(ITestOutputHelper output) : base(output)
         {
         }
 
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
         [Theory]
-        [InlineData(Q, "con cur", "con cu")]
-        [InlineData(Q, "con ency", "con cy")]
-        [InlineData(Q, "curr ency", "curr enc")]
-        [InlineData(Q, "wo rds", "wor ds")]
-        [InlineData(Q, "asymp totic", "asymp tot")]
-        [InlineData(Q, "asymp totic", "asymp tic")]
-        public void ShouldReturnResultsWithHighlightsAndThrowException(string question, string goodSearchTerm, string badSearchTerm)
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "con cur", "con cu")]
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "con ency", "con cy")]
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "curr ency", "curr enc")]
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "wo rds", "wor ds")]
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "asymp totic", "asymp tot")]
+        [SearchEngineInlineData(SearchEngineType.Lucene, Q, "asymp totic", "asymp tic")]
+        public void ShouldReturnResultsWithHighlightsAndThrowException(string searchEngineType, string question, string goodSearchTerm, string badSearchTerm)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 new QuestionIndex().Execute(store);
 

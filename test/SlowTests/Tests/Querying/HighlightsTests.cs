@@ -7,16 +7,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Tests.Querying
 {
-    public class HighlightesTests : RavenTestBase
+    public class HighlightsTests : RavenTestBase
     {
-        public HighlightesTests(ITestOutputHelper output) : base(output)
+        public HighlightsTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -66,10 +68,10 @@ namespace SlowTests.Tests.Querying
         }
 
         [Theory]
-        [InlineData("session")]
-        public void SearchWithHighlightes(string q)
+        [SearchEngineInlineData(SearchEngineType.Lucene, "session")]
+        public void SearchWithHighlights(string searchEngineType, string q)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
             {
                 using (var session = store.OpenSession())
                 {

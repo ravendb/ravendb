@@ -3,6 +3,7 @@ using Xunit;
 using System.Linq;
 using FastTests.Server.Documents.Indexing;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.PoisonIndexes
 {

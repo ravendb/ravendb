@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                     session.Store(new Order
                     {
-                        Company   = "HR",
+                        Company = "HR",
                         Employee = "employees/1-A"
                     }, "orders/1-A");
                     session.SaveChanges();
@@ -46,8 +46,8 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = from o in session.Query<Order>()
-	                            let employee = RavenQuery.Load<Employee>(o.Employee)
-	                            select employee;
+                                let employee = RavenQuery.Load<Employee>(o.Employee)
+                                select employee;
 
                     Assert.Equal("from 'Orders' as o load o.Employee as employee select employee", query.ToString());
 
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                     Assert.Equal(1, employees.Count);
                     Assert.Equal("Jerry", employees[0].FirstName);
                 }
-                
+
             }
         }
 
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
         public void CanLoadViaLetAndProjectNestedMember()
         {
             using (var store = GetDocumentStore())
-            {           
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Employee
@@ -225,6 +225,5 @@ namespace SlowTests.Issues
 
             }
         }
-
     }
 }

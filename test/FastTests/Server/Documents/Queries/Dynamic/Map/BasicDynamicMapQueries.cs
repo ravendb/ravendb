@@ -12,6 +12,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {

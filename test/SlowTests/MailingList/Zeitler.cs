@@ -25,14 +25,14 @@ namespace SlowTests.MailingList
         [Fact]
         public void AddTest()
         {
-            // want a green test? comment this	
+            // want a green test? comment this    
             using (var documentStore = GetDocumentStore())
             {
                 documentStore.Initialize();
 
-                // want a green test? uncomment this	
+                // want a green test? uncomment this    
                 //var documentStore = new DocumentStore() {
-                //	Url = "http://localhost:8082/databases/entitytagstore"
+                //    Url = "http://localhost:8082/databases/entitytagstore"
                 //}.Initialize();
 
                 byte[] hash = Encoding.UTF8.GetBytes("/api/Cars");

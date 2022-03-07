@@ -16,7 +16,7 @@ namespace SlowTests.Voron.Storage
             File.Delete("db.voron");
         }
 
-        [Fact]	
+        [Fact]    
         public void MemoryMapWithoutBackingReleasePagerState()
         {
             PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));

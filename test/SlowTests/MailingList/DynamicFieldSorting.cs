@@ -14,6 +14,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -124,7 +125,7 @@ namespace SlowTests.MailingList
             }
         }
 
-	    [Theory]
+        [Theory]
         [SearchEngineClassData(SearchEngineType.Lucene)]
         public void CanSortDynamically_Desc(string searchEngineType)
         {

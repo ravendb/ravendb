@@ -1,6 +1,6 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,7 +41,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var lastPosition = session.Query<Section>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderByDescending(x => x.Position)
                         .Select(x => x.Position)
                         .FirstOrDefault();
@@ -74,7 +74,7 @@ namespace SlowTests.Tests.Linq
                 using (var session = store.OpenSession())
                 {
                     var lastPosition = session.Query<Section>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Position)
                         .Select(x => x.Position)
                         .FirstOrDefault();

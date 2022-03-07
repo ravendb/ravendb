@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 using FastTests;
 using FastTests.Server.Documents.Indexing;
 using Xunit;
+using Tests.Infrastructure;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 

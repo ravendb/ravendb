@@ -16,6 +16,7 @@ using Tests.Infrastructure.Entities;
 using Xunit;
 using static FastTests.Client.Indexing.PeopleUtil;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {

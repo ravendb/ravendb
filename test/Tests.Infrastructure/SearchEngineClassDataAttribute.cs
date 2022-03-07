@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Org.BouncyCastle.Asn1.X509.Qualified;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace FastTests.Server.Documents.Indexing
+namespace Tests.Infrastructure
 {
     public enum SearchEngineClassDataMode
     {
@@ -13,6 +12,7 @@ namespace FastTests.Server.Documents.Indexing
         OnlyLucene,
         AllEngines
     }
+
     public class SearchEngineClassDataAttribute : ClassDataAttribute
     {
         public SearchEngineClassDataAttribute() : base(typeof(SearchEngineMode.AllSearchEngines))
@@ -39,38 +39,38 @@ namespace FastTests.Server.Documents.Indexing
             {
                 _data = new()
                 {
-                    new object[] {SearchEngineType.Corax},
-                    new object[] {SearchEngineType.Lucene}
+                    new object[] { SearchEngineType.Corax },
+                    new object[] { SearchEngineType.Lucene }
                 };
             }
         }
-        
+
         public class SearchEngineCorax : SearchEngineTypeData
         {
             public SearchEngineCorax()
             {
                 _data = new()
                 {
-                    new object[] {SearchEngineType.Corax}
+                    new object[] { SearchEngineType.Corax }
                 };
             }
         }
-        
+
         public class SearchEngineLucene : SearchEngineTypeData
         {
             public SearchEngineLucene()
             {
                 _data = new()
                 {
-                    new object[] {SearchEngineType.Lucene}
+                    new object[] { SearchEngineType.Lucene }
                 };
             }
         }
-        
+
         public abstract class SearchEngineTypeData : IEnumerable<object[]>
         {
             protected List<object[]> _data;
-                
+
 
             public IEnumerator<object[]> GetEnumerator() => _data.GetEnumerator();
 

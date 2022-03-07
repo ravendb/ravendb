@@ -10,6 +10,7 @@ using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries
 {

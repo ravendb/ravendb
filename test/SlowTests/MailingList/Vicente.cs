@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -21,13 +22,13 @@ namespace SlowTests.MailingList
 
         private const string Query =
             @"CTOTurning a dream into a web :)
-https://www.talentous.comSenior consultantWorking as software architect and senior developer in Raona key accounts.Software Design Engineer•	In this company, I worked as software design engineer developing software projects with Microsoft Visual Studio 2008/2010, SQL Server 2008, Visual C# & LINQ and Entity Framework. I participated in the whole software project lifecycle, performing design, implementation and modification tasks. Also, I did load testing and software debug and optimization. 
+https://www.talentous.comSenior consultantWorking as software architect and senior developer in Raona key accounts.Software Design Engineer•    In this company, I worked as software design engineer developing software projects with Microsoft Visual Studio 2008/2010, SQL Server 2008, Visual C# & LINQ and Entity Framework. I participated in the whole software project lifecycle, performing design, implementation and modification tasks. Also, I did load testing and software debug and optimization. 
 
-•	Full customer satisfaction through technical and personal skills demonstrated.
+•    Full customer satisfaction through technical and personal skills demonstrated.
 
-•	Attendance at several internal training workshops on advanced use of Microsoft Entity Framework and N-layer architecture domain oriented and Microsoft SQL Server 2008.
+•    Attendance at several internal training workshops on advanced use of Microsoft Entity Framework and N-layer architecture domain oriented and Microsoft SQL Server 2008.
 
-•	Microsoft development technologies and security development trainer.Hardware support technician";
+•    Microsoft development technologies and security development trainer.Hardware support technician";
 
 
         private class Item

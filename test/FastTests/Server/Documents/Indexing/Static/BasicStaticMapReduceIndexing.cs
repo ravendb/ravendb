@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {

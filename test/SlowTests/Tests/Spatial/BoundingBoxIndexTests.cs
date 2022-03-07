@@ -20,7 +20,7 @@ namespace SlowTests.Tests.Spatial
             // X XXX X
             // X XXX X
             // X XXX X
-            // X	 X
+            // X     X
             // XXXXXXX
 
             var polygon = "POLYGON ((0 0, 0 5, 1 5, 1 1, 5 1, 5 5, 6 5, 6 0, 0 0))";

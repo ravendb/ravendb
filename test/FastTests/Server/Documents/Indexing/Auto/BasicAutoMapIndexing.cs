@@ -26,6 +26,7 @@ using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Auto
 {

@@ -21,6 +21,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {

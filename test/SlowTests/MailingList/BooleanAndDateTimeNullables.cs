@@ -87,7 +87,7 @@ namespace SlowTests.MailingList
                 {
                     index.Execute(store);
                 }
-            }			
+            }            
         }
 
         [Fact]

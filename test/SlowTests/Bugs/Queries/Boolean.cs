@@ -19,7 +19,7 @@ namespace SlowTests.Bugs.Queries
                 using(var s = store.OpenSession())
                 {
                     s.Store(new User{Active = false});
-                    s.SaveChanges();	
+                    s.SaveChanges();    
                 }
 
                 using(var s = store.OpenSession())
