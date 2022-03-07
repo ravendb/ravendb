@@ -43,6 +43,8 @@ var process = {
         [CanBeNull]
         private IJavaScriptOptions _jsOptions;
 
+        public  bool IsMemoryChecksOn => false;
+
         public JintEngineEx(IJavaScriptOptions jsJsOptions = null, JintPreventResolvingTasksReferenceResolver refResolver = null) : base(options =>
         {
             if (jsJsOptions == null)

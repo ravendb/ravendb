@@ -36,11 +36,19 @@ namespace Raven.Server.Documents.Patch.V8
         // PoolWithLevels<V8EngineEx>(targetLevel, maxCapacity) makes this job
         private static PoolWithLevels<V8EngineEx>? _pool;
 
+        public static int MemoryChecksMode;
+        public static bool IsMemoryChecksOnStatic => MemoryChecksMode > 0;
+        public static JsConverter JsConverterInstance;
+
+        public bool IsMemoryChecksOn => IsMemoryChecksOnStatic;
+        
         public static PoolWithLevels<V8EngineEx> GetPool(IJavaScriptOptions jsOptions)
         {
             if (_pool == null)
             {
                 _pool = new PoolWithLevels<V8EngineEx>(jsOptions.TargetContextCountPerEngine, jsOptions.MaxEngineCount);
+                MemoryChecksMode = int.Parse(Environment.GetEnvironmentVariable("JS_V8_MemoryChecksMode") ?? "0");
+                JsConverterInstance = new(IsMemoryChecksOnStatic);
             }
 
             return _pool;
@@ -83,15 +91,9 @@ namespace Raven.Server.Documents.Patch.V8
             private IJavaScriptContext _jsContext;
             public IJavaScriptContext JsContext => _jsContext;
             
-            public void SetBasicConfiguration()
-            {
-                //.LocalTimeZone(TimeZoneInfo.Utc);  // TODO -> ??? maybe these V8 args: harmony_intl_locale_info, harmony_intl_more_timezone
-            }
-
             public void SetOptions(IJavaScriptOptions? jsOptions)
             {
                 _jsOptions = jsOptions;
-                SetBasicConfiguration();
                 if (jsOptions == null)
                     return;
                 string strictModeFlag = jsOptions.StrictMode ? "--use_strict" : "--no-use_strict";
@@ -210,7 +212,14 @@ namespace Raven.Server.Documents.Patch.V8
         
         public class JsConverter : IJsConverter
         {
-            public static JsConverter Instance = new();
+            private bool _isMemoryChecksOn;
+                
+            public JsConverter(bool isMemoryChecksOn)
+            {
+                _isMemoryChecksOn = isMemoryChecksOn;
+            }
+            
+            public bool IsMemoryChecksOn => _isMemoryChecksOn;
             
             public InternalHandle ConvertToJs(V8Engine engine, object obj, bool keepAlive = false)
             {
@@ -497,7 +506,7 @@ var process = {
         }
 
         // ------------------------------------------ internal implementation
-        public V8EngineEx() : base(false, jsConverter: JsConverter.Instance)
+        public V8EngineEx() : base(false, jsConverter: JsConverterInstance)
         {
         }
 

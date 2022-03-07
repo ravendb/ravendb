@@ -549,6 +549,11 @@ namespace Raven.Server.Documents.Patch
                             if (!jsMethod.IsFunction)
                                 throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify.StaticCall(method)}");
 
+                            if (ScriptEngineHandle.IsMemoryChecksOn)
+                            {
+                                ScriptEngineHandle.MakeSnapshot("single_run");
+                            }
+
 #if DEBUG
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
@@ -599,7 +604,6 @@ namespace Raven.Server.Documents.Patch
                     }
                     finally
                     {
-                        ScriptEngineHandle.ForceGarbageCollection();
                         DisposeArgs();
                         _scope = null;
                         _loadScope = null;
@@ -607,6 +611,12 @@ namespace Raven.Server.Documents.Patch
                         _jsonCtx = null;
                         _token = default;
                         _lastException = null;
+
+                        ScriptEngineHandle.ForceGarbageCollection();
+                        if (ScriptEngineHandle.IsMemoryChecksOn)
+                        {
+                            ScriptEngineHandle.CheckForMemoryLeaks("single_run");
+                        }
                     }
                 }
             }

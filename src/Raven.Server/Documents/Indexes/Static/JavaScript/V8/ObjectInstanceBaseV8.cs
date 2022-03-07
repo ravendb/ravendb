@@ -9,9 +9,7 @@ using Raven.Server.Extensions.V8;
 namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 {
     public abstract class ObjectInstanceBaseV8: IObjectInstance // TODO [shlomo] refactor to make it ObjectBinder itself
-#if DEBUG
     , IV8DebugInfo
-#endif
     {
         public abstract class CustomBinder<T> : ObjectBinderEx<T>
         where T : ObjectInstanceBaseV8
@@ -76,9 +74,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
         bool IsImplicitNull;
         protected DictionaryCloningValueIHV8<string> _properties = new DictionaryCloningValueIHV8<string>();
 
-#if DEBUG
-        private V8EntityID _SelfID;
-#endif
+        private V8EntityID _SelfID; // for memory checks
 
         public ObjectInstanceBaseV8(V8EngineEx engineEx, bool isImplicitNull = true)
         {
@@ -147,7 +143,6 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
             _disposed = true;
         }
 
-#if DEBUG
         public V8EntityID SelfID
         {
             get{ return _SelfID; }
@@ -197,7 +192,5 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
                 return desc;
             }
         }
-#endif
-
     }
 }

@@ -90,9 +90,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (_jsIndexUtils.GetValue(item, out JsHandle jsItem) == false)
                         continue;
 
-#if DEBUG
-                    _engineHandle.MakeSnapshot("map");
-#endif
+                    if (_engineHandle.IsMemoryChecksOn)
+                    {
+                        _engineHandle.MakeSnapshot("map");
+                    }
 
                     if (jsItem.IsObject)
                     {
@@ -138,8 +139,13 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             finally
                             {
-                                _engineHandle.ForceGarbageCollection();
                                 _index._lastException = null;
+
+                                _engineHandle.ForceGarbageCollection();
+                                if (_engineHandle.IsMemoryChecksOn)
+                                {
+                                    _engineHandle.CheckForMemoryLeaks("map");
+                                }
                             }
 
                             using (jsRes)
@@ -158,6 +164,12 @@ namespace Raven.Server.Documents.Indexes.Static
                                             }
                                             else
                                             {
+                                                _engineHandle.ForceGarbageCollection();
+                                                if (_engineHandle.IsMemoryChecksOn)
+                                                {
+                                                    _engineHandle.CheckForMemoryLeaks("map");
+                                                }
+                                                
                                                 // this check should be to catch map errors
                                                 throw new JavaScriptIndexFuncException($"Failed to execute {MapString}",
                                                     new Exception($"At least one of map results is not object: {jsRes.ToString()}"));
@@ -175,10 +187,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
 
                         _engineHandle.ForceGarbageCollection();
-
-#if DEBUG
-                        _engineHandle.CheckForMemoryLeaks("map");
-#endif
+                        if (_engineHandle.IsMemoryChecksOn)
+                        {
+                            _engineHandle.CheckForMemoryLeaks("map");
+                        }
                     }
                     else
                     {

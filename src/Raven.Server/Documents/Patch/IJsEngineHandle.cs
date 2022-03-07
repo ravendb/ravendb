@@ -34,6 +34,8 @@ namespace Raven.Server.Documents.Patch
         [CanBeNull]
         IJavaScriptOptions JsOptions { get;  }
         
+        bool IsMemoryChecksOn { get;  }
+        
         JsHandle ImplicitNull { get;  }
         
         JsHandle ExplicitNull { get;  }

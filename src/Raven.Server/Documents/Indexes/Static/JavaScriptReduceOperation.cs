@@ -215,9 +215,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         {
                             using (var jsGrouping = ConstructGrouping(item))
                             {
-#if DEBUG
-                                EngineHandle.MakeSnapshot("reduce");
-#endif
+                                if (EngineHandle.IsMemoryChecksOn)
+                                {
+                                    EngineHandle.MakeSnapshot("reduce");
+                                }
 
                                 jsRes = Reduce.StaticCall(jsGrouping);
                                 if (_index._lastException != null)
@@ -249,6 +250,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         finally
                         {
                             EngineHandle.ForceGarbageCollection();
+                            if (EngineHandle.IsMemoryChecksOn)
+                            {
+                                EngineHandle.CheckForMemoryLeaks("map");
+                            }
                         }
 
                         yield return jsRes;
