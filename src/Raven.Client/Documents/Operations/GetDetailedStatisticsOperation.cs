@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Operations
             return new DetailedDatabaseStatisticsCommand(_debugTag);
         }
 
-        private class DetailedDatabaseStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
+        internal class DetailedDatabaseStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
         {
             private readonly string _debugTag;
 

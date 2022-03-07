@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -24,12 +25,15 @@ namespace Raven.Server.Documents.Handlers
                 FillDatabaseStatistics(stats, context);
 
                 stats.CountOfTimeSeriesDeletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
+                if (ShardHelper.IsShardedName(Database.Name) == false)
                 {
-                    stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
-                    stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
-                    stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                    using (serverContext.OpenReadTransaction())
+                    {
+                        stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
+                        stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
+                        stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
+                    }
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
