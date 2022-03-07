@@ -439,7 +439,13 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                _asyncWrite = WriteRequestBodyAsync();
+
+                async Task WriteRequestBodyAsync()
+                {
+                    await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
+                    await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+                }
             }
         }
 
