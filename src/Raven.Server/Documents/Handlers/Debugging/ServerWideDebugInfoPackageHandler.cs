@@ -57,6 +57,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.TimeSeries),
         };
 
+        private Logger _logger = LoggingSource.Instance.GetLogger<ServerWideDebugInfoPackageHandler>(nameof(ServerWideDebugInfoPackageHandler));
+
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterWideInfoPackageForRemote()
         {
@@ -309,11 +311,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             foreach (var route in routes)
             {
-                token.ThrowIfCancellationRequested();
-
+                Exception ex = null;
                 var sw = Stopwatch.StartNew();
-                await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, token);
-                debugInfoDict[route.Path] = sw.Elapsed;
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, token);
+                    debugInfoDict[route.Path] = sw.Elapsed;
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                finally
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Elapsed time for '{route.Path}': {sw.Elapsed} ", ex);
+                }
             }
 
             await DebugInfoPackageUtils.WriteDebugInfoTimesAsZipEntryAsync(debugInfoDict, archive, databaseName);
