@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
 import studioConfigurationDatabaseModel = require("models/database/settings/studioConfigurationDatabaseModel");
 import eventsCollector = require("common/eventsCollector");
@@ -7,10 +6,9 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import accessManager = require("common/shell/accessManager");
 import popoverUtils = require("common/popoverUtils");
-import shardedDatabase from "models/resources/shardedDatabase";
-import { shardingTodo } from "common/developmentHelper";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class studioConfiguration extends viewModelBase {
+class studioConfiguration extends shardViewModelBase {
 
     view = require("views/database/settings/studioConfiguration.html");
 
@@ -29,11 +27,7 @@ class studioConfiguration extends viewModelBase {
      
         this.canNavigateToServerSettings = accessManager.default.isClusterAdminOrClusterNode;
 
-        const db = this.activeDatabase();
-        shardingTodo("Marcin");
-        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
-        
-        return new getDatabaseStudioConfigurationCommand(dbToUse)
+        return new getDatabaseStudioConfigurationCommand(this.db)
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
                 this.model = settings ? new studioConfigurationDatabaseModel(settings) : studioConfigurationDatabaseModel.empty();
@@ -58,7 +52,7 @@ class studioConfiguration extends viewModelBase {
 
         this.spinners.save(true);
 
-        new saveDatabaseStudioConfigurationCommand(this.model.toRemoteDto(), this.activeDatabase())
+        new saveDatabaseStudioConfigurationCommand(this.model.toRemoteDto(), this.db)
             .execute()
             .done(() => {
                 this.model.dirtyFlag().reset();

@@ -147,11 +147,7 @@ class shell extends viewModelBase {
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
 
         studioSettings.default.configureLoaders(() => new getGlobalStudioConfigurationCommand().execute(),
-            (db) => {
-                shardingTodo("Marcin");
-                const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard 
-                return new getDatabaseStudioConfigurationCommand(dbToUse).execute();
-            },
+            (db) => new getDatabaseStudioConfigurationCommand(db).execute(),
             settings => new saveGlobalStudioConfigurationCommand(settings).execute(),
             (settings, db) => new saveDatabaseStudioConfigurationCommand(settings, db).execute()
         );
