@@ -6,6 +6,7 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import shardSelector = require("viewmodels/common/sharding/shardSelector");
 import allShardsDialog = require("viewmodels/common/sharding/allShardsDialog");
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
+import { shardingTodo } from "common/developmentHelper";
 
 class shardAwareContainer extends viewModelBase {
     private readonly childCtr: new (db: database, state?: any) => shardViewModelBase;
@@ -146,12 +147,14 @@ class shardAwareContainer extends viewModelBase {
             this.databasesManager.activate(db);
             this.shardSelector(null);
         } else {
-            this.useDatabase(db); //TODO:
+            shardingTodo("Marcin");
+            this.useDatabase(db); //TODO: 
             this.shardSelector(null);    
         }
     }
     
     useDatabase(db: database) {
+        shardingTodo("Marcin");
         // TODO: allow to persist between views - check if local / remote
         //TODO: doesn't work when pinning
         const oldChild = this.child();

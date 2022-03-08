@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import database from "models/resources/database";
 import shard from "models/resources/shard";
+import { shardingTodo } from "common/developmentHelper";
 
 
 
@@ -26,6 +27,7 @@ abstract class shardViewModelBase extends viewModelBase {
      * Allows to sot
      */
     getViewState(): any {
+        shardingTodo("Marcin");
         return null;
     }
     

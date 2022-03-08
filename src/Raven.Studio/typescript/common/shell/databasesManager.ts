@@ -14,6 +14,7 @@ import generalUtils = require("common/generalUtils");
 import shardedDatabase from "models/resources/shardedDatabase";
 import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import shard from "models/resources/shard";
+import { shardingTodo } from "common/developmentHelper";
 
 class databasesManager {
 
@@ -196,13 +197,15 @@ class databasesManager {
 
     private updateDatabaseGroup(dbs: Raven.Client.ServerWide.Operations.DatabaseInfo[], existingDb: database): shardedDatabase {
         if (existingDb) {
+            shardingTodo("Marcin"); //TODO:
             //TODO: existingDb.updateUsingGroup(dbs);
             
             return existingDb as shardedDatabase;
         } else {
             const nodeTag = clusterTopologyManager.default.localNodeTag;
             const group = new shardedDatabase(dbs[0], nodeTag);
-            group.name = databasesManager.shardGroupKey(dbs[0].Name); //TODO: update other props!
+            shardingTodo("Marcin"); //TODO:
+            group.name = databasesManager.shardGroupKey(dbs[0].Name); //TODO: update other props! //TODO: 
             group.shards(dbs.map(db => {
                 const singleShard = new shard(db, nodeTag);
                 singleShard.parent = group;

@@ -7,6 +7,7 @@ import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import accessManager = require("common/shell/accessManager");
 import shardedDatabase from "models/resources/shardedDatabase";
+import { shardingTodo } from "common/developmentHelper";
 
 class studioConfiguration extends viewModelBase {
 
@@ -28,6 +29,7 @@ class studioConfiguration extends viewModelBase {
         this.canNavigateToServerSettings = accessManager.default.isClusterAdminOrClusterNode;
 
         const db = this.activeDatabase();
+        shardingTodo("Marcin");
         const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
         
         return new getStudioConfigurationCommand(dbToUse)
