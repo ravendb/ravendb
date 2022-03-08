@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 
-internal class ConfigurationHandlerProcessorForGetStudioConfiguration : AbstractStudioConfigurationHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+internal class ConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
 {
     private readonly DocumentDatabase _database;
 

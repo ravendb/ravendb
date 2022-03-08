@@ -6,7 +6,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ShardedHandlers.Processors;
-internal class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : AbstractStudioConfigurationHandlerProcessor<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : AbstractConfigurationHandlerProcessorForGetStudioConfiguration<ShardedRequestHandler, TransactionOperationContext>
 {
     private readonly ShardedContext _shardedContext;
 
