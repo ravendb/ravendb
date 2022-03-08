@@ -7,29 +7,42 @@
             <div class="flex-horizontal">
                 <div class="btn-group">
                     <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                        <span data-bind="text: $root.form.shard().name"></span> <span class="caret"></span>
+                        <span data-bind="text: $root.form.shard().shardName"></span> <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: shards">
-                        <li><a href="#" data-bind="click: _.partial($root.changeShard, $data)"><span data-bind="text: name"></span></a></li>
+                        <li><a href="#" data-bind="click: _.partial($root.changeShard, $data)"><span data-bind="text: shardName"></span></a></li>
                     </ul>
                 </div>
                 <div class="btn-group">
                     <button type="button" class="btn btn-default set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                        <span data-bind="text: $root.form.node"></span> <span class="caret"></span>
+                        <span data-bind="text: $root.form.node"></span>
+                        <i class="icon-link" data-bind="visible: $root.form.node() !== $root.currentNode()"></i>
+                        <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" data-bind="foreach: shardNodes">
-                        <li><a href="#" data-bind="click: _.partial($root.changeNodeTag, $data)"><span data-bind="text: $data"></span></a></li>
+                        <li>
+                            <a href="#" data-bind="click: _.partial($root.changeNodeTag, $data)">
+                                <span data-bind="text: $data"></span>
+                                <i class="icon-link" data-bind="visible: $data !== $root.currentNode()"></i> 
+                            </a>
+                        </li>
                     </ul>
                 </div>
 
                 <div>
-                    <button type="button" class="btn btn-primary" data-bind="click: shardSelected">
+                    <a href="#" class="btn btn-primary" data-bind="click: shardSelected, attr: { href: targetHref, target: targetIsLocal() ? undefined : '_blank' }">
                         View <i class="arrow-right"></i>
-                    </button>
+                    </a>
                 </div>
             </div>
 
-            <div class="checkbox">
+            <div class="checkbox" data-bind="visible: forcePin">
+                <input id="pinShardForced" type="checkbox" checked disabled />
+                <label for="pinShardForced">
+                    Pin
+                </label>
+            </div>
+            <div class="checkbox" data-bind="visible: !forcePin()">
                 <input id="pinShard" type="checkbox" data-bind="checked: form.pin" />
                 <label for="pinShard">
                     Pin
