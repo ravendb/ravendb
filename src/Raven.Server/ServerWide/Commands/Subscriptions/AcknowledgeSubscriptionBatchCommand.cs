@@ -6,6 +6,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -71,10 +72,24 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return context.ReadObject(existingValue, SubscriptionName);
             }
 
+            if (IsLegacyCommand())
+            {
+                if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+
+                subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+            }
+
             subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
             
             return context.ReadObject(subscription.ToJson(), subscriptionName);
+        }
+
+        private bool IsLegacyCommand()
+        {
+            return BatchId == null || // from old node
+                   BatchId == SubscriptionConnection.NonExistentBatch; // from new node, but has lower cluster version
         }
 
         public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
