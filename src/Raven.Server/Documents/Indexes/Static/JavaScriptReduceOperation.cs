@@ -191,8 +191,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 lock (EngineHandle)
                 {
-                    _index._lastException = null;
-
                     switch (EngineHandle.EngineType)
                     {
                         case JavaScriptEngineType.Jint:
@@ -207,6 +205,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var item in _groupedItems.Values)
                     {
+                        _index._lastException = null;
+
                         EngineHandle.ResetCallStack();
                         EngineHandle.ResetConstraints();
 
@@ -237,6 +237,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (V8Exception jse)
                         {
+                            ProcessRunException(jsRes);
                             var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
                             if (success == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
@@ -244,29 +245,42 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (Exception e)
                         {
-                            jsRes.Dispose();
+                            ProcessRunException(jsRes);
                             throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                         }
                         finally
                         {
-                            EngineHandle.ForceGarbageCollection();
-                            if (EngineHandle.IsMemoryChecksOn)
-                            {
-                                EngineHandle.CheckForMemoryLeaks("map");
-                            }
+                            _index._lastException = null;
                         }
 
                         yield return jsRes;
+                        
+                        EngineHandle.ForceGarbageCollection();
+                        if (EngineHandle.IsMemoryChecksOn)
+                        {
+                            EngineHandle.CheckForMemoryLeaks("reduce");
+                        }
                     }
                 }
             }
             finally
             {
                 _groupedItems.Clear();
-                _index._lastException = null;
             }
         }
 
+
+        private void ProcessRunException(JsHandle jsRes)
+        {
+            jsRes.Dispose();
+
+            EngineHandle.ForceGarbageCollection();
+            if (EngineHandle.IsMemoryChecksOn)
+            {
+                EngineHandle.CheckForMemoryLeaks("reduce");
+            }
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void EnsureGroupItemCreated()
         {

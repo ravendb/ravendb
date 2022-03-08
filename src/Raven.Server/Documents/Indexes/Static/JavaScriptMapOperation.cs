@@ -17,6 +17,7 @@ using JintPreventResolvingTasksReferenceResolver = Raven.Server.Documents.Patch.
 using V8Exception = V8.Net.V8Exception;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 using Raven.Server.Documents.Patch.V8;
+using V8.Net;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -119,6 +120,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             catch (JavaScriptException jse)
                             {
+                                ProcessRunException(jsRes);
                                 var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
                                 if (success == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
@@ -126,26 +128,20 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             catch (V8Exception jse)
                             {
+                                ProcessRunException(jsRes);
                                 var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
-                                jsRes.Dispose();
                                 if (success == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
                                 throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
                             }
                             catch (Exception e)
                             {
-                                jsRes.Dispose();
+                                ProcessRunException(jsRes);
                                 throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
                             }
                             finally
                             {
                                 _index._lastException = null;
-
-                                _engineHandle.ForceGarbageCollection();
-                                if (_engineHandle.IsMemoryChecksOn)
-                                {
-                                    _engineHandle.CheckForMemoryLeaks("map");
-                                }
                             }
 
                             using (jsRes)
@@ -204,12 +200,22 @@ namespace Raven.Server.Documents.Indexes.Static
                             _resolver.ExplodeArgsOn(null, null);
                             break;
                         case JavaScriptEngineType.V8:
-                            //DisposeArgsV8(); 
                             break;
                         default:
                             throw new NotSupportedException($"Not supported JS engine kind '{_engineHandle.EngineType}'.");
                     }
                 }
+            }
+        }
+
+        private void ProcessRunException(JsHandle jsRes)
+        {
+            jsRes.Dispose();
+
+            _engineHandle.ForceGarbageCollection();
+            if (_engineHandle.IsMemoryChecksOn)
+            {
+                _engineHandle.CheckForMemoryLeaks("map");
             }
         }
         
