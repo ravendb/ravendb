@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.Subscriptions
         public SubscriptionException ConnectionException;
         public long SubscriptionId { get; set; }
         public string Database;
-        public ShardData Shard;
         public readonly TcpConnectionOptions TcpConnection;
         public readonly CancellationTokenSource CancellationTokenSource;
 
@@ -235,14 +234,12 @@ namespace Raven.Server.Documents.Subscriptions
             Info
         }
 
+        protected abstract (string, string, string) GetStatusMessageDetails();
+
         protected string CreateStatusMessage(ConnectionStatus status, string info = null)
         {
-            var dbNameStr = Shard == null ? $"for database '{Database}'" : $"for shard '{Shard.ShardName}'";
-            dbNameStr = $"{dbNameStr} on '{_serverStore.NodeTag}'";
-            var clientType = Shard == null ? "'client worker'" : "'sharded worker'";
-            clientType = $"{clientType} with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
-            var subsType = Shard == null ? "subscription" : "sharded subscription";
-            subsType = $"{subsType} '{_options.SubscriptionName}', id '{SubscriptionId}'";
+           var (dbNameStr, clientType, subsType) = GetStatusMessageDetails();
+
             string m = null;
             switch (status)
             {

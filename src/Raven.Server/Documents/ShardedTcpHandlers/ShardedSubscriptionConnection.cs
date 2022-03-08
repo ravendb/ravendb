@@ -87,6 +87,14 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
+        protected override (string, string, string) GetStatusMessageDetails()
+        {
+            string dbNameStr = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'";
+            string clientType = "'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
+            string subsType = $"sharded subscription '{_options.SubscriptionName}', id '{SubscriptionId}'";
+            return (dbNameStr, clientType, subsType);
+        }
+
         public override async Task ParseSubscriptionOptionsAsync()
         {
             await base.ParseSubscriptionOptionsAsync();
@@ -99,7 +107,6 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
             _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.ShardedContext.ShardCount, _options.MaxDocsPerBatch);
-            _options.MaxDocsPerBatch = Math.Max(1, _options.MaxDocsPerBatch);
 
             // add to connections
             if (Connections.TryAdd(_options.SubscriptionName, this) == false)

@@ -67,6 +67,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private readonly MemoryStream _buffer = new MemoryStream();
         public readonly SubscriptionConnectionStats Stats;
+        public ShardData Shard;
 
         private SubscriptionConnectionStatsScope _connectionScope;
         private SubscriptionConnectionStatsScope _pendingConnectionScope;
@@ -1120,6 +1121,32 @@ namespace Raven.Server.Documents.TcpHandlers
         internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
         {
             return GetReplyFromClientInternalAsync();
+        }
+
+        protected override (string, string, string) GetStatusMessageDetails()
+        {
+            string dbNameStr;
+            string clientType;
+            string subsType;
+            if (Shard == null)
+            {
+                dbNameStr = $"for database '{Database}'";
+                clientType = "'client worker'";
+                subsType = "subscription";
+
+            }
+            else
+            {
+                dbNameStr = $"for shard '{Shard.ShardName}'";
+                clientType = "'sharded worker'";
+                subsType = "sharded subscription";
+
+            }
+            dbNameStr = $"{dbNameStr} on '{_serverStore.NodeTag}'";
+            clientType = $"{clientType} with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
+            subsType = $"{subsType} '{_options.SubscriptionName}', id '{SubscriptionId}'";
+
+            return (dbNameStr, clientType, subsType);
         }
     }
 
