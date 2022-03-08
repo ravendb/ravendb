@@ -96,6 +96,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
+using Raven.Server.Web.System.Processors;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -545,7 +546,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupParameters));
 
             // compare exchange
-            scripter.AddType(typeof(CompareExchangeHandler.CompareExchangeListItem));
+            scripter.AddType(typeof(AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem));
             scripter.AddType(typeof(CompareExchangeResult<object>));
             scripter.AddType(typeof(CompareExchangeValue<object>));
 
