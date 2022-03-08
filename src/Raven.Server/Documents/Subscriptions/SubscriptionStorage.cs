@@ -299,15 +299,18 @@ namespace Raven.Server.Documents.Subscriptions
 
         public async Task DeleteSubscription(string name, string raftRequestId)
         {
-            var command = new DeleteSubscriptionCommand(_databaseName, name, raftRequestId);
-
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
+            await DeleteSubscriptionInternal(_serverStore, _databaseName, name, raftRequestId);
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info($"Subscription with name {name} was deleted");
             }
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+        }
+
+        public static async Task DeleteSubscriptionInternal(ServerStore serverStore, string databaseName, string name, string raftRequestId)
+        {
+            var command = new DeleteSubscriptionCommand(databaseName, name, raftRequestId);
+            var (etag, _) = await serverStore.SendToLeaderAsync(command);
+            await serverStore.Cluster.WaitForIndexNotification(etag, serverStore.Engine.OperationTimeout);
         }
 
         public bool DropSubscriptionConnections(long subscriptionId, SubscriptionException ex)
