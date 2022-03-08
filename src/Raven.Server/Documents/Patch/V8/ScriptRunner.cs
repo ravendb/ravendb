@@ -1905,22 +1905,27 @@ namespace Raven.Server.Documents.Patch
                         var desc = boi.GetOwnProperty(propertyNameOrig);
                         if (desc != null)
                         {
-                            var valueNew = desc.ValueCopy();
+                            var valueNew = desc.Value;
                             var propertyName = "$" + propertyNameOrig;
                             if (global.HasProperty(propertyName))
                             {
-                                var valuePrev = global.GetProperty(propertyName);
-                                if (ReferenceEquals(valuePrev.Object, valueNew.Object))
-                                    return; // ExplodeArgsOn can be called after SetArgs in ScriptRunner, in this case we can just skip repeated setting
-                                else
+                                using (var valuePrev = global.GetProperty(propertyName))
                                 {
-                                    var valueNewStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valueNew);
-                                    var valuePrevStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valuePrev);
-                                    throw new ArgumentException($"Can't set argument '{propertyName}' as property on global object as it already exists with value {valuePrevStr}, new value {valueNewStr}");
+                                    if (ReferenceEquals(valuePrev.Object, valueNew.Object))
+                                    {
+                                        return; // ExplodeArgsOn can be called after SetArgs in ScriptRunner, in this case we can just skip repeated setting
+                                    }
+                                    else
+                                    {
+                                        var valueNewStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valueNew);
+                                        var valuePrevStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valuePrev);
+                                        throw new ArgumentException(
+                                            $"Can't set argument '{propertyName}' as property on global object as it already exists with value {valuePrevStr}, new value {valueNewStr}");
+                                    }
                                 }
                             }
 
-                            if (!global.SetProperty(propertyName, valueNew))
+                            if (!global.SetProperty(propertyName, valueNew.Clone()))
                             {
                                 throw new JavaScriptException($"Failed to set property {propertyName} on global object");
                             }
