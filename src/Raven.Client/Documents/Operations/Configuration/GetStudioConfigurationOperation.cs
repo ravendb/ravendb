@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
-    public class GetStudioConfigurationOperation : IMaintenanceOperation<StudioConfiguration>
+    internal class GetStudioConfigurationOperation : IMaintenanceOperation<StudioConfiguration>
     {
         public RavenCommand<StudioConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
