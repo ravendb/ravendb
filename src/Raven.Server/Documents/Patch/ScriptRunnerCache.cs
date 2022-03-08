@@ -100,6 +100,14 @@ namespace Raven.Server.Documents.Patch
             return _cache.GetOrAdd(script, value).Value;
         }
 
+        public void UpdateConfiguration(RavenConfiguration configuration)
+        {
+            foreach (var keyValue in _cache)
+            {
+                keyValue.Value.Value.UpdateConfiguration(configuration);
+            }
+        }
+
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
             _cache.Clear();

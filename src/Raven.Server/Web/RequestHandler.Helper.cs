@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
@@ -15,6 +16,7 @@ using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -264,6 +266,19 @@ namespace Raven.Server.Web
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
             }
+        }
+
+        internal void TrafficWatchQuery(IndexQueryServerSide indexQuery)
+        {
+            var sb = new StringBuilder();
+
+            // append stringBuilder with the query
+            sb.Append(indexQuery.Query);
+            // if query got parameters append with parameters
+            if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
+                sb.AppendLine().Append(indexQuery.QueryParameters);
+
+            AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Queries);
         }
     }
 }

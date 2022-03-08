@@ -18,7 +18,6 @@ using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -38,6 +37,7 @@ using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Spatial4n.Core.Distance;
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Patch
 
         private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
         private readonly DocumentDatabase _db;
-        private readonly RavenConfiguration _configuration;
+        private RavenConfiguration _configuration;
         internal readonly bool _enableClr;
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
@@ -2102,6 +2102,13 @@ namespace Raven.Server.Documents.Patch
                 _holder.Parent._cache.Enqueue(_holder);
                 _run = null;
             }
+        }
+
+        public void UpdateConfiguration(RavenConfiguration configuration)
+        {
+            _configuration = configuration;
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Update the cache holder as well");
         }
 
         public bool RunIdleOperations()

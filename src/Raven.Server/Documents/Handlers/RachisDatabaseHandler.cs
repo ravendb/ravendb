@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "raft-index-ids");
                 var commands = JsonDeserializationServer.WaitForRaftCommands(blittable);
 
-                foreach (var index in commands.RaftIndexIds)
+                foreach (var index in commands.RaftCommandIndexes)
                 {
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, HttpContext.RequestAborted);
                 }

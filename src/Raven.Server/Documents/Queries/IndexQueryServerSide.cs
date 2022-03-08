@@ -106,8 +106,11 @@ namespace Raven.Server.Documents.Queries
 
         public BlittableJsonReaderObject ToJson(JsonOperationContext context)
         {
-            if (_asJson != null) 
+            if (_asJson != null)
+            {
+                Debug.Assert(context == _asJson._context);
                 return _asJson;
+            }
 
             _asJson = context.ReadObject(new DynamicJsonValue
             {
@@ -342,7 +345,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException($"{nameof(PageSize)} cannot be negative, but was {indexQuery.PageSize}.", indexQuery.Query, indexQuery.QueryParameters);
         }
         
-        public (List<string> Ids, string StartsWith) ExtractIdsFromQuery(ServerStore serverStore, string databaseName)
+        public (List<Slice> Ids, string StartsWith) ExtractIdsFromQuery(ServerStore serverStore, ByteStringContext allocator, string databaseName)
         {
             if (Metadata.Query.Where == null)
                 return (null, null);
@@ -364,13 +367,11 @@ namespace Raven.Server.Documents.Queries
 
                 using (closeServerTransaction)
                 {
-                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata);
+                    var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata, allocator);
 
                     idsRetriever.Visit(Metadata.Query.Where, QueryParameters);
 
-                    var sortedIds = idsRetriever.Ids?.ToList();
-                    sortedIds?.Sort(StringComparer.OrdinalIgnoreCase);
-                    return (sortedIds, idsRetriever.StartsWith);
+                    return (idsRetriever.Ids?.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
                 }
             }
             finally
@@ -386,17 +387,19 @@ namespace Raven.Server.Documents.Queries
             private readonly ServerStore _serverStore;
             private readonly string _databaseName;
             private readonly QueryMetadata _metadata;
+            private readonly ByteStringContext _allocator;
             public string StartsWith;
 
-            public HashSet<string> Ids { get; private set; }
+            public HashSet<Slice> Ids { get; private set; }
 
-            public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, ServerStore serverStore, string databaseName,  QueryMetadata metadata) : base(metadata.Query.QueryText)
+            public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, ServerStore serverStore, string databaseName, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
             {
                 _query = metadata.Query;
                 _serverContext = serverContext;
                 _serverStore = serverStore;
                 _databaseName = databaseName;
                 _metadata = metadata;
+                _allocator = allocator;
             }
 
             public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
@@ -443,7 +446,7 @@ namespace Raven.Server.Documents.Queries
             public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
             {
                 // Handles the case of IN with empty list
-                Ids ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Ids ??= new HashSet<Slice>(SliceComparer.Instance);
 
                 if (fieldName is MethodExpression me && string.Equals("id", me.Name.Value, StringComparison.OrdinalIgnoreCase))
                 {
@@ -492,9 +495,23 @@ namespace Raven.Server.Documents.Queries
 
             private void AddId(string id)
             {
-                Ids ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Slice key;
+                if (string.IsNullOrEmpty(id) == false)
+                {
+                    Slice.From(_allocator, id, out key);
+                    _allocator.ToLowerCase(ref key.Content);
+                }
+                else
+                {
+                    // this is a rare case
+                    // we are allocating here, because we are releasing all of the ids later on
+                    // if we will use Slices.Empty, then we will release that on a different context
+                    Slice.From(_allocator, string.Empty, out key);
+                }
 
-                Ids.Add(id);
+                Ids ??= new HashSet<Slice>(SliceComparer.Instance);
+
+                Ids.Add(key);
             }
 
             private void ThrowNotSupportedCollectionQueryOperator(string @operator, BlittableJsonReaderObject parameters)

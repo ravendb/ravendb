@@ -7,6 +7,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -59,7 +60,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             result.Indexes.Start();
 
-            var configuration = _server.DatabasesLandlord.CreateConfiguration(_databaseRecord);
+            var configuration = DatabasesLandlord.CreateConfiguration(_server.Server.ServerStore, _databaseRecord.DatabaseName, _databaseRecord.Settings);
 
             await foreach (var index in _source.GetIndexesAsync())
             {

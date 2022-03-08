@@ -229,6 +229,8 @@ namespace Raven.Client
                 public const string HasValue = "HasValue";
 
                 public const string Etag = "@etag";
+
+                internal const string OrderByFields = "@order-by-fields";
             }
 
             public class Collections

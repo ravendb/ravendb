@@ -9,11 +9,11 @@ namespace Raven.Server.Documents.Sharding
 {
     public class WaitForRaftCommands : RavenCommand
     {
-        private readonly List<long> _raftIndexIds;
+        private readonly List<long> _raftCommandIndexes;
 
-        public WaitForRaftCommands(List<long> raftIndexIds)
+        public WaitForRaftCommands(List<long> raftCommandIndexes)
         {
-            _raftIndexIds = raftIndexIds;
+            _raftCommandIndexes = raftCommandIndexes;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Sharding
 
             var waitForCommands = new WaitForCommandsRequest
             {
-                RaftIndexIds = _raftIndexIds
+                RaftCommandIndexes = _raftCommandIndexes
             };
 
             var request = new HttpRequestMessage
@@ -38,6 +38,6 @@ namespace Raven.Server.Documents.Sharding
 
     public class WaitForCommandsRequest
     {
-        public List<long> RaftIndexIds { get; set; }
+        public List<long> RaftCommandIndexes { get; set; }
     }
 }

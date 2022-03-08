@@ -9,9 +9,11 @@ public partial class IndexReadOperation
     partial void AddOrderByFields(IndexQueryServerSide query, global::Lucene.Net.Documents.Document document, ref Document d)
     {
         // * for sharded queries, we'll send the order by fields separately
-        // * for a map-reduce index it's fields are the ones that are used for sorting
+        // * for a map-reduce index, it's fields are the ones that are used for sorting
         if (_index.DocumentDatabase.IsSharded == false || query.Metadata.OrderBy?.Length > 0 == false || _indexType.IsMapReduce())
             return;
+
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "review after Corax is merged");
 
         var documentWithOrderByFields = DocumentWithOrderByFields.From(d);
 
