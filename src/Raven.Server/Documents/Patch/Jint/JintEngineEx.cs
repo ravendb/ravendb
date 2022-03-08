@@ -148,8 +148,10 @@ var process = {
         public void ForceGarbageCollection()
         {}
 
-        public void MakeSnapshot(string name)
-        {}
+        public object MakeSnapshot(string name)
+        {
+            return null;
+        }
         
         public void CheckForMemoryLeaks(string name)
         {}

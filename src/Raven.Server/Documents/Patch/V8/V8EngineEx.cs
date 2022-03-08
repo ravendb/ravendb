@@ -330,6 +330,12 @@ var process = {
             ForceV8GarbageCollection();
         }
 
+        new public object MakeSnapshot(string name)
+        {
+            return base.MakeSnapshot(name);
+        }
+
+
         public void TryCompileScript(string script)
         {
             try

@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Patch
         
         void ForceGarbageCollection();
 
-        void MakeSnapshot(string name);
+        object MakeSnapshot(string name);
 
         void CheckForMemoryLeaks(string name);
         
