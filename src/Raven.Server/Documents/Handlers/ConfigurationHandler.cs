@@ -1,59 +1,21 @@
-﻿using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Web;
-using Raven.Server.Web.Studio.Sharding.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
     public class ConfigurationHandler : DatabaseRequestHandler
     {
-        internal abstract class AbstractStudioConfigurationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
-            where TRequestHandler : RequestHandler
-            where TOperationContext : JsonOperationContext
-        {
-            protected AbstractStudioConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
-            { }
-
-            public async Task WriteStudioConfiguration(StudioConfiguration studioConfiguration)
-            {
-                if (studioConfiguration == null)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
-                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var val = studioConfiguration.ToJson();
-                    var clientConfigurationJson = context.ReadObject(val, Constants.Configuration.StudioId);
-
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                    {
-                        writer.WriteObject(clientConfigurationJson);
-                    }
-                }
-            }
-        }
-
-        internal class StudioConfigurationHandlerProcessor : AbstractStudioConfigurationHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
-        {
-            public StudioConfigurationHandlerProcessor(DatabaseRequestHandler requestHandler, DocumentsContextPool contextPool) : base(requestHandler, contextPool) { }
-        }
-
         [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetStudioConfiguration()
         {
-            var configuration = Database.StudioConfiguration;
-            using (var processor = new StudioConfigurationHandlerProcessor(this, ContextPool))
-            {
-                await processor.WriteStudioConfiguration(configuration);
-            }
+            using (var processor = new ConfigurationHandlerProcessorForGetStudioConfiguration(this, Database))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
