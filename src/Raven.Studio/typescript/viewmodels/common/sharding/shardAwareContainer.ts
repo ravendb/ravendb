@@ -64,13 +64,7 @@ class shardAwareContainer extends viewModelBase {
             return this.effectiveDatabase() && this.effectiveDatabase() instanceof shard;
         });
         
-        this.canChangeScope = ko.pureComputed(() => {
-            if (this.mode === "allShardsOnly") {
-                return false;
-            }
-            
-            return true;
-        });
+        this.canChangeScope = ko.pureComputed(() => this.mode !== "allShardsOnly");
         
         this.contextName = ko.pureComputed(() => {
             const db = this.effectiveDatabase();
@@ -139,13 +133,11 @@ class shardAwareContainer extends viewModelBase {
         this.resetView(true);
     }
     
-    private onDatabaseSelected(db: database, nodeTag: string | null, pin: boolean) {
-        //TODO: handle new tab!
-        
+    private onDatabaseSelected(db: database, pin: boolean) {
         const dbChanged = db.name !== this.activeDatabase().name;
         
         if (!dbChanged) {
-            this.useDatabase(db, nodeTag);
+            this.useDatabase(db);
             this.shardSelector(null);
             return;
         }
@@ -154,12 +146,12 @@ class shardAwareContainer extends viewModelBase {
             this.databasesManager.activate(db);
             this.shardSelector(null);
         } else {
-            this.useDatabase(db, nodeTag); //TODO:
+            this.useDatabase(db); //TODO:
             this.shardSelector(null);    
         }
     }
     
-    useDatabase(db: database, nodeTag: string | null) {
+    useDatabase(db: database) {
         // TODO: allow to persist between views - check if local / remote
         //TODO: doesn't work when pinning
         const oldChild = this.child();
@@ -170,7 +162,7 @@ class shardAwareContainer extends viewModelBase {
     }
 
     useAllShards() {
-        this.useDatabase(this.activeDatabase().root, null);
+        this.useDatabase(this.activeDatabase().root);
     }
     
     supportsDatabase(db: database): db is shard {
@@ -199,7 +191,7 @@ class shardAwareContainer extends viewModelBase {
         } else if (this.mode === "allShardsOnly" && activeDatabase instanceof shard) {
             this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.viewForAllShards()));
         } else {
-            this.shardSelector(new shardSelector(this.shards(), (db, tag, pin) => this.onDatabaseSelected(db, tag, pin)));
+            this.shardSelector(new shardSelector(this.shards(), (db, pin) => this.onDatabaseSelected(db, pin)));
         }
     }
     

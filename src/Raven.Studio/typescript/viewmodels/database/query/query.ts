@@ -312,10 +312,10 @@ class query extends shardViewModelBase {
         }
     };
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db); 
 
-        this.languageService = new rqlLanguageService(this.activeDatabase, this.indexes, "Select");
+        this.languageService = new rqlLanguageService(ko.observable(this.db), this.indexes, "Select");
         
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
@@ -1764,7 +1764,7 @@ class query extends shardViewModelBase {
         }
         $("input[name=ExportOptions]").val(JSON.stringify(payload));
 
-        const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
+        const url = appUrl.forDatabaseQuery(this.db) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
         this.$downloadForm.attr("action", url);
         this.$downloadForm.submit();
     }
