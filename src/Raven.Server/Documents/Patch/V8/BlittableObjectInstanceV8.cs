@@ -398,7 +398,7 @@ namespace Raven.Server.Documents.Patch.V8
         {
             var desc = GetOwnProperty(propertyName);
             if (desc != null)
-                return desc.ValueCopy();
+                return desc.Value.Clone();
             return InternalHandle.Empty;
         }
 
@@ -465,7 +465,7 @@ namespace Raven.Server.Documents.Patch.V8
                     val != null)
                 {
                     val.Value = jsValue;
-                    return toReturnCopy ? val.ValueCopy() : val.Value;
+                    return toReturnCopy ? val.Value.Clone() : val.Value;
                 }
                 
                 _deletes?.Remove(propertyName);
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.Patch.V8
                 MarkChanged();
                 _ownValues ??= new Dictionary<string, BlittableObjectProperty>(_blittable.Count);
                 _ownValues[propertyName] = val;
-                return toReturnCopy ? val.ValueCopy() : val.Value;
+                return toReturnCopy ? val.Value.Clone() : val.Value;
             }
             finally
             {
@@ -609,7 +609,7 @@ namespace Raven.Server.Documents.Patch.V8
             if (_ownValues?.TryGetValue(strKey, out property) == true &&
                 property != null) 
             {
-                return property.ValueCopy();
+                return property.Value.Clone();
             }
 
             property = GenerateProperty(strKey);
@@ -622,7 +622,7 @@ namespace Raven.Server.Documents.Patch.V8
             _ownValues[strKey] = property;
             _deletes?.Remove(strKey);
 
-            return property.ValueCopy();
+            return property.Value.Clone();
 
 
             BlittableObjectProperty GenerateProperty(string propertyName)
@@ -704,15 +704,6 @@ namespace Raven.Server.Documents.Patch.V8
                     _parent.MarkChanged();
                     _changed = true;
                 }
-            }
-
-            public InternalHandle ValueCopy()
-            {
-                _CheckIsNotDisposed($"ValueCopy");
-
-                if (_value.IsEmpty)
-                    return InternalHandle.Empty;
-                return new InternalHandle(ref _value, true);
             }
 
             private void _OnSetValue()
