@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Routing;
@@ -13,6 +14,11 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task FooterStats()
         {
+            using (var processor = new StatsHandlerProcessorForGetStudioFooterStats(this))
+            {
+                await processor.ExecuteAsync();
+            }
+
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
             await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             using (context.OpenReadTransaction())

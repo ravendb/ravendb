@@ -155,6 +155,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
 
+        internal static readonly Func<BlittableJsonReaderObject, FooterStatistics> FooterStatistics = GenerateJsonDeserializationRoutine<FooterStatistics>();
+
         public static readonly Func<BlittableJsonReaderObject, ServerWideStudioConfiguration> ServerWideStudioConfiguration = GenerateJsonDeserializationRoutine<ServerWideStudioConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexQueryServerSide> IndexQuery = GenerateJsonDeserializationRoutine<IndexQueryServerSide>();
