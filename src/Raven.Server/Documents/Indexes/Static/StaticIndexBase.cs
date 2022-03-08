@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Documents;
@@ -125,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Static
             // never hit
             return null;
         }
-
+        
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
@@ -435,6 +436,94 @@ namespace Raven.Server.Documents.Indexes.Static
                 Indexing = indexing,
                 TermVector = FieldTermVector.No
             });
+        }
+
+        public unsafe dynamic AsDateOnly(dynamic field)
+        {
+            if (field is LazyStringValue lsv)
+            {
+                if (LazyStringParser.TryParseDateOnly(lsv.Buffer, lsv.Length, out var @do) == false) 
+                    return DynamicNullObject.Null;
+                
+                return @do;
+            }
+            
+            if (field is string str)
+            {
+                fixed (char* strBuffer = str.AsSpan())
+                {
+                    if (LazyStringParser.TryParseDateOnly(strBuffer, str.Length, out var to) == false)
+                        return DynamicNullObject.Null;
+
+                    return to;
+                }
+            }
+            
+            if (field is DateTime dt)
+            {
+                return DateOnly.FromDateTime(dt);
+            }
+
+            if (field is DateOnly dtO)
+            {
+                return dtO;
+            }
+
+            if (field is null)
+            {
+                return DynamicNullObject.ExplicitNull;
+            }
+            
+            if (field is DynamicNullObject dno)
+            {
+                return dno;
+            }
+            
+            throw new InvalidDataException($"Expected {nameof(DateTime)}, {nameof(DateOnly)}, null, string or JSON value.");
+        }
+
+        public unsafe dynamic AsTimeOnly(dynamic field)
+        {
+            if (field is LazyStringValue lsv)
+            {
+                if (LazyStringParser.TryParseTimeOnly(lsv.Buffer, lsv.Length, out var to) == false)
+                    return DynamicNullObject.Null;
+
+                return to;
+            }
+
+            if (field is string str)
+            {
+                fixed (char* strBuffer = str.AsSpan())
+                {
+                    if (LazyStringParser.TryParseTimeOnly(strBuffer, str.Length, out var to) == false)
+                        return DynamicNullObject.Null;
+
+                    return to;
+                }
+            }
+            
+            if (field is TimeSpan ts)
+            {
+                return TimeOnly.FromTimeSpan(ts);
+            }
+
+            if (field is TimeOnly toF)
+            {
+                return toF;
+            }
+
+            if (field is null)
+            {
+                return DynamicNullObject.ExplicitNull;
+            }
+            
+            if (field is DynamicNullObject dno)
+            {
+                return dno;
+            }
+            
+            throw new InvalidDataException($"Expected {nameof(TimeSpan)}, {nameof(TimeOnly)}, null, string or JSON value.");
         }
 
         public IEnumerable<AbstractField> CreateSpatialField(string name, object lat, object lng)

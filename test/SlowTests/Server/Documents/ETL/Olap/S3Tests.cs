@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -411,7 +410,7 @@ loadToOrders(partitionBy(key), orderData);
             }
         }
 
-        private static string GetPerformanceStats(DocumentDatabase database)
+        internal static string GetPerformanceStats(DocumentDatabase database)
         {
             var process = database.EtlLoader.Processes.First();
             var stats = process?.GetLatestPerformanceStats().ToPerformanceStats();
@@ -979,7 +978,7 @@ for (var i = 0; i < this.Lines.length; i++){
             }
             finally
             {
-                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty, replaceSpecialChars: true);
+                await DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
             }
         }
 
@@ -1353,7 +1352,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
         }
 
-        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false, bool replaceSpecialChars = false)
+        private static async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
         {
             if (s3Settings == null)
                 return;
@@ -1368,18 +1367,8 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                     if (listFolder == false)
                     {
-                        if (replaceSpecialChars == false)
-                        {
-                            var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
-                            s3Client.DeleteMultipleObjects(pathsToDelete);
-                            return;
-                        }
-
-                        foreach (var path in cloudObjects.FileInfoDetails.Select(x => EnsureSafeName(x.FullPath)))
-                        {
-                            s3Client.DeleteObject(path);
-                        }
-
+                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                        s3Client.DeleteMultipleObjects(pathsToDelete);
                         return;
                     }
 
@@ -1405,21 +1394,5 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
             return files;
         }
 
-        private static string EnsureSafeName(string str)
-        {
-            var builder = new StringBuilder(str.Length);
-            foreach (char @char in str)
-            {
-                if (SpecialChars.Contains(@char))
-                {
-                    builder.AppendFormat("%{0:X2}", (int)@char);
-                    continue;
-                }
-
-                builder.Append(@char);
-            }
-
-            return builder.ToString();
-        }
     }
 }

@@ -16,7 +16,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task Should_Delete_All_Documents_Without_Timeout()
         {
             using (var store = GetDocumentStore(new Options

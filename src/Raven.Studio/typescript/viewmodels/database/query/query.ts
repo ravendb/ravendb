@@ -48,6 +48,7 @@ import { highlight, languages } from "prismjs";
 import shardedDatabase from "models/resources/shardedDatabase";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import { shardingTodo } from "common/developmentHelper";
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -200,9 +201,11 @@ class query extends shardViewModelBase {
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
-    cacheEnabled = ko.observable<boolean>(true);
     lastCriteriaExecuted: queryCriteria = queryCriteria.empty();
-
+    
+    cacheEnabled = ko.observable<boolean>(true);
+    disableAutoIndexCreation = ko.observable<boolean>(true);
+    
     private indexEntriesStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
@@ -578,9 +581,11 @@ class query extends shardViewModelBase {
         }
         
         this.updateHelpLink('KCIMJK');
+
+        this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
         
         const db = this.db;
-
+        
         return this.fetchAllIndexes(db)
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
@@ -970,6 +975,7 @@ class query extends shardViewModelBase {
         
         const criteriaDto = criteria.toStorageDto();
         const disableCache = !this.cacheEnabled();
+        const disableAutoIndexCreation = this.disableAutoIndexCreation();
 
         if (criteria.queryText()) {
             this.spinners.isLoading(true);
@@ -978,7 +984,7 @@ class query extends shardViewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCmd = new queryCommand(database, 0, 25, criteria, disableCache);
+            const queryCmd = new queryCommand(database, 0, 25, criteria, disableCache, disableAutoIndexCreation);
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
@@ -999,7 +1005,7 @@ class query extends shardViewModelBase {
             const resultsFetcher = (skip: number, take: number) => {
                 const criteriaForFetcher = this.lastCriteriaExecuted;
                 
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache);
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, criteriaForFetcher, disableCache, disableAutoIndexCreation);
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
@@ -1621,7 +1627,8 @@ class query extends shardViewModelBase {
                                          this.allSpatialResultsItems().length,
                                          query.maxSpatialResultsToFetch + 1,
                                          this.criteria().clone(),
-                                         !this.cacheEnabled());
+                                         !this.cacheEnabled(),
+                                         this.disableAutoIndexCreation());
         command.execute()
             .done((queryResults: pagedResultExtended<document>) => {
                 const spatialProperties = queryResults.additionalResultInfo.SpatialProperties;

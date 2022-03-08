@@ -15,13 +15,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void ShouldWork64()
         {
             ShouldWork(40_000, 25_000);
         }
 
-        [Fact32Bit]
+        [MultiplatformFact(RavenArchitecture.AllX86)]
         public void ShouldWork32()
         {
             ShouldWork(10_000, 7_000);

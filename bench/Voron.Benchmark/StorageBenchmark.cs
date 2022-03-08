@@ -54,17 +54,9 @@ namespace Voron.Benchmark
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core22,
+                        Runtime = CoreRuntime.Core60,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
-                    },
-                    Run =
-                    {
-                        LaunchCount = 1,
-                        WarmupCount = 1,
-                        IterationCount = 1,
-                        InvocationCount = 1,
-                        UnrollFactor = 1
                     },
                     // TODO: Next line is just for testing. Fine tune parameters.
                 });
@@ -72,7 +64,7 @@ namespace Voron.Benchmark
                 // Exporters for data
                 AddExporter(GetExporters().ToArray());
                 // Generate plots using R if %R_HOME% is correctly set
-                AddExporter(RPlotExporter.Default);
+                // AddExporter(RPlotExporter.Default);
 
                 AddColumn(StatisticColumn.AllStatistics);
 
@@ -109,7 +101,6 @@ namespace Voron.Benchmark
             }
         }
 
-        [GlobalSetup]
         public virtual void Setup()
         {
             if (DeleteBeforeEachBenchmark)

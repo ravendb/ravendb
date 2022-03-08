@@ -88,7 +88,11 @@ namespace Raven.Server.Documents.Handlers
                 var timeLimit = TimeSpan.FromSeconds(GetIntValueQueryString("timeLimit", false) ?? 15);
                 var startEtag = cv.Etag;
 
-                var processor = new TestDocumentsSubscriptionProcessor(Server.ServerStore, Database, state, sub.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                SubscriptionProcessor processor;
+                if(sub.Revisions)
+                    processor = new TestRevisionsSubscriptionProcessor(Server.ServerStore, Database, state, sub.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
+                else
+                    processor = new TestDocumentsSubscriptionProcessor(Server.ServerStore, Database, state, sub.Collection, new SubscriptionWorkerOptions("dummy"), new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
                 processor.AddScript(patch);
 
                 using (processor)
@@ -108,7 +112,7 @@ namespace Raven.Server.Documents.Handlers
                         var first = true;
                         var lastEtag = startEtag;
                         
-                        processor.SetStartEtag(startEtag);
+                        ((IEtagSettable)processor).SetStartEtag(startEtag);
 
                         foreach (var itemDetails in processor.GetBatch())
                         {

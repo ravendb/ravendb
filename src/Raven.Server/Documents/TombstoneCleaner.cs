@@ -17,7 +17,8 @@ namespace Raven.Server.Documents
         private readonly ITombstoneAware.TombstoneType[] _tombstoneTypes = new ITombstoneAware.TombstoneType[]
         {
             ITombstoneAware.TombstoneType.Documents,
-            ITombstoneAware.TombstoneType.TimeSeries
+            ITombstoneAware.TombstoneType.TimeSeries,
+            ITombstoneAware.TombstoneType.Counters
         };
 
         private readonly SemaphoreSlim _subscriptionsLocker = new SemaphoreSlim(1, 1);
@@ -87,7 +88,7 @@ namespace Raven.Server.Documents
 
                 while (CancellationToken.IsCancellationRequested == false)
                 {
-                    var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, state.MinAllTimeSeriesEtag, batchSize, _documentDatabase, Logger);
+                    var command = new DeleteTombstonesCommand(state.Tombstones, state.MinAllDocsEtag, state.MinAllTimeSeriesEtag, state.MinAllCountersEtag, batchSize, _documentDatabase, Logger);
                     await _documentDatabase.TxMerger.Enqueue(command);
 
                     numberOfTombstonesDeleted += command.NumberOfTombstonesDeleted;
@@ -110,18 +111,19 @@ namespace Raven.Server.Documents
             return GetStateInternal().Tombstones;
         }
 
-        private (Dictionary<string, StateHolder> Tombstones, long MinAllDocsEtag, long MinAllTimeSeriesEtag) GetStateInternal()
+        private (Dictionary<string, StateHolder> Tombstones, long MinAllDocsEtag, long MinAllTimeSeriesEtag, long MinAllCountersEtag) GetStateInternal()
         {
             var minAllDocsEtag = long.MaxValue;
             var minAllTimeSeriesEtag = long.MaxValue;
+            var minAllCountersEtag = long.MaxValue;
             var tombstones = new Dictionary<string, StateHolder>(StringComparer.OrdinalIgnoreCase);
 
             if (CancellationToken.IsCancellationRequested)
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag);
+                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
 
             var storageEnvironment = _documentDatabase?.DocumentsStorage?.Environment;
             if (storageEnvironment == null) // doc storage was disposed before us?
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag);
+                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
 
             using (var tx = storageEnvironment.ReadTransaction())
             {
@@ -130,7 +132,7 @@ namespace Raven.Server.Documents
             }
 
             if (tombstones.Count == 0)
-                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag);
+                return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
 
             _subscriptionsLocker.Wait();
 
@@ -144,7 +146,7 @@ namespace Raven.Server.Documents
                         if (subscriptionTombstones == null)
                             continue;
 
-                        Debug.Assert(new[] { Constants.TimeSeries.All, Constants.Documents.Collections.AllDocumentsCollection }.All(x => subscriptionTombstones.Keys.Contains(x)) == false);
+                        Debug.Assert(new[] { Constants.TimeSeries.All, Constants.Documents.Collections.AllDocumentsCollection, Constants.Counters.All }.All(x => subscriptionTombstones.Keys.Contains(x)) == false);
 
                         foreach (var tombstone in subscriptionTombstones)
                         {
@@ -157,6 +159,12 @@ namespace Raven.Server.Documents
                             if (tombstone.Key == Constants.TimeSeries.All)
                             {
                                 minAllTimeSeriesEtag = Math.Min(tombstone.Value, minAllTimeSeriesEtag);
+                                break;
+                            }
+
+                            if (tombstone.Key == Constants.Counters.All)
+                            {
+                                minAllCountersEtag = Math.Min(tombstone.Value, minAllCountersEtag);
                                 break;
                             }
 
@@ -175,7 +183,7 @@ namespace Raven.Server.Documents
                 _subscriptionsLocker.Release();
             }
 
-            return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag);
+            return (tombstones, minAllDocsEtag, minAllTimeSeriesEtag, minAllCountersEtag);
 
             static State GetState(Dictionary<string, StateHolder> results, string collection, ITombstoneAware.TombstoneType type)
             {
@@ -188,6 +196,8 @@ namespace Raven.Server.Documents
                         return value.Documents;
                     case ITombstoneAware.TombstoneType.TimeSeries:
                         return value.TimeSeries;
+                    case ITombstoneAware.TombstoneType.Counters:
+                        return value.Counters;
                     default:
                         throw new NotSupportedException($"Tombstone type '{type}' is not supported.");
                 }
@@ -200,11 +210,14 @@ namespace Raven.Server.Documents
             {
                 Documents = new State();
                 TimeSeries = new State();
+                Counters = new State();
             }
 
             public State Documents;
 
             public State TimeSeries;
+
+            public State Counters;
         }
 
         public class State
@@ -225,17 +238,19 @@ namespace Raven.Server.Documents
             private readonly Dictionary<string, StateHolder> _tombstones;
             private readonly long _minAllDocsEtag;
             private readonly long _minAllTimeSeriesEtag;
+            private readonly long _minAllCountersEtag;
             private readonly long _numberOfTombstonesToDeleteInBatch;
             private readonly DocumentDatabase _database;
             private readonly Logger _logger;
 
             public long NumberOfTombstonesDeleted { get; private set; }
 
-            public DeleteTombstonesCommand(Dictionary<string, StateHolder> tombstones, long minAllDocsEtag, long minAllTimeSeriesEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
+            public DeleteTombstonesCommand(Dictionary<string, StateHolder> tombstones, long minAllDocsEtag, long minAllTimeSeriesEtag, long minAllCountersEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
             {
                 _tombstones = tombstones ?? throw new ArgumentNullException(nameof(tombstones));
                 _minAllDocsEtag = minAllDocsEtag;
                 _minAllTimeSeriesEtag = minAllTimeSeriesEtag;
+                _minAllCountersEtag = minAllCountersEtag;
                 _numberOfTombstonesToDeleteInBatch = numberOfTombstonesToDeleteInBatch;
                 _database = database ?? throw new ArgumentNullException(nameof(database));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -258,6 +273,13 @@ namespace Raven.Server.Documents
                         var deletedSegmentsOrRanges = ProcessTimeSeries(context, tombstone.Value.TimeSeries, tombstone.Key, numberOfTombstonesToDeleteInBatch);
                         numberOfTombstonesToDeleteInBatch -= deletedSegmentsOrRanges;
                         NumberOfTombstonesDeleted += deletedSegmentsOrRanges;
+
+                        if (numberOfTombstonesToDeleteInBatch <= 0)
+                            break;
+
+                        var deletedCounterTombstoneEntries = ProcessCounters(context, tombstone.Value.Counters, tombstone.Key, numberOfTombstonesToDeleteInBatch);
+                        numberOfTombstonesToDeleteInBatch -= deletedCounterTombstoneEntries;
+                        NumberOfTombstonesDeleted += deletedCounterTombstoneEntries;
 
                         if (numberOfTombstonesToDeleteInBatch <= 0)
                             break;
@@ -303,6 +325,18 @@ namespace Raven.Server.Documents
                 return _database.DocumentsStorage.TimeSeriesStorage.PurgeSegmentsAndDeletedRanges(context, collection, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
             }
 
+            private long ProcessCounters(DocumentsOperationContext context, State state, string collection, long numberOfTombstonesToDeleteInBatch)
+            {
+                if (state == null)
+                    return 0;
+
+                var minTombstoneValue = Math.Min(state.Etag, _minAllCountersEtag);
+                if (minTombstoneValue <= 0)
+                    return 0;
+
+                return _database.DocumentsStorage.CountersStorage.PurgeCountersAndCounterTombstones(context, collection, minTombstoneValue, numberOfTombstonesToDeleteInBatch);
+            }
+
             private long ProcessDocuments(DocumentsOperationContext context, State state, string collection, long numberOfTombstonesToDeleteInBatch)
             {
                 if (state == null)
@@ -322,12 +356,13 @@ namespace Raven.Server.Documents
         public Dictionary<string, TombstoneCleaner.StateHolder> Tombstones;
         public long MinAllDocsEtag;
         public long MinAllTimeSeriesEtag;
+        public long MinAllCountersEtag;
         public long? NumberOfTombstonesToDeleteInBatch;
 
         public TombstoneCleaner.DeleteTombstonesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var log = LoggingSource.Instance.GetLogger<TombstoneCleaner.DeleteTombstonesCommand>(database.Name);
-            var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, MinAllTimeSeriesEtag, NumberOfTombstonesToDeleteInBatch ?? long.MaxValue, database, log);
+            var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, MinAllTimeSeriesEtag, MinAllCountersEtag, NumberOfTombstonesToDeleteInBatch ?? long.MaxValue, database, log);
             return command;
         }
     }
@@ -341,7 +376,8 @@ namespace Raven.Server.Documents
         public enum TombstoneType
         {
             Documents,
-            TimeSeries
+            TimeSeries,
+            Counters
         }
     }
 }

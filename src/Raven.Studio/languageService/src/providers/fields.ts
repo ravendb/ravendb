@@ -33,7 +33,8 @@ export class AutoCompleteFields extends BaseAutocompleteProvider implements Auto
                 // at literal / string
                 if (scanner.previous()) {
                     switch (scanner.tokenType()) {
-                        case RqlParser.STRING:
+                        case RqlParser.DOUBLE_QUOTE_STRING:
+                        case RqlParser.SINGLE_QUOTE_STRING:    
                             parts.unshift(QuoteUtils.unquote(scanner.tokenText()));
                             break;
                         case RqlParser.WORD:

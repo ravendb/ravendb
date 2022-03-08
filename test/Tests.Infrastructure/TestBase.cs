@@ -191,10 +191,10 @@ namespace FastTests
 
         protected static TestCertificatesHolder _selfSignedCertificates;
 
-        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false)
+        protected TestCertificatesHolder GenerateAndSaveSelfSignedCertificate(bool createNew = false, [CallerMemberName] string caller = null)
         {
             if (createNew)
-                return ReturnCertificatesHolder(Generate(Interlocked.Increment(ref _counter)));
+                return ReturnCertificatesHolder(Generate(caller, Interlocked.Increment(ref _counter)));
 
             var selfSignedCertificates = _selfSignedCertificates;
             if (selfSignedCertificates != null)
@@ -204,7 +204,7 @@ namespace FastTests
             {
                 selfSignedCertificates = _selfSignedCertificates;
                 if (selfSignedCertificates == null)
-                    _selfSignedCertificates = selfSignedCertificates = Generate();
+                    _selfSignedCertificates = selfSignedCertificates = Generate(caller);
 
                 return ReturnCertificatesHolder(selfSignedCertificates);
             }
@@ -214,7 +214,7 @@ namespace FastTests
                 return new TestCertificatesHolder(certificates, GetTempFileName);
             }
 
-            TestCertificatesHolder Generate(int gen = 0)
+            TestCertificatesHolder Generate(string caller, int gen = 0)
             {
                 var log = new StringBuilder();
                 byte[] certBytes;
@@ -224,6 +224,8 @@ namespace FastTests
 
                 if (File.Exists(serverCertificatePath) == false)
                 {
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Generating cert file: {serverCertificatePath} (caller: {caller})");
+
                     try
                     {
                         certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
@@ -239,6 +241,8 @@ namespace FastTests
                     try
                     {
                         File.WriteAllBytes(serverCertificatePath, certBytes);
+
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Certificate {serverCertificatePath} generated successfully");
                     }
                     catch (Exception e)
                     {

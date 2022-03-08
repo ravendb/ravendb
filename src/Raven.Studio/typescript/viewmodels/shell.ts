@@ -31,7 +31,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import getGlobalStudioConfigurationCommand = require("commands/resources/getGlobalStudioConfigurationCommand");
-import getStudioConfigurationCommand = require("commands/resources/getStudioConfigurationCommand");
+import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
@@ -49,7 +49,7 @@ import clientCertificateModel = require("models/auth/clientCertificateModel");
 import certificateModel = require("models/auth/certificateModel");
 import serverTime = require("common/helpers/database/serverTime");
 import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
-import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
+import saveDatabaseStudioConfigurationCommand = require("commands/resources/saveDatabaseStudioConfigurationCommand");
 import studioSetting = require("common/settings/studioSetting");
 import detectBrowser = require("viewmodels/common/detectBrowser");
 import genUtils = require("common/generalUtils");
@@ -150,10 +150,10 @@ class shell extends viewModelBase {
             (db) => {
                 shardingTodo("Marcin");
                 const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard 
-                return new getStudioConfigurationCommand(dbToUse).execute();
+                return new getDatabaseStudioConfigurationCommand(dbToUse).execute();
             },
             settings => new saveGlobalStudioConfigurationCommand(settings).execute(),
-            (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
+            (settings, db) => new saveDatabaseStudioConfigurationCommand(settings, db).execute()
         );
         
         this.browserAlert = new detectBrowser(true);

@@ -20,13 +20,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
         {
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(false);
         }
         
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
         {
             return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(true);

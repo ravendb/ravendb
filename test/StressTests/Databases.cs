@@ -23,13 +23,13 @@ namespace StressTests
         {
         }
 
-        [NightlyBuildFact64Bit]
+        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
         public void CanHandleMultipleDatabasesOnWrite()
         {
             RunTest(numberOfDatabases: 25);
         }
 
-        [NightlyBuildFact32Bit]
+        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX86)]
         public void CanHandleMultipleDatabasesOnWrite32()
         {
             RunTest(numberOfDatabases: 10);

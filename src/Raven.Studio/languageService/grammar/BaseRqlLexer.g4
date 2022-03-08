@@ -283,6 +283,14 @@ FUZZY
    : F U Z Z Y
    ;
 
+FILTER
+   : F I L T E R
+   ;
+   
+FILTER_LIMIT
+   : F I L T E R '_' L I M I T
+   ;
+
 TIMESERIES
    : T I M E S E R I E S ' '? OP_PAR -> pushMode (TIME_SERIES)
    ;
@@ -306,16 +314,15 @@ NUM
    : DIGIT+ (DOT DIGIT+)?
    ;
 
-STRING
-   : SINGLE_QUOTE_STRING
-   | ('"' ('\\"' | .)*? '"')
-   | ('\'' ('\\"' | .)*? '\'')
+DOUBLE_QUOTE_STRING
+   : '"' ('\\"' | .)*? '"'
    | '"' UTFEscape '"'
-   | '\'' UTFEscape '\''
    ;
 
 SINGLE_QUOTE_STRING
    : '\'' (('\'\'') | ('\\'+ ~ '\\') | ~ ('\'' | '\\'))* '\''
+   | ('\'' ('\\"' | .)*? '\'')
+   | '\'' UTFEscape '\''
    ;
 
 WORD
