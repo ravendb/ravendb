@@ -43,6 +43,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/settings/studioConfiguration',
+            shardingMode: "allShardsOnly",
             moduleId: require('viewmodels/database/settings/studioConfiguration'),
             title: 'Studio Configuration',
             nav: true,
