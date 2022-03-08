@@ -25,8 +25,8 @@ class cmpXchg extends viewModelBase {
     selectedItemsCount: KnockoutComputed<number>;
     private nextItemToFetchIndex = undefined as number;
 
-    private gridController = ko.observable<virtualGridController<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>>();
-    private columnPreview = new columnPreviewPlugin<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>();
+    private gridController = ko.observable<virtualGridController<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>>();
+    private columnPreview = new columnPreviewPlugin<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>();
 
     spinners = {
         delete: ko.observable<boolean>(false)
@@ -64,8 +64,8 @@ class cmpXchg extends viewModelBase {
         });
     }
 
-    fetchItems(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>> {
-        const task = $.Deferred<pagedResult<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>>();
+    fetchItems(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>> {
+        const task = $.Deferred<pagedResult<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>>();
 
         new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), this.nextItemToFetchIndex || 0, 101)
             .execute()
@@ -94,20 +94,20 @@ class cmpXchg extends viewModelBase {
         grid.headerVisible(true);
 
         const checkColumn = new checkedColumn(true); 
-        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%", {
+        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%", {
             sortable: "string"
         });
-        const valueColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%", {
+        const valueColumn = new textColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%", {
             sortable: "string"
         });
-        const metadataColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%", {
+        const metadataColumn = new textColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Value["@metadata"], "Metadata", "20%", {
             sortable: "string"
         });
-        const raftIndexColumn = new textColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid, x => x.Index, "Raft Index", "20%", {
+        const raftIndexColumn = new textColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Index, "Raft Index", "20%", {
             sortable: "number"
         });
 
-        const editColumn = new actionColumn<Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem>(grid,
+        const editColumn = new actionColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid,
             x => this.editItem(x.Key),
             "Edit",
             `<i class="icon-edit"></i>`,
@@ -119,7 +119,7 @@ class cmpXchg extends viewModelBase {
         grid.init((s, _) => this.fetchItems(s), () => gridColumns);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
-             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+             (doc: Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
