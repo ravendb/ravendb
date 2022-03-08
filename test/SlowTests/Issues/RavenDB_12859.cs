@@ -373,6 +373,205 @@ namespace SlowTests.Issues
                     Assert.NotNull(name);
                     Assert.Equal("HR_Stored", name.Name);
 
+                    name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .Projection(ProjectionBehavior.Default)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name.Name);
+
+                    name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .Projection(ProjectionBehavior.FromIndex)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name.Name);
+
+                    name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .Projection(ProjectionBehavior.FromIndex)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name.Name);
+
+                    name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .Projection(ProjectionBehavior.FromDocument)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR", name.Name);
+
+                    name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .Projection(ProjectionBehavior.FromDocumentOrThrow)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR", name.Name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var fax = session.Advanced
+                        .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax.Fax);
+
+                    fax = session.Advanced
+                        .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
+                        .Projection(ProjectionBehavior.Default)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax.Fax);
+
+                    fax = session.Advanced
+                        .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
+                        .Projection(ProjectionBehavior.FromIndex)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.Null(fax.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced
+                            .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
+                            .Projection(ProjectionBehavior.FromIndexOrThrow)
+                            .NoCaching()
+                            .FirstOrDefault();
+                    });
+
+                    fax = session.Advanced
+                        .RawQuery<ClassWithFax>("from index 'Companies/ByName' as c select { Fax : c.Fax }")
+                        .Projection(ProjectionBehavior.FromDocument)
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced
+                            .RawQuery<Company_WithExtraField>("from index 'Companies/ByName' as c select { ExtraField : c.ExtraField }")
+                            .Projection(ProjectionBehavior.FromDocumentOrThrow)
+                            .NoCaching()
+                            .FirstOrDefault();
+                    });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var values = session.Advanced
+                        .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    values = session.Advanced
+                        .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
+                        .NoCaching()
+                        .Projection(ProjectionBehavior.Default)
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    values = session.Advanced
+                        .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
+                        .NoCaching()
+                        .Projection(ProjectionBehavior.FromIndex)
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal(null, values.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        values = session.Advanced
+                            .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
+                            .NoCaching()
+                            .Projection(ProjectionBehavior.FromIndexOrThrow)
+                            .FirstOrDefault();
+                    });
+
+                    values = session.Advanced
+                            .RawQuery<ClassWithNameAndFax>("from index 'Companies/ByName' as c select { Name : c.Name, Fax: c.Fax }")
+                            .NoCaching()
+                            .Projection(ProjectionBehavior.FromDocument)
+                            .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced
+                            .RawQuery<Company_WithExtraField>("from index 'Companies/ByName' as c select { Name : c.Name, ExtraField: c.ExtraField }")
+                            .NoCaching()
+                            .Projection(ProjectionBehavior.FromDocumentOrThrow)
+                            .FirstOrDefault();
+                    });
+                }
+            }
+        }
+        
+        
+        [Theory]
+        [InlineData("Jint", -1, -1)]
+        [InlineData("V8", 1, 1)]
+        [InlineData("V8", 1, -1)]
+        public void Can_Use_Projection_Behavior_Query_JavaScriptDebug(string jsEngineType, int targetContextCountPerEngine, int maxEngineCount)
+        {
+            var options = Options.ForJavaScriptEngine(jsEngineType, d =>
+            {
+                if (targetContextCountPerEngine > 0)
+                    d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.TargetContextCountPerEngine)] = targetContextCountPerEngine.ToString();
+                if (maxEngineCount > 0)
+                    d.Settings[RavenConfiguration.GetKey(x => x.JavaScript.MaxEngineCount)] = maxEngineCount.ToString();            
+            });
+            using (var store = GetDocumentStore(options))
+            {
+                new Companies_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR", Fax = "123" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var name = session.Advanced
+                        .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
+                        .NoCaching()
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name.Name);
+
                     /*name = session.Advanced
                         .RawQuery<ClassWithName>("from index 'Companies/ByName' as c select { Name : c.Name }")
                         .Projection(ProjectionBehavior.Default)
