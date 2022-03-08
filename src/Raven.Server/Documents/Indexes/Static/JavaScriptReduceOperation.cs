@@ -256,10 +256,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         yield return jsRes;
                         
                         EngineHandle.ForceGarbageCollection();
-                        if (EngineHandle.IsMemoryChecksOn)
+                        /*if (EngineHandle.IsMemoryChecksOn)
                         {
                             EngineHandle.CheckForMemoryLeaks("reduce");
-                        }
+                        }*/
                     }
                 }
             }
