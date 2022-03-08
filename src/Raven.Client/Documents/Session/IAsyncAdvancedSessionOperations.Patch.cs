@@ -34,5 +34,11 @@ namespace Raven.Client.Documents.Session
 
         void Patch<T, TKey, TValue>(string id, Expression<Func<T, IDictionary<TKey, TValue>>> path,
             Expression<Func<JavaScriptDictionary<TKey, TValue>, object>> dictionaryAdder);
+
+        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value);
+
+        void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, List<TU>>> path, Expression<Func<JavaScriptArray<TU>, object>> arrayAdder);
+
+        void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valToAdd);
     }
 }
