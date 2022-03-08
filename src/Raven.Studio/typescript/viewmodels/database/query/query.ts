@@ -47,6 +47,7 @@ import moment = require("moment");
 import { highlight, languages } from "prismjs";
 import shardedDatabase from "models/resources/shardedDatabase";
 import shardViewModelBase from "viewmodels/shardViewModelBase";
+import { shardingTodo } from "common/developmentHelper";
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph" | "revisions";
 
@@ -888,7 +889,8 @@ class query extends shardViewModelBase {
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {
-        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix!
+        shardingTodo("Marcin");
+        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix! 
         
         return new getDatabaseStatsCommand(dbToUse)
             .execute()

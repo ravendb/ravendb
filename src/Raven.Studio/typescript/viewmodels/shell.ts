@@ -56,6 +56,7 @@ import genUtils = require("common/generalUtils");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import connectionStatus from "models/resources/connectionStatus";
 import shardedDatabase from "models/resources/shardedDatabase";
+import { shardingTodo } from "common/developmentHelper";
 
 class shell extends viewModelBase {
 
@@ -147,7 +148,8 @@ class shell extends viewModelBase {
 
         studioSettings.default.configureLoaders(() => new getGlobalStudioConfigurationCommand().execute(),
             (db) => {
-                const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
+                shardingTodo("Marcin");
+                const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard 
                 return new getStudioConfigurationCommand(dbToUse).execute();
             },
             settings => new saveGlobalStudioConfigurationCommand(settings).execute(),

@@ -4,7 +4,6 @@ import database = require("models/resources/database");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats");
 import generalUtils = require("common/generalUtils");
-import shardedDatabase from "models/resources/shardedDatabase";
 
 class collectionsTracker {
 
