@@ -157,8 +157,9 @@ namespace SlowTests.Client.Counters
                 await SetupReplicationAsync(storeA, storeB);
                 await SetupReplicationAsync(storeB, storeA);
 
-                EnsureReplicating(storeA, storeB);
-                
+                await EnsureReplicatingAsync(storeA, storeB);
+                await EnsureReplicatingAsync(storeB, storeA);
+
                 using (var session = storeB.OpenAsyncSession())
                 {
                     var counters = await session.CountersFor("users/1").GetAllAsync();

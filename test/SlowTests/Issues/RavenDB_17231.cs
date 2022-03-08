@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -7,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide;
+using Raven.Server;
 using Sparrow.Server.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
@@ -20,10 +22,12 @@ namespace SlowTests.Issues
         {
         }
 
+
         [Fact]
         public async Task FailuresDuringEmptyQueueShouldCauseReelection()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
+            var leaderTag = leader.ServerStore.NodeTag;
             var dbName = GetDatabaseName();
             var db = await CreateDatabaseInCluster(dbName, 3, leader.WebUrl);
 
@@ -36,6 +40,13 @@ namespace SlowTests.Issues
                     exceptionThrown.Set();
                     throw new DiskFullException("no more space");
                 }
+            };
+
+            var stateChanged = new ManualResetEventSlim();
+            leader.ServerStore.Engine.StateChanged += (_, transition) =>
+            {
+                if (transition.From == RachisState.Leader && transition.To == RachisState.Candidate)
+                    stateChanged.Set();
             };
 
             var followers = nodes.Where(s => s != leader).ToList();
@@ -65,14 +76,21 @@ namespace SlowTests.Issues
             });
 
             Assert.True(exceptionThrown.Wait(TimeSpan.FromSeconds(10)), $"no exception thrown. commands count : {cmdCount}");
+
+            Assert.True(stateChanged.Wait(TimeSpan.FromSeconds(15)),
+                await AddErrorMessageAndClusterDebugLogs(nodes, 
+                    new StringBuilder().AppendLine($"leader {leaderTag} did not have a state transition from 'Leader' to 'Candidate' after 15 seconds.")));
+
             Assert.True(leaderSteppedDown.Wait(TimeSpan.FromSeconds(15)), 
-                await AddErrorMessageAndClusterDebugLogs(new StringBuilder().AppendLine($"leader {leader.ServerStore.NodeTag} did not step down after 15 seconds")));
+                await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"leader {leaderTag} did not step down after 15 seconds")));
+
             Assert.True(newLeaderElected.Wait(TimeSpan.FromSeconds(15)), 
-                await AddErrorMessageAndClusterDebugLogs(new StringBuilder().AppendLine($"old leader {leader.ServerStore.NodeTag} stepped down, but no new leader was elected after 15 seconds")));
+                await AddErrorMessageAndClusterDebugLogs(nodes, new StringBuilder().AppendLine($"old leader {leaderTag} stepped down, but no new leader was elected after 15 seconds")));
+            
             await putConnectionStrings;
         }
 
-        private async Task<string> AddErrorMessageAndClusterDebugLogs(StringBuilder sb)
+        private async Task<string> AddErrorMessageAndClusterDebugLogs(IEnumerable<RavenServer> nodes, StringBuilder sb)
         {
             try
             {
@@ -80,10 +98,28 @@ namespace SlowTests.Issues
             }
             catch (Exception e)
             {
-                sb.AppendLine("Failed to get cluster debug logs : " + e);
+                sb.AppendLine("Failed to get cluster debug logs " + e);
+            }
+
+            foreach (var node in nodes)
+            {
+                GetStateTransitionsForNode(node, sb);
             }
 
             return sb.ToString();
+        }
+
+        private void GetStateTransitionsForNode(RavenServer node, StringBuilder sb)
+        {
+            var prevStates = node.ServerStore.Engine.PrevStates.Select(s => s.ToString()).ToList();
+            sb.AppendLine($"{Environment.NewLine}State transitions for node {node.ServerStore.NodeTag}:{Environment.NewLine}-----------------------");
+
+            foreach (var state in prevStates)
+            {
+                sb.AppendLine($"{state}{Environment.NewLine}");
+            }
+
+            sb.AppendLine();
         }
     }
 }

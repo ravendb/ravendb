@@ -91,9 +91,7 @@ namespace FastTests.Utils
                 Assert.Equal(expected, dto);
             }
         }
-
-
-
+        
         [Theory]
         [InlineData("2016-10-05T")]
         [InlineData("2016-10-05T21:17:32.2082285+01:00,ad")]
@@ -110,5 +108,39 @@ namespace FastTests.Utils
                     LazyStringParser.TryParseDateTime(buffer, bytes.Length, out time, out dto, properlyParseThreeDigitsMilliseconds: true));
             }
         }
+        
+        [Theory]
+        [InlineData("1998-02-09", 1998, 2, 9)]
+        [InlineData("0001-12-10", 1, 12, 10)]
+        [InlineData("2022-02-14", 2022, 2, 14)]
+        [InlineData("5999-01-01", 5999, 1, 1)]
+
+        public void DateOnly(string date, int yyyy, int mm, int dd)
+        {
+            var bytes = date.AsSpan();
+            fixed (char* buffer = bytes)
+            {
+                Assert.True(LazyStringParser.TryParseDateOnly(buffer, bytes.Length, out var result));
+                Assert.True(result.Equals(new DateOnly(yyyy,mm,dd)));
+            }
+        }
+
+        [Theory]
+        [InlineData("20:59:12.9990000", 20, 59, 12, 999)]
+        [InlineData("21:38:32.9120000", 21, 38, 32, 912)]
+        [InlineData("23:59:00", 23, 59,0,0)]
+        [InlineData("23:01:09", 23, 1,9,0)]
+        public void TimeOnly(string date, int hh, int mm, int ss, int ms)
+        {
+            var bytes = date.AsSpan();
+            fixed (char* buffer = bytes)
+            {
+                Assert.True(LazyStringParser.TryParseTimeOnly(buffer, bytes.Length, out var result));
+                Assert.True(result.Equals(new TimeOnly(hh, mm, ss, ms)));
+            }
+        }
+
+
+
     }
 }

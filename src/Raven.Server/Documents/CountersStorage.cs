@@ -37,6 +37,9 @@ namespace Raven.Server.Documents
         public static readonly Slice AllCountersEtagSlice;
         internal static readonly Slice CollectionCountersEtagsSlice;
         internal static readonly Slice CounterKeysSlice;
+        private static readonly Slice CounterTombstoneKey;
+        private static readonly Slice AllCounterTombstonesEtagSlice;
+        private static readonly Slice CollectionCounterTombstonesEtagsSlice;
 
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
@@ -55,6 +58,8 @@ namespace Raven.Server.Documents
             TableType = (byte)TableType.Counters
         };
 
+        private static readonly TableSchema CounterTombstonesSchema = new TableSchema();
+
         internal enum CountersTable
         {
             // Format of this is:
@@ -66,6 +71,15 @@ namespace Raven.Server.Documents
             Data = 3,
             Collection = 4,
             TransactionMarker = 5
+        }
+
+        private enum CounterTombstonesTable
+        {
+            // lower document id, record separator, lower counter name
+            CounterTombstoneKey = 0,
+
+            Etag = 1,
+            ChangeVector = 2
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -117,6 +131,9 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "AllCounterGroupsEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
                 Slice.From(ctx, "CollectionCounterGroupsEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
                 Slice.From(ctx, "CounterGroupKeys", ByteStringType.Immutable, out CounterKeysSlice);
+                Slice.From(ctx, "CounterTombstoneKey", ByteStringType.Immutable, out CounterTombstoneKey);
+                Slice.From(ctx, "AllCounterTombstonesEtagSlice", ByteStringType.Immutable, out AllCounterTombstonesEtagSlice);
+                Slice.From(ctx, "CollectionCounterTombstonesEtagsSlice", ByteStringType.Immutable, out CollectionCounterTombstonesEtagsSlice);
             }
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -137,6 +154,27 @@ namespace Raven.Server.Documents
             {
                 StartIndex = (int)CountersTable.Etag,
                 Name = CollectionCountersEtagsSlice
+            });
+
+            CounterTombstonesSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)CounterTombstonesTable.CounterTombstoneKey,
+                Count = 1,
+                Name = CounterTombstoneKey,
+                IsGlobal = true
+            });
+
+            CounterTombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)CounterTombstonesTable.Etag,
+                Name = AllCounterTombstonesEtagSlice,
+                IsGlobal = true
+            });
+
+            CounterTombstonesSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
+            {
+                StartIndex = (int)CounterTombstonesTable.Etag,
+                Name = CollectionCounterTombstonesEtagsSlice
             });
         }
 
@@ -275,6 +313,19 @@ namespace Raven.Server.Documents
                 ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
                 Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
                 Values = GetCounterValuesData(context, ref tvr)
+            };
+        }
+
+        public static CounterTombstoneDetail TableValueToCounterTombstoneDetail(JsonOperationContext context, ref TableValueReader tvr)
+        {
+            ExtractDocIdAndCounterNameFromCounterTombstoneKey(context, ref tvr, out var docId, out var name);
+
+            return new CounterTombstoneDetail
+            {
+                DocumentId = docId,
+                Name = name,
+                ChangeVector = TableValueToString(context, (int)CounterTombstonesTable.ChangeVector, ref tvr),
+                Etag = TableValueToEtag((int)CounterTombstonesTable.Etag, ref tvr)
             };
         }
 
@@ -973,6 +1024,15 @@ namespace Raven.Server.Documents
                                 Debug.Assert(changeType != CounterChangeTypes.None || localCounters.Modifications != null,
                                     "We asked to update counters, but don't have any change.");
 
+                                if (changeType == CounterChangeTypes.Delete)
+                                {
+                                    using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefixSlice, separator: SpecialChars.RecordSeparator))
+                                    using (DocumentIdWorker.GetLower(context.Allocator, prop.Name, out Slice deletedCounterNameSlice))
+                                    {
+                                        CreateCounterTombstone(context, documentKeyPrefixSlice, deletedCounterNameSlice, collectionName, changeVector);
+                                    }
+                                }
+
                                 if (entriesToUpdate.ContainsKey(counterGroupKey) == false)
                                 {
                                     // clone counter group key
@@ -1457,29 +1517,7 @@ namespace Raven.Server.Documents
 
         public Table GetCountersTable(Transaction tx, CollectionName collection)
         {
-            var tableName = collection.GetTableName(CollectionTableType.CounterGroups);
-
-            if (tx.IsWriteTransaction && _tableCreated.Contains(collection.Name) == false)
-            {
-                // RavenDB-11705: It is possible that this will revert if the transaction
-                // aborts, so we must record this only after the transaction has been committed
-                // note that calling the Create() method multiple times is a noop
-                CountersSchema.Create(tx, tableName, 16);
-                tx.LowLevelTransaction.OnDispose += _ =>
-                {
-                    if (tx.LowLevelTransaction.Committed == false)
-                        return;
-
-                    // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
-                    // a new instance, just in case
-                    _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
-                     {
-                         collection.Name
-                     };
-                };
-            }
-
-            return tx.OpenTable(CountersSchema, tableName);
+            return GetOrCreateTable(tx, CountersSchema, collection, CollectionTableType.CounterGroups);
         }
 
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
@@ -1489,6 +1527,34 @@ namespace Raven.Server.Documents
             foreach (string c in GetCountersForDocumentInternal(context, docId, table))
                 yield return c;
         }
+
+        internal long GetNumberOfCountersAndDeletedCountersForDocument(DocumentsOperationContext context, string docId)
+        {
+            // for testing purposes only
+            // get the number of counters without skipping the deleted counters
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            var countersCount = 0L;
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
+            {
+                foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                {
+                    using (var data = GetCounterValuesData(context, ref counterGroup.Value.Reader))
+                    {
+                        if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
+                            return 0;
+
+                        if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                            return 0;
+
+                        countersCount += counterValues.Count;
+                    }
+                }
+            }
+
+            return countersCount;
+        }
+
 
         internal IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, Transaction transaction, string docId)
         {
@@ -1726,6 +1792,7 @@ namespace Raven.Server.Documents
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+
                 if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
                     return null;
 
@@ -1739,6 +1806,8 @@ namespace Raven.Server.Documents
                     return null; // not found
                 if (counterToDelete is LazyStringValue) // already deleted
                     return null;
+
+                CreateCounterTombstone(context, documentKeyPrefix, counterNameSlice, collectionName);
 
                 var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
@@ -1820,6 +1889,244 @@ namespace Raven.Server.Documents
             return sb.ToString();
         }
 
+        private Table GetOrCreateCounterTombstonesTable(Transaction tx, CollectionName collection)
+        {
+            return GetOrCreateTable(tx, CounterTombstonesSchema, collection, CollectionTableType.CounterTombstones);
+        }
+
+        private Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
+        {
+            string tableName = collection.GetTableName(type);
+
+            if (tx.IsWriteTransaction && _tableCreated.Contains(tableName) == false)
+            {
+                // RavenDB-11705: It is possible that this will revert if the transaction
+                // aborts, so we must record this only after the transaction has been committed
+                // note that calling the Create() method multiple times is a noop
+                tableSchema.Create(tx, tableName, 16);
+                tx.LowLevelTransaction.OnDispose += _ =>
+                {
+                    if (tx.LowLevelTransaction.Committed == false)
+                        return;
+
+                    // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
+                    // a new instance, just in case
+                    _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
+                    {
+                        tableName
+                    };
+                };
+            }
+
+            return tx.OpenTable(tableSchema, tableName);
+        }
+
+        private void CreateCounterTombstone(DocumentsOperationContext context, Slice documentKeyPrefix, Slice counterNameSlice, CollectionName collectionName, string remoteChangeVector = null)
+        {
+            var table = GetOrCreateCounterTombstonesTable(context.Transaction.InnerTransaction, collectionName);
+
+            var etag = _documentsStorage.GenerateNextEtag();
+            var changeVector = remoteChangeVector ?? _documentsStorage.GetNewChangeVector(context, etag);
+
+            using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
+            using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterTombstoneKeySlice))
+            {
+                if (table.ReadByKey(counterTombstoneKeySlice, out var tableValueReader))
+                {
+                    var existingChangeVector = ExtractCounterTombstoneChangeVector(context, ref tableValueReader);
+                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
+                    {
+                        // do nothing...
+                        return;
+                    }
+                }
+
+                using (table.Allocate(out TableValueBuilder tvb))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                {
+                    tvb.Add(counterTombstoneKeySlice);
+                    tvb.Add(Bits.SwapBytes(etag));
+                    tvb.Add(cv);
+
+                    table.Set(tvb);
+                }
+            }
+        }
+
+        private static string ExtractCounterTombstoneChangeVector(DocumentsOperationContext context, ref TableValueReader reader)
+        {
+            var changeVectorPtr = reader.Read((int)CounterTombstonesTable.ChangeVector, out int changeVectorSize);
+            return Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize);
+        }
+
+        public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
+        {
+            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], etag, 0))
+            {
+                var item = TableValueToCounterTombstoneDetail(context, ref result.Reader);
+                if (item.Etag > toEtag)
+                    yield break;
+                yield return item;
+            }
+        }
+
+        public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return 0;
+
+            var deletedCounters = PurgeCounters(upto, context, collectionName, numberOfEntriesToDelete);
+            var deletedTombstoneEntries = PurgeCounterTombstones(upto, context, collectionName, numberOfEntriesToDelete - deletedCounters);
+            return deletedTombstoneEntries + deletedCounters;
+        }
+
+        private long PurgeCounters(long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
+        {
+            var counterTombstonesTableName = collectionName.GetTableName(CollectionTableType.CounterTombstones);
+            var tombstonesTable = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
+            if (tombstonesTable == null || tombstonesTable.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
+                return 0;
+
+            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null || table.NumberOfEntries == 0)
+                return 0;
+
+            var deleted = 0L;
+
+            foreach (var item in GetCounterTombstonesFrom(context, 0, upto))
+            {
+                // first, we extract the document Id and the deleted counter name from the counter tombstones entry
+                // then, we extract the data from the counters table, by the counter group key
+                // and remove the deleted counter (change the data)
+                // at the end, we'll write the new data to disk and update the document
+
+                if (item.Etag > upto || numberOfEntriesToDelete <= deleted)
+                    return deleted;
+
+                using (DocumentIdWorker.GetSliceFromId(context, item.DocumentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                using (DocumentIdWorker.GetLower(context.Allocator, context.GetLazyString(item.Name), out Slice counterNameSlice))
+                using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
+                using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
+                {
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing) == false)
+                        return deleted;
+
+                    BlittableJsonReaderObject data;
+                    using (data = GetCounterValuesData(context, ref existing))
+                    {
+                        data = data.Clone(context);
+                    }
+                    if (data.TryGet(CounterNames, out BlittableJsonReaderObject names) == false)
+                        ThrowMissingProperty(counterKeySlice, CounterNames);
+
+                    if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                        ThrowMissingProperty(counterKeySlice, Values);
+
+                    var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name
+                    if (counterValues.TryGetMember(lowered, out var existingCounter) == false ||
+                        existingCounter is LazyStringValue lsv == false)
+                        continue;
+
+                    deleted++;
+
+                    if (counterValues.Count == 1)
+                    {
+                        // we are removing the only existing counter
+                        // so we should remove the entire entry from counters table
+                        using (Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey))
+                        {
+                            table.DeleteByKey(counterGroupKey);
+                        }
+                    }
+                    else
+                    {
+                        using var scope = Slice.From(context.Allocator, existing.Read((int)CountersTable.CounterKey, out var size), size, out var counterGroupKey);
+
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        names.GetPropertyByIndex(0, ref prop);
+                        if (prop.Name.Equals(item.Name) && counterGroupKey.Size == counterKeySlice.Size)
+                        {
+                            // we need to change the counter group key and delete the old one
+                            table.DeleteByKey(counterGroupKey);
+
+                            names.GetPropertyByIndex(1, ref prop);
+                            using var newScope = context.Allocator.Allocate(CounterKeysSlice.Size + 1 /* separator */  + 1 /* replace the current name with next one in counters group */, out ByteString newCounterKey);
+                            documentKeyPrefix.CopyTo(newCounterKey.Ptr);
+                            Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, prop.Name.Buffer, prop.Name.Size);
+                            Slice.From(context.Allocator, newCounterKey.Ptr, documentKeyPrefix.Size + prop.Name.Size, out counterGroupKey);
+                        }
+
+                        counterValues.Modifications ??= new DynamicJsonValue(counterValues);
+                        counterValues.Modifications.Remove(item.Name);
+
+                        names.Modifications ??= new DynamicJsonValue(names);
+                        names.Modifications.Remove(item.Name);
+
+                        data.Modifications = new DynamicJsonValue(data);
+                        using (var old = data)
+                        {
+                            data = context.ReadObject(data, item.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        }
+
+                        var newEtag = _documentsStorage.GenerateNextEtag();
+                        var newChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+
+                        using (Slice.From(context.Allocator, newChangeVector, out var cv))
+                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                        using (table.Allocate(out TableValueBuilder tvb))
+                        {
+                            tvb.Add(counterGroupKey);
+                            tvb.Add(Bits.SwapBytes(newEtag));
+                            tvb.Add(cv);
+                            tvb.Add(data.BasePointer, data.Size);
+                            tvb.Add(collectionSlice);
+                            tvb.Add(context.GetTransactionMarker());
+
+                            table.Set(tvb);
+                        }
+                    }
+
+                    try
+                    {
+                        var document = _documentsStorage.Get(context, item.DocumentId,
+                            throwOnConflict: true);
+
+                        if (document == null)
+                            return 0;
+
+                        using (var old = document)
+                        using (document.Data = document.Data.Clone(context))
+                        {
+                            _documentDatabase.DocumentsStorage.Put(context, item.DocumentId, expectedChangeVector: null, document.Data, flags: document.Flags, nonPersistentFlags: document.NonPersistentFlags);
+                        }
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        throw new InvalidOperationException($"Failed to update document '{item.DocumentId}'," +
+                                                            $"Exception: {e}");
+                    }
+                }
+            }
+
+            return deleted;
+        }
+
+        private long PurgeCounterTombstones(in long upto, DocumentsOperationContext context, CollectionName collectionName, long numberOfEntriesToDelete)
+        {
+            // delete counter tombstones entries
+
+            var counterTombstonesTableName = collectionName.GetTableName(CollectionTableType.CounterTombstones);
+            var tombstonesTable = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
+            if (tombstonesTable == null || tombstonesTable.NumberOfEntries == 0 || numberOfEntriesToDelete <= 0)
+                return 0;
+
+            return tombstonesTable.DeleteBackwardFrom(CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice], upto, numberOfEntriesToDelete);
+        }
+
         private static void AppendDbIdAndEtag(StringBuilder sb, string dbId, long etag)
         {
             if (sb.Length > 0)
@@ -1828,6 +2135,13 @@ namespace Raven.Server.Documents
             sb.Append(dbId)
                 .Append(':')
                 .Append(etag);
+        }
+
+        public long GetNumberOfCounterTombstoneEntries(DocumentsOperationContext context)
+        {
+            var fstIndex = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            return fst.NumberOfEntries;
         }
 
         public static LazyStringValue ExtractDocId(JsonOperationContext context, ref TableValueReader tvr)
@@ -1841,6 +2155,24 @@ namespace Raven.Server.Documents
             }
 
             return context.AllocateStringValue(null, p, sizeOfDocId);
+        }
+
+        public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
+        {
+            var p = tvr.Read((int)CounterTombstonesTable.CounterTombstoneKey, out var size);
+            int sizeOfDocId = 0;
+            var next = 0;
+            for (; sizeOfDocId < size; sizeOfDocId++)
+            {
+                if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+                next++;
+            }
+            docId = context.AllocateStringValue(null, p, sizeOfDocId);
+            counterName = context.GetLazyString(p + next + 1, size - next - 1);
+
+            Debug.Assert(docId != null);
+            Debug.Assert(counterName != null);
         }
 
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,
@@ -2460,5 +2792,20 @@ namespace Raven.Server.Documents
         public long Etag;
         public string DbId;
         public string Name;
+    }
+
+    public class CounterTombstoneDetail : IDisposable
+    {
+        public LazyStringValue DocumentId { get; set; }
+        public LazyStringValue ChangeVector { get; set; }
+        public LazyStringValue Name { get; set; }
+        public long Etag { get; set; }
+
+        public void Dispose()
+        {
+            DocumentId?.Dispose();
+            ChangeVector?.Dispose();
+            Name?.Dispose();
+        }
     }
 }

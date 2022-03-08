@@ -2,8 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Reflection;
 using Raven.Client.Documents.Conventions;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -33,7 +33,12 @@ namespace Raven.Client.Json
                 type == typeof(string) || type == typeof(bool) || type == typeof(int) || type == typeof(long) ||
                 type == typeof(double) || type == typeof(decimal) || type == typeof(float) || type == typeof(short) ||
                 type == typeof(byte) || value is BlittableJsonReaderObject ||
-                type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan))
+                type == typeof(DateTime) || type == typeof(DateTimeOffset) || type == typeof(TimeSpan) 
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                || type == typeof(DateOnly) 
+                || type == typeof(TimeOnly)
+#endif
+                )
                 return BlittableSupportedReturnType.Same;
 
             if (value is IDictionary)
@@ -166,6 +171,14 @@ namespace Raven.Client.Json
                 case TimeSpan timeSpan:
                     kvpKeyAsString = timeSpan.ToString("c", CultureInfo.InvariantCulture);
                     break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                case DateOnly dateOnly:
+                    kvpKeyAsString = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    break;
+                case TimeOnly timeOnly:
+                    kvpKeyAsString = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                    break;
+ #endif              
                 default:
                     kvpKeyAsString = key.ToString();
                     break;

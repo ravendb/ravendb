@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -88,6 +89,66 @@ namespace InterversionTests
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("TimeSeries"))));
             }
         }
+
+        [Fact]
+        public async Task ShouldNotReplicateCounterTombstonesToOldServer()
+        {
+            const string docId = "users/1";
+            using (var oldStore = await GetDocumentStoreAsync("4.2.117"))
+            using (var store = GetDocumentStore())
+            {
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "ayende" }, docId);
+                    var cf = session.CountersFor(docId);
+                    cf.Increment("Likes", 1);
+                    cf.Increment("Likes2", 1);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplication(store, oldStore);
+                await EnsureReplicatingAsync(store, oldStore);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(docId);
+                    session.CountersFor(u)
+                        .Delete("Likes");
+
+                    await session.SaveChangesAsync();
+                }
+
+                await EnsureReplicatingAsync(store, oldStore);
+
+                using (var session = oldStore.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(docId);
+                    var counters = await session.CountersFor(u).GetAllAsync();
+
+                    Assert.Equal(1, counters.Count);
+                }
+
+                var storage = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
+                    Assert.Equal(1, c2);
+                }
+
+                var cleaner = storage.TombstoneCleaner;
+                await cleaner.ExecuteCleanup();
+
+                using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var c2 = storage.DocumentsStorage.CountersStorage.GetNumberOfCounterTombstoneEntries(context);
+                    Assert.Equal(0, c2);
+                }
+            }
+        }
+
 
         [Fact]
         public async Task ShouldNotReplicateIncrementalTimeSeriesToOldServer2()

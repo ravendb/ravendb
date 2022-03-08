@@ -1,8 +1,9 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import studioConfigurationModel = require("models/database/settings/studioConfigurationModel");
+import studioConfigurationGlobalModel = require("models/database/settings/studioConfigurationGlobalModel");
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
 import jsonUtil = require("common/jsonUtil");
+import eventsCollector = require("common/eventsCollector");
 
 class studioConfiguration extends viewModelBase {
 
@@ -12,21 +13,22 @@ class studioConfiguration extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    model: studioConfigurationModel;
+    model: studioConfigurationGlobalModel;
 
-    static environments = studioConfigurationModel.environments;
+    static environments = studioConfigurationGlobalModel.environments;
 
     activate(args: any) {
         super.activate(args);
      
         return studioSettings.default.globalSettings(true)
             .done((settings: globalSettings) => {
-                this.model = new studioConfigurationModel({
+                this.model = new studioConfigurationGlobalModel({
                     Environment: settings.environment.getValue(),
                     Disabled: settings.disabled.getValue(),
                     ReplicationFactor: settings.replicationFactor.getValue(),
                     SendUsageStats: settings.sendUsageStats.getValue(),
-                    CollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue()
+                    CollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue(),
+                    DisableAutoIndexCreation: false
                 });
 
                 this.dirtyFlag = new ko.DirtyFlag([
@@ -41,6 +43,11 @@ class studioConfiguration extends viewModelBase {
     }
     
     saveConfiguration() {
+        if (!this.isValid(this.model.validationGroup)) {
+            return;
+        }
+
+        eventsCollector.default.reportEvent("studio-configuration-global", "save");
         this.spinners.save(true);
         
         studioSettings.default.globalSettings()

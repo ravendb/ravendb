@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 using Newtonsoft.Json;
 using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
@@ -54,6 +56,16 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                     {
                         writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
                     }
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                    else if (v is DateOnly dateOnly)
+                    {
+                        writer.WriteValue(dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    }
+                    else if (v is TimeOnly timeOnly)
+                    {
+                        writer.WriteValue(timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    }
+#endif
                     else if (v is IEnumerable enumerable)
                     {
                         var oldTypeNameHandling = serializer.TypeNameHandling;
@@ -131,7 +143,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                 {
                     fixed (char* pBuffer = s)
                     {
-                        var r = LazyStringParser.TryParseDateTime(pBuffer, s.Length, out var dt, out var dto, properlyParseThreeDigitsMilliseconds: true);
+                        var r = LazyStringParser.TryParseTimeForQuery(pBuffer, s.Length, out var dt, out var dto,
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                            out var @do,
+                            out var to,
+#endif
+                            properlyParseThreeDigitsMilliseconds: true);
                         switch (r)
                         {
                             case LazyStringParser.Result.Failed:
@@ -142,6 +159,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                             case LazyStringParser.Result.DateTimeOffset:
                                 v = dto;
                                 break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                            case LazyStringParser.Result.DateOnly:
+                                v = @do;
+                                break;
+                            case LazyStringParser.Result.TimeOnly:
+                                v = to;
+                                break;
+#endif
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }

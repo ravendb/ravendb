@@ -125,6 +125,12 @@ namespace Raven.Server.Documents.Indexes.Persistence
             if (value is Stream)
                 return ValueType.Stream;
 
+            if (value is DateOnly)
+                return ValueType.DateOnly;
+
+            if (value is TimeOnly)
+                return ValueType.TimeOnly;
+
             return ValueType.ConvertToJson;
         }
 
@@ -222,7 +228,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
             ConvertToJson,
 
-            Stream
+            Stream,
+
+            DateOnly,
+
+            TimeOnly
         }
 
         public abstract void Dispose();

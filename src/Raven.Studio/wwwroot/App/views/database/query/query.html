@@ -327,6 +327,10 @@
             <label for="cache">Cache enabled</label>
         </div>
         <div class="toggle margin-left">
+            <input id="disableAutoIndex" type="checkbox" data-bind="checked: disableAutoIndexCreation">
+            <label for="disableAutoIndex">Disable creating new Auto-Indexes</label>
+        </div>
+        <div class="toggle margin-left">
             <input id="storedFields" type="checkbox" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
             <label for="storedFields">Show stored index fields only</label>
         </div>

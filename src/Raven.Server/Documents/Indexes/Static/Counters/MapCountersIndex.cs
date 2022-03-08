@@ -257,5 +257,27 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
                     queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalNumberOfItems);
             progressStats.TotalNumberOfItems += totalNumberOfItems;
         }
+
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        {
+            if (tombstoneType == ITombstoneAware.TombstoneType.Documents)
+            {
+                using (CurrentlyInUse())
+                {
+                    return StaticIndexHelper.GetLastProcessedDocumentTombstonesPerCollection(
+                        this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                }
+            }
+
+            if (tombstoneType == ITombstoneAware.TombstoneType.Counters)
+            {
+                using (CurrentlyInUse())
+                {
+                    return StaticIndexHelper.GetLastProcessedEtagsPerCollection(this, Collections, _indexStorage);
+                }
+            }
+
+            return null;
+        }
     }
 }

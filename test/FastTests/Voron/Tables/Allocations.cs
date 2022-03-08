@@ -11,7 +11,7 @@ namespace FastTests.Voron.Tables
         {
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public void IndexPagesWillBeNearby_64()
         {
             using (var tx = Env.WriteTransaction())
@@ -50,7 +50,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact32Bit]
+        [MultiplatformFact(RavenArchitecture.AllX86)]
         public void IndexPagesWillBeNearby_32()
         {
             using (var tx = Env.WriteTransaction())
