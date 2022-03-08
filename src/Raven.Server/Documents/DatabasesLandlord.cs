@@ -7,7 +7,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -129,7 +128,7 @@ namespace Raven.Server.Documents
                             if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var shardedContextTask))
                             {
                                 var shardedContext = shardedContextTask.Result; // this isn't really a task
-                                shardedContext.UpdateIndexes(rawRecord);
+                                shardedContext.Indexes.Update(rawRecord);
                                 shardedContext.UpdateDatabaseRecord(rawRecord);
                             }
                         }
@@ -1002,15 +1001,17 @@ namespace Raven.Server.Documents
             if (ignoreNotRelevant == false && databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
-            return CreateConfiguration(databaseRecord);
+
+            return CreateConfiguration(_serverStore, databaseRecord.DatabaseName, databaseRecord.Settings);
         }
 
-        public RavenConfiguration CreateConfiguration(DatabaseRecord record)
+        public static RavenConfiguration CreateConfiguration(ServerStore serverStore, string databaseName, Dictionary<string, string> settings)
         {
-            Debug.Assert(_serverStore.Disposed == false, "_serverStore.Disposed == false");
-            var config = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, record.DatabaseName);
+            Debug.Assert(serverStore.Disposed == false, "_serverStore.Disposed == false");
 
-            foreach (var setting in record.Settings)
+            var config = RavenConfiguration.CreateForDatabase(serverStore.Configuration, databaseName);
+
+            foreach (var setting in settings)
                 config.SetSetting(setting.Key, setting.Value);
 
             config.Initialize();

@@ -5,7 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 
-namespace Raven.Server.Utils;
+namespace Raven.Server.Extensions;
 
 public static class RawDatabaseRecordExtensions
 {
@@ -28,7 +28,7 @@ public static class RawDatabaseRecordExtensions
                 continue;
 
             if (bjro.TryGet(nameof(IndexDefinition.Type), out IndexType indexType) == false ||
-                (indexType != IndexType.MapReduce && indexType != IndexType.JavaScriptMapReduce))
+                indexType.IsStaticMapReduce() == false)
                 continue;
 
             mapReduceIndexes[propertyDetails.Name] = JsonDeserializationCluster.IndexDefinition(bjro);
@@ -56,7 +56,7 @@ public static class RawDatabaseRecordExtensions
                 continue;
 
             if (bjro.TryGet(nameof(IndexDefinition.Type), out IndexType indexType) == false ||
-                indexType != IndexType.AutoMapReduce)
+                indexType.IsAutoMapReduce() == false)
                 continue;
 
             autoMapReduceIndexes[propertyDetails.Name] = JsonDeserializationCluster.AutoIndexDefinition(bjro);

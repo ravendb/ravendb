@@ -670,6 +670,42 @@ select project(o)")
             }
         }
 
+        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18162")]
+        public void BasicInclude()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog { Owner = "users/3" }, "dogs/1");
+                    session.Store(new Dog { Owner = "users/4" }, "dogs/2");
+                    session.Store(new Dog { Owner = "users/5" }, "dogs/3");
+
+                    session.Store(new User { Count = 7 }, "users/3");
+                    session.Store(new User { Count = 19 }, "users/4");
+                    session.Store(new User { Count = 13 }, "users/5");
+                    
+                    session.SaveChanges();
+
+                    var queryResult = session.Query<Dog>()
+                        .Include<Dog, User>(x => x.Owner)
+                        .ToList();
+
+                    Assert.Equal(3, queryResult.Count);
+
+                    var numberOfResults = session.Advanced.NumberOfRequests;
+                    Assert.Equal(1, numberOfResults);
+
+                    for (var i = 0; i < 3; i++)
+                    {
+                        Assert.NotNull(session.Load<User>($"users/{i + 1}"));
+                    }
+
+                    Assert.Equal(numberOfResults, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
         private class AgeResult
         {
             public int Age { get; set; }
@@ -679,6 +715,7 @@ select project(o)")
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public string Owner { get; set; }
             public string Breed { get; set; }
             public string Color { get; set; }
             public int Age { get; set; }

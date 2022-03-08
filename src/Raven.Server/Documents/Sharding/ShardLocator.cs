@@ -1,20 +1,19 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
+using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {
     public static class ShardLocator
     {
-        public static DocumentIdsByShardIndex GroupIdsByShardIndex(IEnumerable<string> ids,
-            ShardedContext shardedContext, TransactionOperationContext context)
+        public static DocumentIdsByShardIndex GroupIdsByShardIndex(IEnumerable<Slice> ids, ShardedContext shardedContext)
         {
             var result = new DocumentIdsByShardIndex();
 
             foreach (var id in ids)
             {
-                var shardIndex = shardedContext.GetShardIndex(context, id);
+                var shardIndex = shardedContext.GetShardIndex(id);
                 result.Add(shardIndex, id);
             }
 
@@ -44,28 +43,28 @@ namespace Raven.Server.Documents.Sharding
             return result;
         }
 
-        public class DocumentIdsByShardIndex : IEnumerable<(int ShardId, List<string> DocumentIds)>
+        public class DocumentIdsByShardIndex : IEnumerable<(int ShardId, List<Slice> DocumentIds)>
         {
-            private readonly Dictionary<int, List<string>> _dictionary;
+            private readonly Dictionary<int, List<Slice>> _dictionary;
 
             public DocumentIdsByShardIndex()
             {
-                _dictionary = new Dictionary<int, List<string>>();
+                _dictionary = new Dictionary<int, List<Slice>>();
             }
 
-            public void Add(int shardIndex, string documentId)
+            public void Add(int shardIndex, Slice documentId)
             {
                 if (_dictionary.TryGetValue(shardIndex, out var idsInShard) == false)
                 {
-                    _dictionary[shardIndex] = idsInShard = new List<string>();
+                    _dictionary[shardIndex] = idsInShard = new List<Slice>();
                 }
 
                 idsInShard.Add(documentId);
             }
 
-            public IEnumerator<(int ShardId, List<string> DocumentIds)> GetEnumerator()
+            public IEnumerator<(int ShardId, List<Slice> DocumentIds)> GetEnumerator()
             {
-                foreach ((int shardId, List<string> list) in _dictionary)
+                foreach ((int shardId, List<Slice> list) in _dictionary)
                 {
                     yield return (shardId, list);
                 }

@@ -7,7 +7,6 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.Documents.Queries.Results
 {

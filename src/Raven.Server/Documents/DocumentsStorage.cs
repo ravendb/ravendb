@@ -962,14 +962,14 @@ namespace Raven.Server.Documents
             var listOfIds = new List<Slice>();
             foreach (var id in ids)
             {
-                Slice.From(context.Allocator, id == null ? string.Empty : id.ToLowerInvariant(), out Slice slice);
+                Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice slice);
                 listOfIds.Add(slice);
             }
 
             return GetDocuments(context, listOfIds, start, take, totalCount);
         }
 
-        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<string> ids, string collection, long start, long take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocumentsForCollection(DocumentsOperationContext context, IEnumerable<Slice> ids, string collection, long start, long take, Reference<int> totalCount)
         {
             // we'll fetch all documents and do the filtering here since we must check the collection name
             foreach (var doc in GetDocuments(context, ids, start, int.MaxValue, totalCount))

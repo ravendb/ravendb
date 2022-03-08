@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -97,6 +98,8 @@ namespace Raven.Server.Documents.Sharding
 
         protected async Task WaitForExecutionOfRaftCommands(JsonOperationContext context, List<long> raftIndexIds)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Should be modified after we migrate to ShardedExecutor");
+
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
             {
                 var timeToWait = ServerStore.Configuration.Cluster.OperationTimeout.GetValue(TimeUnit.Milliseconds) * raftIndexIds.Count;

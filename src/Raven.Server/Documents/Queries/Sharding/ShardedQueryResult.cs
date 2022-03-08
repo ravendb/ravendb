@@ -9,28 +9,28 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries;
+namespace Raven.Server.Documents.Queries.Sharding;
 
 public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
 {
     public override ValueTask AddResultAsync(BlittableJsonReaderObject result, CancellationToken token)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override void AddExplanation(ExplanationResult explanationResult)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override ValueTask HandleExceptionAsync(Exception e, CancellationToken token)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override bool SupportsExceptionHandling => true;
@@ -40,7 +40,7 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
 
     public override void AddCounterIncludes(IncludeCountersCommand command)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
@@ -50,7 +50,7 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
 
     public override void AddTimeSeriesIncludes(IncludeTimeSeriesCommand command)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> GetTimeSeriesIncludes()
@@ -60,7 +60,7 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
 
     public override void AddCompareExchangeValueIncludes(IncludeCompareExchangeValuesCommand command)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> GetCompareExchangeValueIncludes()
@@ -70,7 +70,7 @@ public class ShardedQueryResult : QueryResultServerSide<BlittableJsonReaderObjec
 
     public override void AddRevisionIncludes(IncludeRevisionsCommand command)
     {
-        throw new NotImplementedException();
+        throw new NotSupportedException();
     }
 
     public override Dictionary<string, Document> GetRevisionIncludesByChangeVector()

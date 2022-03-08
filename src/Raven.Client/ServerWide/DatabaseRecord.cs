@@ -25,6 +25,7 @@ using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Client.ServerWide
 {
@@ -317,8 +318,8 @@ namespace Raven.Client.ServerWide
         {
             if (IsSharded)
             {
-                //https://issues.hibernatingrhinos.com/issue/RavenDB-17763
-                throw new NotImplementedException();
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "https://issues.hibernatingrhinos.com/issue/RavenDB-17763");
+                throw new NotImplementedException("Rolling index deployment for a sharded database is currently not supported");
             }
 
             RollingIndexes ??= new Dictionary<string, RollingIndex>();

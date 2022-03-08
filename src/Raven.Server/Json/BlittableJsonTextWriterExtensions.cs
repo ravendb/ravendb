@@ -1995,7 +1995,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
 
-                writer.WritePropertyName(ShardedQueriesHandler.ShardedQueryProcessor.OrderByMetadataField);
+                writer.WritePropertyName(Constants.Documents.Metadata.OrderByFields);
                 writer.WriteStartObject();
 
                 var firstOrderByField = true;

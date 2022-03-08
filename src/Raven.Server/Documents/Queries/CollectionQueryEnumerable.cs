@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Queries
             private bool _hasProjections;
             private List<Document>.Enumerator _projections;
             private int _innerCount;
-            private readonly List<string> _ids;
+            private readonly List<Slice> _ids;
             private readonly MapQueryResultRetriever _resultsRetriever;
             private readonly string _startsWith;
             private readonly Reference<long> _skippedResults;
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Queries
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, queryTimings, documents, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand, includeRevisionsCommand);
 
-                (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, database.Name);
+                (_ids, _startsWith) = query.ExtractIdsFromQuery(database.ServerStore, context.Allocator, database.Name);
                 
                 if (_query.Metadata.FilterScript != null)
                 {
@@ -178,8 +178,6 @@ namespace Raven.Server.Documents.Queries
                     _releaseFilterScriptRunner = database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out _filterScriptRun);
             	}
             }
-
-          
 
             public bool MoveNext()
             {
