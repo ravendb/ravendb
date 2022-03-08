@@ -17,8 +17,8 @@
                 </div>
                 <div class="task-count" data-bind="text: taskCount, visible: taskCount"></div>
                 <div class="task-count no-count" data-bind="visible: !taskCount()"><i class="icon-cancel text-muted"></i></div>
-                <div class="task-node" data-bind="foreach: taskNodesArray">
-                    <span data-bind="text: $data, attr: { class: $parent.getNodeClass($data) }"></span>
+                <div class="task-node" data-bind="foreach: taskNodes().nodesArray">
+                    <span data-bind="text: $data, attr: { class: $root.getNodeClass($data) }"></span>
                 </div>
             </div>
         </div>
