@@ -18,7 +18,7 @@ define(function(require, exports, module) {
             ".)";
 
         var clausesKeywords = (
-            "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
+            "declare|from|group|where|order|load|select|include|update|match|with|limit|filter|filter_limit|offset"
         );
         this.clausesKeywords = clausesKeywords.split("|");
 

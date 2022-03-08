@@ -1,0 +1,30 @@
+<div class="modal-dialog modal-lg queries-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true" title="Click to cancel">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Run Query</h4>
+        </div>
+        <div class="modal-body">
+            <h4 class="margin-top-lg">Select a query to run:</h4>
+            <div class="padding">
+                <div data-bind="foreach: queryList" class="margin-top margin-bottom scroll queries-list">
+                    <div class="flex-horizontal margin-right margin-bottom-sm">
+                        <div class="flex-grow margin-right-xs">
+                            <pre class="bg-info"><code data-bind="text: $data"></code></pre>
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" data-bind="click: $parent.executeQuery.bind($parent, $data)" title="Click to run query">
+                                <i class="icon-play2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel" title="Click to cancel">Cancel</button>
+        </div>
+    </div>
+</div>

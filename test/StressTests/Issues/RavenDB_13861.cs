@@ -20,7 +20,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact32Bit]
+        [MultiplatformFact(RavenArchitecture.AllX86)]
         public async Task BatchMemorySizeLimitationShouldBeExactIn32Bit()
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
@@ -53,7 +53,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact32Bit]
+        [MultiplatformFact(RavenArchitecture.AllX86)]
         public async Task BatchMemorySizeLimitationShouldBeExactInEncryptedModeIn32Bit()
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
@@ -121,7 +121,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task BatchMemorySizeLimitationShouldBeExactIn64Bit()
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());
@@ -155,7 +155,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact64Bit]
+        [MultiplatformFact(RavenArchitecture.AllX64)]
         public async Task BatchMemorySizeLimitationShouldBeExactInEncryptedModeIn64Bit()
         {
             var str = string.Join(string.Empty, Enumerable.Range(0, 1600).Select(x => x.ToString()).ToArray());

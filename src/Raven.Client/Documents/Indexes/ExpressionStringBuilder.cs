@@ -1324,8 +1324,16 @@ namespace Raven.Client.Documents.Indexes
                         return node; // we don't have nullable type on the server side, we can safely ignore this.
                 }
             }
-
             var exprType = node.Expression != null ? node.Member.DeclaringType : node.Type;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            if (node.Type == typeof(TimeOnly) || node.Type == typeof(DateOnly))
+            {
+                Out($"As{node.Type.Name}(");
+                OutMember(node.Expression, node.Member, exprType);
+                Out(")");
+                return node;
+            }
+#endif
             OutMember(node.Expression, node.Member, exprType);
             return node;
         }

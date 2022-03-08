@@ -59,8 +59,7 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         }
 
-                        var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
-                        await Query(queryContext, token, tracker, httpMethod, diagnostics);
+                        await Query(queryContext, token, tracker, httpMethod);
                     }
                 }
                 catch (Exception e)
@@ -113,12 +112,13 @@ namespace Raven.Server.Documents.Handlers
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, -1);
         }
 
-        private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
+        private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             
-            indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
+            indexQuery.Diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
+            indexQuery.DisableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
             queryContext.WithQuery(indexQuery.Metadata);
 
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Patch()
         {
             var queryContext = QueryOperationContext.Allocate(Database); // we don't dispose this as operation is async
-
+            
             try
             {
                 var reader = await queryContext.Documents.ReadForMemoryAsync(RequestBodyStream(), "queries/patch");
@@ -486,6 +486,8 @@ namespace Raven.Server.Documents.Handlers
                     throw new BadRequestException("Missing 'Query' property.");
 
                 var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, queryType: QueryType.Update);
+                
+                query.DisableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     TrafficWatchQuery(query);

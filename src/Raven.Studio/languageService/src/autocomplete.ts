@@ -117,6 +117,7 @@ export class autoCompleteEngine {
         core.ignoredTokens = new Set(ignoredTokens);
 
         core.preferredRules = new Set([
+            RqlParser.RULE_fromMode,
             RqlParser.RULE_collectionName,
             RqlParser.RULE_aliasName,
             RqlParser.RULE_indexName,

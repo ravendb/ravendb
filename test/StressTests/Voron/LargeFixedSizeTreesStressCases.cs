@@ -24,7 +24,7 @@ namespace StressTests.Voron
             }
         }
 
-        [NightlyBuildTheory64Bit]
+        [NightlyBuildMultiplatformTheory(RavenArchitecture.AllX64)]
         [InlineDataWithRandomSeed(1000000)]
         [InlineDataWithRandomSeed(2000000)]
         [InlineData(2000000, 1877749431)]// reproduced a bug, do not remove

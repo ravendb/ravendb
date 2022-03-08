@@ -1029,7 +1029,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [NightlyBuildFact64Bit]
+        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
         public void Routes_Operator()
         {
             var certificates = SetupServerAuthentication();
@@ -1125,7 +1125,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [NightlyBuildFact64Bit]
+        [NightlyBuildMultiplatformFact(RavenArchitecture.AllX64)]
         public void Routes_ClusterAdmin()
         {
             var certificates = SetupServerAuthentication();

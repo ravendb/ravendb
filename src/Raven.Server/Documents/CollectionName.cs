@@ -45,6 +45,7 @@ namespace Raven.Server.Documents
         private readonly string _revisions;
         private readonly string _counters;
         private readonly string _counterGroups;
+        private readonly string _counterTombstones;
         private readonly string _timeseries;
         private readonly string _deletedRanges;
         private readonly string _timeSeriesStats;
@@ -70,6 +71,7 @@ namespace Raven.Server.Documents
             _counters = GetName(CollectionTableType.Counters);
 #pragma warning restore 618
             _counterGroups = GetName(CollectionTableType.CounterGroups);
+            _counterTombstones = GetName(CollectionTableType.CounterTombstones);
             _timeseries = GetName(CollectionTableType.TimeSeries);
             _deletedRanges = GetName(CollectionTableType.TimeSeriesDeletedRanges);
             _timeSeriesStats = GetName(CollectionTableType.TimeSeriesStats);
@@ -94,6 +96,8 @@ namespace Raven.Server.Documents
                     return _counters;
                 case CollectionTableType.CounterGroups:
                     return _counterGroups;
+                case CollectionTableType.CounterTombstones:
+                    return _counterTombstones;
                 case CollectionTableType.TimeSeries:
                     return _timeseries;
                 case CollectionTableType.TimeSeriesDeletedRanges:
@@ -223,6 +227,7 @@ namespace Raven.Server.Documents
         [Obsolete("For migration purposes only from versions where Counters were experimental feature (prior to 4.2)")]
         Counters,
         CounterGroups,
+        CounterTombstones,
         TimeSeries,
         TimeSeriesDeletedRanges,
         TimeSeriesStats

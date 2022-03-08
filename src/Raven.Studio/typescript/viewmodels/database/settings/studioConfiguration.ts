@@ -1,11 +1,12 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getStudioConfigurationCommand = require("commands/resources/getStudioConfigurationCommand");
-import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
+import getDatabaseStudioConfigurationCommand = require("commands/resources/getDatabaseStudioConfigurationCommand");
+import studioConfigurationDatabaseModel = require("models/database/settings/studioConfigurationDatabaseModel");
 import eventsCollector = require("common/eventsCollector");
-import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
+import saveDatabaseStudioConfigurationCommand = require("commands/resources/saveDatabaseStudioConfigurationCommand");
 import appUrl = require("common/appUrl");
 import jsonUtil = require("common/jsonUtil");
 import accessManager = require("common/shell/accessManager");
+import popoverUtils = require("common/popoverUtils");
 import shardedDatabase from "models/resources/shardedDatabase";
 import { shardingTodo } from "common/developmentHelper";
 
@@ -13,11 +14,11 @@ class studioConfiguration extends viewModelBase {
 
     view = require("views/database/settings/studioConfiguration.html");
 
-    model: databaseStudioConfigurationModel;
+    model: studioConfigurationDatabaseModel;
     serverWideStudioConfigurationUrl = appUrl.forGlobalStudioConfiguration();
     canNavigateToServerSettings: KnockoutComputed<boolean>;
 
-    static environments = databaseStudioConfigurationModel.environments;
+    static environments = studioConfigurationDatabaseModel.environments;
     
     spinners = {
         save: ko.observable<boolean>(false)
@@ -32,26 +33,32 @@ class studioConfiguration extends viewModelBase {
         shardingTodo("Marcin");
         const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary workaround - when sharded get data from first available shard
         
-        return new getStudioConfigurationCommand(dbToUse)
+        return new getDatabaseStudioConfigurationCommand(dbToUse)
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
-                this.model = settings ? new databaseStudioConfigurationModel(settings) : databaseStudioConfigurationModel.empty();
+                this.model = settings ? new studioConfigurationDatabaseModel(settings) : studioConfigurationDatabaseModel.empty();
                 this.dirtyFlag = new ko.DirtyFlag([
                     this.model.dirtyFlag().isDirty
                 ], false, jsonUtil.newLineNormalizingHashFunction);
             });
     }
 
-    saveConfiguration() {
-        if (!this.isValid(this.model.validationGroup)) {
-            return;
-        }
+    compositionComplete() {
+        popoverUtils.longWithHover($(".disable-auto-index"),
+            {
+                content: `<ul class="margin-top margin-top-xs no-padding-left margin-left margin-bottom-xs">
+                             <li><small>Toggle on to disable creating new Auto-Indexes when making a <strong>dynamic query</strong>.</small></li>
+                             <li><small>Query results will be returned only when a matching Auto-Index already exists.</small></li>
+                          </ul>`
+            });
+    }
 
-        eventsCollector.default.reportEvent("studio-configuration", "save");
+    saveConfiguration() {
+        eventsCollector.default.reportEvent("studio-configuration-database", "save");
 
         this.spinners.save(true);
 
-        new saveStudioConfigurationCommand(this.model.toRemoteDto(), this.activeDatabase())
+        new saveDatabaseStudioConfigurationCommand(this.model.toRemoteDto(), this.activeDatabase())
             .execute()
             .done(() => {
                 this.model.dirtyFlag().reset();

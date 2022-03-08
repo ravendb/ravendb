@@ -1173,13 +1173,13 @@ namespace FastTests
             });
         }
 
-        protected TestCertificatesHolder SetupServerAuthentication(IDictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null)
+        protected TestCertificatesHolder SetupServerAuthentication(IDictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null, [CallerMemberName] string caller = null)
         {
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
 
             if (certificates == null)
-                certificates = GenerateAndSaveSelfSignedCertificate();
+                certificates = GenerateAndSaveSelfSignedCertificate(caller: caller);
 
             if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;

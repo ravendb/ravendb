@@ -802,7 +802,7 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
             ".)";
 
         var clausesKeywords = (
-            "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
+            "declare|from|group|where|order|load|select|include|update|match|with|limit|filter|filter_limit|offset"
         );
         this.clausesKeywords = clausesKeywords.split("|");
 

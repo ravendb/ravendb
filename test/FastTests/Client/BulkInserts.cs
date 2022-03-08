@@ -26,14 +26,15 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [InlineData(false, false)]
-        public async Task Simple_Bulk_Insert(bool useSsl, bool disableHttpConnectionClose)
+        [InlineData(false)]
+        public async Task Simple_Bulk_Insert(bool useSsl)
         {
             string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} Starting to setup SSL for {nameof(Simple_Bulk_Insert)} test");
                 var certificates = SetupServerAuthentication();
                 adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
@@ -41,10 +42,8 @@ namespace FastTests.Client
                     [dbName] = DatabaseAccess.ReadWrite
                 });
 
-                Server.ForTestingPurposesOnly().PrintExceptionDuringBulkInsertProcessingToConsole = true;
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} SSL setup for {nameof(Simple_Bulk_Insert)} test completed");
 
-                if (disableHttpConnectionClose)
-                    Server.ForTestingPurposesOnly().DisableHttpConnectionCloseDuringBulkInsertProcessing = true;
             }
 
             using (var store = GetDocumentStore(new Options

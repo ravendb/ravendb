@@ -3,7 +3,7 @@ parser grammar BaseRqlParser;
 
 options { tokenVocab = BaseRqlLexer; }
 prog
-   : functionStatment* fromStatement groupByStatement? whereStatement? orderByStatement? loadStatement? updateStatement? selectStatement? includeStatement? limitStatement? EOF
+   : parameterBeforeQuery* functionStatment* fromStatement groupByStatement? whereStatement? orderByStatement? loadStatement? updateStatement? filterStatement? selectStatement? includeStatement? limitStatement? json? EOF
    ;
    //          FROM STATEMENT          //
    
@@ -28,13 +28,13 @@ fromStatement
 
 indexName
    : WORD
-   | STRING
+   | string
    | identifiersWithoutRootKeywords
    ;
 
 collectionName
    : WORD
-   | STRING
+   | string
    | identifiersWithoutRootKeywords
    ;
    //We can use aliases like:
@@ -218,7 +218,7 @@ aliasWithRequiredAs
    ;
 
 aliasName
-   : (WORD | identifiersWithoutRootKeywords | STRING)
+   : (WORD | identifiersWithoutRootKeywords | string)
    ;
    // @metadata.
    
@@ -226,7 +226,7 @@ aliasName
    
 prealias
    : METADATA DOT
-   | ((WORD | STRING) asArray? DOT)+
+   | ((WORD | string) asArray? DOT)+
    ;
 
 asArray
@@ -244,7 +244,8 @@ includeStatement
    //          LIMIT STATEMENT          //
    
 limitStatement
-   : LIMIT variable ((COMMA | OFFSET) variable)?
+   : LIMIT variable ((COMMA | OFFSET) variable)? (FILTER_LIMIT variable)?
+   | FILTER_LIMIT variable
    ;
    //          UTILS SEGMENT           //
    
@@ -262,7 +263,7 @@ memberName
     
 
 param
-   : (NUM | WORD | date | STRING | ID OP_PAR CL_PAR | identifiersAllNames) asArray?
+   : (NUM | WORD | date | string | ID OP_PAR CL_PAR | identifiersAllNames) asArray?
    ;
 
 literal
@@ -333,6 +334,8 @@ rootKeywords
    | INCLUDE
    | LIMIT
    | INDEX
+   | FILTER
+   | FILTER_LIMIT
    ;
 
 identifiersAllNames
@@ -466,3 +469,58 @@ updateBody:
    US_OP updateBody* US_CL 
     ;
 
+filterStatement:
+   filterMode filterExpr;
+   
+filterExpr
+  : left = filterExpr binary right = filterExpr # filterBinaryExpression
+  | OP_PAR filterExpr CL_PAR # filterOpPar
+  | left = exprValue EQUAL right = exprValue # filterEqualExpression
+  | left = exprValue MATH right = exprValue # filterMathExpression
+  | funcExpr=function # filterNormalFunc
+  | TRUE AND NOT? expr # filterBooleanExpression
+  ;
+    
+filterMode:
+   FILTER;
+
+parameterBeforeQuery:
+   name=literal EQUAL value=parameterValue;
+
+parameterValue
+   : string
+   | NUM;
+
+json:
+   jsonObj;
+
+//This part is based on https://github.com/antlr/grammars-v4/blob/master/json/JSON.g4
+//json
+jsonObj
+   : OP_CUR jsonPair (COMMA jsonPair)* CL_CUR
+   | OP_CUR CL_CUR
+   ;
+
+jsonPair
+   : DOUBLE_QUOTE_STRING ':' jsonValue
+   ;
+
+jsonArr
+   : OP_Q jsonValue (COMMA jsonValue)* CL_Q
+   | OP_Q CL_Q
+   ;
+
+jsonValue
+   : DOUBLE_QUOTE_STRING
+   | NUM
+   | jsonObj
+   | jsonArr
+   | TRUE
+   | FALSE
+   | NULL
+   ;
+// end
+string
+   : DOUBLE_QUOTE_STRING
+   | SINGLE_QUOTE_STRING
+   ;

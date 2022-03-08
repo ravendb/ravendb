@@ -43,8 +43,8 @@ class columnPreviewPlugin<T> {
         _.bindAll(this, "defaultMarkupProvider");
     }
     
-    private defaultMarkupProvider(value: any, column: virtualColumn, wrapValue: boolean = true) {
-        const featuresSyntax = this.features.map(f => f.syntax(column, value)).join("");
+    private defaultMarkupProvider(value: any, column: virtualColumn, element: any, wrapValue: boolean = true) {
+        const featuresSyntax = this.features.map(f => f.syntax(column, value, element)).join("");
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
             const dateAsMoment = value as moment.Moment;
@@ -101,7 +101,7 @@ class columnPreviewPlugin<T> {
                     this.previewVisible = true;
 
                     previewContextProvider(element, column, e, (value, valueToCopy, wrapValue) => {
-                        const markup = markupProvider(value, column, wrapValue);
+                        const markup = markupProvider(value, column, element, wrapValue);
                         this.show(markup, e);
                         this.currentValue = _.isUndefined(valueToCopy) ? value : valueToCopy;
                         this.currentElement = element;

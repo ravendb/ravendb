@@ -76,7 +76,6 @@ namespace Raven.Client.Documents.Indexes
             throw new NotSupportedException("This is here as a marker only");
         }
     }
-
     /// <summary>
     /// Base class for creating indexes
     /// </summary>
@@ -165,7 +164,7 @@ namespace Raven.Client.Documents.Indexes
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
-
+        
         /// <summary>
         /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
         /// </summary>
@@ -446,6 +445,24 @@ namespace Raven.Client.Documents.Indexes
         {
             throw new NotSupportedException("This can only be run on the server side");
         }
+        
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+        /// <summary>
+        /// Allow to index DateOnly as Ticks
+        /// </summary>
+        protected DateOnly AsDateOnly(object field)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to index TimeOnly as Ticks
+        /// </summary>
+        protected TimeOnly AsTimeOnly(object field)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+#endif
     }
 
     public class NoTrackingCommonApiForIndexes : ILoadCommonApiForIndexes
