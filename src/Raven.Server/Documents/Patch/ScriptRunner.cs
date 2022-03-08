@@ -29,6 +29,7 @@ using JavaScriptException = Jint.Runtime.JavaScriptException;
 using Raven.Client.ServerWide.JavaScript;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.TimeSeries;
+using Spatial4n.Core.Exceptions;
 using PatchJint = Raven.Server.Documents.Patch.Jint;
 using PatchV8 = Raven.Server.Documents.Patch.V8;
 using V8.Net;
@@ -549,18 +550,21 @@ namespace Raven.Server.Documents.Patch
                             if (!jsMethod.IsFunction)
                                 throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify.StaticCall(method)}");
 
+                            V8Engine.MemorySnapshot memorySnapshotBefore = null;
                             if (ScriptEngineHandle.IsMemoryChecksOn)
                             {
-                                ScriptEngineHandle.MakeSnapshot("single_run");
+                                memorySnapshotBefore = (V8Engine.MemorySnapshot)ScriptEngineHandle.MakeSnapshot("single_run");
                             }
 
 #if DEBUG
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
                             {
-                                var jsArgStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]);
-                                var argStr = jsArgStr.IsUndefined ? "undefined" : jsArgStr.AsString;
-                                argsStr += argStr + "\n\n";
+                                using (var jsArgStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]))
+                                {
+                                    var argStr = jsArgStr.IsUndefined ? "undefined" : jsArgStr.AsString;
+                                    argsStr += argStr + "\n\n";
+                                }
                             }
 #endif
                             
@@ -578,9 +582,20 @@ namespace Raven.Server.Documents.Patch
                                     }
                                 }
 #if DEBUG
-                                var jsResStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes);
-                                var resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
+                                using (var jsResStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes))
+                                {
+                                    var resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
+                                }
 #endif
+
+                                if (memorySnapshotBefore != null)
+                                {
+                                    var h = jsRes.V8.Item;
+                                    memorySnapshotBefore.Add(h);
+                                    if (h.RefCount != 1)
+                                        throw new RuntimeException($"Result JS V8 handle has wrong reference count h.RefCount, it should be equal to 1");
+                                }
+
                                 return new ScriptRunnerResult(this, jsRes);
                             }
                         }
