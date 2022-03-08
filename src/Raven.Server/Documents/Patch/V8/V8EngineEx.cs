@@ -37,11 +37,9 @@ namespace Raven.Server.Documents.Patch.V8
         private static PoolWithLevels<V8EngineEx>? _pool;
 
         public static int MemoryChecksMode;
-        public static bool IsMemoryChecksOnStatic => MemoryChecksMode > 0;
+        public static bool IsMemoryChecksOnStatic => true; // MemoryChecksMode > 0; // TODO [shlomo] to restore
         public static JsConverter JsConverterInstance;
 
-        public bool IsMemoryChecksOn => IsMemoryChecksOnStatic;
-        
         public static PoolWithLevels<V8EngineEx> GetPool(IJavaScriptOptions jsOptions)
         {
             if (_pool == null)
@@ -364,13 +362,13 @@ var process = {
             {}
         }
 
-        public void ExecuteWithReset(InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
+        new public void ExecuteWithReset(InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
         {
             using (ExecuteExprWithReset(script, throwExceptionOnError, timeout))
             {}
         }
 
-        public InternalHandle ExecuteExprWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true, int timeout = 0)
+        new public InternalHandle ExecuteExprWithReset(string source, string sourceName = "anonymousCode.js", bool throwExceptionOnError = true, int timeout = 0)
         {
             using (var script = Compile(source, sourceName, throwExceptionOnError))
             {
@@ -378,7 +376,7 @@ var process = {
             }
         }
 
-        public InternalHandle ExecuteExprWithReset(InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
+        new public InternalHandle ExecuteExprWithReset(InternalHandle script, bool throwExceptionOnError = true, int timeout = 0)
         {
             try
             {
@@ -551,23 +549,5 @@ var process = {
             _contextEx.MaxDuration = maxDurationNew;
             return new DisposableAction(RestoreMaxDuration);
         }
-
-        public IDisposable DisableMaxDuration()
-        {
-            return ChangeMaxDuration(0);
-        }
-        
-        public void ResetCallStack()
-        {
-            //engine?.ForceV8GarbageCollection();
-
-            // there is no need to do something as V8 doesn't have intermediate state of callstack
-        }
-
-        public void ResetConstraints()
-        {
-            // there is no need to do something as V8 doesn't have intermediate state of timer
-        }
-
     }
 }
