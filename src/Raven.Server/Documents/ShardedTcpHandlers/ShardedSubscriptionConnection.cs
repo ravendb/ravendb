@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 if (result.Stopping)
                     continue;
 
-                if (shardHolder.PullingTask.IsFaulted == false && shardHolder.PullingTask.IsCanceled == false)
+                if (shardHolder.PullingTask.IsCompleted == false)
                 {
                     if (redirectBatch == false)
                         continue;
@@ -264,8 +264,16 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                     continue;
                 }
 
-                result.Exceptions.Add(shard, shardHolder.PullingTask.IsCanceled ? new TaskCanceledException() : shardHolder.PullingTask.Exception);
-                result.ShardsToReconnect.Add(shard);
+                try
+                {
+                    await shardHolder.PullingTask;
+                    Debug.Assert(false, $"The pulling task should be faulted or canceled. Should not reach this line");
+                }
+                catch (Exception e)
+                {
+                    result.Exceptions.Add(shard, e);
+                    result.ShardsToReconnect.Add(shard);
+                }
 
                 if (CanContinueSubscription(shardHolder))
                     continue;
