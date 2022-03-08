@@ -208,10 +208,7 @@ namespace Raven.Server.Documents.ShardedHandlers
         public async Task Delete()
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
-            var command = new DeleteSubscriptionCommand(ShardedContext.DatabaseName, subscriptionName, GetRaftRequestIdFromQuery());
-            var (etag, _) = await ServerStore.SendToLeaderAsync(command);
-            await ServerStore.Cluster.WaitForIndexNotification(etag, ServerStore.Engine.OperationTimeout);
-
+            await SubscriptionStorage.DeleteSubscriptionInternal(ServerStore, ShardedContext.DatabaseName, subscriptionName, GetRaftRequestIdFromQuery());
             await NoContent();
         }
 
