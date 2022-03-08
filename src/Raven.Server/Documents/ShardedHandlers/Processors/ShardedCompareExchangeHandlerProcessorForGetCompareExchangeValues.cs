@@ -1,5 +1,4 @@
-﻿using System;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Web.System.Processors;

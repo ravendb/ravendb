@@ -76,13 +76,6 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
             _requestHandler.HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
     }
 
-    internal class CompareExchangeListItem
-    {
-        public string Key { get; set; }
-        public object Value { get; set; }
-        public long Index { get; set; }
-    }
-
     private async Task GetCompareExchangeValuesByKey(TransactionOperationContext context, Microsoft.Extensions.Primitives.StringValues keys)
     {
         var sw = Stopwatch.StartNew();
@@ -114,9 +107,9 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
 
                     operationContext.Write(textWriter, new DynamicJsonValue
                     {
-                        ["Key"] = item.Key,
-                        ["Value"] = item.Value,
-                        ["Index"] = item.Index
+                        [nameof(CompareExchangeListItem.Key)] = item.Key,
+                        [nameof(CompareExchangeListItem.Value)] = item.Value,
+                        [nameof(CompareExchangeListItem.Index)] = item.Index
                     });
                 });
 
@@ -129,5 +122,12 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
 
     public void Dispose()
     {
+    }
+
+    internal class CompareExchangeListItem
+    {
+        public string Key { get; set; }
+        public object Value { get; set; }
+        public long Index { get; set; }
     }
 }
