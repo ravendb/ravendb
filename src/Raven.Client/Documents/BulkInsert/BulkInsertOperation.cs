@@ -402,6 +402,8 @@ namespace Raven.Client.Documents.BulkInsert
             return new DisposableAction(() => Interlocked.CompareExchange(ref _concurrentCheck, 0, 1));
         }
 
+        private bool _firstFlush = true;
+
         private async Task FlushIfNeeded(string id = null)
         {
             _currentWriter.Flush();
@@ -439,9 +441,16 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                _asyncWrite = WriteRequestBodyAsync();
 
-                async Task WriteRequestBodyAsync()
+                if (_firstFlush)
+                {
+                    _firstFlush = false;
+                    _asyncWrite = WriteToRequestBodyStreamAndFlushAsync();
+                }
+                else
+                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+
+                async Task WriteToRequestBodyStreamAndFlushAsync()
                 {
                     await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
                     await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
