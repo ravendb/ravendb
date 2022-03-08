@@ -592,8 +592,6 @@ namespace Raven.Server.Documents.Patch
                                 {
                                     var h = jsRes.V8.Item;
                                     memorySnapshotBefore.Add(h);
-                                    if (h.RefCount != 1)
-                                        throw new RuntimeException($"Result JS V8 handle has wrong reference count h.RefCount, it should be equal to 1");
                                 }
 
                                 return new ScriptRunnerResult(this, jsRes);
