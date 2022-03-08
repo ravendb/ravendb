@@ -22,7 +22,7 @@ namespace Raven.Server.Config.Categories
     public class JavaScriptConfiguration : ConfigurationCategory, IJavaScriptOptions
     {
         [Description("EXPERT: the type of JavaScript engine that will be used by RavenDB: 'Jint'  or 'V8'")]
-        [DefaultValue(JavaScriptEngineType.V8)] // TODO [shlomo] to restore to Jint
+        [DefaultValue(JavaScriptEngineType.Jint)]
         [ConfigurationEntry("JsConfiguration.Engine", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public JavaScriptEngineType EngineType { get; set; }
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting MaxDuration { get; set; }
         
         [Description("EXPERT: Target number of contexts per engine (isolate) (V8)")]
-        [DefaultValue(1)] // TODO [shlomo] to restore to 10
+        [DefaultValue(10)]
         [ConfigurationEntry("JsConfiguration.TargetContextCountPerEngine", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int TargetContextCountPerEngine { get; set; }
         
