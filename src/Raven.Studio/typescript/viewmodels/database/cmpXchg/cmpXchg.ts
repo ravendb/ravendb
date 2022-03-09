@@ -13,10 +13,11 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import continueTest = require("common/shell/continueTest");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
-class cmpXchg extends viewModelBase {
+class cmpXchg extends shardViewModelBase {
 
     view = require("views/database/cmpXchg/cmpXchg.html");
 
@@ -34,8 +35,8 @@ class cmpXchg extends viewModelBase {
 
     clientVersion = viewModelBase.clientVersion;
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.initObservables();
         this.filter.throttle(500).subscribe(() => this.filterLogEntries());
@@ -67,7 +68,7 @@ class cmpXchg extends viewModelBase {
     fetchItems(skip: number): JQueryPromise<pagedResult<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>> {
         const task = $.Deferred<pagedResult<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>>();
 
-        new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), this.nextItemToFetchIndex || 0, 101)
+        new getCompareExchangeItemsCommand(this.db, this.filter(), this.nextItemToFetchIndex || 0, 101)
             .execute()
             .done(result => {
                 const hasMore = result.items.length === 101;
@@ -94,7 +95,7 @@ class cmpXchg extends viewModelBase {
         grid.headerVisible(true);
 
         const checkColumn = new checkedColumn(true); 
-        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.activeDatabase()), "Key", "20%", {
+        const keyColumn = new hyperlinkColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Key, x => appUrl.forEditCmpXchg(x.Key, this.db), "Key", "20%", {
             sortable: "string"
         });
         const valueColumn = new textColumn<Raven.Server.Web.System.Processors.AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>(grid, x => x.Value.Object, "Value", "20%", {
@@ -133,7 +134,7 @@ class cmpXchg extends viewModelBase {
 
     newItem($event: JQueryEventObject): void {
         eventsCollector.default.reportEvent("cmpXchg", "new");
-        const url = appUrl.forNewCmpXchg(this.activeDatabase());
+        const url = appUrl.forNewCmpXchg(this.db);
         if ($event.ctrlKey) {
             window.open(url);
         } else {
@@ -156,10 +157,10 @@ class cmpXchg extends viewModelBase {
                     if (result.can) {
                         this.spinners.delete(true);
                         
-                        new getCompareExchangeItemsCommand(this.activeDatabase(), this.filter(), 0, 2147483647)
+                        new getCompareExchangeItemsCommand(this.db, this.filter(), 0, 2147483647)
                             .execute()
                             .done(allValues => {
-                                const deleteProgress = new deleteCompareExchangeProgress(allValues.items, this.activeDatabase());
+                                const deleteProgress = new deleteCompareExchangeProgress(allValues.items, this.db);
 
                                 deleteProgress.start()
                                     .always(() => this.onDeleteCompleted());
@@ -176,7 +177,7 @@ class cmpXchg extends viewModelBase {
                     if (deleting) {
                         this.spinners.delete(true);
 
-                        const deleteProgress = new deleteCompareExchangeProgress(selection, this.activeDatabase());
+                        const deleteProgress = new deleteCompareExchangeProgress(selection, this.db);
 
                         deleteProgress.start()
                             .always(() => this.onDeleteCompleted());
@@ -192,7 +193,7 @@ class cmpXchg extends viewModelBase {
     }
     
     private editItem(itemKey: string): void {
-        router.navigate(appUrl.forEditCmpXchg(itemKey, this.activeDatabase()));
+        router.navigate(appUrl.forEditCmpXchg(itemKey, this.db));
 }
 }
 

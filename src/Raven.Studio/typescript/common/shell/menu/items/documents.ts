@@ -68,6 +68,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: "Compare Exchange",
             nav: true,
+            shardingMode: "allShardsOnly",
             route: "databases/cmpXchg",
             moduleId: require("viewmodels/database/cmpXchg/cmpXchg"),
             css: "icon-cmp-xchg",
@@ -76,6 +77,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: "databases/cmpXchg/edit",
             title: "Edit Compare Exchange Value",
+            shardingMode: "allShardsOnly",
             moduleId: require("viewmodels/database/cmpXchg/editCmpXchg"),
             nav: false,
             itemRouteToHighlight: "databases/cmpXchg"

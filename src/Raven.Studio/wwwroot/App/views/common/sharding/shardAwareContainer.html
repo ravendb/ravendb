@@ -6,6 +6,6 @@
     </button>
     <button class="btn btn-default" data-bind="click: exit, visible: canCloseContext"><i class="icon-cancel"></i></button>
 </div>
-<div data-bind="compose: { model: child, activationData: activationData }" style="display: contents; position: relative"></div>
+<div class="shard-aware-container" data-bind="compose: { model: child, activationData: activationData, activate: false }" style="display: contents; position: relative"></div>
 <div data-bind="compose: { model: shardSelector }"></div>
 <div data-bind="compose: { model: allShardsDialog }"></div>

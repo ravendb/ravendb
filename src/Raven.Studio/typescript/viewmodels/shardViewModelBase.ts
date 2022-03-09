@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database from "models/resources/database";
 import shard from "models/resources/shard";
 import { shardingTodo } from "common/developmentHelper";
+import accessManager from "common/shell/accessManager";
 
 
 
@@ -13,6 +14,10 @@ abstract class shardViewModelBase extends viewModelBase {
         super();
         
         this.db = db;
+
+        this.isReadOnlyAccess =  ko.pureComputed(() => accessManager.default.readOnlyOrAboveForDatabase(this.db));
+        this.isReadWriteAccessOrAbove = ko.pureComputed(() => accessManager.default.readWriteAccessOrAboveForDatabase(this.db));
+        this.isAdminAccessOrAbove = ko.pureComputed(() => accessManager.default.adminAccessOrAboveForDatabase(this.db));
     }
     
     /**
