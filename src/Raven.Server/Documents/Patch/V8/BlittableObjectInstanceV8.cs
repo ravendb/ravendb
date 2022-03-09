@@ -582,12 +582,10 @@ namespace Raven.Server.Documents.Patch.V8
                 //using (var old = metadata)
                 {
                     metadata = _javaScriptUtils.Context.ReadObject(metadata, _documentId);
-                    using (InternalHandle jsMetadata = _javaScriptUtils.TranslateToJs(_javaScriptUtils.Context, metadata, keepAlive: false, parent: this))
-                    {
-                        if (jsMetadata.IsError)
-                            return jsMetadata;
-                        return SetOwnProperty(propertyName, jsMetadata, toReturnCopy: false);
-                    }
+                    var jsMetadata = _javaScriptUtils.TranslateToJs(_javaScriptUtils.Context, metadata, keepAlive: false, parent: this);
+                    if (jsMetadata.IsError)
+                        return jsMetadata;
+                    return SetOwnProperty(propertyName, jsMetadata, toReturnCopy: false);
                 }
             }
             catch (Exception e) 
@@ -729,7 +727,7 @@ namespace Raven.Server.Documents.Patch.V8
             public BlittableObjectProperty(BlittableObjectInstanceV8 parent, string propertyName, InternalHandle jsValue)
             {
                 Init(parent, propertyName);
-                _value = new InternalHandle(ref jsValue, true);
+                _value = jsValue.Clone();
                 _OnSetValue();
             }
 
