@@ -1,53 +1,32 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers.Processors;
-using Sparrow.Json;
+using Raven.Server.Documents.ShardedHandlers;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Processors
 {
-    internal class ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics : AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<ShardedRequestHandler>
+    internal class ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics : AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<ShardedRequestHandler, TransactionOperationContext>
     {
-        private readonly string _databaseName;
-
-        private JsonOperationContext _context;
-
-        private readonly DetailedDatabaseStatistics _databaseStatistics;
-
-        private IDisposable _releaseContext;
-
-        public ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] ShardedRequestHandler requestHandler, string databaseName, DetailedDatabaseStatistics databaseStatistics) : base(requestHandler)
+        public ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-            _databaseStatistics = databaseStatistics ?? throw new ArgumentNullException(nameof(databaseStatistics));
-        }
-
-        protected override void Initialize()
-        {
-            _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
-        }
-
-        protected override JsonOperationContext GetContext()
-        {
-            return _context;
         }
 
         protected override string GetDatabaseName()
         {
-            return _databaseName;
+            return RequestHandler.ShardedContext.DatabaseName;
         }
 
-        protected override DetailedDatabaseStatistics GetDatabaseStatistics()
+        protected override async Task<DetailedDatabaseStatistics> GetDatabaseStatistics()
         {
-            return _databaseStatistics;
-        }
+            var op = new ShardedStatsHandler.ShardedDetailedStatsOperation();
 
-        public override void Dispose()
-        {
-            base.Dispose();
+            var detailedStatistics = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            detailedStatistics.Indexes = GetDatabaseIndexesFromRecord();
+            detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
 
-            _releaseContext?.Dispose();
-            _releaseContext = null;
+            return detailedStatistics;
         }
     }
 }

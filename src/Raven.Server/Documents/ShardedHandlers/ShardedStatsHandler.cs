@@ -16,56 +16,15 @@ namespace Raven.Server.Documents.ShardedHandlers
         [RavenShardedAction("/databases/*/stats", "GET")]
         public async Task Stats()
         {
-            var op = new ShardedStatsOperation();
-
-            var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
-            stats.Indexes = GetDatabaseIndexesFromRecord();
-            stats.CountOfIndexes = stats.Indexes.Length;
-
-            using (var processor = new ShardedStatsHandlerProcessorForGetDatabaseStatistics(this, stats))
+            using (var processor = new ShardedStatsHandlerProcessorForGetDatabaseStatistics(this))
                 await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/stats/detailed", "GET")]
         public async Task DetailedStats()
         {
-            var op = new ShardedDetailedStatsOperation();
-
-            var detailedStatistics = await ShardExecutor.ExecuteParallelForAllAsync(op);
-            detailedStatistics.Indexes = GetDatabaseIndexesFromRecord();
-            detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
-
-            using (var processor = new ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics(this, ShardedContext.DatabaseName, detailedStatistics))
+            using (var processor = new ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics(this))
                 await processor.ExecuteAsync();
-        }
-
-        private IndexInformation[] GetDatabaseIndexesFromRecord()
-        {
-            var record = ShardedContext.DatabaseRecord;
-            var indexes = record.Indexes;
-            var indexInformation = new IndexInformation[indexes.Count];
-
-            int i = 0;
-            foreach (var key in indexes.Keys)
-            {
-                var index = indexes[key];
-
-                indexInformation[i] = new IndexInformation
-                {
-                    Name = index.Name,
-                    // IndexDefinition includes nullable fields, then in case of null we set to default values
-                    State = index.State ?? IndexState.Normal, 
-                    LockMode = index.LockMode ?? IndexLockMode.Unlock,
-                    Priority = index.Priority ?? IndexPriority.Normal,
-                    Type = index.Type,
-                    SourceType = index.SourceType,
-                    IsStale = false // for sharding we can't determine 
-                };
-
-                i++;
-            }
-
-            return indexInformation;
         }
 
         private static void FillDatabaseStatistics(DatabaseStatistics combined, DatabaseStatistics result, ref long totalSizeOnDisk, ref long totalTempBuffersSizeOnDisk)
@@ -82,7 +41,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             totalTempBuffersSizeOnDisk += result.TempBuffersSizeOnDisk.SizeInBytes;
         }
 
-        private readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
+        public readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
         {
             public DatabaseStatistics Combine(Memory<DatabaseStatistics> results)
             {
@@ -111,7 +70,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
         }
 
-        private readonly struct ShardedDetailedStatsOperation : IShardedOperation<DetailedDatabaseStatistics>
+        public readonly struct ShardedDetailedStatsOperation : IShardedOperation<DetailedDatabaseStatistics>
         {
             public DetailedDatabaseStatistics Combine(Memory<DetailedDatabaseStatistics> results)
             {
