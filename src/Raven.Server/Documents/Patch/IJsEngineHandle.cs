@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Patch
 
         object MakeSnapshot(string name);
 
-        void CheckForMemoryLeaks(string name);
+        void CheckForMemoryLeaks(string name, bool shouldRemove = true);
         
         void TryCompileScript(string script);
 

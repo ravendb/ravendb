@@ -153,7 +153,7 @@ var process = {
             return null;
         }
         
-        public void CheckForMemoryLeaks(string name)
+        public void CheckForMemoryLeaks(string name, bool shouldRemove = true)
         {}
 
         public void TryCompileScript(string script)
