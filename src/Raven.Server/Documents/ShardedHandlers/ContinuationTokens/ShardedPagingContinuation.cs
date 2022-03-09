@@ -1,4 +1,5 @@
 ﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
@@ -23,7 +24,7 @@ public class ShardedPagingContinuation : ContinuationToken
 
         for (var index = 0; index < Pages.Length; index++)
         {
-            Pages[index].Shard = index;
+            Pages[index].ShardNumber = index;
             Pages[index].Start = startPortion;
         }
 
@@ -43,7 +44,7 @@ public class ShardedPagingContinuation : ContinuationToken
 
     public struct ShardPaging : IDynamicJson
     {
-        public int Shard;
+        public int ShardNumber;
         public int Start;
 
         public DynamicJsonValue ToJson()
@@ -51,7 +52,7 @@ public class ShardedPagingContinuation : ContinuationToken
             return new DynamicJsonValue
             {
                 [nameof(Start)] = Start, 
-                [nameof(Shard)] = Shard
+                [nameof(ShardNumber)] = ShardNumber
             };
         }
     }

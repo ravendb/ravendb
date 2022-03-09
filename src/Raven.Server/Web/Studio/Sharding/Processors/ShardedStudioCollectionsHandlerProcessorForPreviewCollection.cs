@@ -37,9 +37,9 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         _requestHandler = requestHandler;
     }
 
-    protected override async ValueTask Initialize()
+    protected override async ValueTask InitializeAsync()
     {
-        await base.Initialize();
+        await base.InitializeAsync();
 
         _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
 
@@ -55,16 +55,16 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return _context;
     }
 
-    protected override void WriteResult(
+    protected override async ValueTask WriteResultAsync(
         AsyncBlittableJsonTextWriter writer, 
-        List<Document> documents, 
+        IAsyncEnumerable<Document> documents, 
         JsonOperationContext context, 
         HashSet<string> propertiesPreviewToSend, 
         HashSet<string> fullPropertiesToSend,
         long totalResults, 
         List<string> availableColumns)
     {
-        base.WriteResult(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+        await base.WriteResultAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
         writer.WriteComma();
         writer.WriteContinuationToken(context, _continuationToken);
     }
@@ -89,19 +89,15 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return false;
     }
 
-    protected override async ValueTask<List<Document>> GetDocumentsAsync()
+    protected override async IAsyncEnumerable<Document> GetDocumentsAsync()
     {
-        var results = new List<Document>();
-
         await foreach (var doc in _requestHandler.ShardedContext.Streaming.PagedShardedDocumentsByLastModified(_combinedReadState, nameof(PreviewCollectionResult.Results), _continuationToken))
         {
-            results.Add(doc.Item.Clone(_context));
+            yield return doc.Item;
         }
-
-        return results;
     }
 
-    protected override async ValueTask<List<string>> GetAvailableColumns(List<Document> documents)
+    protected override async ValueTask<List<string>> GetAvailableColumnsAsync()
     {
         var result = await _requestHandler.ShardedContext.Streaming.ReadCombinedObjectAsync(_combinedReadState, nameof(PreviewCollectionResult.AvailableColumns), ShardResultConverter.BlittableToStringListConverter);
         var total = new HashSet<string>();
@@ -115,14 +111,16 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
     public override void Dispose()
     {
-        _combinedReadState.Dispose();
+        _combinedReadState?.Dispose();
+        _combinedReadState = null;
+
         base.Dispose();
 
         _releaseContext?.Dispose();
         _releaseContext = null;
     }
 
-    public class PreviewCollectionResult
+    private class PreviewCollectionResult
     {
         public List<Document> Results;
         public long TotalResults;
