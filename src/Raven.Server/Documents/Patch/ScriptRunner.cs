@@ -550,10 +550,9 @@ namespace Raven.Server.Documents.Patch
                             if (!jsMethod.IsFunction)
                                 throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify.StaticCall(method)}");
 
-                            V8Engine.MemorySnapshot memorySnapshotBefore = null;
                             if (ScriptEngineHandle.IsMemoryChecksOn)
                             {
-                                memorySnapshotBefore = (V8Engine.MemorySnapshot)ScriptEngineHandle.MakeSnapshot("single_run");
+                                ScriptEngineHandle.MakeSnapshot("single_run");
                             }
 
 #if DEBUG
@@ -588,12 +587,9 @@ namespace Raven.Server.Documents.Patch
                                 }
 #endif
 
-                                if (memorySnapshotBefore != null)
-                                {
-                                    var h = jsRes.V8.Item;
-                                    memorySnapshotBefore.Add(h);
-                                }
-
+                                if (ScriptEngineHandle.EngineType == JavaScriptEngineType.V8)
+                                    ScriptEngineV8.AddToLastMemorySnapshotBefore(jsRes.V8.Item);
+                                
                                 return new ScriptRunnerResult(this, jsRes);
                             }
                         }
