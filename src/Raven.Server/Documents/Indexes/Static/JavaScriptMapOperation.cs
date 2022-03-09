@@ -91,9 +91,12 @@ namespace Raven.Server.Documents.Indexes.Static
                     if (_jsIndexUtils.GetValue(item, out JsHandle jsItem) == false)
                         continue;
 
+                    bool isMemorySnapshotMade = false;
+
                     if (_engineHandle.IsMemoryChecksOn)
                     {
                         _engineHandle.MakeSnapshot("map");
+                        isMemorySnapshotMade = true;
                     }
 
                     if (jsItem.IsObject)
@@ -120,7 +123,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             catch (JavaScriptException jse)
                             {
-                                ProcessRunException(jsRes);
+                                ProcessRunException(jsRes, isMemorySnapshotMade);
                                 var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
                                 if (success == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
@@ -128,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             catch (V8Exception jse)
                             {
-                                ProcessRunException(jsRes);
+                                ProcessRunException(jsRes, isMemorySnapshotMade);
                                 var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
                                 if (success == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
@@ -136,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             }
                             catch (Exception e)
                             {
-                                ProcessRunException(jsRes);
+                                ProcessRunException(jsRes, isMemorySnapshotMade);
                                 throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
                             }
                             finally
@@ -161,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                             else
                                             {
                                                 _engineHandle.ForceGarbageCollection();
-                                                if (_engineHandle.IsMemoryChecksOn)
+                                                if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                                                 {
                                                     _engineHandle.CheckForMemoryLeaks("map");
                                                 }
@@ -183,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
 
                         _engineHandle.ForceGarbageCollection();
-                        /*if (_engineHandle.IsMemoryChecksOn)
+                        /*if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                         {
                             _engineHandle.CheckForMemoryLeaks("map");
                         }*/
@@ -208,12 +211,12 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private void ProcessRunException(JsHandle jsRes)
+        private void ProcessRunException(JsHandle jsRes, bool isMemorySnapshotMade)
         {
             jsRes.Dispose();
 
             _engineHandle.ForceGarbageCollection();
-            if (_engineHandle.IsMemoryChecksOn)
+            if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
             {
                 _engineHandle.CheckForMemoryLeaks("map");
             }

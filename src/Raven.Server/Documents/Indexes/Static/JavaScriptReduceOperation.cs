@@ -210,6 +210,8 @@ namespace Raven.Server.Documents.Indexes.Static
                         EngineHandle.ResetCallStack();
                         EngineHandle.ResetConstraints();
 
+                        bool isMemorySnapshotMade = false;
+                        
                         JsHandle jsRes = JsHandle.Empty;
                         try
                         {
@@ -218,6 +220,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 if (EngineHandle.IsMemoryChecksOn)
                                 {
                                     EngineHandle.MakeSnapshot("reduce");
+                                    isMemorySnapshotMade = true;
                                 }
 
                                 jsRes = Reduce.StaticCall(jsGrouping);
@@ -237,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (V8Exception jse)
                         {
-                            ProcessRunException(jsRes);
+                            ProcessRunException(jsRes, isMemorySnapshotMade);
                             var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
                             if (success == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
@@ -245,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (Exception e)
                         {
-                            ProcessRunException(jsRes);
+                            ProcessRunException(jsRes, isMemorySnapshotMade);
                             throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                         }
                         finally
@@ -256,7 +259,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         yield return jsRes;
                         
                         EngineHandle.ForceGarbageCollection();
-                        /*if (EngineHandle.IsMemoryChecksOn)
+                        /*if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                         {
                             EngineHandle.CheckForMemoryLeaks("reduce");
                         }*/
@@ -270,12 +273,12 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
 
-        private void ProcessRunException(JsHandle jsRes)
+        private void ProcessRunException(JsHandle jsRes, bool isMemorySnapshotMade)
         {
             jsRes.Dispose();
 
             EngineHandle.ForceGarbageCollection();
-            if (EngineHandle.IsMemoryChecksOn)
+            if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
             {
                 EngineHandle.CheckForMemoryLeaks("reduce");
             }

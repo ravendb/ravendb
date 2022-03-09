@@ -537,7 +537,9 @@ namespace Raven.Server.Documents.Patch
 
                     Reset();
                     OriginalDocumentId = documentId;
-                    
+
+                    bool isMemorySnapshotMade = false;
+                            
                     try
                     {
                         SetArgs(jsonCtx, method, args);
@@ -588,8 +590,11 @@ namespace Raven.Server.Documents.Patch
 #endif
 
                                 if (ScriptEngineHandle.EngineType == JavaScriptEngineType.V8)
+                                {
                                     ScriptEngineV8.AddToLastMemorySnapshotBefore(jsRes.V8.Item);
-                                
+                                    isMemorySnapshotMade = true;
+                                }
+
                                 return new ScriptRunnerResult(this, jsRes);
                             }
                         }
@@ -622,7 +627,7 @@ namespace Raven.Server.Documents.Patch
                         _lastException = null;
 
                         ScriptEngineHandle.ForceGarbageCollection();
-                        if (ScriptEngineHandle.IsMemoryChecksOn)
+                        if (ScriptEngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                         {
                             ScriptEngineHandle.CheckForMemoryLeaks("single_run");
                         }
