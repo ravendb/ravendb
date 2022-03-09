@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Core.Commands
@@ -31,10 +32,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanGetStatistics()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetStatistics(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 

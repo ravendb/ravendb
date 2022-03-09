@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractStatsHandler<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractStatsHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -19,12 +19,12 @@ namespace Raven.Server.Documents.Handlers.Processors
 
         protected abstract string GetDatabaseName();
 
-        protected abstract Task<DetailedDatabaseStatistics> GetDatabaseStatistics();
+        protected abstract ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync();
 
         public override async ValueTask ExecuteAsync()
         {
             var databaseName = GetDatabaseName();
-            var databaseStats = await GetDatabaseStatistics();
+            var databaseStats = await GetDatabaseStatisticsAsync();
 
             GetDetailedDatabaseStatistics(databaseStats, databaseName);
 
