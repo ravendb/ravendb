@@ -55,7 +55,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return _context;
     }
 
-    protected override async ValueTask WriteResultAsync(
+    protected override async ValueTask WriteResultsAsync(
         AsyncBlittableJsonTextWriter writer, 
         IAsyncEnumerable<Document> documents, 
         JsonOperationContext context, 
@@ -64,7 +64,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         long totalResults, 
         List<string> availableColumns)
     {
-        await base.WriteResultAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+        await base.WriteResultsAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
         writer.WriteComma();
         writer.WriteContinuationToken(context, _continuationToken);
     }
@@ -118,13 +118,6 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         _releaseContext?.Dispose();
         _releaseContext = null;
-    }
-
-    private class PreviewCollectionResult
-    {
-        public List<Document> Results;
-        public long TotalResults;
-        public List<string> AvailableColumns;
     }
 
     private readonly struct ShardedCollectionPreviewOperation : IShardedStreamableOperation
