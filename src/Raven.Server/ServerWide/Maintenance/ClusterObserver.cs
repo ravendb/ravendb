@@ -1245,7 +1245,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag}/{mentorsEtag})", database: dbName);
 
-                if (msg.Equals(topology.DemotionReasons[promotable]) == false)
+                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                    msg.Equals(demotionReason) == false)
                 {
                     topology.DemotionReasons[promotable] = msg;
                     topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
