@@ -35,8 +35,6 @@ namespace Voron.Benchmark.Table
         [Params(-1)]
         public int RandomSeed { get; set; } = -1;
 
-        private const string TableName = "TestTable1";
-
         static TableFillRandom()
         {
             Slice.From(Configuration.Allocator, TableName, ByteStringType.Immutable, out TableNameSlice);
@@ -52,7 +50,7 @@ namespace Voron.Benchmark.Table
                 });
         }
 
-        [GlobalSetup(Targets = new []{nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
+        [GlobalSetup(Targets = new[] { nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public override void Setup()
         {
             base.Setup();
@@ -87,7 +85,7 @@ namespace Voron.Benchmark.Table
             }
         }
 
-        [IterationSetup(Targets = new[] {nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
+        [IterationSetup(Targets = new[] { nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public void ClearTable()
         {
             using (var tx = Env.WriteTransaction())

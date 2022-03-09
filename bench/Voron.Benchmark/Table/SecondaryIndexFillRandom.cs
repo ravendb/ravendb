@@ -44,25 +44,23 @@ namespace Voron.Benchmark.Table
             Slice.From(Configuration.Allocator, "TestSchema2", ByteStringType.Immutable, out SecondaryIndexNameSlice);
 
             Schema = new TableSchema()
-                .DefineKey(new TableSchema.SchemaIndexDef
+                .DefineKey(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     Count = 0,
                     IsGlobal = false,
-                    Name = SchemaPKNameSlice,
-                    Type = TableIndexType.BTree
+                    Name = SchemaPKNameSlice
                 })
-                .DefineIndex(new TableSchema.SchemaIndexDef
+                .DefineIndex(new TableSchema.IndexDef
                 {
                     StartIndex = 0,
                     Count = 2,
                     IsGlobal = false,
-                    Name = SecondaryIndexNameSlice,
-                    Type = TableIndexType.BTree
+                    Name = SecondaryIndexNameSlice
                 });
         }
 
-        [GlobalSetup(Targets = new []{nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
+        [GlobalSetup(Targets = new[] { nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public override void Setup()
         {
             base.Setup();
@@ -97,7 +95,7 @@ namespace Voron.Benchmark.Table
             }
         }
 
-        [IterationSetup(Targets = new[] {nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
+        [IterationSetup(Targets = new[] { nameof(FillRandomOneTransaction), nameof(FillRandomMultipleTransactions) })]
         public void ClearTable()
         {
             using (var tx = Env.WriteTransaction())
