@@ -92,12 +92,12 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
-            await WriteResultAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+            await WriteResultsAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
             writer.WriteEndObject();
         }
     }
 
-    protected virtual async ValueTask WriteResultAsync(
+    protected virtual async ValueTask WriteResultsAsync(
         AsyncBlittableJsonTextWriter writer, 
         IAsyncEnumerable<Document> documents, 
         JsonOperationContext context, 
@@ -106,14 +106,14 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         long totalResults, 
         List<string> availableColumns)
     {
-        writer.WritePropertyName("TotalResults");
+        writer.WritePropertyName(nameof(PreviewCollectionResult.TotalResults));
         writer.WriteInteger(totalResults);
         writer.WriteComma();
 
-        writer.WriteArray("AvailableColumns", availableColumns);
+        writer.WriteArray(nameof(PreviewCollectionResult.AvailableColumns), availableColumns);
         writer.WriteComma();
 
-        writer.WritePropertyName("Results");
+        writer.WritePropertyName(nameof(PreviewCollectionResult.Results));
         writer.WriteStartArray();
 
         var first = true;
@@ -130,6 +130,13 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         }
 
         writer.WriteEndArray();
+    }
+    
+    protected class PreviewCollectionResult
+    {
+        public List<Document> Results;
+        public long TotalResults;
+        public List<string> AvailableColumns;
     }
 
     private static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
