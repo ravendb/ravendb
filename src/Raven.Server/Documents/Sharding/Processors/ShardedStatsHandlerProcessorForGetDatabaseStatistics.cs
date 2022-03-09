@@ -20,11 +20,22 @@ namespace Raven.Server.Documents.Sharding.Processors
 
         protected override async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync()
         {
+            var shard = RequestHandler.GetIntValueQueryString("shard", required: false);
+
             var op = new ShardedStatsOperation();
 
-            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-            stats.Indexes = GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
-            stats.CountOfIndexes = stats.Indexes.Length;
+            DatabaseStatistics stats;
+            if (shard == null)
+            {
+                stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+                stats.Indexes = GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
+                stats.CountOfIndexes = stats.Indexes.Length;
+            }
+            else
+            {
+                var command = op.CreateCommandForShard(shard.Value);
+                stats = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shard.Value);
+            }
 
             return stats;
         }
@@ -83,7 +94,7 @@ namespace Raven.Server.Documents.Sharding.Processors
                 return combined;
             }
 
-            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
+            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null, shard);
 
             internal static void FillDatabaseStatistics(DatabaseStatistics combined, DatabaseStatistics result, ref long totalSizeOnDisk, ref long totalTempBuffersSizeOnDisk)
             {
