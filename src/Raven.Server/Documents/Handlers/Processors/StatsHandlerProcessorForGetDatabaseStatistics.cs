@@ -1,43 +1,30 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal class StatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics<DatabaseRequestHandler>
+    internal class StatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        private QueryOperationContext _context;
-
-        private readonly DatabaseStatistics _databaseStatistics;
-
-        public StatsHandlerProcessorForGetDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler, QueryOperationContext context, DatabaseStatistics databaseStatistics) : base(requestHandler)
-        {
-            _context = context;
-            _databaseStatistics = databaseStatistics ?? throw new ArgumentNullException(nameof(databaseStatistics));
-        }
-
-        protected override void Initialize()
+        public StatsHandlerProcessorForGetDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 
-        protected override JsonOperationContext GetContext()
+        protected override Task<DatabaseStatistics> GetDatabaseStatistics()
         {
-            return _context.Documents;
-        }
+            using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
+            using (context.OpenReadTransaction())
+            {
+                var stats = new DatabaseStatistics();
 
-        protected override DatabaseStatistics GetDatabaseStatistics()
-        {
-            return _databaseStatistics;
-        }
+                FillDatabaseStatistics(stats, context);
 
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            _context?.Dispose();
-            _context = null;
+                return Task.FromResult(stats);
+            }
         }
     }
 }

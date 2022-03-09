@@ -1,45 +1,27 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Handlers.Processors;
-using Sparrow.Json;
+using Raven.Server.Documents.ShardedHandlers;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Processors
 {
-    internal class ShardedStatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics <ShardedRequestHandler>
+    internal class ShardedStatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics <ShardedRequestHandler, TransactionOperationContext>
     {
-        private JsonOperationContext _context;
-
-        private readonly DatabaseStatistics _databaseStatistics;
-
-        private IDisposable _releaseContext;
-
-        public ShardedStatsHandlerProcessorForGetDatabaseStatistics([NotNull] ShardedRequestHandler requestHandler, DatabaseStatistics databaseStatistics) : base(requestHandler)
+        public ShardedStatsHandlerProcessorForGetDatabaseStatistics([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
-            _databaseStatistics = databaseStatistics ?? throw new ArgumentNullException(nameof(databaseStatistics));
         }
 
-        protected override void Initialize()
+        protected override async Task<DatabaseStatistics> GetDatabaseStatistics()
         {
-            _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
-        }
+            var op = new ShardedStatsHandler.ShardedStatsOperation();
 
-        protected override JsonOperationContext GetContext()
-        {
-            return _context;
-        }
+            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            stats.Indexes = GetDatabaseIndexesFromRecord();
+            stats.CountOfIndexes = stats.Indexes.Length;
 
-        protected override DatabaseStatistics GetDatabaseStatistics()
-        {
-            return _databaseStatistics;
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            _releaseContext?.Dispose();
-            _releaseContext = null;
+            return stats;
         }
     }
 }

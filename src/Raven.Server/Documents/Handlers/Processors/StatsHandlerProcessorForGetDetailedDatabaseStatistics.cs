@@ -1,52 +1,36 @@
-﻿using System;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal class StatsHandlerProcessorForGetDetailedDatabaseStatistics : AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<DatabaseRequestHandler>
+    internal class StatsHandlerProcessorForGetDetailedDatabaseStatistics : AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        private readonly string _databaseName;
-
-        private QueryOperationContext _context;
-
-        private readonly DetailedDatabaseStatistics _databaseStatistics;
-
-        public StatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler, string databaseName, QueryOperationContext context, DetailedDatabaseStatistics databaseStatistics) : base(requestHandler)
+        public StatsHandlerProcessorForGetDetailedDatabaseStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
-            _context = context;
-            _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-            _databaseStatistics = databaseStatistics ?? throw new ArgumentNullException(nameof(databaseStatistics));
-        }
-
-        protected override void Initialize()
-        {
-        }
-
-        protected override JsonOperationContext GetContext()
-        {
-            return _context.Documents;
         }
 
         protected override string GetDatabaseName()
         {
-            return ShardHelper.ToDatabaseName(_databaseName);
+            return ShardHelper.ToDatabaseName(RequestHandler.Database.Name);
         }
 
-        protected override DetailedDatabaseStatistics GetDatabaseStatistics()
+        protected override Task<DetailedDatabaseStatistics> GetDatabaseStatistics()
         {
-            return _databaseStatistics;
-        }
+            using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
+            using (context.OpenReadTransaction())
+            {
+                var stats = new DetailedDatabaseStatistics();
 
-        public override void Dispose()
-        {
-            base.Dispose();
+                FillDatabaseStatistics(stats, context);
 
-            _context?.Dispose();
-            _context = null;
+                stats.CountOfTimeSeriesDeletedRanges = RequestHandler.Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
+                
+                return Task.FromResult(stats);
+            }
         }
     }
 }

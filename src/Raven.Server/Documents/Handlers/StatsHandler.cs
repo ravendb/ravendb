@@ -18,33 +18,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/stats/detailed", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task DetailedStats()
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            using (context.OpenReadTransaction())
-            {
-                var stats = new DetailedDatabaseStatistics();
-
-                FillDatabaseStatistics(stats, context);
-
-                stats.CountOfTimeSeriesDeletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
-
-                using (var processor = new StatsHandlerProcessorForGetDetailedDatabaseStatistics(this, Database.Name, context, stats))
+            using (var processor = new StatsHandlerProcessorForGetDetailedDatabaseStatistics(this))
                     await processor.ExecuteAsync();
-            }
         }
 
         [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Stats()
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            using (context.OpenReadTransaction())
-            {
-                var stats = new DatabaseStatistics();
-
-                FillDatabaseStatistics(stats, context);
-
-                using (var processor = new StatsHandlerProcessorForGetDatabaseStatistics(this, context, stats))
-                    await processor.ExecuteAsync();
-            }
+            using (var processor = new StatsHandlerProcessorForGetDatabaseStatistics(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]

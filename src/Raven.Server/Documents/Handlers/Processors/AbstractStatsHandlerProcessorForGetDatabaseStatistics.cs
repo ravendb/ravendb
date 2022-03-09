@@ -9,41 +9,24 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    public abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler> : IDisposable
+    internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractStatsHandler<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
+        where TOperationContext : JsonOperationContext
     {
-        protected readonly TRequestHandler RequestHandler;
-
-        protected readonly HttpContext HttpContext;
-
-        protected AbstractStatsHandlerProcessorForGetDatabaseStatistics([NotNull] TRequestHandler requestHandler)
+        protected AbstractStatsHandlerProcessorForGetDatabaseStatistics([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> operationContext) : base(requestHandler, operationContext)
         {
-            RequestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
-            HttpContext = requestHandler.HttpContext;
         }
 
-        protected abstract JsonOperationContext GetContext();
+        protected abstract Task<DatabaseStatistics> GetDatabaseStatistics();
 
-        protected abstract DatabaseStatistics GetDatabaseStatistics();
-
-        protected abstract void Initialize();
-
-        public async Task ExecuteAsync()
+        public override async ValueTask ExecuteAsync()
         {
-            Initialize();
+            var databaseStats = await GetDatabaseStatistics();
 
-            var databaseStats = GetDatabaseStatistics();
-
-            var context = GetContext();
-
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 writer.WriteDatabaseStatistics(context, databaseStats);
 
-        }
-
-        public virtual void Dispose()
-        {
-            GC.SuppressFinalize(this);
         }
     }
 }
