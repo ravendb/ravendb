@@ -6,9 +6,8 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Processors;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -19,17 +18,12 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             var op = new ShardedStatsOperation();
 
-            var statistics = await ShardExecutor.ExecuteParallelForAllAsync(op);
-            statistics.Indexes = GetDatabaseIndexesFromRecord();
-            statistics.CountOfIndexes = statistics.Indexes.Length;
+            var stats = await ShardExecutor.ExecuteParallelForAllAsync(op);
+            stats.Indexes = GetDatabaseIndexesFromRecord();
+            stats.CountOfIndexes = stats.Indexes.Length;
 
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    Json.BlittableJsonTextWriterExtensions.WriteDatabaseStatistics(writer, context, statistics);
-                }
-            }
+            using (var processor = new ShardedStatsHandlerProcessorForGetDatabaseStatistics(this, stats))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/stats/detailed", "GET")]
@@ -41,21 +35,8 @@ namespace Raven.Server.Documents.ShardedHandlers
             detailedStatistics.Indexes = GetDatabaseIndexesFromRecord();
             detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-            using (serverContext.OpenReadTransaction())
-            {
-                detailedStatistics.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, ShardedContext.DatabaseName);
-                detailedStatistics.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, ShardedContext.DatabaseName);
-                detailedStatistics.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, ShardedContext.DatabaseName);
-            }
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    Json.BlittableJsonTextWriterExtensions.WriteDetailedDatabaseStatistics(writer, context, detailedStatistics);
-                }
-            }
+            using (var processor = new ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics(this, ShardedContext.DatabaseName, detailedStatistics))
+                await processor.ExecuteAsync();
         }
 
         private IndexInformation[] GetDatabaseIndexesFromRecord()

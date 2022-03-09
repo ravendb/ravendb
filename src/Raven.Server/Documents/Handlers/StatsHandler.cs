@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -26,16 +27,8 @@ namespace Raven.Server.Documents.Handlers
 
                 stats.CountOfTimeSeriesDeletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
 
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
-                {
-                    stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
-                    stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
-                    stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-                    writer.WriteDetailedDatabaseStatistics(context.Documents, stats);
+                using (var processor = new StatsHandlerProcessorForGetDetailedDatabaseStatistics(this, Database.Name, context, stats))
+                    await processor.ExecuteAsync();
             }
         }
 
@@ -49,8 +42,8 @@ namespace Raven.Server.Documents.Handlers
 
                 FillDatabaseStatistics(stats, context);
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-                    writer.WriteDatabaseStatistics(context.Documents, stats);
+                using (var processor = new StatsHandlerProcessorForGetDatabaseStatistics(this, context, stats))
+                    await processor.ExecuteAsync();
             }
         }
 
