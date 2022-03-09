@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -87,40 +86,6 @@ namespace SlowTests.Issues
                 Assert.NotNull(studioConfiguration);
                 Assert.True(studioConfiguration.Disabled);
                 Assert.Equal(StudioConfiguration.StudioEnvironment.Production, studioConfiguration.Environment); // from database
-            }
-        }
-
-        internal class GetStudioConfigurationOperation : IMaintenanceOperation<StudioConfiguration>
-        {
-            public RavenCommand<StudioConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new GetStudioConfigurationCommand();
-            }
-
-            private class GetStudioConfigurationCommand : RavenCommand<StudioConfiguration>
-            {
-                public override bool IsReadRequest => false;
-
-
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/databases/{node.Database}/configuration/studio";
-
-                    var request = new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Get
-                    };
-
-                    return request;
-                }
-
-                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-                {
-                    if (response == null)
-                        return;
-
-                    Result = JsonDeserializationClient.StudioConfiguration(response);
-                }
             }
         }
 
