@@ -22,6 +22,7 @@ import generalUtils = require("common/generalUtils");
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCriteria = require("models/database/query/queryCriteria");
 import rqlLanguageService = require("common/rqlLanguageService");
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -131,6 +132,8 @@ class patch extends viewModelBase {
     maxOperationsPerSecond = ko.observable<number>();
     defineMaxOperationsPerSecond = ko.observable<boolean>(false);
     
+    disableAutoIndexCreation = ko.observable<boolean>(false);
+    
     static readonly recentKeyword = 'Recent Patch';
 
     static readonly $body = $("body");
@@ -205,6 +208,8 @@ class patch extends viewModelBase {
 
         this.loadLastQuery();
 
+        this.disableAutoIndexCreation(activeDatabaseTracker.default.settings().disableAutoIndexCreation.getValue());
+        
         return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
@@ -426,7 +431,8 @@ class patch extends viewModelBase {
                     new patchCommand(this.patchDocument().query(), this.activeDatabase(), {
                         allowStale: this.staleIndexBehavior() === "patchStale",
                         staleTimeout: this.staleIndexBehavior() === "timeoutDefined" ? generalUtils.formatAsTimeSpan(this.staleTimeout() * 1000) : undefined,
-                        maxOpsPerSecond: this.maxOperationsPerSecond()
+                        maxOpsPerSecond: this.maxOperationsPerSecond(),
+                        disableAutoIndexCreation: this.disableAutoIndexCreation()
                     })
                         .execute()
                         .done((operation: operationIdDto) => {

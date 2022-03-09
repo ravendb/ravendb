@@ -112,7 +112,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ShouldBeAbleToChangeBufferSizes()
         {
             using (var store = GetDocumentStore())
@@ -176,7 +176,7 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
+        [MultiplatformFact(RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ShouldStreamAllDocumentsAfterSubscriptionCreation()
         {
             using (var store = GetDocumentStore())

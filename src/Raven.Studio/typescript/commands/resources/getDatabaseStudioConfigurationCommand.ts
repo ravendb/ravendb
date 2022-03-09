@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
-class getStudioConfigurationCommand extends commandBase {
+class getDatabaseStudioConfigurationCommand extends commandBase {
     
     constructor(private db: database) {
         super();
@@ -16,7 +16,7 @@ class getStudioConfigurationCommand extends commandBase {
             .done(dto => loadTask.resolve(dto))
             .fail((response: JQueryXHR) => {
                 if (response.status !== 404) {
-                    this.reportError(`Failed to load studio configuration`, response.responseText, response.statusText);
+                    this.reportError(`Failed to load the studio database configuration`, response.responseText, response.statusText);
                     loadTask.reject(response);
                 } else {
                     loadTask.resolve(null);
@@ -27,4 +27,4 @@ class getStudioConfigurationCommand extends commandBase {
     }
 }
 
-export = getStudioConfigurationCommand;
+export = getDatabaseStudioConfigurationCommand;

@@ -209,11 +209,26 @@ namespace Raven.Server.Documents.Indexes
 
         private int GetNumberOfUtilizedCores()
         {
-            var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+            int defaultNumberOfCores = ProcessorInfo.ProcessorCount;
 
-            return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
-                ? detailsPerNode.UtilizedCores
-                : ProcessorInfo.ProcessorCount;
+            try
+            {
+                var licenseLimits = _documentDatabase.ServerStore.LoadLicenseLimits();
+
+                return licenseLimits != null && licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out DetailsPerNode detailsPerNode)
+                    ? detailsPerNode.UtilizedCores
+                    : defaultNumberOfCores;
+            }
+            catch (Exception e)
+            {
+                if (e.IsOutOfMemory() == false)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Failed to get number of utilized cores. Defaulting to {defaultNumberOfCores} cores", e);
+                }
+
+                return defaultNumberOfCores;
+            }
         }
 
         private void HandleSorters(DatabaseRecord record, long index)

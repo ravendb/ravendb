@@ -18,6 +18,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
+using Sparrow.Server;
 using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -185,6 +186,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
 
+                case ValueType.DateOnly:
+                case ValueType.TimeOnly:
                 case ValueType.DateTime:
                 case ValueType.DateTimeOffset:
                 case ValueType.TimeSpan:
@@ -337,6 +340,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 return newFields;
+            }
+
+            if (valueType == ValueType.DateOnly)
+            {
+                var dateOnly = (DateOnly)value;
+                var asString = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;
+
+                instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
+                newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, ticks, Field.Store.NO));
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+                return newFields;
+            }
+
+            if (valueType == ValueType.TimeOnly)
+            {
+                var timeOnly = (TimeOnly)value;
+                var asString = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
+                newFields++;
+
+                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, timeOnly.Ticks, Field.Store.NO));
+                newFields++;
+
+                _index.IndexFieldsPersistence.MarkHasTimeValue(path);
+                return newFields;
+
             }
 
             if (valueType == ValueType.BoostedValue)

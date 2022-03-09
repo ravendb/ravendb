@@ -406,7 +406,11 @@
         </div>
         <hr class="margin-right">
         <div class="margin-left margin-left-sm">
-            <div class="toggle toggle-primary">
+            <div class="toggle">
+                <input id="disableAutoIndex" type="checkbox" data-bind="checked: disableAutoIndexCreation">
+                <label for="disableAutoIndex">Disable creating new Auto-Indexes</label>
+            </div>
+            <div class="toggle">
                 <input id="maxOperations" class="styled" type="checkbox" data-bind="checked: defineMaxOperationsPerSecond">
                 <label for="maxOperations">Limit number of operations</label>
             </div>

@@ -312,7 +312,12 @@ namespace Raven.Client.Documents.Session
                 return null;
 
             var typeOfValue = value.GetType();
-            if (propertyType == typeOfValue || typeOfValue.IsClass == false)
+            if (
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                value is not (DateOnly or TimeOnly) 
+                &&  
+#endif
+                (propertyType == typeOfValue || typeOfValue.IsClass == false))
                 return value;
 
             using (var writer = Conventions.Serialization.CreateWriter(Context))

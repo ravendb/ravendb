@@ -10,8 +10,8 @@ class saveGlobalStudioConfigurationCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const url = endpoints.global.adminConfiguration.adminConfigurationStudio;
         return this.put<void>(url, JSON.stringify(this.dto), null, { dataType: undefined})
-            .fail((response: JQueryXHR) => this.reportError(`Failed to save Studio configuration`, response.responseText, response.statusText)) 
-            .done(() => this.reportSuccess("Saved Studio configuration"));
+            .fail((response: JQueryXHR) => this.reportError(`Failed to save the global studio configuration`, response.responseText, response.statusText)) 
+            .done(() => this.reportSuccess("Global studio configuration saved successfully"));
     }
 }
 

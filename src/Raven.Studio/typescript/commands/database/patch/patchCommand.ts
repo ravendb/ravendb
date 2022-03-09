@@ -8,6 +8,7 @@ interface patchCommandOptions {
     allowStale?: boolean;
     staleTimeout?: string;
     maxOpsPerSecond?: number;
+    disableAutoIndexCreation?: boolean;
 }
 
 class patchCommand extends commandBase {
@@ -29,7 +30,8 @@ class patchCommand extends commandBase {
             allowStale: this.options.allowStale,
             staleTimeout: this.options.staleTimeout,
             maxOpsPerSec: this.options.maxOpsPerSecond,
-            id: this.options.test ? this.options.documentId : undefined
+            id: this.options.test ? this.options.documentId : undefined,
+            disableAutoIndexCreation: this.options.disableAutoIndexCreation
         };
 
         const payload = {
