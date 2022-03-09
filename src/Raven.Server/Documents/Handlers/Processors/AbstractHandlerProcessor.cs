@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
+using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Web.Studio.Sharding.Processors
+namespace Raven.Server.Documents.Handlers.Processors
 {
     internal abstract class AbstractHandlerProcessor<TRequestHandler, TOperationContext> : IDisposable
             where TRequestHandler : RequestHandler
@@ -19,8 +21,10 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
             RequestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
             HttpContext = requestHandler.HttpContext;
-            ContextPool = contextPool;
+            ContextPool = contextPool ?? throw new ArgumentNullException(nameof(contextPool));
         }
+
+        public abstract ValueTask ExecuteAsync();
 
         public virtual void Dispose()
         {

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors
 
         protected abstract string GetDatabaseName();
 
-        public async ValueTask ExecuteAsync()
+        public override async ValueTask ExecuteAsync()
         {
             using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
