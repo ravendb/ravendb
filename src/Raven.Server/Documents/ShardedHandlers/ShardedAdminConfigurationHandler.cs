@@ -5,13 +5,15 @@ using Raven.Server.Routing;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
-    public class ShardedConfigurationHandler : ShardedRequestHandler
+    internal class ShardedAdminConfigurationHandler : ShardedRequestHandler
     {
-        [RavenShardedAction("/databases/*/configuration/studio", "GET")]
+        [RavenShardedAction("/databases/*/admin/configuration/studio", "PUT")]
         public async Task GetStudioConfiguration()
         {
-            using (var processor = new ShardedConfigurationHandlerProcessorForGetStudioConfiguration(this))
+            using (var processor = new ShardedConfigurationHandlerProcessorForPutAdminConfiguration(this))
+            {
                 await processor.ExecuteAsync();
+            }
         }
     }
 }

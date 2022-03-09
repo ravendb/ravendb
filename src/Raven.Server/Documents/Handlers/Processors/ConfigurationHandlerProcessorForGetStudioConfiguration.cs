@@ -9,10 +9,10 @@ internal class ConfigurationHandlerProcessorForGetStudioConfiguration : Abstract
 {
     private readonly DocumentDatabase _database;
 
-    public ConfigurationHandlerProcessorForGetStudioConfiguration(DatabaseRequestHandler requestHandler, [NotNull] DocumentDatabase database)
-        : base(requestHandler, database.DocumentsStorage.ContextPool)
+    public ConfigurationHandlerProcessorForGetStudioConfiguration([NotNull] DatabaseRequestHandler requestHandler)
+        : base(requestHandler, requestHandler.ContextPool)
     {
-        _database = database ?? throw new ArgumentNullException(nameof(database));
+        _database = requestHandler.Database;
     }
 
     protected override StudioConfiguration GetStudioConfiguration()

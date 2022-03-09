@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Web;
@@ -12,7 +13,7 @@ internal abstract class AbstractConfigurationHandlerProcessorForGetStudioConfigu
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractConfigurationHandlerProcessorForGetStudioConfiguration(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool)
+    protected AbstractConfigurationHandlerProcessorForGetStudioConfiguration([NotNull] TRequestHandler requestHandler,[NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         : base(requestHandler, contextPool)
     {
     }

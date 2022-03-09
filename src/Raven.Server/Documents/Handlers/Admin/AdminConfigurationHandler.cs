@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -108,20 +109,10 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
         {
-            await ServerStore.EnsureNotPassiveAsync();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var processor = new ConfigurationHandlerProcessorForPutAdminConfiguration(this))
             {
-                var studioConfigurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), Constants.Configuration.StudioId);
-                var studioConfiguration = JsonDeserializationServer.StudioConfiguration(studioConfigurationJson);
-
-                await UpdateDatabaseRecord(context, (record, _) =>
-                {
-                    record.Studio = studioConfiguration;
-                }, GetRaftRequestIdFromQuery());
+                await processor.ExecuteAsync();
             }
-
-            NoContentStatus(HttpStatusCode.Created);
         }
 
         [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.DatabaseAdmin)]

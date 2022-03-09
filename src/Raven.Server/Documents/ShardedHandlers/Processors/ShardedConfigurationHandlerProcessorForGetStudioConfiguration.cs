@@ -1,6 +1,4 @@
-﻿using System;
-using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Configuration;
+﻿using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -10,10 +8,10 @@ internal class ShardedConfigurationHandlerProcessorForGetStudioConfiguration : A
 {
     private readonly ShardedContext _shardedContext;
 
-    public ShardedConfigurationHandlerProcessorForGetStudioConfiguration(ShardedRequestHandler requestHandler, [NotNull] ShardedContext shardedContext)
+    public ShardedConfigurationHandlerProcessorForGetStudioConfiguration(ShardedRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
-        _shardedContext = shardedContext ?? throw new ArgumentNullException(nameof(shardedContext));
+        _shardedContext = requestHandler.ShardedContext;
     }
 
     protected override StudioConfiguration GetStudioConfiguration()
