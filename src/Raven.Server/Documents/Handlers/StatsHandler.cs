@@ -25,15 +25,13 @@ namespace Raven.Server.Documents.Handlers
                 FillDatabaseStatistics(stats, context);
 
                 stats.CountOfTimeSeriesDeletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
-                if (ShardHelper.IsShardedName(Database.Name) == false)
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
                 {
-                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                    using (serverContext.OpenReadTransaction())
-                    {
-                        stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
-                        stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
-                        stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
-                    }
+                    stats.CountOfIdentities = ServerStore.Cluster.GetNumberOfIdentities(serverContext, Database.Name);
+                    stats.CountOfCompareExchange = ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, Database.Name);
+                    stats.CountOfCompareExchangeTombstones = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, Database.Name);
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
