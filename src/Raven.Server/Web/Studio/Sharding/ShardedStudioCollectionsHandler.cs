@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
- using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Routing;
 using Raven.Server.Web.Studio.Sharding.Processors;
 
- namespace Raven.Server.Web.Studio.Sharding
+namespace Raven.Server.Web.Studio.Sharding
 {
     public class ShardedStudioCollectionsHandler : ShardedRequestHandler
     {

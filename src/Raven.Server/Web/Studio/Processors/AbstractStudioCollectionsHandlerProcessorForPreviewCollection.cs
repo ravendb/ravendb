@@ -44,7 +44,7 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         HttpContext = requestHandler.HttpContext;
     }
 
-    protected virtual ValueTask Initialize()
+    protected virtual ValueTask InitializeAsync()
     {
         Collection = RequestHandler.GetStringQueryString("collection", required: false);
         _bindings = RequestHandler.GetStringValuesQueryString("binding", required: false);
@@ -60,13 +60,13 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
 
     protected abstract bool NotModified(out string etag);
 
-    protected abstract ValueTask<List<Document>> GetDocumentsAsync();
+    protected abstract IAsyncEnumerable<Document> GetDocumentsAsync();
 
-    protected abstract ValueTask<List<string>> GetAvailableColumns(List<Document> documents);
+    protected abstract ValueTask<List<string>> GetAvailableColumnsAsync();
 
     public async Task ExecuteAsync()
     {
-        await Initialize();
+        await InitializeAsync();
 
         if (NotModified(out var etag))
         {
@@ -77,9 +77,9 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         if (etag != null)
             HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
-        var documents = await GetDocumentsAsync();
+        var documents = GetDocumentsAsync();
         var totalResults = await GetTotalResultsAsync();
-        var availableColumns = await GetAvailableColumns(documents);
+        var availableColumns = await GetAvailableColumnsAsync();
 
         var propertiesPreviewToSend = IsAllDocsCollection
             ? _bindings.Count > 0 ? new HashSet<string>(_bindings) : new HashSet<string>()
@@ -92,26 +92,32 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
-            WriteResult(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
+            await WriteResultAsync(writer, documents, context, propertiesPreviewToSend, fullPropertiesToSend, totalResults, availableColumns);
             writer.WriteEndObject();
         }
     }
 
-    protected virtual void WriteResult(
+    protected virtual async ValueTask WriteResultAsync(
         AsyncBlittableJsonTextWriter writer, 
-        List<Document> documents, 
+        IAsyncEnumerable<Document> documents, 
         JsonOperationContext context, 
         HashSet<string> propertiesPreviewToSend,
         HashSet<string> fullPropertiesToSend, 
         long totalResults, 
         List<string> availableColumns)
     {
-        writer.WritePropertyName("Results");
+        writer.WritePropertyName("TotalResults");
+        writer.WriteInteger(totalResults);
+        writer.WriteComma();
 
+        writer.WriteArray("AvailableColumns", availableColumns);
+        writer.WriteComma();
+
+        writer.WritePropertyName("Results");
         writer.WriteStartArray();
 
         var first = true;
-        foreach (var document in documents)
+        await foreach (var document in documents)
         {
             if (first == false)
                 writer.WriteComma();
@@ -124,15 +130,6 @@ public abstract class AbstractStudioCollectionsHandlerProcessorForPreviewCollect
         }
 
         writer.WriteEndArray();
-
-        writer.WriteComma();
-
-        writer.WritePropertyName("TotalResults");
-        writer.WriteInteger(totalResults);
-
-        writer.WriteComma();
-
-        writer.WriteArray("AvailableColumns", availableColumns);
     }
 
     private static void WriteDocument(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)

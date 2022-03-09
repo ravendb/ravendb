@@ -25,15 +25,17 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
 
     private DocumentsOperationContext _context;
 
+    private List<Document> _documents;
+
     public StudioCollectionsHandlerProcessorForPreviewCollection(DatabaseRequestHandler requestHandler, DocumentDatabase database)
         : base(requestHandler)
     {
         _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    protected override ValueTask Initialize()
+    protected override async ValueTask InitializeAsync()
     {
-        base.Initialize();
+        await base.InitializeAsync();
 
         _start = RequestHandler.GetStart();
         _pageSize = RequestHandler.GetPageSize();
@@ -44,8 +46,6 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _totalResults = IsAllDocsCollection
             ? _database.DocumentsStorage.GetNumberOfDocuments(_context)
             : _database.DocumentsStorage.GetCollection(Collection, _context).Count;
-
-        return ValueTask.CompletedTask;
     }
 
     protected override JsonOperationContext GetContext()
@@ -84,7 +84,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         return false;
     }
 
-    protected override ValueTask<List<Document>> GetDocumentsAsync()
+    protected override IAsyncEnumerable<Document> GetDocumentsAsync()
     {
         var documents = IsAllDocsCollection
             ? _database.DocumentsStorage
@@ -94,12 +94,14 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
                 .GetDocumentsInReverseEtagOrder(_context, Collection, _start, _pageSize)
                 .ToList();
 
-        return ValueTask.FromResult(documents);
+        _documents = documents;
+
+        return _documents.ToAsyncEnumerable();
     }
 
-    protected override ValueTask<List<string>> GetAvailableColumns(List<Document> documents)
+    protected override ValueTask<List<string>> GetAvailableColumnsAsync()
     {
-        return ValueTask.FromResult(ExtractColumnNames(documents, _context));
+        return ValueTask.FromResult(ExtractColumnNames(_documents, _context));
     }
 
     public override void Dispose()
@@ -112,8 +114,7 @@ public class StudioCollectionsHandlerProcessorForPreviewCollection : AbstractStu
         _releaseContext?.Dispose();
         _releaseContext = null;
     }
-
-    public static List<string> ExtractColumnNames(List<Document> documents, JsonOperationContext context)
+    private static List<string> ExtractColumnNames(List<Document> documents, JsonOperationContext context)
     {
         var columns = new List<string>();
 
