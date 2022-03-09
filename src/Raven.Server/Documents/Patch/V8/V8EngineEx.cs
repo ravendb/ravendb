@@ -350,6 +350,19 @@ namespace Raven.Server.Documents.Patch.V8
             public void InitializeGlobal()
             {
                 Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
+
+                var bindersLazy = Engine.BindersLazy;
+                bindersLazy.Add(typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance);
+                bindersLazy.Add(typeof(Task), () => TypeBinderTask);
+                bindersLazy.Add(typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance);
+                bindersLazy.Add(typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance);
+                bindersLazy.Add(typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance);
+                bindersLazy.Add(typeof(AttachmentObjectInstanceV8), () => TypeBinderAttachmentObjectInstance);
+                bindersLazy.Add(typeof(LazyNumberValue), () => TypeBinderLazyNumberValue);
+                bindersLazy.Add(typeof(LazyStringValue), () => TypeBinderLazyStringValue);
+                bindersLazy.Add(typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue);
+                bindersLazy.Add(typeof(RavenServer), () => TypeBinderRavenServer);
+                bindersLazy.Add(typeof(DocumentDatabase), () => TypeBinderDocumentDatabase);
             }
         }
         
