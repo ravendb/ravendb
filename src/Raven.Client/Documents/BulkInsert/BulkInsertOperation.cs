@@ -149,6 +149,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly JsonSerializer _defaultSerializer;
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private long _concurrentCheck;
+        private bool _isInitialWrite = true;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default)
         {
@@ -361,7 +362,7 @@ namespace Raven.Client.Documents.BulkInsert
                         _backgroundWriter = tmp;
                         _currentWriter.BaseStream.SetLength(0);
                         ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                        _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
                     }
                 }
                 catch (Exception e)
@@ -400,6 +401,17 @@ namespace Raven.Client.Documents.BulkInsert
 
                     writer.Write(c);
                 }
+            }
+        }
+
+        private async Task WriteToRequestBodyStreamAsync(ArraySegment<byte> buffer)
+        {
+            await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
+
+            if (_isInitialWrite)
+            {
+                _isInitialWrite = false;
+                await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
         }
 
