@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -12,24 +12,25 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors;
 
-public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues : IDisposable
+internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler, TransactionOperationContext>
+    where TRequestHandler : RequestHandler
 {
-    private readonly RequestHandler _requestHandler;
+    [NotNull]
     private readonly string _databaseName;
 
-    protected AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] RequestHandler requestHandler, [NotNull] string databaseName)
+    protected AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] TRequestHandler requestHandler, [NotNull] string databaseName)
+        : base(requestHandler, requestHandler.ServerStore.ContextPool)
     {
-        _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
-        _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
+        _databaseName = databaseName;
     }
 
     protected abstract void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long durationInMs, long totalDocumentsSizeInBytes);
 
-    public async ValueTask ExecuteAsync()
+    public override async ValueTask ExecuteAsync()
     {
-        var keys = _requestHandler.GetStringValuesQueryString("key", required: false);
+        var keys = RequestHandler.GetStringValuesQueryString("key", required: false);
 
-        using (_requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
             if (keys.Count > 0)
@@ -44,15 +45,15 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
     {
         var sw = Stopwatch.StartNew();
 
-        var start = _requestHandler.GetStart();
-        var pageSize = _requestHandler.GetPageSize();
+        var start = RequestHandler.GetStart();
+        var pageSize = RequestHandler.GetPageSize();
 
-        var startsWithKey = _requestHandler.GetStringQueryString("startsWith", false);
-        var items = _requestHandler.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _databaseName, CompareExchangeKey.GetStorageKey(_databaseName, startsWithKey), start, pageSize);
+        var startsWithKey = RequestHandler.GetStringQueryString("startsWith", false);
+        var items = RequestHandler.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, _databaseName, CompareExchangeKey.GetStorageKey(_databaseName, startsWithKey), start, pageSize);
 
         var numberOfResults = 0;
         long totalDocumentsSizeInBytes = 0;
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, _requestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
 
@@ -73,7 +74,7 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
         }
 
         AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith),
-            _requestHandler.HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+            HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
     }
 
     private async Task GetCompareExchangeValuesByKey(TransactionOperationContext context, Microsoft.Extensions.Primitives.StringValues keys)
@@ -83,10 +84,10 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
         var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
         foreach (var key in keys)
         {
-            var item = _requestHandler.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_databaseName, key));
+            var item = RequestHandler.ServerStore.Cluster.GetCompareExchangeValue(context, CompareExchangeKey.GetStorageKey(_databaseName, key));
             if (item.Value == null && keys.Count == 1)
             {
-                _requestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return;
             }
 
@@ -95,7 +96,7 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
 
         var numberOfResults = 0;
         long totalDocumentsSizeInBytes = 0;
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, _requestHandler.ResponseBodyStream()))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
 
@@ -116,12 +117,8 @@ public abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchan
             writer.WriteEndObject();
         }
 
-        AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), _requestHandler.HttpContext.Request.QueryString.Value,
+        AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), HttpContext.Request.QueryString.Value,
             numberOfResults, keys.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-    }
-
-    public void Dispose()
-    {
     }
 
     internal class CompareExchangeListItem

@@ -6,9 +6,10 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ShardedHandlers.Processors;
 
-public class ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues
+internal class ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<ShardedRequestHandler>
 {
-    public ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] ShardedRequestHandler requestHandler, [NotNull] string databaseName) : base(requestHandler, databaseName)
+    public ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] ShardedRequestHandler requestHandler, [NotNull] string databaseName) 
+        : base(requestHandler, databaseName)
     {
     }
 
