@@ -34,16 +34,12 @@ namespace FastTests.Client
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                Console.WriteLine($"DEBUG: {DateTime.UtcNow} Starting to setup SSL for {nameof(Simple_Bulk_Insert)} test");
                 var certificates = SetupServerAuthentication();
                 adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite
                 });
-
-                Console.WriteLine($"DEBUG: {DateTime.UtcNow} SSL setup for {nameof(Simple_Bulk_Insert)} test completed");
-
             }
 
             using (var store = GetDocumentStore(new Options
