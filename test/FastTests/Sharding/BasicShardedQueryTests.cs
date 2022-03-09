@@ -346,7 +346,7 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18192")]
         public void Auto_Map_Reduce_With_Order_By()
         {
             using (var store = GetShardedDocumentStore())
