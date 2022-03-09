@@ -15,6 +15,8 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import database from "models/resources/database";
 
 type contentType = "Value" | "Metadata";
 
@@ -149,7 +151,7 @@ class editorInfo {
     }
 }
 
-class editCmpXchg extends viewModelBase {
+class editCmpXchg extends shardViewModelBase {
 
     view = require("views/database/cmpXchg/editCmpXchg.html");
     
@@ -177,8 +179,8 @@ class editCmpXchg extends viewModelBase {
     
     hasMetadata = ko.observable<boolean>(false);
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         this.bindToCurrentInstance("removeMetadata");
         aceEditorBindingHandler.install();
     }
@@ -201,7 +203,7 @@ class editCmpXchg extends viewModelBase {
 
         this.loadValue(key)
             .done(() => canActivateResult.resolve({ can: true }))
-            .fail(() => canActivateResult.resolve({ redirect: appUrl.forCmpXchg(this.activeDatabase()) }));
+            .fail(() => canActivateResult.resolve({ redirect: appUrl.forCmpXchg(this.db) }));
 
         return canActivateResult;
     }
@@ -369,7 +371,7 @@ class editCmpXchg extends viewModelBase {
 
         this.spinners.save(true);
 
-        new saveCompareExchangeItemCommand(this.activeDatabase(), this.key(), this.loadedIndex(), valueDto, metadataDto)
+        new saveCompareExchangeItemCommand(this.db, this.key(), this.loadedIndex(), valueDto, metadataDto)
             .execute()
             .done(saveResult => this.onValueSaved(saveResult))
             .fail(() => this.spinners.save(false));
@@ -378,7 +380,7 @@ class editCmpXchg extends viewModelBase {
     private loadValue(key: string): JQueryPromise<any> {
         this.isBusy(true);
 
-        const db = this.activeDatabase();
+        const db = this.db;
         const loadTask = $.Deferred<any>();
 
         new getCompareExchangeItemCommand(db, key)
@@ -419,7 +421,7 @@ class editCmpXchg extends viewModelBase {
             this.isCreatingNewItem(false);
             
             messagePublisher.reportSuccess(`Compare exchange item with key: ${this.key()} was saved successfully`);
-            router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
+            router.navigate(appUrl.forCmpXchg(this.db));
         } else {
             this.displayExternalChange(true);
             this.spinners.save(false);
@@ -445,12 +447,12 @@ class editCmpXchg extends viewModelBase {
                 if (deleting) {
                     this.spinners.delete(true);
                     
-                    const deleteProgress = new deleteCompareExchangeProgress([{ Key: this.key(), Index: this.loadedIndex() }], this.activeDatabase());
+                    const deleteProgress = new deleteCompareExchangeProgress([{ Key: this.key(), Index: this.loadedIndex() }], this.db);
                  
                     deleteProgress.start()
                         .done(() => {
                             this.dirtyFlag().reset();
-                            router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
+                            router.navigate(appUrl.forCmpXchg(this.db));
                         })
                         .fail(() => this.displayExternalChange(true))
                         .always(() => this.spinners.delete(false));
@@ -470,7 +472,7 @@ class editCmpXchg extends viewModelBase {
     }
 
     updateUrl(valueKey: string) {
-        const editUrl = appUrl.forEditCmpXchg(valueKey, this.activeDatabase());
+        const editUrl = appUrl.forEditCmpXchg(valueKey, this.db);
         router.navigate(editUrl, false);
     }
 

@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import shard = require("models/resources/shard");
+import activator = require("durandal/activator");
 import database = require("models/resources/database");
 import shardedDatabase = require("models/resources/shardedDatabase");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
@@ -9,6 +10,7 @@ import nonShardedDatabase from "models/resources/nonShardedDatabase";
 import { shardingTodo } from "common/developmentHelper";
 
 class shardAwareContainer extends viewModelBase {
+    protected rootActivator: DurandalActivator<any>;
     private readonly childCtr: new (db: database, state?: any) => shardViewModelBase;
     
     mode: shardingMode;
@@ -35,6 +37,8 @@ class shardAwareContainer extends viewModelBase {
 
     constructor(mode: shardingMode, childCtr: new (db: database, state?: any) => shardViewModelBase) {
         super();
+        
+        this.rootActivator = activator.create();
         
         this.mode = mode;
         this.childCtr = childCtr;
@@ -104,12 +108,14 @@ class shardAwareContainer extends viewModelBase {
         this.resetView();
     }
     
+    //TODO: candeactivate?
+    
     deactivate() {
         super.deactivate();
 
         if (this.child()) {
-            this.child().deactivate();
             this.child(null);
+            return this.rootActivator.deactivate(true);
         }
     }
 
@@ -161,7 +167,7 @@ class shardAwareContainer extends viewModelBase {
         const oldViewState = oldChild?.getViewState?.();
         
         this.effectiveDatabase(db);
-        this.child(new this.childCtr(db, oldViewState));
+        this.activateChildView(db); //TODO: old child state!
     }
 
     useAllShards() {
@@ -185,12 +191,22 @@ class shardAwareContainer extends viewModelBase {
         return false;
     }
     
+    private activateChildView(db: database) {
+        const child = new this.childCtr(db);
+        
+        this.rootActivator.activateItem(child, this.activationData)
+            .done(() => {
+                this.child(child);
+            })
+        //TODO: handle failure!
+    }
+    
     private resetView(forceShardSelection = false) {
         const activeDatabase = this.activeDatabase();
         
         if (this.supportsDatabase(activeDatabase) && !forceShardSelection) {
             this.effectiveDatabase(activeDatabase);
-            this.child(new this.childCtr(activeDatabase));
+            this.activateChildView(activeDatabase);
         } else if (this.mode === "allShardsOnly" && activeDatabase instanceof shard) {
             this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.viewForAllShards()));
         } else {
