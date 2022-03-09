@@ -1,10 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Http;
-using Raven.Client.Util;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Sharding.Processors;
 using Raven.Server.Routing;
@@ -25,81 +19,6 @@ namespace Raven.Server.Documents.ShardedHandlers
         {
             using (var processor = new ShardedStatsHandlerProcessorForGetDetailedDatabaseStatistics(this))
                 await processor.ExecuteAsync();
-        }
-
-        private static void FillDatabaseStatistics(DatabaseStatistics combined, DatabaseStatistics result, ref long totalSizeOnDisk, ref long totalTempBuffersSizeOnDisk)
-        {
-            combined.CountOfDocuments += result.CountOfDocuments;
-            combined.CountOfAttachments += result.CountOfAttachments;
-            combined.CountOfConflicts += result.CountOfConflicts;
-            combined.CountOfCounterEntries += result.CountOfCounterEntries;
-            combined.CountOfDocumentsConflicts += result.CountOfDocumentsConflicts;
-            combined.CountOfRevisionDocuments += result.CountOfRevisionDocuments;
-            combined.CountOfTimeSeriesSegments += result.CountOfTimeSeriesSegments;
-            combined.CountOfTombstones += result.CountOfTombstones;
-            totalSizeOnDisk += result.SizeOnDisk.SizeInBytes;
-            totalTempBuffersSizeOnDisk += result.TempBuffersSizeOnDisk.SizeInBytes;
-        }
-
-        public readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>
-        {
-            public DatabaseStatistics Combine(Memory<DatabaseStatistics> results)
-            {
-                var span = results.Span;
-
-                var combined = new DatabaseStatistics
-                {
-                    DatabaseChangeVector = null,
-                    DatabaseId = null,
-                    Indexes = Array.Empty<IndexInformation>()
-                };
-
-                long totalSizeOnDisk = 0;
-                long totalTempBuffersSizeOnDisk = 0;
-                foreach (var result in span)
-                {
-                    FillDatabaseStatistics(combined, result, ref totalSizeOnDisk, ref totalTempBuffersSizeOnDisk);
-                }
-
-                combined.SizeOnDisk = new Size(totalSizeOnDisk);
-                combined.TempBuffersSizeOnDisk = new Size(totalTempBuffersSizeOnDisk);
-
-                return combined;
-            }
-
-            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
-        }
-
-        public readonly struct ShardedDetailedStatsOperation : IShardedOperation<DetailedDatabaseStatistics>
-        {
-            public DetailedDatabaseStatistics Combine(Memory<DetailedDatabaseStatistics> results)
-            {
-                var span = results.Span;
-                if (span.Length == 0)
-                    return null;
-
-                var combined = new DetailedDatabaseStatistics
-                {
-                    DatabaseChangeVector = null,
-                    DatabaseId = null,
-                    Indexes = Array.Empty<IndexInformation>()
-                };
-
-                long totalSizeOnDisk = 0;
-                long totalTempBuffersSizeOnDisk = 0;
-                foreach (var result in span)
-                {
-                    FillDatabaseStatistics(combined, result, ref totalSizeOnDisk, ref totalTempBuffersSizeOnDisk);
-                    combined.CountOfTimeSeriesDeletedRanges += result.CountOfTimeSeriesDeletedRanges;
-                }
-
-                combined.SizeOnDisk = new Size(totalSizeOnDisk);
-                combined.TempBuffersSizeOnDisk = new Size(totalTempBuffersSizeOnDisk);
-
-                return combined;
-            }
-
-            public RavenCommand<DetailedDatabaseStatistics> CreateCommandForShard(int shard) => new GetDetailedStatisticsOperation.DetailedDatabaseStatisticsCommand(debugTag: null);
         }
     }
 

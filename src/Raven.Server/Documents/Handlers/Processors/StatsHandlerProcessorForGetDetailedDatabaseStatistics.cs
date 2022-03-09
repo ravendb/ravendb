@@ -18,18 +18,18 @@ namespace Raven.Server.Documents.Handlers.Processors
             return ShardHelper.ToDatabaseName(RequestHandler.Database.Name);
         }
 
-        protected override Task<DetailedDatabaseStatistics> GetDatabaseStatistics()
+        protected override ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync()
         {
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
             {
                 var stats = new DetailedDatabaseStatistics();
 
-                FillDatabaseStatistics(stats, context);
+                StatsHandlerProcessorForGetDatabaseStatistics.FillDatabaseStatistics(stats, context, RequestHandler.Database);
 
                 stats.CountOfTimeSeriesDeletedRanges = RequestHandler.Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
-                
-                return Task.FromResult(stats);
+
+                return ValueTask.FromResult(stats);
             }
         }
     }

@@ -1,7 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Web;
@@ -9,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractStatsHandler<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractStatsHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -17,11 +15,11 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected abstract Task<DatabaseStatistics> GetDatabaseStatistics();
+        protected abstract ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync();
 
         public override async ValueTask ExecuteAsync()
         {
-            var databaseStats = await GetDatabaseStatistics();
+            var databaseStats = await GetDatabaseStatisticsAsync();
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
