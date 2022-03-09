@@ -20,7 +20,7 @@ internal abstract class AbstractConfigurationHandlerProcessorForGetStudioConfigu
 
     protected abstract StudioConfiguration GetStudioConfiguration();
 
-    public async ValueTask ExecuteAsync()
+    public override async ValueTask ExecuteAsync()
     {
         var studioConfiguration = GetStudioConfiguration();
 

@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Raven.Server.Web.Studio.Sharding.Processors;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
@@ -24,6 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
 
+            long raftCommandIndex;
             using (context.OpenReadTransaction())
             {
                 var record = RequestHandler.ServerStore.Cluster.ReadDatabase(context, databaseName, out long index);
@@ -31,8 +31,10 @@ namespace Raven.Server.Documents.Handlers.Processors
                 action(record, index);
 
                 var result = await RequestHandler.ServerStore.WriteDatabaseRecordAsync(databaseName, record, index, raftRequestId);
-                await WaitForIndexNotificationAsync(result.Index);
+                raftCommandIndex = result.Index;
             }
+
+            await WaitForIndexNotificationAsync(raftCommandIndex);
         }
     }
 }

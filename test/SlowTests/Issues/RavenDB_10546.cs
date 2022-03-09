@@ -23,10 +23,9 @@ namespace SlowTests.Issues
         public RavenDB_10546(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.Lucene)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanSetStudioConfiguration(Options options)
         {
             DoNotReuseServer();
@@ -101,7 +100,7 @@ namespace SlowTests.Issues
             private class GetStudioConfigurationCommand : RavenCommand<StudioConfiguration>
             {
                 public override bool IsReadRequest => false;
-                
+
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
@@ -227,7 +226,7 @@ namespace SlowTests.Issues
             private class GetServerWideStudioConfigurationCommand : RavenCommand<ServerWideStudioConfiguration>
             {
                 public override bool IsReadRequest => false;
-                
+
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
