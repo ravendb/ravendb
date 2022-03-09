@@ -45,7 +45,7 @@ class databasesManager {
             const groupName = databasesManager.shardGroupKey(name);
             const dbByName = this
                 .databases()
-                .find(x => groupName === x.name.toLowerCase()) as shardedDatabase;
+                .find(x => groupName.toLowerCase() === x.name.toLowerCase()) as shardedDatabase;
             
             if (dbByName) {
                 return dbByName.shards().find(x => x.name.toLowerCase() === name.toLowerCase());
