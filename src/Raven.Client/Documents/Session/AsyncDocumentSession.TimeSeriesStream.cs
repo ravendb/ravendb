@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        internal class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>> where T : ITimeSeriesQueryStreamResult, new()
+        internal class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>, StreamOperation.YieldStreamResults> where T : ITimeSeriesQueryStreamResult, new()
         {
             private readonly AsyncDocumentSession _parent;
             private readonly AsyncDocumentQuery<T> _query;
@@ -44,10 +44,10 @@ namespace Raven.Client.Documents.Session
                 _query = query;
             }
 
-            internal override TimeSeriesStreamResult<T> ResultCreator(IAsyncEnumerator<BlittableJsonReaderObject> asyncEnumerator)
+            internal override TimeSeriesStreamResult<T> ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
             {
                 _query?.InvokeAfterStreamExecuted(asyncEnumerator.Current);
-                return _parent.CreateTimeSeriesStreamResult<T>((StreamOperation.YieldStreamResults)asyncEnumerator);
+                return _parent.CreateTimeSeriesStreamResult<T>(asyncEnumerator);
             }
         }
 
