@@ -352,21 +352,27 @@ namespace Raven.Server.Documents.Patch.V8
                 Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
 
                 var bindersLazy = Engine.BindersLazy;
-                bindersLazy.Add(typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance);
-                bindersLazy.Add(typeof(Task), () => TypeBinderTask);
-                bindersLazy.Add(typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance);
-                bindersLazy.Add(typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance);
-                bindersLazy.Add(typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance);
-                bindersLazy.Add(typeof(AttachmentObjectInstanceV8), () => TypeBinderAttachmentObjectInstance);
-                bindersLazy.Add(typeof(LazyNumberValue), () => TypeBinderLazyNumberValue);
-                bindersLazy.Add(typeof(LazyStringValue), () => TypeBinderLazyStringValue);
-                bindersLazy.Add(typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue);
-                bindersLazy.Add(typeof(RavenServer), () => TypeBinderRavenServer);
-                bindersLazy.Add(typeof(DocumentDatabase), () => TypeBinderDocumentDatabase);
+                
+                AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance);
+                AddToBindersLazy(bindersLazy, typeof(Task), () => TypeBinderTask);
+                AddToBindersLazy(bindersLazy, typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance);
+                AddToBindersLazy(bindersLazy, typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance);
+                AddToBindersLazy(bindersLazy, typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance);
+                AddToBindersLazy(bindersLazy, typeof(AttachmentObjectInstanceV8), () => TypeBinderAttachmentObjectInstance);
+                AddToBindersLazy(bindersLazy, typeof(LazyNumberValue), () => TypeBinderLazyNumberValue);
+                AddToBindersLazy(bindersLazy, typeof(LazyStringValue), () => TypeBinderLazyStringValue);
+                AddToBindersLazy(bindersLazy, typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue);
+                AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer);
+                AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase);
             }
+            
+            private void AddToBindersLazy(Dictionary<Type, Func<TypeBinder>> bindersLazy, Type key, Func<TypeBinder> value)
+            {
+                bindersLazy.Add(key, value);
+            }
+        
         }
-        
-        
+
         public class JsConverter : IJsConverter
         {
             private bool _isMemoryChecksOn;
