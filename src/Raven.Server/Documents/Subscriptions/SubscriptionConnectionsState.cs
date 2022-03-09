@@ -76,18 +76,34 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionName = connection.Options.SubscriptionName ?? _subscriptionId.ToString();
             _subscriptionState = connection.SubscriptionState;
             Query = connection.SubscriptionState.Query;
-
+            
             // update the subscription data only on new concurrent connection or regular connection
             if (afterSubscribe && _connections.Count == 1)
             {
                 using (var old = _disposableNotificationsRegistration)
                 {
-                    _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
+            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
                 }
 
-                LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-                PreviouslyRecordedChangeVector = LastChangeVectorSent;
+
+            if (connection.Shard != null)
+            {
+                if (connection.SubscriptionState.NextBatchStartingPointChangeVectors == null || connection.SubscriptionState.NextBatchStartingPointChangeVectors.TryGetValue(connection.Shard.ShardName, out string cv) == false)
+                {
+                    LastChangeVectorSent = null;
+                }
+                else
+                {
+                    LastChangeVectorSent = cv;
+                }
             }
+            else
+            {
+                LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+            }
+
+            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+        }
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
@@ -631,8 +647,8 @@ namespace Raven.Server.Documents.Subscriptions
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
             LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
             PreviouslyRecordedChangeVector = LastChangeVectorSent;
-        }
+    }
 
         public static SubscriptionConnectionsState CreateDummyState(DocumentsStorage storage, SubscriptionState state) => new(storage, state);
-    }
+}
 }

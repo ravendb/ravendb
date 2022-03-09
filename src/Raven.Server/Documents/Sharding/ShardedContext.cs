@@ -189,10 +189,10 @@ namespace Raven.Server.Documents.Sharding
             return list;
         }
 
-        public async Task<string> GetLastDocumentChangeVectorForCollection(string collection)
+        public async Task<LastChangeVectorForCollectionCombinedResult> GetLastDocumentChangeVectorForCollection(string collection)
         {
-            var res = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(collection));
-            return res.LastChangeVector;
+            var res = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(collection, DatabaseName));
+            return res;
         }
 
         public void Dispose()

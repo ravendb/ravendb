@@ -2,19 +2,18 @@
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
-using Raven.Server.Documents.Replication;
-using Raven.Server.Rachis;
-using Voron.Impl.Paging;
-using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.Subscriptions;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
@@ -28,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string MentorNode;
 
         // for serialization
-        private PutSubscriptionCommand() { }
+        public PutSubscriptionCommand() { }
 
         public PutSubscriptionCommand(string databaseName, string query, string mentor, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
@@ -80,47 +79,63 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                                                            "' is already in use in a subscription with different Id.");
                         }
 
-                        if (string.IsNullOrEmpty(InitialChangeVector) == false && InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
-                        {
-                            InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
-                        }
-                        else
-                        {
-                            AssertValidChangeVector();
-                            if (InitialChangeVector != existingSubscriptionState.ChangeVectorForNextBatchStartingPoint)
-                            {
-                                // modified by the admin
-                                var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
-                                using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, subscriptionId, out var prefix))
-                                {
-                                    using var _ = Slice.External(context.Allocator, prefix, out var prefixSlice);
-                                    subscriptionStateTable.DeleteByPrimaryKeyPrefix(prefixSlice);
-                                }
-                            }
-                        }
+                        HandleChangeVectorOnUpdate(context, existingSubscriptionState, subscriptionId);
                     }
                     else
                     {
                         AssertValidChangeVector();
                     }
 
-                    using (var receivedSubscriptionState = context.ReadObject(new SubscriptionState
-                    {
-                        Query = Query,
-                        ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
-                        SubscriptionId = subscriptionId,
-                        SubscriptionName = SubscriptionName,
-                        LastBatchAckTime = null,
-                        Disabled = Disabled,
-                        MentorNode = MentorNode,
-                        LastClientConnectionTime = null
-                    }.ToJson(), SubscriptionName))
+                    using (var receivedSubscriptionState = context.ReadObject(Builder(subscriptionId), SubscriptionName))
                     {
                         ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, receivedSubscriptionState);
                     }
                     
                     tryToSetName = false;
                 }
+            }
+        }
+
+        protected virtual DynamicJsonValue Builder(long subscriptionId)
+        {
+            var json = new SubscriptionState
+            {
+                Query = Query,
+                ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
+                SubscriptionId = subscriptionId,
+                SubscriptionName = SubscriptionName,
+                LastBatchAckTime = null,
+                Disabled = Disabled,
+                MentorNode = MentorNode,
+                LastClientConnectionTime = null
+            }.ToJson();
+            return json;
+        }
+
+        protected virtual void HandleChangeVectorOnUpdate(ClusterOperationContext context, SubscriptionState existingSubscriptionState, long subscriptionId)
+        {
+            if (InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
+            {
+                InitialChangeVector = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
+            }
+            else
+            {
+                AssertValidChangeVector();
+                if (InitialChangeVector != existingSubscriptionState.ChangeVectorForNextBatchStartingPoint)
+                {
+                    // modified by the admin
+                    RemoveSubscriptionStateFromStorage(context, subscriptionId);
+                }
+            }
+        }
+
+        protected void RemoveSubscriptionStateFromStorage(ClusterOperationContext context, long subscriptionId)
+        {
+            var subscriptionStateTable = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.SubscriptionStateSchema, ClusterStateMachine.SubscriptionState);
+            using (SubscriptionConnectionsState.GetDatabaseAndSubscriptionPrefix(context, DatabaseName, subscriptionId, out var prefix))
+            {
+                using var _ = Slice.External(context.Allocator, prefix, out var prefixSlice);
+                subscriptionStateTable.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
         }
 
@@ -151,7 +166,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             return subscriptionId;
         }
 
-        private void AssertValidChangeVector()
+        protected virtual void AssertValidChangeVector()
         {
             try
             {

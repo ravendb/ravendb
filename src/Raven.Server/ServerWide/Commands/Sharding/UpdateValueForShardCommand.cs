@@ -1,4 +1,6 @@
-﻿using Sparrow.Json;
+﻿using System.Collections.Generic;
+using Raven.Client.Extensions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sharding;
@@ -10,9 +12,9 @@ public abstract class UpdateValueForShardCommand : UpdateValueForDatabaseCommand
     {
     }
 
-    public string ShardDbId;
     public string ShardName;
-    public string ShardLocalChangeVector;
+    public Dictionary<string, string> CurrentChangeVectorPerShard;
+    public Dictionary<string, string> PreviouslyChangeVectorPerShard;
 
     public override DynamicJsonValue ToJson(JsonOperationContext context)
     {
@@ -21,8 +23,8 @@ public abstract class UpdateValueForShardCommand : UpdateValueForDatabaseCommand
             return djv;
 
         djv[nameof(ShardName)] = ShardName;
-        djv[nameof(ShardDbId)] = ShardDbId;
-        djv[nameof(ShardLocalChangeVector)] = ShardLocalChangeVector;
+        djv[nameof(CurrentChangeVectorPerShard)] = CurrentChangeVectorPerShard?.ToJson();
+        djv[nameof(PreviouslyChangeVectorPerShard)] = PreviouslyChangeVectorPerShard?.ToJson();
 
         return djv;
     }

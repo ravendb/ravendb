@@ -171,9 +171,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (shardData == null)
                 return;
 
-            command.ShardDbId = shardData.DatabaseId;
             command.ShardName = shardData.ShardName;
-            command.ShardLocalChangeVector = shardData.LocalChangeVector;
         }
 
         public SubscriptionState GetSubscriptionFromServerStore(string name)
@@ -590,6 +588,7 @@ namespace Raven.Server.Documents.Subscriptions
                 LastBatchAckTime = @base.LastBatchAckTime;
                 LastClientConnectionTime = @base.LastClientConnectionTime;
                 Disabled = @base.Disabled;
+                NextBatchStartingPointChangeVectors = @base.NextBatchStartingPointChangeVectors;
             }
         }
 

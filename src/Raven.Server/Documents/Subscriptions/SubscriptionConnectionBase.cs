@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected async Task LogExceptionAndReportToClientAsync(Exception e)
         {
-            var errorMessage = CreateStatusMessage(ConnectionStatus.Fail);
+            var errorMessage = CreateStatusMessage(ConnectionStatus.Fail, e.ToString());
             AddToStatusDescription($"{errorMessage}. Sending response to client");
             if (_logger.IsOperationsEnabled)
                 _logger.Info(errorMessage, e);
@@ -247,6 +247,7 @@ namespace Raven.Server.Documents.Subscriptions
                     m = $"[CREATE] Received a connection for {subsType}, {dbNameStr} from {clientType}";
                     break;
                 case ConnectionStatus.Fail:
+                    m = $"[FAIL] for {subsType}, {dbNameStr} from {clientType}";
                     break;
                 case ConnectionStatus.Info:
                     return $"[INFO] Update for {subsType}, {dbNameStr}, with {clientType}: {info}";
@@ -466,9 +467,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public class ShardData
         {
-            public string DatabaseId;
             public string ShardName;
-            public string LocalChangeVector;
         }
     }
 }

@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         protected override (string, string, string) GetStatusMessageDetails()
         {
             string dbNameStr = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'";
-            string clientType = "'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
+            string clientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
             string subsType = $"sharded subscription '{_options.SubscriptionName}', id '{SubscriptionId}'";
             return (dbNameStr, clientType, subsType);
         }

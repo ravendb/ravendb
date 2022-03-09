@@ -1270,6 +1270,7 @@ namespace Raven.Server.Web.System
                                 TaskId = subscriptionState.SubscriptionId,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
+                                NextBatchStartingPointChangeVectors = subscriptionState.NextBatchStartingPointChangeVectors,
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,
                                 LastBatchAckTime = subscriptionState.LastBatchAckTime,

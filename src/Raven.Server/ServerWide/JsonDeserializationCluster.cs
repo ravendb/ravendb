@@ -202,6 +202,7 @@ namespace Raven.Server.ServerWide
             [nameof(AcknowledgeSubscriptionBatchCommand)] = GenerateJsonDeserializationRoutine<AcknowledgeSubscriptionBatchCommand>(),
             [nameof(RecordBatchSubscriptionDocumentsCommand)] = GenerateJsonDeserializationRoutine<RecordBatchSubscriptionDocumentsCommand>(),
             [nameof(PutSubscriptionCommand)] = GenerateJsonDeserializationRoutine<PutSubscriptionCommand>(),
+            [nameof(PutShardedSubscriptionCommand)] = GenerateJsonDeserializationRoutine<PutShardedSubscriptionCommand>(),
             [nameof(ToggleSubscriptionStateCommand)] = GenerateJsonDeserializationRoutine<ToggleSubscriptionStateCommand>(),
             [nameof(DeleteSubscriptionCommand)] = GenerateJsonDeserializationRoutine<DeleteSubscriptionCommand>(),
             [nameof(UpdatePeriodicBackupCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupCommand>(),

@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             Shard = TcpConnection.DocumentDatabase.ShardedDatabaseName == null 
                 ? null 
-                : new ShardData { ShardName = TcpConnection.DocumentDatabase.Name, DatabaseId = TcpConnection.DocumentDatabase.DbBase64Id };
+                : new ShardData { ShardName = TcpConnection.DocumentDatabase.Name };
 
             await ParseSubscriptionOptionsAsync();
             var message = CreateStatusMessage(ConnectionStatus.Create);
@@ -517,8 +517,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                     lastChangeVectorSentInThisBatch,
                                     ChangeVectorUtils.NewChangeVector(SubscriptionConnectionsState.DocumentDatabase, result.Doc.Etag),
                                     result.Doc.ChangeVector); //merge with this node's local etag
-                                if (Shard != null)
-                                    Shard.LocalChangeVector = result.Doc.ChangeVector;
 
                                 if (result.Doc.Data == null)
                                 {
