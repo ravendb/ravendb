@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -12,7 +11,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
-using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Static;
@@ -21,6 +19,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -31,10 +30,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanReset(string searchEngineType)
+        [RavenData]
+        public async Task CanReset(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -52,10 +51,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanDelete(string searchEngineType)
+        [RavenData]
+        public async Task CanDelete(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -72,10 +71,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanStopAndStart(string searchEngineType)
+        [RavenData]
+        public async Task CanStopAndStart(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
@@ -128,10 +127,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task SetLockModeAndSetPriorityForAutoIndex(string searchEngineType)
+        [RavenData]
+        public async Task SetLockModeAndSetPriorityForAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -175,10 +174,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task GetErrors(string searchEngineType)
+        [RavenData]
+        public async Task GetErrors(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -240,10 +239,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task GetDefinition(string searchEngineType)
+        [RavenData]
+        public async Task GetDefinition(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -305,10 +304,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task GetTerms(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task GetTerms(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -342,10 +341,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Performance(string searchEngineType)
+        [RavenData]
+        public async Task Performance(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -394,10 +393,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task GetIndexNames(string searchEngineType)
+        [RavenData]
+        public async Task GetIndexNames(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -427,10 +426,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanExplain(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanExplain(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -470,10 +469,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task MoreLikeThis(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task MoreLikeThis(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

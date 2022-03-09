@@ -1,12 +1,10 @@
 ﻿using FastTests;
 using Newtonsoft.Json;
-using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Queries
 {
@@ -17,10 +15,10 @@ namespace SlowTests.Bugs.Queries
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanFetchMultiplePropertiesFromCollection(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanFetchMultiplePropertiesFromCollection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

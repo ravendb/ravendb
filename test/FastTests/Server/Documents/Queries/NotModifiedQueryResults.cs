@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries
 {
@@ -18,10 +17,10 @@ namespace FastTests.Server.Documents.Queries
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified(string searchEngineType)
+        [RavenData]
+        public async Task Returns_correct_results_from_cache_if_server_response_was_not_modified(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {

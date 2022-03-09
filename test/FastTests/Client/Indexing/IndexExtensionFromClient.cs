@@ -5,17 +5,17 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using NodaTime;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using static FastTests.Client.Indexing.PeopleUtil;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
+
+using static FastTests.Client.Indexing.PeopleUtil;
 
 namespace FastTests.Client.Indexing
 {
@@ -26,11 +26,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanCompileIndexWithExtensions(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanCompileIndexWithExtensions(Options options)
         {
             CopyNodaTimeIfNeeded();
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new PeopleByEmail());
                 using (var session = store.OpenSession())
@@ -46,10 +46,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanUpdateIndexExtensions(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanUpdateIndexExtensions(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var getRealCountry = @"
 using System.Globalization;
@@ -89,10 +89,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_List(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_List(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex1());
 
@@ -130,10 +130,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_Dictionary(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_Dictionary(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex2());
 
@@ -185,10 +185,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_ICollection(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_ICollection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex3());
 
@@ -230,10 +230,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_Hashset(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_Hashset(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex4());
 
@@ -275,10 +275,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_ListOfUsers(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_ListOfUsers(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex5());
 
@@ -331,10 +331,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_Array(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_Array(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex6());
 
@@ -387,10 +387,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_MyList(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_MyList(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex7());
 
@@ -428,10 +428,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_MyEnumerable(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_MyEnumerable(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex8());
 
@@ -469,10 +469,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_DateTime(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_DateTime(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new PeopleIndex9());
 
@@ -569,10 +569,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex11();
                 store.ExecuteIndex(index);
@@ -619,10 +619,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableParameterAndIEnumerableReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithIEnumerableParameterAndIEnumerableReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex12();
                 store.ExecuteIndex(index);
@@ -663,10 +663,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithUintReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithUintReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex13();
                 store.ExecuteIndex(index);
@@ -702,10 +702,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithListReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithListReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex14();
                 store.ExecuteIndex(index);
@@ -749,10 +749,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithHashsetReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithHashsetReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex15();
                 store.ExecuteIndex(index);
@@ -796,10 +796,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithArrayReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithArrayReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex16();
                 store.ExecuteIndex(index);
@@ -844,10 +844,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithMyListReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithMyListReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex17();
                 store.ExecuteIndex(index);
@@ -890,10 +890,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithMyEnumerableReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithMyEnumerableReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex18();
                 store.ExecuteIndex(index);
@@ -936,10 +936,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex19();
                 store.ExecuteIndex(index);
@@ -988,10 +988,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex20();
                 store.ExecuteIndex(index);
@@ -1028,10 +1028,10 @@ namespace My.Crazy.Namespace
 
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex21();
                 store.ExecuteIndex(index);
@@ -1063,10 +1063,10 @@ namespace My.Crazy.Namespace
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseMethodFromExtensionsInIndex_WithXmlComments(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMethodFromExtensionsInIndex_WithXmlComments(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new PeopleIndex22();
                 store.ExecuteIndex(index);

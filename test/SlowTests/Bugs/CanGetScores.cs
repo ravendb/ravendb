@@ -1,6 +1,5 @@
 ﻿using FastTests;
 using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Lucene.Net.Analysis;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -8,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -20,10 +20,10 @@ namespace SlowTests.Bugs
         private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQuery(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQuery(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -57,10 +57,10 @@ namespace SlowTests.Bugs
 
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByScoreThenName(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByScoreThenName(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -105,10 +105,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByScoreThenNameDescending(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByScoreThenNameDescending(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -153,10 +153,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByNameThenByScore(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByNameThenByScore(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -212,10 +212,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByNameThenByScoreDescending(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreDescending(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -271,10 +271,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByNameThenByScoreThenByAge(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreThenByAge(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -332,10 +332,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {

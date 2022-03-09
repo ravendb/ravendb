@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -10,6 +9,7 @@ using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries
 {
@@ -44,10 +44,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -94,10 +94,10 @@ namespace FastTests.Client.Queries
             }
         }
         [Theory]
-        [SearchEngineClassData]
-        public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(string searchEngineType)
+        [RavenData]
+        public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -137,10 +137,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public  void Query_CreateClausesForQueryDynamically(string searchEngineType)
+        [RavenData]
+        public  void Query_CreateClausesForQueryDynamically(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -183,10 +183,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(string searchEngineType)
+        [RavenData]
+        public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 const string id1 = "users/1";
                 const string id2 = "users/2";
@@ -235,10 +235,10 @@ namespace FastTests.Client.Queries
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(string searchEngineType)
+        [RavenData]
+        public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -263,10 +263,10 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)
         {
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
 
             using (var session = store.OpenAsyncSession())
             {

@@ -1,12 +1,11 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -17,10 +16,10 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUseFullTextSearchInAutoIndex(string searchEngineType)
+        [RavenData]
+        public async Task CanUseFullTextSearchInAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -61,10 +60,10 @@ namespace FastTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUseFullTextSearchInAutoMapReduceIndex(string searchEngineType)
+        [RavenData]
+        public async Task CanUseFullTextSearchInAutoMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {

@@ -7,9 +7,9 @@
 using FastTests;
 using Xunit;
 using System.Linq;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -36,10 +36,10 @@ https://www.talentous.comSenior consultantWorking as software architect and seni
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanQuery(string searchEngineType)
+        [RavenData]
+        public void CanQuery(Options options)
         {
-            using(var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using(var store = GetDocumentStore(options))
             {
                 using(var session = store.OpenSession())
                 {

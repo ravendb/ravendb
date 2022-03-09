@@ -2,10 +2,10 @@
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -16,10 +16,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexDictionaryDirectly(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexDictionaryDirectly(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new IndexReturningDictionary_MethodSyntax().Execute(store);
                 new IndexReturningDictionary_QuerySyntax().Execute(store);
@@ -58,10 +58,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanMapReduceIndexDictionaryDirectly(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapReduceIndexDictionaryDirectly(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceIndexReturningDictionary_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionary_QuerySyntax().Execute(store);
@@ -100,10 +100,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new IndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new IndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -200,10 +200,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapReduceIndexDictionaryWithComplexObjectsDirectly(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new MapReduceIndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
                 new MapReduceIndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
@@ -274,10 +274,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new MixedSelectWithAnonymusAndDictionary().Execute(store);
 

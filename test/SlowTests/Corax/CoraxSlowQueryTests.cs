@@ -27,16 +27,16 @@ namespace SlowTests.Corax
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void CompoundOrderByWithPagination(string searchEngineType, int size = 10_000)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
+        public void CompoundOrderByWithPagination(RavenDataExplicitConfiguration config, int size = 10_000)
         {
             List<Result> expected = new();
             var option = new Options()
             {
                 ModifyDatabaseRecord = d =>
                 {
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
-                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                     d.Client = new ClientConfiguration() { MaxNumberOfRequestsPerSession = int.MaxValue };
                 }
             };
@@ -71,11 +71,11 @@ namespace SlowTests.Corax
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void AnalyzerAreApplied(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void AnalyzerAreApplied(Options options)
         {
             var item = new Person() { Name = "MaCiEJ" };
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
             {
                 using var session = store.OpenSession();
                 session.Store(item);
@@ -90,11 +90,11 @@ namespace SlowTests.Corax
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void BoostingTest(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void BoostingTest(Options options)
         {
             const int terms = 29;
-            using var coraxStore = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var coraxStore = GetDocumentStore(options);
             using var luceneStore = GetDocumentStore();
             List<Result> results;
             {
@@ -153,11 +153,11 @@ namespace SlowTests.Corax
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void NgramSuggestionTest(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void NgramSuggestionTest(Options options)
         {
-            using (var documentStore = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var documentStore = GetDocumentStore(options))
             {
 
                 using (var s = documentStore.OpenSession())
@@ -185,10 +185,10 @@ namespace SlowTests.Corax
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void MaxSuggestionsShouldWork(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void MaxSuggestionsShouldWork(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 

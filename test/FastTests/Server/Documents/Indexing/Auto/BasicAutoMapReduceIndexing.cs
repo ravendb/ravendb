@@ -17,6 +17,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Auto
 {
@@ -28,10 +29,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUseSimpleReduction(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanUseSimpleReduction(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var mri = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
@@ -118,12 +119,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanDelete(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanDelete(RavenDataExplicitConfiguration config)
         {
             const long numberOfUsers = 10;
 
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
 
@@ -231,12 +232,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task DefinitionOfAutoMapReduceIndexIsPersisted(string searchEngineType)
+        [RavenExplicitData]
+        public async Task DefinitionOfAutoMapReduceIndexIsPersisted(RavenDataExplicitConfiguration config)
         {
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 dbName = database.Name;
 
@@ -334,10 +335,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanGroupByNestedFieldAndAggregateOnCollection(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanGroupByNestedFieldAndAggregateOnCollection(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition(
                 "Orders",
                 new[]
@@ -396,10 +397,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanStoreAndReadReduceStats(string searchEngineType)
+        [RavenExplicitData]
+        public void CanStoreAndReadReduceStats(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
@@ -446,10 +447,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUpdateByChangingValue(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanUpdateByChangingValue(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -524,10 +525,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUpdateByChangingReduceKey(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanUpdateByChangingReduceKey(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
@@ -605,10 +606,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task GroupByMultipleFields(string searchEngineType)
+        [RavenExplicitData]
+        public async Task GroupByMultipleFields(RavenDataExplicitConfiguration config)
         {
-            using (var db = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Orders", new[]
             {
                 new AutoIndexField
