@@ -546,7 +546,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupParameters));
 
             // compare exchange
-            scripter.AddType(typeof(AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<>.CompareExchangeListItem));
+            scripter.AddType(typeof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem));
             scripter.AddType(typeof(CompareExchangeResult<object>));
             scripter.AddType(typeof(CompareExchangeValue<object>));
 

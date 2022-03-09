@@ -15,4 +15,11 @@ internal class CompareExchangeHandlerProcessorForGetCompareExchangeValues : Abst
     {
         RequestHandler.AddPagingPerformanceHint(PagingOperationType.CompareExchange, action, details, numberOfResults, pageSize, durationInMs, totalDocumentsSizeInBytes);
     }
+
+    internal class CompareExchangeListItem
+    {
+        public string Key { get; set; }
+        public object Value { get; set; }
+        public long Index { get; set; }
+    }
 }
