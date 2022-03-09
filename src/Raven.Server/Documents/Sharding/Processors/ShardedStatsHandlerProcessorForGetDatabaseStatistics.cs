@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
@@ -21,10 +23,38 @@ namespace Raven.Server.Documents.Sharding.Processors
             var op = new ShardedStatsOperation();
 
             var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-            stats.Indexes = GetDatabaseIndexesFromRecord();
+            stats.Indexes = GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
             stats.CountOfIndexes = stats.Indexes.Length;
 
             return stats;
+        }
+
+        internal static IndexInformation[] GetDatabaseIndexesFromRecord(DatabaseRecord record)
+        {
+            var indexes = record.Indexes;
+            var indexInformation = new IndexInformation[indexes.Count];
+
+            int i = 0;
+            foreach (var key in indexes.Keys)
+            {
+                var index = indexes[key];
+
+                indexInformation[i] = new IndexInformation
+                {
+                    Name = index.Name,
+                    // IndexDefinition includes nullable fields, then in case of null we set to default values
+                    State = index.State ?? IndexState.Normal,
+                    LockMode = index.LockMode ?? IndexLockMode.Unlock,
+                    Priority = index.Priority ?? IndexPriority.Normal,
+                    Type = index.Type,
+                    SourceType = index.SourceType,
+                    IsStale = false // for sharding we can't determine 
+                };
+
+                i++;
+            }
+
+            return indexInformation;
         }
 
         internal readonly struct ShardedStatsOperation : IShardedOperation<DatabaseStatistics>

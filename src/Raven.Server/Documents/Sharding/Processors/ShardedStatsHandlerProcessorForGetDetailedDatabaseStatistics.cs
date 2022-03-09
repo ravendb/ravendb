@@ -23,10 +23,10 @@ namespace Raven.Server.Documents.Sharding.Processors
 
         protected override async ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync()
         {
-            var op = new ShardedDetailedStatsOperation();
+            var operation = new ShardedDetailedStatsOperation();
 
-            var detailedStatistics = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-            detailedStatistics.Indexes = GetDatabaseIndexesFromRecord();
+            var detailedStatistics = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(operation);
+            detailedStatistics.Indexes = ShardedStatsHandlerProcessorForGetDatabaseStatistics.GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
             detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
 
             return detailedStatistics;
