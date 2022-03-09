@@ -64,9 +64,9 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
                     totalDocumentsSizeInBytes += item.Value?.Size ?? 0;
                     operationContext.Write(textWriter, new DynamicJsonValue
                     {
-                        [nameof(CompareExchangeListItem.Key)] = item.Key.Key,
-                        [nameof(CompareExchangeListItem.Value)] = item.Value,
-                        [nameof(CompareExchangeListItem.Index)] = item.Index
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Key)] = item.Key.Key,
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Value)] = item.Value,
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Index)] = item.Index
                     });
                 });
 
@@ -108,9 +108,9 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
 
                     operationContext.Write(textWriter, new DynamicJsonValue
                     {
-                        [nameof(CompareExchangeListItem.Key)] = item.Key,
-                        [nameof(CompareExchangeListItem.Value)] = item.Value,
-                        [nameof(CompareExchangeListItem.Index)] = item.Index
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Key)] = item.Key,
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Value)] = item.Value,
+                        [nameof(CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem.Index)] = item.Index
                     });
                 });
 
@@ -119,12 +119,5 @@ internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExch
 
         AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), HttpContext.Request.QueryString.Value,
             numberOfResults, keys.Count, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
-    }
-
-    internal class CompareExchangeListItem
-    {
-        public string Key { get; set; }
-        public object Value { get; set; }
-        public long Index { get; set; }
     }
 }
