@@ -2,12 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -128,10 +128,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanUseSuggestionsWithAutoIndex(string searchEngine)
+        [RavenData]
+        public void CanUseSuggestionsWithAutoIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 
@@ -150,10 +150,10 @@ namespace SlowTests.Issues
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanExtendAutoIndexWithSuggestions(string searchEngine)
+        [RavenData]
+        public void CanExtendAutoIndexWithSuggestions(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store);
 

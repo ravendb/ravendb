@@ -22,8 +22,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void basic_alphanumeric_sort(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void basic_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
             {
@@ -56,7 +56,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,8 +95,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void number_and_decimal_alphanumeric_sort(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void number_and_decimal_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
             {
@@ -110,7 +110,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -148,8 +148,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void basic_sequence_of_characters(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void basic_sequence_of_characters(Options options)
         {
             var titles = new List<string>
             {
@@ -167,7 +167,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -205,8 +205,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void order_by_two_parameters_alphanumeric(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", "3"));
@@ -216,7 +216,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", "4"));
             localTracks.Add(CreateTrack("1.1", "1"));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -256,8 +256,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void order_by_two_parameters_first_alphanumeric_than_long(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_first_alphanumeric_than_long(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1", year: 2005));
@@ -268,7 +268,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("2", year: 2012));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -308,8 +308,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void order_by_two_parameters_first_long_than_alphanumeric(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void order_by_two_parameters_first_long_than_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(CreateTrack("1.01", year: 2015));
@@ -320,7 +320,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("1.1", year: 2015));
             localTracks.Add(CreateTrack("1.1", year: 2005));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -579,8 +579,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void dynamic_query_should_work(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void dynamic_query_should_work(Options options)
         {
             var titles = new List<string>
             {
@@ -602,7 +602,7 @@ namespace SlowTests.Tests.Sorting
             var localTracks = new List<Track>();
             titles.ForEach(x => localTracks.Add(CreateTrack(x)));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -641,8 +641,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void OrderByPrefixes(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void OrderByPrefixes(Options options)
         {
             var localTracks = new List<Track>();
             localTracks.Add(
@@ -679,7 +679,7 @@ namespace SlowTests.Tests.Sorting
             localTracksRightOrder.Add(
                 CreateTrack("z444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444445"));
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -704,8 +704,8 @@ namespace SlowTests.Tests.Sorting
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void NumbersTests(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void NumbersTests(Options options)
         {
             var localTracks = new List<Track>();
 
@@ -735,7 +735,7 @@ namespace SlowTests.Tests.Sorting
             localTracks.Add(CreateTrack("3333bvc1trt", year: 2));
 
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

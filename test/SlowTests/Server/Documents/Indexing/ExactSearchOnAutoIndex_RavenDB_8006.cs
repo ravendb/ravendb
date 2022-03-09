@@ -2,7 +2,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -12,6 +11,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Server.Documents.Indexing
 {
@@ -22,16 +22,16 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanUseExactInAutoIndex(string searchEngineType)
-        {
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanUseExactInAutoIndex(RavenDataExplicitConfiguration config)
+        {            
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = record =>
                 {
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
-                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -91,10 +91,10 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanUseExactInAutoMapReduceIndex(string searchEngineType)
+        [RavenData]
+        public async Task CanUseExactInAutoMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenAsyncSession())
                 {
@@ -158,16 +158,16 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task ShouldExtendMappingOfTheSameField(string searchEngineType)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task ShouldExtendMappingOfTheSameField(RavenDataExplicitConfiguration config)
         {
             using (var store = GetDocumentStore(new Options
                    {
                        ModifyDatabaseRecord = record =>
                        {
                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                        }
                    }))
             {
@@ -215,16 +215,16 @@ namespace SlowTests.Server.Documents.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(string searchEngineType)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(RavenDataExplicitConfiguration config)
         {
             using (var store = GetDocumentStore(new Options
                    {
                        ModifyDatabaseRecord = record =>
                        {
                            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
-                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                        }
                    }))
             {

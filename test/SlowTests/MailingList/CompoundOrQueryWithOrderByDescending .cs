@@ -14,6 +14,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -24,10 +25,10 @@ namespace SlowTests.MailingList
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void ThreeOrClauses_works(string searchEngineType)
+        [RavenData]
+        public void ThreeOrClauses_works(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 
@@ -70,10 +71,10 @@ namespace SlowTests.MailingList
 
 
         [Theory]
-        [SearchEngineClassData]
-        public void FourOrClauses_fails(string searchEngineType)
+        [RavenData]
+        public void FourOrClauses_fails(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
 

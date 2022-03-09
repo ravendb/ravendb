@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -13,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -28,10 +28,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueriesRunning(string searchEngineType)
+        [RavenData]
+        public async Task QueriesRunning(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 IndexQuery q;
                 using (var session = store.OpenSession())

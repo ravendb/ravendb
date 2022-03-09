@@ -9,6 +9,7 @@ using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Indexing
 {
@@ -19,10 +20,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptIndex(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByName());
                 using (var session = store.OpenSession())
@@ -42,10 +43,10 @@ namespace FastTests.Client.Indexing
 
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexTimeSpan(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexTimeSpan(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new TeemoByDuration());
                 using (var session = store.OpenSession())
@@ -70,10 +71,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptIndexWithAdditionalSources(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptIndexWithAdditionalSources(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByNameWithAdditionalSources());
                 using (var session = store.OpenSession())
@@ -92,10 +93,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexArrayProperties(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexArrayProperties(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByPhones());
                 using (var session = store.OpenSession())
@@ -123,10 +124,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexMapWithFanout(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexMapWithFanout(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new FanoutByNumbers());
                 using (var session = store.OpenSession())
@@ -154,10 +155,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexMapReduceWithFanoutWhenOutputingBlittableObjectInstance(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new FanoutByPaymentsWithReduce());
                 using (var session = store.OpenSession())
@@ -187,10 +188,10 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexMapReduceWithFanout(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexMapReduceWithFanout(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new FanoutByNumbersWithReduce());
                 using (var session = store.OpenSession())
@@ -218,10 +219,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptIndexWithDynamicFields(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptIndexWithDynamicFields(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByNameAndAnalyzedName());
                 using (var session = store.OpenSession())
@@ -242,10 +243,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptMultiMapIndex(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptMultiMapIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersAndProductsByName());
                 using (var session = store.OpenSession())
@@ -269,22 +270,22 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptIndexWithLoadDocument(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptIndexWithLoadDocument(Options options)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(searchEngineType);
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByName>(options);
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptIndexWithExternalLoadDocument(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptIndexWithExternalLoadDocument(Options options)
         {
-            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(searchEngineType);
+            CanUseJavaScriptIndexWithLoadInternal<UsersWithProductsByNameWithExternalLoad>(options);
         }
 
-        private void CanUseJavaScriptIndexWithLoadInternal<T>(string searchEngineType) where T : AbstractJavaScriptIndexCreationTask, new()
+        private void CanUseJavaScriptIndexWithLoadInternal<T>(Options options) where T : AbstractJavaScriptIndexCreationTask, new()
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new T();
                 store.ExecuteIndex(index);
@@ -310,10 +311,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanElivateSimpleFunctions(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanElivateSimpleFunctions(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByNameAndIsActive());
                 using (var session = store.OpenSession())
@@ -333,10 +334,10 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJavaScriptMapReduceIndex(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJavaScriptMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersAndProductsByNameAndCount());
                 using (var session = store.OpenSession())
@@ -359,11 +360,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseSpatialFields(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseSpatialFields(Options options)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Spatial());
                 CanUseSpatialFieldsInternal(kalab, store, "Spatial");
@@ -371,11 +372,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseDynamicSpatialFields(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseDynamicSpatialFields(Options options)
         {
             var kalab = 10;
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new DynamicSpatial());
                 CanUseSpatialFieldsInternal(kalab, store, "DynamicSpatial");
@@ -408,11 +409,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanReduceNullValues(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanReduceNullValues(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
-            using (var store2 = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 ReduceNullValuesInternal(store);
             }
@@ -436,10 +437,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanReduceWithReturnSyntax(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanReduceWithReturnSyntax(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersReducedByNameReturnSyntax());
                 using (var session = store.OpenSession())
@@ -460,10 +461,10 @@ namespace FastTests.Client.Indexing
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanUseJsIndexWithArrowObjectFunctionInMap(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseJsIndexWithArrowObjectFunctionInMap(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new UsersByNameMapArrowSyntax());
                 using (var session = store.OpenSession())
@@ -486,11 +487,11 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void IdenticalMapReduceIndexWillGenerateDiffrentIndexInstance(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
-            using (var store2 = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
+            using (var store2 = GetDocumentStore(options))
             {
                 ReduceNullValuesInternal(store);
                 ReduceNullValuesInternal(store2);
@@ -498,10 +499,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void OutputReduceToCollection(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void OutputReduceToCollection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Products_ByCategory());
                 using (var session = store.OpenSession())
@@ -524,10 +525,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void DateCheckMapReduce(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void DateCheckMapReduce(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Product_Sales_ByMonth());
                 using (var session = store.OpenSession())
@@ -574,8 +575,8 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryBySubObjectAsString(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryBySubObjectAsString(Options options)
         {
             var address = new Address
             {
@@ -583,7 +584,7 @@ namespace FastTests.Client.Indexing
                 Line2 = "sweet home"
             };
 
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new Users_ByAddress());
                 using (var session = store.OpenSession())
@@ -603,10 +604,10 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanIndexSwitchCases(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIndexSwitchCases(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 store.ExecuteIndex(new ProductsWarrenty());
                 using (var session = store.OpenSession())

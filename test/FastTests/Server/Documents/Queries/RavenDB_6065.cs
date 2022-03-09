@@ -1,8 +1,7 @@
-﻿using FastTests.Server.Documents.Indexing;
-using Raven.Client.Documents.Queries;
-using Raven.Server.Config;
+﻿using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries
 {
@@ -20,10 +19,10 @@ namespace FastTests.Server.Documents.Queries
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void QueryWithOrOperators(string searchEngineType)
+        [RavenData]
+        public void QueryWithOrOperators(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

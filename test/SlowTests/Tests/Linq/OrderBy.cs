@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Tests.Linq
 {
@@ -26,10 +26,10 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanDescOrderBy_AProjection(string searchEngine)
+        [RavenData]
+        public void CanDescOrderBy_AProjection(Options config)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(config))
             {
                 using (var session = store.OpenSession())
                 {
@@ -52,10 +52,10 @@ namespace SlowTests.Tests.Linq
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void CanAscOrderBy_AProjection(string searchEngine)
+        [RavenData]
+        public void CanAscOrderBy_AProjection(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

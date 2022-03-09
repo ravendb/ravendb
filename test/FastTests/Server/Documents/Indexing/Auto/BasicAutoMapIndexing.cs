@@ -25,6 +25,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace FastTests.Server.Documents.Indexing.Auto
@@ -36,10 +37,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CheckDispose(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CheckDispose(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
@@ -80,10 +81,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanPersist(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanPersist(RavenDataExplicitConfiguration config)
         {
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType ))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 var dbName = database.Name;
                 var name1 = new AutoIndexField
@@ -128,7 +129,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
-                Assert.Equal(searchEngineType, index2.SearchEngineType.ToString());
+                Assert.Equal(config.SearchEngine.ToString(), index2.SearchEngineType.ToString());
                 
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
@@ -142,13 +143,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanDelete(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanDelete(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType ))
+            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
                 await CanDeleteInternal(database);
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database,modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType ))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database,modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
                 await CanDeleteInternal(database);
         }
 
@@ -196,13 +197,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanReset(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanReset(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
                 await CanResetInternal(database);
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, config)))
                 await CanResetInternal(database);
         }
 
@@ -252,10 +253,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void SimpleIndexing(string searchEngineType)
+        [RavenExplicitData]
+        public void SimpleIndexing(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 using (var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
@@ -415,10 +416,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void WriteErrors(string searchEngineType)
+        [RavenExplicitData]
+        public void WriteErrors(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -454,8 +455,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void Errors2(string searchEngineType)
+        [RavenExplicitData]
+        public void Errors2(RavenDataExplicitConfiguration config)
         {
             var times = new[]
             {
@@ -878,7 +879,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 "2016-04-15T15:49:27.4750453Z",
                 "2016-04-15T15:49:27.4750453Z",
             };
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -903,10 +904,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void Errors(string searchEngineType)
+        [RavenExplicitData]
+        public void Errors(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 using (var index = AutoMapIndex.CreateNew(
                     new AutoMapIndexDefinition(
@@ -946,8 +947,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(string searchEngineType)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(RavenDataExplicitConfiguration config)
         {
             void WaitForIndexDeletion(DocumentDatabase database, string indexName)
             {
@@ -960,9 +961,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
 
             DoNotReuseServer();
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
-                Assert.Equal(searchEngineType, database.Configuration.Indexing.AutoIndexingEngineType.ToString());
+                Assert.Equal(config.SearchEngine.ToString(), database.Configuration.Indexing.AutoIndexingEngineType.ToString());
                 var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No, Id = 1 } }), Guid.NewGuid().ToString());
 
                 await database.ServerStore.Engine.PutAsync(new SetIndexStateCommand(index0.Name, IndexState.Idle, database.Name, Guid.NewGuid().ToString()));
@@ -1262,10 +1263,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task IndexCreationOptions(string searchEngineType)
+        [RavenExplicitData]
+        public async Task IndexCreationOptions(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
@@ -1287,10 +1288,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task LockMode(string searchEngineType)
+        [RavenExplicitData]
+        public async Task LockMode(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabaseForSearchEngine(searchEngineType))
+            using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
@@ -1314,14 +1315,14 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(string searchEngineType)
+        [RavenExplicitData]
+        public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(RavenDataExplicitConfiguration config)
         {
             string indexStoragePath;
             string indexName;
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, config)))
             {
                 dbName = database.Name;
                 var name1 = new AutoIndexField
@@ -1370,10 +1371,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task CanDeleteFaultyIndex(string searchEngineType)
+        [RavenExplicitData]
+        public async Task CanDeleteFaultyIndex(RavenDataExplicitConfiguration config)
         {
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, searchEngineType)))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, config)))
             {
                 var dbName = database.Name;
                 var name1 = new AutoIndexField
@@ -1439,9 +1440,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        private static void GetModificationDictionaryForSearchEngine(Dictionary<string, string> dictionary, string searchEngineType)
+        private static void GetModificationDictionaryForSearchEngine(Dictionary<string, string> dictionary, RavenDataExplicitConfiguration config)
         {
-            dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
+            dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
         }
     }
 }

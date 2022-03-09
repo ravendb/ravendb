@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -9,6 +8,7 @@ using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Bugs
 {
@@ -29,10 +29,10 @@ namespace SlowTests.Bugs
         };
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryForDistinctItems(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryForDistinctItems(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -62,10 +62,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryForDistinctItemsUsingLinq(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryForDistinctItemsUsingLinq(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -94,10 +94,10 @@ namespace SlowTests.Bugs
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryForDistinctItemsUsingLinq_WithPaging(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryForDistinctItemsUsingLinq_WithPaging(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -126,10 +126,10 @@ namespace SlowTests.Bugs
             }
         }
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryForDistinctItemsAndProperlyPage(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryForDistinctItemsAndProperlyPage(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -159,10 +159,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void IncludeWithDistinct(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void IncludeWithDistinct(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 new CustomersIndex().Execute(store);
 
@@ -196,10 +196,10 @@ namespace SlowTests.Bugs
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void DistinctWithMapReduce(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void DistinctWithMapReduce(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 new ReducedCustomersIndex().Execute(store);
 

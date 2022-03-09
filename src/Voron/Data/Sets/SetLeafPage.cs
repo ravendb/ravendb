@@ -341,8 +341,6 @@ namespace Voron.Data.Sets
                     }                
                 }
 
-            End:
-
                 _rawValuesIndex = rawValuesIndex;
                 _compressIndex = compressIndex;
                 _compressLength = compressLength;

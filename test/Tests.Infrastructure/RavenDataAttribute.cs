@@ -72,18 +72,18 @@ public class RavenDataAttribute : DataAttribute
 
     internal static IEnumerable<(RavenSearchEngineMode SearchMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
-        //if (mode.HasFlag(RavenSearchEngineMode.Corax))
-        //{
-        //    var coraxOptions = options.Clone();
+        if (mode.HasFlag(RavenSearchEngineMode.Corax))
+        {
+            var coraxOptions = options.Clone();
 
-        //    coraxOptions.ModifyDatabaseRecord += record =>
-        //    {
-        //        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
-        //        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
-        //    };
+            coraxOptions.ModifyDatabaseRecord += record =>
+            {
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
+            };
 
-        //    yield return (RavenSearchEngineMode.Corax, coraxOptions);
-        //}
+            yield return (RavenSearchEngineMode.Corax, coraxOptions);
+        }
 
         if (mode.HasFlag(RavenSearchEngineMode.Lucene))
         {

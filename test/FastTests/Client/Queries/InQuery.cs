@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Linq;
-using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries
 {
@@ -14,10 +14,10 @@ namespace FastTests.Client.Queries
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void QueryingUsingInShouldYieldDistinctResults(string searchEngineType)
+        [RavenData]
+        public void QueryingUsingInShouldYieldDistinctResults(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

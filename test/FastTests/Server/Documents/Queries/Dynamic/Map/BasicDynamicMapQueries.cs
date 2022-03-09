@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
@@ -12,6 +11,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Server.Config;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -23,10 +23,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task String_where_clause(string searchEngineType)
+        [RavenData]
+        public async Task String_where_clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -47,10 +47,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Numeric_where_equals_clause(string searchEngineType)
+        [RavenData]
+        public async Task Numeric_where_equals_clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -71,10 +71,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Numeric_between_clause(string searchEngineType)
+        [RavenData]
+        public async Task Numeric_between_clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -101,10 +101,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Numeric_range_where_clause(string searchEngineType)
+        [RavenData]
+        public async Task Numeric_range_where_clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -135,10 +135,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Where_clause_and_sorting(string searchEngineType)
+        [RavenData]
+        public async Task Where_clause_and_sorting(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -170,10 +170,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Sorting_by_doubles(string searchEngineType)
+        [RavenData]
+        public async Task Sorting_by_doubles(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -197,10 +197,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Sorting_by_integers(string searchEngineType)
+        [RavenData]
+        public async Task Sorting_by_integers(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -224,10 +224,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Sorting_by_nested_string_field(string searchEngineType)
+        [RavenData]
+        public async Task Sorting_by_nested_string_field(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -263,10 +263,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Sorting_by_nested_integer_field(string searchEngineType)
+        [RavenData]
+        public async Task Sorting_by_nested_integer_field(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -302,10 +302,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Sorting_by_strings(string searchEngineType)
+        [RavenData]
+        public async Task Sorting_by_strings(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -334,10 +334,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Partial_match(string searchEngineType)
+        [RavenData]
+        public async Task Partial_match(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -373,10 +373,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Empty_query(string searchEngineType)
+        [RavenData]
+        public async Task Empty_query(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -413,10 +413,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task Can_project_in_map(string searchEngineType)
+        [RavenData]
+        public async Task Can_project_in_map(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -476,10 +476,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void Collection_query(string searchEngineType)
+        [RavenData]
+        public void Collection_query(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -511,10 +511,10 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void Can_query_on_dictionary(string searchEngineType)
+        [RavenData]
+        public void Can_query_on_dictionary(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

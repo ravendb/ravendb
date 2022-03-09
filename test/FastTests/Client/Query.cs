@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
+using Tests.Infrastructure.Entities;
+
 
 namespace FastTests.Client
 {
@@ -39,10 +40,10 @@ namespace FastTests.Client
          */
         
         [Theory]
-        [SearchEngineClassData]
-        public void RawQuery_with_transformation_function_should_work(string searchEngineType)
+        [RavenData]
+        public void RawQuery_with_transformation_function_should_work(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -122,10 +123,10 @@ namespace FastTests.Client
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public void LinqQuery_with_transformation_function_should_work(string searchEngineType)
+        [RavenData]
+        public void LinqQuery_with_transformation_function_should_work(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -199,10 +200,10 @@ namespace FastTests.Client
 
         
         [Theory]
-        [SearchEngineClassData]
-        public void Query_Simple(string searchEngineType)
+        [RavenData]
+        public void Query_Simple(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -220,10 +221,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void Query_With_Where_Clause(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_With_Where_Clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -252,13 +253,13 @@ namespace FastTests.Client
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork(string searchEngineType)
+        [RavenData]
+        public async Task QueryWithWhere_WhenUsingStringEquals_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";
             string varStrToQuery = constStrToQuery;
 
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
             
             await session.StoreAsync(new User { Name = "John" });
@@ -369,13 +370,13 @@ namespace FastTests.Client
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork(string searchEngineType)
+        [RavenData]
+        public async Task QueryWithWhere_WhenUsingStringEqualsWhitParameterExpression_ShouldWork(Options options)
         {
             const string constStrToQuery = "Tarzan";
             string varStrToQuery = constStrToQuery;
 
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
 
             await session.StoreAsync(new Test {StrList = new[]{"John"}});
@@ -481,10 +482,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryWithWhere_WhenUsingNotSupportedExpressions_ShouldThrowNotSupported(string searchEngineType)
+        [RavenData]
+        public async Task QueryWithWhere_WhenUsingNotSupportedExpressions_ShouldThrowNotSupported(Options options)
         {
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+            using var store = GetDocumentStore(options);
             using var session = store.OpenAsyncSession();
 
             const string toQuery = "John";
@@ -543,10 +544,10 @@ namespace FastTests.Client
         }
         
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void Query_With_Customize(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_With_Customize(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new DogsIndex().Execute(store);
                 using (var newSession = store.OpenSession())
@@ -579,10 +580,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void Query_Long_Request(string searchEngineType)
+        [RavenData]
+        public void Query_Long_Request(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -601,10 +602,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void Query_By_Index(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_By_Index(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new DogsIndex().Execute(store);
                 using (var newSession = store.OpenSession())

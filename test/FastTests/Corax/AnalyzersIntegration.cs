@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Linq;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Corax;
 
@@ -16,11 +15,11 @@ public class AnalyzersIntegration : RavenTestBase
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Corax)]
-    public void LowercaseAnalyzer(string searchEngineType)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void LowercaseAnalyzer(Options options)
     {
         var storedValue = "TeSTeR";
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
             session.Store(new Record() { Data = storedValue });
@@ -45,11 +44,11 @@ public class AnalyzersIntegration : RavenTestBase
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Corax)]
-    public void RavenStandardAnalyzer(string searchEngineType)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void RavenStandardAnalyzer(Options options)
     {
         var valuesToStore = new[] { "PoINt oF tHe IMPLemeNTation", "tHiS IS TesTion" };
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType));
+        using var store = GetDocumentStore(options);
         {
             using var session = store.OpenSession();
             session.Store(new Record() { Data = valuesToStore[0] });

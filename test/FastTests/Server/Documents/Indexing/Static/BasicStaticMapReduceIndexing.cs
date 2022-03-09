@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -24,10 +25,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task The_simpliest_static_map_reduce_index(string searchEngineType)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task The_simpliest_static_map_reduce_index(RavenDataExplicitConfiguration config)
         {
-            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType))
+            using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 using (var index = MapReduceIndex.CreateNew<MapReduceIndex>(new IndexDefinition()
                 {
@@ -117,13 +118,13 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanPersist(string searchEngineType)
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public async Task CanPersist(RavenDataExplicitConfiguration config)
         {
             IndexDefinition defOne, defTwo;
             string dbName;
 
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType))
+            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
                 dbName = database.Name;
 

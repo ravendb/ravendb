@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 using FastTests;
 using FastTests.Server.Documents.Indexing;
 using Xunit;
+using Tests.Infrastructure;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 
@@ -22,10 +23,10 @@ namespace SlowTests.Core.Querying
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void BasicSorting(string searchEngineType)
+        [RavenData]
+        public void BasicSorting(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

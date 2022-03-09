@@ -2,9 +2,9 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -21,10 +21,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public async Task CanUseIdMethodInJavascriptIndex(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanUseIdMethodInJavascriptIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new JavaScriptIndexWithIdMethod().Execute(store);
 
@@ -61,10 +61,10 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]        
-        public async Task CanUseGetMetadataMethodInJavascriptIndex(string searchEngineType)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]        
+        public async Task CanUseGetMetadataMethodInJavascriptIndex(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngineType)))
+            using (var store = GetDocumentStore(options))
             {
                 new JavaScriptIndexWithGetMetadataMethod().Execute(store);
 
