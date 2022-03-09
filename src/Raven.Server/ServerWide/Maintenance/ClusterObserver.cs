@@ -106,7 +106,6 @@ namespace Raven.Server.ServerWide.Maintenance
             return (_decisionsLog.ToArray(), _iteration);
         }
 
-
         public void Run(CancellationToken token)
         {
             // we give some time to populate the stats.
@@ -1255,14 +1254,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var indexesCatchedUp = CheckIndexProgress(
+            var indexesCaughtUp = CheckIndexProgress(
                 promotablePrevDbStats.LastEtag,
                 promotablePrevDbStats.LastIndexStats,
                 promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats,
                 out var reason);
 
-            if (indexesCatchedUp)
+            if (indexesCaughtUp)
             {
                 LogMessage($"We try to promote the database '{dbName}' on {promotable} to be a full member", database: dbName);
 
