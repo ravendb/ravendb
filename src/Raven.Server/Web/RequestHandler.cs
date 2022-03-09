@@ -388,7 +388,7 @@ namespace Raven.Server.Web
             return pageSize.Value;
         }
 
-        protected int? GetIntValueQueryString(string name, bool required = true)
+        protected internal int? GetIntValueQueryString(string name, bool required = true)
         {
             var intAsString = GetStringQueryString(name, required);
             if (intAsString == null)
