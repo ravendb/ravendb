@@ -51,8 +51,9 @@ namespace Raven.Server.Documents.ShardedHandlers
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                         @"what do we do with: var diagnostics = GetBoolValueQueryString(""diagnostics"", required: false) ?? false");
 
+                    var addSpatialProperties = GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
                     var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(),
-                        ShardedContext.QueryMetadataCache, database: null);
+                        ShardedContext.QueryMetadataCache, database: null, addSpatialProperties);
 
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
@@ -61,55 +62,56 @@ namespace Raven.Server.Documents.ShardedHandlers
                         if (TrafficWatchManager.HasRegisteredClients)
                             TrafficWatchQuery(indexQuery);
 
-                        var queryProcessor = new ShardedQueryProcessor(context, this, indexQuery);
-
-                        queryProcessor.Initialize();
-                        await queryProcessor.ExecuteShardedOperations();
-
-                        var existingResultEtag = GetLongFromHeaders("If-None-Match");
-                        if (existingResultEtag != null && indexQuery.Metadata.HasOrderByRandom == false)
+                        using (var queryProcessor = new ShardedQueryProcessor(context, this, indexQuery))
                         {
-                            if (existingResultEtag == queryProcessor.ResultsEtag)
+                            queryProcessor.Initialize();
+                            await queryProcessor.ExecuteShardedOperations();
+
+                            var existingResultEtag = GetLongFromHeaders("If-None-Match");
+                            if (existingResultEtag != null && indexQuery.Metadata.HasOrderByRandom == false)
                             {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                                return;
+                                if (existingResultEtag == queryProcessor.ResultsEtag)
+                                {
+                                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                                    return;
+                                }
                             }
+
+                            // * For includes, we send the includes to all shards, then we merge them together. We do explicitly
+                            //   support including from another shard, so we'll need to do that again for missing includes
+                            //   That means also recording the include() call from JS on missing values that we'll need to rerun on
+                            //   other shards
+                            var includeTask = queryProcessor.HandleIncludes();
+                            if (includeTask.IsCompleted == false)
+                            {
+                                await includeTask.AsTask();
+                            }
+
+                            queryProcessor.MergeResults();
+
+                            // * For map/reduce - we need to re-run the reduce portion of the index again on the results
+                            queryProcessor.ReduceResults();
+
+                            // * For order by, we need to merge the results and compute the order again 
+                            queryProcessor.ApplyOrdering();
+
+                            queryProcessor.ApplyPaging();
+
+                            // * For map-reduce indexes we project the results after the reduce part 
+                            queryProcessor.ProjectAfterMapReduce();
+
+                            var result = queryProcessor.GetResult();
+                            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
+                            {
+                                result.Timings = indexQuery.Timings?.ToTimings();
+                                await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
+                                await writer.OuterFlushAsync();
+                            }
+
+                            // * For JS projections and load clauses, we don't support calling load() on a
+                            //   document that is not on the same shard
+                            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for that");
                         }
-
-                        // * For includes, we send the includes to all shards, then we merge them together. We do explicitly
-                        //   support including from another shard, so we'll need to do that again for missing includes
-                        //   That means also recording the include() call from JS on missing values that we'll need to rerun on
-                        //   other shards
-                        var includeTask = queryProcessor.HandleIncludes();
-                        if (includeTask.IsCompleted == false)
-                        {
-                            await includeTask.AsTask();
-                        }
-
-                        queryProcessor.MergeResults();
-
-                        // * For map/reduce - we need to re-run the reduce portion of the index again on the results
-                        queryProcessor.ReduceResults();
-
-                        // * For order by, we need to merge the results and compute the order again 
-                        queryProcessor.ApplyOrdering();
-
-                        queryProcessor.ApplyPaging();
-
-                        // * For map-reduce indexes we project the results after the reduce part 
-                        queryProcessor.ProjectAfterMapReduce();
-
-                        var result = queryProcessor.GetResult();
-                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), HttpContext.RequestAborted))
-                        {
-                            result.Timings = indexQuery.Timings?.ToTimings();
-                            await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
-                            await writer.OuterFlushAsync();
-                        }
-
-                        // * For JS projections and load clauses, we don't support calling load() on a
-                        //   document that is not on the same shard
-                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for that");
                     }
                 }
                 catch (Exception e)

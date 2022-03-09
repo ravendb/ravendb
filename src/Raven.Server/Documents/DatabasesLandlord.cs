@@ -128,7 +128,6 @@ namespace Raven.Server.Documents
                             if (_shardedDatabases.TryGetValue(rawRecord.DatabaseName, out var shardedContextTask))
                             {
                                 var shardedContext = shardedContextTask.Result; // this isn't really a task
-                                shardedContext.Indexes.Update(rawRecord);
                                 shardedContext.UpdateDatabaseRecord(rawRecord);
                             }
                         }

@@ -2107,8 +2107,8 @@ namespace Raven.Server.Documents.Patch
         public void UpdateConfiguration(RavenConfiguration configuration)
         {
             _configuration = configuration;
-
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Update the cache holder as well");
+            
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Bump the generation like we do in the ArenaAllocator");
         }
 
         public bool RunIdleOperations()

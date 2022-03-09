@@ -13,15 +13,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly List<BlittableJsonReaderObject> _jsons;
         private readonly IPropertyAccessor _propertyAccessor;
         private readonly JsonOperationContext _indexContext;
-        private readonly Action<DynamicJsonValue> _modifyOutputToStore;
+        protected Action<DynamicJsonValue> ModifyOutputToStore;
 
-        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext, Action<DynamicJsonValue> modifyOutputToStore = null)
+        public AggregatedAnonymousObjects(List<object> results, IPropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
             _outputs = results;
             _propertyAccessor = propertyAccessor;
             _jsons = new List<BlittableJsonReaderObject>(results.Count);
             _indexContext = indexContext;
-            _modifyOutputToStore = modifyOutputToStore;
         }
 
         public override int Count => _outputs.Count;
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     djv[property.Key] = TypeConverter.ToBlittableSupportedType(value, context: _indexContext);
                 }
 
-                _modifyOutputToStore?.Invoke(djv);
+                ModifyOutputToStore?.Invoke(djv);
 
                 var item = _indexContext.ReadObject(djv, "map/reduce result to store");
                 _jsons.Add(item);
