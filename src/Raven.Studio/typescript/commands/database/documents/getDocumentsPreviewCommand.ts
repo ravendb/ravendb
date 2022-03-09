@@ -28,12 +28,21 @@ class getDocumentsPreviewCommand extends commandBase {
     static readonly ArrayStubsKey = "$a";
     static readonly TrimmedValueKey = "$t";
 
-    constructor(private database: database, private skip: number, private take: number, private collectionName: string, private previewBindings?: string[], private fullBindings?: string[]) {
+    constructor(private database: database, private skip: number, private take: number, private collectionName: string,
+                private previewBindings?: string[], private fullBindings?: string[], private continuationToken?: string) {
         super();
     }
 
     execute(): JQueryPromise<pagedResultWithAvailableColumns<document>> {
-        const args = {
+        
+        const argsWithContinuationToken = {
+            collection: this.collectionName,
+            binding: this.previewBindings,
+            fullBinding: this.fullBindings,
+            "continuation-token": this.continuationToken
+        };
+
+        const argsWithSkipAndTake = {
             collection: this.collectionName,
             start: this.skip,
             pageSize: this.take,
@@ -41,13 +50,16 @@ class getDocumentsPreviewCommand extends commandBase {
             fullBinding: this.fullBindings
         };
 
+        const args = this.continuationToken ? argsWithContinuationToken : argsWithSkipAndTake;
+
         const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR): pagedResultWithAvailableColumns<document> => {
             dto.AvailableColumns.push("__metadata");
             return {
                 items: dto.Results.map(x => this.mapToDocument(x)),
                 totalResultCount: dto.TotalResults,
                 resultEtag: this.extractEtag(xhr),
-                availableColumns: dto.AvailableColumns
+                availableColumns: dto.AvailableColumns,
+                continuationToken: dto.ContinuationToken
             };
         };
         

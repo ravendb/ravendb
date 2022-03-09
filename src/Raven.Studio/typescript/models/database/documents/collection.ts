@@ -59,9 +59,9 @@ class collection {
         return this.isAllDocuments ? "@all_docs" : this.name;
     }
 
-    fetchDocuments(skip: number, take: number, previewColumns?: string[], fullColumns?: string[]): JQueryPromise<pagedResultWithAvailableColumns<document>> {
+    fetchDocuments(skip: number, take: number, previewColumns?: string[], fullColumns?: string[], continuationToken?: string): JQueryPromise<pagedResultWithAvailableColumns<document>> {
         const collection = this.isAllDocuments ? undefined : this.name;
-        return new getDocumentsPreviewCommand(this.db, skip, take, collection, previewColumns, fullColumns)
+        return new getDocumentsPreviewCommand(this.db, skip, take, collection, previewColumns, fullColumns, continuationToken)
             .execute();
     }
 
