@@ -12,6 +12,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,13 +23,15 @@ namespace SlowTests.Issues
         public RavenDB_10546(ITestOutputHelper output) : base(output)
         {
         }
-
-        [Fact]
-        public void CanSetStudioConfiguration()
+        
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanSetStudioConfiguration(Options options)
         {
             DoNotReuseServer();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ServerWideStudioConfiguration serverWideStudioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
 
