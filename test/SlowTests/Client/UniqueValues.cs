@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,21 +28,23 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
-        public async Task CanPutUniqueString()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPutUniqueString(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
             var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test"));
             Assert.Equal("Karmel", res.Value);
         }
 
-        [Fact]
-        public async Task CanPutUniqueObject()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPutUniqueObject(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
@@ -50,11 +53,12 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", res.Value.Name);
         }
 
-        [Fact]
-        public async Task CanPutMultiDifferentValues()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanPutMultiDifferentValues(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
@@ -105,11 +109,12 @@ namespace SlowTests.Client
             Assert.True(res.Successful);
         }
 
-        [Fact]
-        public async Task CanListCompareExchange()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanListCompareExchange(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
@@ -130,11 +135,12 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", values["test2"].Value.Name);
         }
 
-        [Fact]
-        public async Task CanRemoveUnique()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanRemoveUnique(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
             Assert.Equal("Karmel", res.Value);
@@ -144,11 +150,12 @@ namespace SlowTests.Client
             Assert.True(res.Successful);
         }
 
-        [Fact]
-        public async Task RemoveUniqueFailed()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task RemoveUniqueFailed(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
 
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
             Assert.Equal("Karmel", res.Value);
@@ -161,11 +168,12 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", result.Value);
         }
 
-        [Fact]
-        public async Task ReturnCurrentValueWhenPuttingConcurrently()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ReturnCurrentValueWhenPuttingConcurrently(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
@@ -188,11 +196,12 @@ namespace SlowTests.Client
             Assert.Equal("Karmel2", res2.Value.Name);
         }
 
-        [Fact]
-        public async Task CanGetIndexValue()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetIndexValue(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
             {
                 Name = "Karmel"
@@ -208,11 +217,12 @@ namespace SlowTests.Client
             Assert.Equal("Karmel2", res2.Value.Name);
         }
 
-        [Fact]
-        public async Task CanListValues()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanListValues(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             for (var i = 0; i < 10; i++)
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test" + i, new User
@@ -259,8 +269,9 @@ namespace SlowTests.Client
             Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
         }
 
-        [Fact]
-        public async Task SaveSameValuesToDifferentDatabases()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task SaveSameValuesToDifferentDatabases(Options options)
         {
             DoNotReuseServer();
             var store = GetDocumentStore(caller: $"CmpExchangeTest1-{new Guid()}");
@@ -274,10 +285,11 @@ namespace SlowTests.Client
             Assert.True(res2.Successful);
         }
 
-        [Fact]
-        public async Task CompareExchangeShouldBeRemovedFromStorageWhenDbGetsDeleted()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CompareExchangeShouldBeRemovedFromStorageWhenDbGetsDeleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User
                 {
@@ -304,10 +316,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task CompareExchangeTombstoneShouldBeRemovedFromStorageWhenDbGetsDeleted()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CompareExchangeTombstoneShouldBeRemovedFromStorageWhenDbGetsDeleted(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User
                 {
@@ -336,11 +349,12 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task EnsureCanCompareExchangeWithCorrectCharsEscapeInKey()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task EnsureCanCompareExchangeWithCorrectCharsEscapeInKey(Options options)
         {
             DoNotReuseServer();
-            var store = GetDocumentStore();
+            using var store = GetDocumentStore(options);
             var strList = new List<string>()
             {
                 "emails/foo+test@email.com", "fĀthēr&s0n", @"Aa0 !""#$%'()*+,-./:;<=>?@[\]^_`{|}~", "ĀĒĪŌŪAa0 322", "āēīōūBb1 123"
@@ -367,10 +381,11 @@ namespace SlowTests.Client
             Assert.Equal(0, realNumOfCmpXchg);
         }
 
-        [Fact]
-        public async Task CanAddMetadataToSimpleCompareExchange()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanAddMetadataToSimpleCompareExchange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var str = "Test";
                 var num = 123.456;
@@ -397,14 +412,15 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanAddMetadataToCompareExchangeAndWaitForExpiration()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task CanAddMetadataToCompareExchangeAndWaitForExpiration(Options options)
         {
             using var server = GetNewServer();
-            using (var store = GetDocumentStore(new Options
-            {
-                Server = server
-            }))
+
+            options.Server = server;
+
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User
                 {
@@ -446,10 +462,14 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanAddMetadataToSimpleCompareExchangeAndWaitForExpiration()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddMetadataToSimpleCompareExchangeAndWaitForExpiration(Options options)
         {
             using var server = GetNewServer();
+
+            options.Server = server;
+
             using (var store = GetDocumentStore(new Options
             {
                 Server = server
@@ -490,10 +510,14 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task CanAddMetadataToIntCompareExchangeAndWaitForExpiration()
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanAddMetadataToIntCompareExchangeAndWaitForExpiration(Options options)
         {
             using var server = GetNewServer();
+
+            options.Server = server;
+
             using (var store = GetDocumentStore(new Options
             {
                 Server = server
