@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -1233,18 +1233,20 @@ namespace FastTests
             private bool _runInMemory = true;
             private bool _encrypted;
 
+            private StringBuilder _descriptionBuilder;
+
             public static readonly Options Default = new Options(true);
 
             public Options() : this(false)
             {
             }
 
-            public static Options ForSearchEngine(string searchEngineType)
+            public static Options ForSearchEngine(RavenDataExplicitConfiguration config)
             {
                 return new Options() { ModifyDatabaseRecord = d =>
                     {
-                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType;
-                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = searchEngineType;
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                        d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                     }
                 };
             }
@@ -1256,6 +1258,30 @@ namespace FastTests
                 ReplicationFactor = 1;
 
                 _frozen = frozen;
+            }
+
+            public static Options ForMode(RavenDatabaseMode mode)
+            {
+                switch (mode)
+                {
+                    case RavenDatabaseMode.Single:
+                        var single = new Options();
+                        single.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
+
+                        return single;
+                    case RavenDatabaseMode.All:
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
+                }
+            }
+
+            private void AddToDescription(string descriptionToAdd)
+            {
+                _descriptionBuilder ??= new StringBuilder();
+
+                _descriptionBuilder
+                    .Append(" ")
+                    .Append(descriptionToAdd);
             }
 
             public string Path
@@ -1406,6 +1432,35 @@ namespace FastTests
             {
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
+            }
+
+            public override string ToString()
+            {
+                return _descriptionBuilder == null
+                    ? base.ToString()
+                    : _descriptionBuilder.ToString();
+            }
+
+            public Options Clone()
+            {
+                return new Options
+                {
+                    AdminCertificate = AdminCertificate,
+                    ClientCertificate = ClientCertificate,
+                    CreateDatabase = CreateDatabase,
+                    DeleteDatabaseOnDispose = DeleteDatabaseOnDispose,
+                    DeleteTimeout = DeleteTimeout,
+                    Encrypted = Encrypted,
+                    IgnoreDisabledDatabase = IgnoreDisabledDatabase,
+                    ModifyDatabaseName = ModifyDatabaseName,
+                    ModifyDatabaseRecord = ModifyDatabaseRecord,
+                    ModifyDocumentStore = ModifyDocumentStore,
+                    Path = Path,
+                    ReplicationFactor = ReplicationFactor,
+                    RunInMemory = RunInMemory,
+                    Server = Server,
+                    _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
+                };
             }
         }
 

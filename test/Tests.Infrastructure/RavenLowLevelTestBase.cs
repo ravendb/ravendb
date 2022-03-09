@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,11 +11,11 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -49,10 +49,10 @@ namespace FastTests
             });
         }
 
-        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(string searchEngineType)
+        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(RavenDataExplicitConfiguration config)
         {
             return CreateDocumentDatabase(modifyConfiguration: dictionary =>
-                dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = searchEngineType);
+                dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString());
         }
         
         protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
