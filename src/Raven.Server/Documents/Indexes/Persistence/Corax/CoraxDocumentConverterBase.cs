@@ -4,6 +4,7 @@ using System.Buffers.Text;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Amazon.SimpleNotificationService.Model;
 using Corax;
 using Raven.Client.Documents.Indexes;
@@ -22,13 +23,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
 public abstract class CoraxDocumentConverterBase : ConverterBase
 {
+    protected const int DocumentBufferSize = 1024 * 10;
     private static readonly Memory<byte> _trueLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("true"));
     private static readonly Memory<byte> _falseLiteral = new Memory<byte>(Encoding.UTF8.GetBytes("false"));
     private static readonly StandardFormat _standardFormat = new StandardFormat('g');
     private static readonly StandardFormat _timeSpanFormat = new StandardFormat('c');
+    
+    private ConversionScope Scope;
     protected readonly IndexFieldsMapping _knownFields;
-
     protected readonly ByteStringContext _allocator;
+
+    private const int InitialSizeOfEnumerableBuffer = 128;
+    private bool EnumerableDataStructExist => StringsListForEnumerableScope is not null && LongsListForEnumerableScope is not null && DoublesListForEnumerableScope is not null;
+
+    public List<Memory<byte>> StringsListForEnumerableScope;
+    public List<long> LongsListForEnumerableScope;
+    public List<double> DoublesListForEnumerableScope;
 
     public abstract Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
         out LazyStringValue id);
@@ -39,6 +49,7 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     {
         _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
         _knownFields = GetKnownFields();
+        Scope = new();
     }
 
     public static IndexFieldsMapping GetKnownFields(ByteStringContext allocator, Index index)
@@ -192,7 +203,13 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
             case ValueType.Enumerable:
                 var iterator = (IEnumerable)value;
-                var enumerableScope = new EnumerableWriterScope(field.Id, ref entryWriter, scope.GetLengthList(), _allocator);
+                if (EnumerableDataStructExist == false)
+                {
+                    StringsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+                    LongsListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+                    DoublesListForEnumerableScope = new(InitialSizeOfEnumerableBuffer);
+                }
+                var enumerableScope = new EnumerableWriterScope(StringsListForEnumerableScope, LongsListForEnumerableScope, DoublesListForEnumerableScope, _allocator);
                 foreach (var item in iterator)
                 {
                     InsertRegularField(field, item, indexContext, out _, ref entryWriter, enumerableScope);
@@ -207,8 +224,14 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
             case ValueType.ConvertToJson:
                 var val = TypeConverter.ToBlittableSupportedType(value);
-                if (!(val is DynamicJsonValue json))
+                if (val is not DynamicJsonValue json)
+                {
                     InsertRegularField(field, val, indexContext, out _, ref entryWriter, scope, nestedArray);
+                    return;
+                }
+
+                var jsonScope = Scope.CreateJson(json, indexContext);
+                InsertRegularField(field, HandleStreamsAndConversionIntoJson(null, jsonScope), indexContext, out _, ref entryWriter, scope);
                 return;
 
             case ValueType.BlittableJsonObject:
@@ -229,7 +252,24 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
 
         shouldSkip = true;
     }
+    
+    object HandleStreamsAndConversionIntoJson(Stream streamValue, BlittableJsonReaderObject blittableValue)
+    {
+        if (blittableValue is not null)
+        {
+            //TODO PERF 
+            //TODO: Notice this is basic implementation. We've to create additional flag `Json` inside Corax for patching.
+            var blittableReader = Scope.GetBlittableReader();
+            var reader = blittableReader.GetTextReaderFor(blittableValue);
+            return reader.ReadToEnd();
+        }
+        if (streamValue is not null)
+        {
+            return ToArray(Scope, streamValue, out var streamLength);
+        }
 
+        throw new InvalidParameterException($"Got no data at {nameof(HandleStreamsAndConversionIntoJson)}");
+    }
     void HandleArray(IEnumerable itemsToIndex, IndexField field, JsonOperationContext indexContext, out bool shouldSkip, ref IndexEntryWriter entryWriter,
         IWriterScope scope, bool nestedArray = false)
     {
@@ -257,5 +297,10 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
         }
 
         shouldSkip = false;
+    }
+
+    public override void Dispose()
+    {
+        Scope?.Dispose();
     }
 }

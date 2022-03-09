@@ -385,7 +385,7 @@ namespace Raven.Server.Config.Categories
         public SearchEngineType AutoIndexingEngineType { get; protected set; }
 
         [Description("Search engine for static indexes")]
-        [DefaultValue(SearchEngineType.Lucene)]
+        [DefaultValue(SearchEngineType.Corax)]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.Static.SearchEngineType", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public SearchEngineType StaticIndexingEngineType { get; protected set; }

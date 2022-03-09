@@ -26,7 +26,8 @@ namespace FastTests.Client.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
         public void CanCompileIndexWithExtensions(Options options)
         {
             CopyNodaTimeIfNeeded();

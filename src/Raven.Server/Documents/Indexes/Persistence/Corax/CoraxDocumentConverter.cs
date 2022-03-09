@@ -33,8 +33,7 @@ public class CoraxDocumentConverter : CoraxDocumentConverterBase
             bool shouldSkip;
 
 
-            List<int> stringsLength = new List<int>(128);
-            var scope = new SingleEntryWriterScope(stringsLength, _allocator);
+            var scope = new SingleEntryWriterScope(_allocator);
             scope.Write(0, id.AsSpan(), ref entryWriter);
             object value;
             foreach (var indexField in _fields.Values)

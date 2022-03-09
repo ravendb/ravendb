@@ -13,6 +13,7 @@ namespace Corax
 
         public static class IndexSearcher
         {
+            public const int InvalidId = -1;
             public const int TakeAll = -1;
             public const int NonAnalyzer = -1;
         }

@@ -1,6 +1,13 @@
 ﻿using System;
+using System.IO;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Indexing;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -30,8 +37,20 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             case IndexType.Map:
                 _converter = new AnonymousCoraxDocumentConverter(index);
                 break;
-            default:
-                storeValue = false;
+            case IndexType.JavaScriptMap:
+                switch (_index.SourceType)
+                {
+                    case IndexSourceType.Documents:
+                        _converter = new JintCoraxDocumentConverter((MapIndex)index);
+                        break;
+                    case IndexSourceType.TimeSeries:
+                        throw new InvalidDataException($"Currently, {nameof(TimeSeries)} are not supported by Corax");
+                    case IndexSourceType.Counters:
+                        throw new InvalidDataException($"Currently, {nameof(IndexSourceType.Counters)} are not supported by Corax");
+                }
+                break;
+            case IndexType.JavaScriptMapReduce:
+                _converter = new JintCoraxDocumentConverter((MapReduceIndex)index, storeValue: true);
                 break;
         }
         _converter ??= new CoraxDocumentConverter(index, storeValue: storeValue);
@@ -122,77 +141,5 @@ public class CoraxIndexPersistence : IndexPersistenceBase
             _logger
         );
     }
-
-    public override IndexReadOperationBase OpenIndexReader(Transaction readTransaction) => new CoraxIndexReadOperation(_index, _logger, readTransaction);
-
-    public override bool ContainsField(string field)
-    {
-        if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-            return _index.Type.IsMap();
-
-        return _index.Definition.IndexFields.ContainsKey(field);
-    }
-
-    public override IndexFacetedReadOperation OpenFacetedIndexReader(Transaction readTransaction)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override SuggestionIndexReaderBase OpenSuggestionIndexReader(Transaction readTransaction, string field)
-    {
-        throw new NotImplementedException();
-    }
-
-    public override void Dispose()
-    {
-        _converter?.Dispose();
-    }
-
-    #region LuceneMethods
-
-    public override bool HasWriter { get; }
-
-    public override void CleanWritersIfNeeded()
-    {
-        // lucene method
-    }
-
-    public override void Clean(IndexCleanup mode)
-    {
-        // lucene method
-    }
-
-    public override void Initialize(StorageEnvironment environment)
-    {
-        // lucene method
-    }
-
-    public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
-    {
-        //lucene method
-    }
-
-    internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
-    {
-        //lucene method
-
-        return null;
-    }
-
-    internal override void RecreateSearcher(Transaction asOfTx)
-    {
-        //lucene method
-    }
-
-    internal override void RecreateSuggestionsSearchers(Transaction asOfTx)
-    {
-        //lucene method
-    }
-
-    public override void DisposeWriters()
-    {
-        //lucene method
-    }
-
-    #endregion
+    
 }
