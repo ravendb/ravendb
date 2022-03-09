@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -9,34 +10,33 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System.Processors;
 
-public class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue : IDisposable
+internal class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue : AbstractHandlerProcessor<RequestHandler, TransactionOperationContext>
 {
-    private readonly RequestHandler _requestHandler;
     private readonly string _databaseName;
 
     public CompareExchangeHandlerProcessorForDeleteCompareExchangeValue([NotNull] RequestHandler requestHandler, [NotNull] string databaseName)
+        : base(requestHandler, requestHandler.ServerStore.ContextPool)
     {
-        _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
         _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
     }
 
-    public async ValueTask ExecuteAsync()
+    public override async ValueTask ExecuteAsync()
     {
-        var key = _requestHandler.GetStringQueryString("key");
-        var raftRequestId = _requestHandler.GetRaftRequestIdFromQuery();
+        var key = RequestHandler.GetStringQueryString("key");
+        var raftRequestId = RequestHandler.GetRaftRequestIdFromQuery();
 
         // ReSharper disable once PossibleInvalidOperationException
-        var index = _requestHandler.GetLongQueryString("index", true).Value;
+        var index = RequestHandler.GetLongQueryString("index", true).Value;
 
-        await _requestHandler.ServerStore.EnsureNotPassiveAsync();
+        await RequestHandler.ServerStore.EnsureNotPassiveAsync();
 
-        using (_requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var command = new RemoveCompareExchangeCommand(_databaseName, key, index, context, raftRequestId);
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, _requestHandler.ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                (var raftIndex, var response) = await _requestHandler.ServerStore.SendToLeaderAsync(context, command);
-                await _requestHandler.ServerStore.Cluster.WaitForIndexNotification(raftIndex);
+                (var raftIndex, var response) = await RequestHandler.ServerStore.SendToLeaderAsync(context, command);
+                await RequestHandler.ServerStore.Cluster.WaitForIndexNotification(raftIndex);
 
                 var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
                 context.Write(writer, new DynamicJsonValue
@@ -47,9 +47,5 @@ public class CompareExchangeHandlerProcessorForDeleteCompareExchangeValue : IDis
                 });
             }
         }
-    }
-
-    public void Dispose()
-    {
     }
 }
