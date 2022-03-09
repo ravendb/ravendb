@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
@@ -15,6 +17,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public string Query { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
+        public Dictionary<string, string> NextBatchStartingPointChangeVectors { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
@@ -61,7 +64,8 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(NodeTag)] = NodeTag,
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
-                [nameof(Disabled)] = Disabled
+                [nameof(Disabled)] = Disabled,
+                [nameof(NextBatchStartingPointChangeVectors)] = NextBatchStartingPointChangeVectors?.ToJson()
             };
 
             return djv;

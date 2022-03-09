@@ -7,6 +7,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.Documents.Sharding;
@@ -14,13 +15,12 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide.Commands.Subscriptions;
+using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions.DeleteSubscriptionCommand;
 
 namespace Raven.Server.Documents.ShardedHandlers
 {
@@ -129,26 +129,15 @@ namespace Raven.Server.Documents.ShardedHandlers
             }
         }
 
-        private  async Task CreateSubscriptionInternal(long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
+        private async Task CreateSubscriptionInternal(long? id, bool? disabled, SubscriptionCreationOptions options, JsonOperationContext context)
         {
             var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
-            if (Enum.TryParse(options.ChangeVector, out Client.Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
-            {
-                switch (changeVectorSpecialValue)
-                {
-                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
-                        options.ChangeVector = null;
-                        break;
+            var changeVectorValidationResult = await TryValidateChangeVector(options, sub);
 
-                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        options.ChangeVector = await ShardedContext.GetLastDocumentChangeVectorForCollection(sub.Collection);
-                        break;
-                }
-            }
-
-            var (etag, _) = await ServerStore.SendToLeaderAsync(new PutSubscriptionCommand(ShardedContext.DatabaseName, options.Query, options.MentorNode, GetRaftRequestIdFromQuery())
+            var (etag, _) = await ServerStore.SendToLeaderAsync(new PutShardedSubscriptionCommand(ShardedContext.DatabaseName, options.Query, options.MentorNode, GetRaftRequestIdFromQuery())
             {
-                InitialChangeVector = options.ChangeVector,
+                InitialChangeVectorsCollection = changeVectorValidationResult.ChangeVectorsCollection,
+                InitialChangeVector = changeVectorValidationResult.InitialChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = id,
                 Disabled = disabled ?? false
@@ -184,6 +173,57 @@ namespace Raven.Server.Documents.ShardedHandlers
                     [nameof(CreateSubscriptionResult.RaftCommandIndex)] = index
                 });
             }
+        }
+
+        private struct ChangeVectorValidationResult
+        {
+            public Dictionary<string, string> ChangeVectorsCollection;
+            public string InitialChangeVector;
+        }
+
+        private async Task<ChangeVectorValidationResult> TryValidateChangeVector(SubscriptionCreationOptions options, SubscriptionConnection.ParsedSubscription sub)
+        {
+            var result = new ChangeVectorValidationResult()
+            {
+                ChangeVectorsCollection = null,
+                InitialChangeVector = null
+            };
+            if (Enum.TryParse(options.ChangeVector, out Client.Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorSpecialValue))
+            {
+                switch (changeVectorSpecialValue)
+                {
+                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+                        break;
+                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
+                        result.ChangeVectorsCollection = (await ShardedContext.GetLastDocumentChangeVectorForCollection(sub.Collection)).LastChangeVectors;
+                        foreach ((string key, string value) in result.ChangeVectorsCollection)
+                        {
+                            try
+                            {
+                                value.ToChangeVector();
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException($"Could not parse change vector for shard '{key}', CV: '{value}'", e);
+                            }
+                        }
+
+                        break;
+                    case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
+                        result.InitialChangeVector = options.ChangeVector;
+                        break;
+                    default:
+                        result.InitialChangeVector = options.ChangeVector;
+                        if (string.IsNullOrEmpty(result.InitialChangeVector) == false)
+                        {
+                            throw new InvalidOperationException("Setting initial change vector for sharded subscription is not allowed.");
+                        }
+
+                        break;
+                }
+            }
+
+            return result;
         }
 
         private async Task GetResponsibleNodesAndWaitForExecution(string name, long index)

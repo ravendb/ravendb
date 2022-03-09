@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
@@ -353,6 +354,7 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(SubscriptionState.SubscriptionId)] = state.SubscriptionId,
                 [nameof(SubscriptionState.SubscriptionName)] = state.SubscriptionName,
                 [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = state.ChangeVectorForNextBatchStartingPoint,
+                [nameof(SubscriptionState.NextBatchStartingPointChangeVectors)] = state.NextBatchStartingPointChangeVectors?.ToJson(),
                 [nameof(SubscriptionState.Query)] = state.Query,
                 [nameof(SubscriptionState.Disabled)] = state.Disabled,
                 [nameof(SubscriptionState.LastClientConnectionTime)] = state.LastClientConnectionTime,
@@ -368,6 +370,7 @@ namespace Raven.Server.Documents.Handlers
                     ["State"] = new DynamicJsonValue()
                     {
                         ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.NextBatchStartingPointChangeVectors?.ToJson(),
                         ["Query"] = r.SubscriptionState.Query
                     },
                     ["Connection"] = GetSubscriptionConnectionJson(r)
@@ -377,6 +380,7 @@ namespace Raven.Server.Documents.Handlers
                     ["State"] = new DynamicJsonValue()
                     {
                         ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
+                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.NextBatchStartingPointChangeVectors?.ToJson(),
                         ["Query"] = r.SubscriptionState.Query
                     },
                     ["Connection"] = GetSubscriptionConnectionJson(r)

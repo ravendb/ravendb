@@ -1,28 +1,36 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Server.Json;
-using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 {
-    public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult>
+    public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
     {
         private readonly string _collection;
+        private readonly string _database;
 
-        public ShardedLastChangeVectorForCollectionOperation(string collection)
+        public ShardedLastChangeVectorForCollectionOperation(string collection, string database)
         {
             _collection = collection;
+            _database = database;
         }
 
-        public LastChangeVectorForCollectionResult Combine(Memory<LastChangeVectorForCollectionResult> results)
+        public LastChangeVectorForCollectionCombinedResult Combine(Memory<LastChangeVectorForCollectionResult> results)
         {
-            return new LastChangeVectorForCollectionResult
+            var dic = new Dictionary<string, string>();
+            var array = results.Span;
+            for (var i = 0; i < array.Length; i++)
+            {
+                dic.Add($"{_database}${i}", array[i].LastChangeVector);
+            }
+
+            return new LastChangeVectorForCollectionCombinedResult
             {
                 Collection = _collection,
-                LastChangeVector = ChangeVectorUtils.MergeVectors(results.ToArray().Select(x => x.LastChangeVector).ToArray())
+                LastChangeVectors = dic
             };
         }
 
@@ -68,5 +76,11 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
     {
         public string Collection { get; set; }
         public string LastChangeVector { get; set; }
+    }
+
+    public class LastChangeVectorForCollectionCombinedResult
+    {
+        public string Collection { get; set; }
+        public Dictionary<string, string> LastChangeVectors { get; set; }
     }
 }

@@ -15,13 +15,12 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.Subscriptions;
+using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Utils;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -355,7 +354,7 @@ namespace SlowTests.Sharding.Subscriptions
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Cannot set CV by admin in sharded subscription")]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
             using (var store = GetShardedDocumentStore())
@@ -567,6 +566,77 @@ namespace SlowTests.Sharding.Subscriptions
                     Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
 
                 Assert.True(result);
+            }
+        }
+
+        [Fact]
+        public async Task ConcurrentSubscriptions()
+        {
+            using (var store = GetShardedDocumentStore())
+            {
+                var id = store.Subscriptions.Create<User>();
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    MaxDocsPerBatch = 2
+                }))
+                using (var secondSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
+                {
+                    Strategy = SubscriptionOpeningStrategy.Concurrent,
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
+                    MaxDocsPerBatch = 2
+                }))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User(), "user/1");
+                        session.Store(new User(), "user/2");
+                        session.Store(new User(), "user/3");
+                        session.Store(new User(), "user/4");
+                        session.Store(new User(), "user/5");
+                        session.Store(new User(), "user/6");
+                        session.SaveChanges();
+                    }
+
+                    var con1Docs = new List<string>();
+                    var con2Docs = new List<string>();
+
+                    var t = subscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            con1Docs.Add(item.Id);
+                        }
+                    });
+
+                    var _ = secondSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            con2Docs.Add(item.Id);
+                        }
+                    });
+
+                    await AssertWaitForTrueAsync(() => Task.FromResult(con1Docs.Count + con2Docs.Count == 6), 6000);
+                    await AssertNoLeftovers(store, id);
+                }
+            }
+        }
+
+        private async Task AssertNoLeftovers(IDocumentStore store, string id)
+        {
+            var shards = await GetShardsDocumentDatabaseInstancesFor(store);
+            foreach (var db in shards)
+            {
+                await AssertWaitForValueAsync(() =>
+                {
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        return Task.FromResult(db.SubscriptionStorage.GetSubscriptionConnectionsState(ctx, id).GetNumberOfResendDocuments(SubscriptionType.Document));
+                    }
+                }, 0);
             }
         }
     }
