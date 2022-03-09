@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _fieldMappings = CoraxDocumentConverterBase.GetKnownFields(readTransaction.Allocator, index);
             _fieldMappings.UpdateAnalyzersInBindings(CoraxIndexingHelpers.CreateCoraxAnalyzers(readTransaction.Allocator, index, index.Definition, true));
             _indexSearcher = new IndexSearcher(readTransaction, _fieldMappings);
-            _coraxQueryEvaluator = new CoraxQueryEvaluator(_indexSearcher);
+            _coraxQueryEvaluator = new CoraxQueryEvaluator(index, _indexSearcher);
         }
 
         public override long EntriesCount() => _entriesCount;

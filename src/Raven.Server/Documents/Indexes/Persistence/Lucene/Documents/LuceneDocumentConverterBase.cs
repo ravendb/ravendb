@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             _storeValueField = new Field(storeValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
-            Scope = new ConversionScope(this);
+            Scope = new (storeValue, _storeValueField);
         }
 
         // returned document needs to be written do index right after conversion because the same cached instance is used here
@@ -651,19 +651,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             return field;
 
-            static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
-            {
-                length = (int)(stream.Length - stream.Position);
-
-                var buffer = scope.RentArray(length);
-
-                using (var ms = new MemoryStream(buffer))
-                {
-                    stream.CopyTo(ms);
-
-                    return buffer;
-                }
-            }
+            
         }
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
@@ -805,85 +793,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (isMultipleItemsSameField)
                 _numberOfItemsInNumericFieldsCacheForMultipleItemsSameField++;
-        }
-
-        protected class ConversionScope : IDisposable
-        {
-            private readonly LinkedList<IDisposable> _toDispose = new LinkedList<IDisposable>();
-            private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
-            private readonly LinkedList<byte[]> _arrays = new LinkedList<byte[]>();
-
-            private readonly LuceneDocumentConverterBase _parent;
-
-            private static readonly byte[] EmptyBuffer = Array.Empty<byte>();
-
-            public ConversionScope(LuceneDocumentConverterBase parent)
-            {
-                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
-            }
-
-            public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
-            {
-                var result = context.ReadObject(djv, "lucene field as json");
-
-                _toDispose.AddFirst(result);
-
-                return result;
-            }
-
-            public void AddToDispose(IDisposable toDispose)
-            {
-                if (toDispose == null)
-                    return;
-
-                _toDispose.AddFirst(toDispose);
-            }
-
-            public void Dispose()
-            {
-                if (_parent._storeValue)
-                    _parent._storeValueField.SetValue(EmptyBuffer);
-
-                if (_toDispose.Count > 0)
-                {
-                    foreach (var toDispose in _toDispose)
-                        toDispose.Dispose();
-
-                    _toDispose.Clear();
-                }
-
-                if (_readers.Count > 0)
-                {
-                    foreach (var reader in _readers)
-                        BlittableObjectReaderPool.Instance.Free(reader);
-
-                    _readers.Clear();
-                }
-
-                if (_arrays.Count > 0)
-                {
-                    foreach (var array in _arrays)
-                        ArrayPool<byte>.Shared.Return(array);
-
-                    _arrays.Clear();
-                }
-            }
-
-            public BlittableObjectReader GetBlittableReader()
-            {
-                var reader = BlittableObjectReaderPool.Instance.Allocate();
-                _readers.AddFirst(reader);
-
-                return reader;
-            }
-
-            public byte[] RentArray(int length)
-            {
-                var array = ArrayPool<byte>.Shared.Rent(length);
-                _arrays.AddFirst(array);
-
-                return array;
-            }
         }
     }
 }

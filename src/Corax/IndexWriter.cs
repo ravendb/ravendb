@@ -218,11 +218,10 @@ namespace Corax
 
         private unsafe void AddSuggestions(IndexFieldBinding binding, Slice slice)
         {
-            if (_suggestionsAccumulator == null)
-                _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
+            _suggestionsAccumulator ??= new Dictionary<int, Dictionary<Slice, int>>();
 
-            if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
-            {
+            if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
+            {             
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
@@ -236,7 +235,7 @@ namespace Corax
             while (idx < keysCount)
             {
                 var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
-                if (!suggestionsToAdd.TryGetValue(key, out int counter))
+                if (suggestionsToAdd.TryGetValue(key, out int counter) == false) 
                     counter = 0;
 
                 counter++;
@@ -250,8 +249,8 @@ namespace Corax
             if (_suggestionsAccumulator == null)
                 _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
 
-            if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
-            {
+            if (_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd) == false)
+            {                
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
@@ -265,7 +264,7 @@ namespace Corax
             while (idx < keysCount)
             {
                 var key = new Slice(bsc.Slice(keys, idx * keySizes, keySizes, ByteStringType.Immutable));
-                if (!suggestionsToAdd.TryGetValue(key, out int counter))
+                if (suggestionsToAdd.TryGetValue(key, out int counter) == false)
                     counter = 0;
 
                 counter--;
@@ -593,7 +592,7 @@ namespace Corax
                     var tree = Transaction.CompactTreeFor(treeName);
                     foreach (var (key, counter) in values)
                     {
-                        if (!tree.TryGetValue(key, out var storedCounter))
+                        if (tree.TryGetValue(key, out var storedCounter) == false)
                             storedCounter = 0;
 
                         long finalCounter = storedCounter + counter;
@@ -608,6 +607,7 @@ namespace Corax
 
             if (_ownsTransaction)
                 Transaction.Commit();
+            
         }
 
         private unsafe void AddNewTerm(List<long> entries, CompactTree fieldTree, ReadOnlySpan<byte> termsSpan, Span<byte> tmpBuf)

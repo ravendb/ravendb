@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
+        public const int MaximumPersistedCapacityOfCoraxWriter = 512;
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
         private readonly IndexFieldsMapping _knownFields;                
@@ -124,7 +125,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         public override void Dispose()
         {
-            _indexWriter?.Dispose();           
+            _indexWriter?.Dispose();
+            if (_converter.StringsListForEnumerableScope?.Capacity > MaximumPersistedCapacityOfCoraxWriter)
+            {
+                //We want to make sure we didn't persist too much memory for our enumerable writer.
+                _converter.DoublesListForEnumerableScope = null;
+                _converter.LongsListForEnumerableScope = null;
+                _converter.StringsListForEnumerableScope = null;
+            }
+            else
+            {
+                //We want to make sure we didn't persist too much memory for our enumerable writer.
+                _converter.DoublesListForEnumerableScope?.Clear();
+                _converter.LongsListForEnumerableScope?.Clear();
+                _converter.StringsListForEnumerableScope?.Clear();
+            }
         }
     }
 }

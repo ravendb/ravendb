@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence;
@@ -213,6 +214,16 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration, indexVersion);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
+            
+            if (configuration.Indexing.StaticIndexingEngineType is SearchEngineType.Corax)
+            {
+                if (staticIndex.HasDynamicFields)
+                    throw new IndexCreationException($"{nameof(Corax)} is not supporting dynamic fields yet. Please use Lucene engine.");
+                
+                if (staticIndex.HasBoostedFields)
+                    throw new IndexCreationException($"{nameof(Corax)} is not supporting boosting inside index yet. Please use Lucene engine.");
+            }
+            
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }

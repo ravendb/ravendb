@@ -9,22 +9,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.WriterScopes
 {
     public class SingleEntryWriterScope : IWriterScope
     {
-        private readonly List<int> _lengthList;
         private readonly ByteStringContext _allocator;
 
-        public SingleEntryWriterScope(List<int> lengthList, ByteStringContext allocator)
+        public SingleEntryWriterScope(ByteStringContext allocator)
         {
             _allocator = allocator;
-            _lengthList = lengthList;
         }
         
         public void Write(int field, ReadOnlySpan<byte> value, ref IndexEntryWriter entryWriter)
         {
             entryWriter.Write(field, value);
         }
-
-        public List<int> GetLengthList() => _lengthList;
-
+        
         public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue, ref IndexEntryWriter entryWriter)
         {
             entryWriter.Write(field, value, longValue, doubleValue);

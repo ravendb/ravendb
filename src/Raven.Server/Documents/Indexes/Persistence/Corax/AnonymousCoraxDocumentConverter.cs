@@ -21,19 +21,15 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
     private IPropertyAccessor _propertyAccessor;
 
     public AnonymousCoraxDocumentConverter(Index index, bool storeValue = false)
-        : base(index, storeValue, false, true, 1, null,Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+        : base(index, storeValue, false, true, 1, null, Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
     {
         _isMultiMap = index.IsMultiMap;
     }
-
-    public override void Dispose()
-    {
-        //throw new NotImplementedException();
-    }
-
+    
     public override Span<byte> SetDocumentFields(LazyStringValue key, LazyStringValue sourceDocumentId, object doc, JsonOperationContext indexContext,
         out LazyStringValue id)
     {
+        //todo maciej boosting inside index
         var boostedValue = doc as BoostedValue;
         var documentToProcess = boostedValue == null ? doc : boostedValue.Value;
 
@@ -42,37 +38,40 @@ public class AnonymousCoraxDocumentConverter : CoraxDocumentConverterBase
         if (_isMultiMap == false)
             accessor = _propertyAccessor ??= PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess);
         else
-            accessor = Raven.Server.Utils.TypeConverter.GetPropertyAccessor(documentToProcess);
+            accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 
-        using var _ = _allocator.Allocate(9086 * 8, out ByteString buffer);
+        // We need to discuss how we will handle this.  
+        // https://github.com/ravendb/ravendb/pull/13730#discussion_r820661488
+        using var _ = _allocator.Allocate(DocumentBufferSize, out ByteString buffer);
         var entryWriter = new IndexEntryWriter(buffer.ToSpan(), _knownFields);
-        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException(""));
-        List<int> stringsLength = new List<int>(128);
-        var scope = new SingleEntryWriterScope(stringsLength, _allocator);
 
+        id = key ?? (sourceDocumentId ?? throw new InvalidParameterException("Cannot find any identifier of the document."));
+        var scope = new SingleEntryWriterScope(_allocator);
         var storedValue = _storeValue ? new DynamicJsonValue() : null;
 
 
         scope.Write(0, id.AsSpan(), ref entryWriter);
-        int idX = 1;
         foreach (var property in accessor.GetPropertiesInOrder(documentToProcess))
         {
             var value = property.Value;
 
             IndexField field;
 
-            try
+
+            if (_knownFields.TryGetByFieldName(property.Key, out var binding))
             {
                 field = _fields[property.Key];
-                field.Id = idX++;
+                field.Id = binding.FieldId;
             }
-            catch (KeyNotFoundException e)
+            else
             {
-                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
+                throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.");
             }
+
 
             if (storedValue is not null)
             {
+                //Notice: we are always saving values inside Corax index. This method is explicitly for MapReduce because we have to have JSON as the last item.
                 var blittableValue = TypeConverter.ToBlittableSupportedType(value, out TypeConverter.BlittableSupportedReturnType returnType, flattenArrays: true);
 
                 if (returnType == TypeConverter.BlittableSupportedReturnType.Ignored)

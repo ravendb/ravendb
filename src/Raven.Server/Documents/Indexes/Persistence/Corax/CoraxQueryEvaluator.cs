@@ -9,6 +9,7 @@ using Corax.Queries;
 using Google.Protobuf.WellKnownTypes;
 using JetBrains.Annotations;
 using Nest;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -21,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxQueryEvaluator : IDisposable
     {
+        private readonly Index _index;
         private readonly IndexSearcher _searcher;
         private readonly ByteStringContext _allocator;
         private IndexQueryServerSide _query;
@@ -30,10 +32,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         [CanBeNull]
         private FieldsToFetch _fieldsToFetch;
 
-        public CoraxQueryEvaluator(IndexSearcher searcher)
+        public CoraxQueryEvaluator(Index index, IndexSearcher searcher)
         {
             _allocator = new(SharedMultipleUseFlag.None);
             _searcher = searcher;
+            _index = index;
         }
 
         public IQueryMatch Search(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, int take = TakeAll)
@@ -74,12 +77,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
                             return _searcher.StartWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, scoreFunction, isNegated, fieldId);
+                                GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated, fieldId);
                         case MethodType.EndsWith:
                             fieldName = GetField(methodExpression.Arguments[0]);
                             fieldId = GetFieldIdInIndex(fieldName);
-                            return _searcher.EndsWithQuery(fieldName,
-                                ((ValueExpression)methodExpression.Arguments[1]).Token.Value, scoreFunction, isNegated, fieldId);
+                            return _searcher.EndsWithQuery(fieldName, GetFieldValue((ValueExpression)methodExpression.Arguments[1]).ToString(), scoreFunction, isNegated, fieldId);
                         case MethodType.Exact:
                             return BinaryEvaluator((BinaryExpression)methodExpression.Arguments[0], isNegated, take, scoreFunction);
                         case MethodType.Boost:
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IQueryMatch SearchMethod<TScoreFunction>(MethodExpression expression, bool isNegated, TScoreFunction scoreFunction)
             where TScoreFunction : IQueryScoreFunction
         {
-            var fieldName = $"search({GetField(expression.Arguments[0])})";
+            var fieldName = _index.Type is IndexType.AutoMap or IndexType.AutoMapReduce ? $"search({GetField(expression.Arguments[0])})" : GetField(expression.Arguments[0]);
             var fieldId = GetFieldIdInIndex(fieldName);
             Constants.Search.Operator @operator = Constants.Search.Operator.Or;
             string searchTerm;
@@ -176,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     value = (ValueExpression)expression.Right;
                     field = (FieldExpression)expression.Left;
                     fieldName = GetField(field);
-                    var match = _searcher.TermQuery(fieldName, value.GetValue(_query.QueryParameters).ToString(), GetFieldIdInIndex(fieldName));
+                    var match = _searcher.TermQuery(fieldName, GetFieldValue(value).ToString(), GetFieldIdInIndex(fieldName));
                     return scoreFunction is NullScoreFunction
                         ? match
                         : _searcher.Boost(match, scoreFunction);
@@ -296,8 +298,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 case double:
                     valueType = ValueTokenType.Double;
                     break;
+                case LazyStringValue lsv:
+                    valueType = ValueTokenType.String;
+                    fieldValue = lsv.ToString();
+                    break;
+                    
                 default:
-                    throw new NotSupportedException($"Unsupported type: ${fieldValue}.");
+                    throw new NotSupportedException($"Unsupported type: {fieldValue}.");
             }
 
             return (valueType, fieldValue);
@@ -689,7 +696,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _ => throw new InvalidQueryException("Maximum amount of comparers in ORDER BY clause is 8.")
             };
         }
-
+        
         public void Dispose()
         {
             _allocator?.Dispose();
