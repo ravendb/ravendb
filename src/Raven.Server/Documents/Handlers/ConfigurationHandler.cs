@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetStudioConfiguration()
         {
-            using (var processor = new ConfigurationHandlerProcessorForGetStudioConfiguration(this, Database))
+            using (var processor = new ConfigurationHandlerProcessorForGetStudioConfiguration(this))
                 await processor.ExecuteAsync();
         }
 

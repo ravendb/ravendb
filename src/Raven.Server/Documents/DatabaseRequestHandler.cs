@@ -17,8 +17,8 @@ namespace Raven.Server.Documents
 {
     public abstract class DatabaseRequestHandler : RequestHandler
     {
-        protected DocumentsContextPool ContextPool;
-        protected DocumentDatabase Database;
+        public DocumentsContextPool ContextPool;
+        public DocumentDatabase Database;
         protected Logger Logger;
 
         public override void Init(RequestHandlerContext context)

@@ -560,7 +560,7 @@ namespace Raven.Server.Web
             return Task.CompletedTask;
         }
 
-        protected void NoContentStatus(HttpStatusCode statusCode = HttpStatusCode.NoContent)
+        internal void NoContentStatus(HttpStatusCode statusCode = HttpStatusCode.NoContent)
         {
             HttpContext.Response.Headers.Remove("Content-Type");
             HttpContext.Response.StatusCode = (int)statusCode;
