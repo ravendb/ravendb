@@ -9,20 +9,22 @@ namespace Raven.Server.Documents.Queries;
 
 public struct IndexQueryReader
 {
-    public int Start, PageSize;
-    public HttpContext HttpContext;
-    public Stream Stream;
-    public QueryMetadataCache QueryMetadataCache;
-    public DocumentDatabase Database;
+    private readonly int _start, _pageSize;
+    private readonly HttpContext _httpContext;
+    private readonly Stream _stream;
+    private readonly QueryMetadataCache _queryMetadataCache;
+    private readonly DocumentDatabase _database;
+    private readonly bool _addSpatialProperties;
 
-    public IndexQueryReader(int start, int pageSize, HttpContext httpContext, Stream stream, QueryMetadataCache queryMetadataCache, DocumentDatabase database)
+    public IndexQueryReader(int start, int pageSize, HttpContext httpContext, Stream stream, QueryMetadataCache queryMetadataCache, DocumentDatabase database, bool addSpatialProperties = false)
     {
-        Start = start;
-        PageSize = pageSize;
-        HttpContext = httpContext;
-        Stream = stream;
-        QueryMetadataCache = queryMetadataCache;
-        Database = database;
+        _start = start;
+        _pageSize = pageSize;
+        _httpContext = httpContext;
+        _stream = stream;
+        _queryMetadataCache = queryMetadataCache;
+        _database = database;
+        _addSpatialProperties = addSpatialProperties;
     }
 
     public ValueTask<IndexQueryServerSide> GetIndexQueryAsync(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
@@ -32,11 +34,11 @@ public struct IndexQueryReader
             return ReadIndexQueryAsync(context, tracker);
         }
 
-        var read = context.ReadForMemoryAsync(Stream, "index/query");
+        var read = context.ReadForMemoryAsync(_stream, "index/query");
         if (read.IsCompleted)
         {
 
-            var result = IndexQueryServerSide.Create(HttpContext, read.Result, QueryMetadataCache, tracker, database: Database);
+            var result = IndexQueryServerSide.Create(_httpContext, read.Result, _queryMetadataCache, tracker, _addSpatialProperties, database: _database);
             return ValueTask.FromResult(result);
         }
 
@@ -46,11 +48,11 @@ public struct IndexQueryReader
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(ValueTask<BlittableJsonReaderObject> read, RequestTimeTracker tracker)
     {
         var json = await read;
-        return IndexQueryServerSide.Create(HttpContext, json, QueryMetadataCache, tracker, database: Database);
+        return IndexQueryServerSide.Create(_httpContext, json, _queryMetadataCache, tracker, database: _database);
     }
 
     private async ValueTask<IndexQueryServerSide> ReadIndexQueryAsync(JsonOperationContext context, RequestTimeTracker tracker)
     {
-        return await IndexQueryServerSide.CreateAsync(HttpContext, Start, PageSize, context, tracker);
+        return await IndexQueryServerSide.CreateAsync(_httpContext, _start, _pageSize, context, tracker, _addSpatialProperties);
     }
 }

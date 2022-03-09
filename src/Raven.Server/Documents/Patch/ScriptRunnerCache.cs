@@ -6,6 +6,7 @@ using System.Linq;
 using Raven.Server.Config;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -102,6 +103,8 @@ namespace Raven.Server.Documents.Patch
 
         public void UpdateConfiguration(RavenConfiguration configuration)
         {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Bump the generation like we do in the ArenaAllocator and maybe remove if needed");
+
             foreach (var keyValue in _cache)
             {
                 keyValue.Value.Value.UpdateConfiguration(configuration);

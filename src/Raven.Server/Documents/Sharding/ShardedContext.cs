@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Sharding
 
         private readonly ServerStore _serverStore;
         private readonly long _lastClientConfigurationIndex;
-        private readonly ShardedIndexesCache _indexes;
         private readonly ShardExecutor _shardExecutor;
 
         private DatabaseRecord _record;
@@ -33,7 +32,6 @@ namespace Raven.Server.Documents.Sharding
         public ShardExecutor ShardExecutor => _shardExecutor;
         public DatabaseRecord DatabaseRecord => _record;
 
-        public ShardedIndexesCache Indexes => _indexes;
 
         public int[] FullRange;
 
@@ -68,8 +66,10 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateContext(out JsonOperationContext context) => _serverStore.ContextPool.AllocateOperationContext(out context);
 
-        public void UpdateDatabaseRecord(DatabaseRecord record)
+        public void UpdateDatabaseRecord(RawDatabaseRecord record)
         {
+            Indexes.Update(record);
+
             Interlocked.Exchange(ref _record, record);
         }
 

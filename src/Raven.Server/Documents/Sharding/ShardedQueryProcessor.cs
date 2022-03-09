@@ -36,6 +36,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     private readonly Dictionary<int, ShardedQueryCommand> _commands;
     private readonly HashSet<int> _filteredShardIndexes;
     private readonly ShardedQueryResult _result;
+    private readonly List<IDisposable> _disposables = new();
 
     // User should also be able to define a query parameter ("Sharding.Context") which is an array
     // that contains the ids whose shards the query should be limited to. Advanced: Optimization if user
@@ -220,7 +221,9 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
         foreach (var (shardIndex, cmd) in _commands)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
-            var task = _parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, cmd.Context);
+
+            _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+            var task = _parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context);
             tasks.Add(task);
         }
 
@@ -266,38 +269,31 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
     {
         var includeCommands = new Dictionary<int, ShardedQueryCommand>();
 
-        try
+        IDisposable toDispose = null;
+        var missingAsSlice = missing.Select(key =>
         {
-            IDisposable toDispose = null;
-            var missingAsSlice = missing.Select(key =>
-            {
-                toDispose?.Dispose();
-                toDispose = DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, key, out var lowerId, out _);
-                return lowerId;
-            });
-                    
-            GenerateLoadByIdQueries(missingAsSlice, includeCommands);
-            var tasks = new List<Task>();
-            foreach (var (shardIndex, cmd) in includeCommands)
-            {
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
-                tasks.Add(_parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, cmd.Context));
-            }
+            toDispose?.Dispose();
+            toDispose = DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, key, out var lowerId, out _);
+            return lowerId;
+        });
 
-            await Task.WhenAll(tasks);
-            foreach (var (_, cmd) in includeCommands)
-            {
-                foreach (BlittableJsonReaderObject result in cmd.Result.Results)
-                {
-                    _result.Includes.Add(result);
-                }
-            }
-        }
-        finally
+        GenerateLoadByIdQueries(missingAsSlice, includeCommands);
+        toDispose?.Dispose();
+
+        var tasks = new List<Task>();
+        foreach (var (shardIndex, cmd) in includeCommands)
         {
-            foreach (var (var, cmd) in includeCommands)
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Use ShardedExecutor");
+            _disposables.Add(_parent.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+            tasks.Add(_parent.ShardedContext.RequestExecutors[shardIndex].ExecuteAsync(cmd, context));
+        }
+
+        await Task.WhenAll(tasks);
+        foreach (var (_, cmd) in includeCommands)
+        {
+            foreach (BlittableJsonReaderObject result in cmd.Result.Results)
             {
-                cmd.Dispose();
+                _result.Includes.Add(result);
             }
         }
     }
@@ -350,9 +346,6 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
             }
         }
     }
-
-    [ThreadStatic]
-    private static Random Random;
 
     public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
@@ -428,7 +421,7 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
                 return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
             }
             case OrderByFieldType.Random:
-                return (Random ??= new Random()).Next(0, int.MaxValue);
+                return Random.Shared.Next(0, int.MaxValue);
                  
             case OrderByFieldType.Custom:
                 throw new NotSupportedException("Custom sorting is not supported in sharding as of yet");
@@ -496,9 +489,9 @@ public class ShardedQueryProcessor : IComparer<BlittableJsonReaderObject>, IDisp
 
     public void Dispose()
     {
-        foreach (var (_, cmd) in _commands)
+        foreach (var toDispose in _disposables)
         {
-            cmd.Dispose();
+            toDispose.Dispose();
         }
     }
 }

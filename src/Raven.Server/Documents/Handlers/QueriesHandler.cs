@@ -114,7 +114,8 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Query(QueryOperationContext queryContext, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
+            var addSpatialProperties = GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
+            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database, addSpatialProperties);
             var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
             
             indexQuery.Diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;

@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (_asJson != null)
             {
-                Debug.Assert(context == _asJson._context);
+                Debug.Assert(context == _asJson._context, $"context == _asJson._context, Query: {Query}");
                 return _asJson;
             }
 
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Queries
                     var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, serverStore, databaseName, Metadata, allocator);
 
                     idsRetriever.Visit(Metadata.Query.Where, QueryParameters);
-
+                    
                     return (idsRetriever.Ids?.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
                 }
             }
