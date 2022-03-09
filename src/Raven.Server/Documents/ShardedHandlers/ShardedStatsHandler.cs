@@ -71,12 +71,14 @@ namespace Raven.Server.Documents.ShardedHandlers
 
                 indexInformation[i] = new IndexInformation
                 {
-                    State = index.State ?? IndexState.Error,
                     Name = index.Name,
-                    LockMode = index.LockMode ?? IndexLockMode.LockedError,
+                    // IndexDefinition includes nullable fields, then in case of null we set to default values
+                    State = index.State ?? IndexState.Normal, 
+                    LockMode = index.LockMode ?? IndexLockMode.Unlock,
                     Priority = index.Priority ?? IndexPriority.Normal,
                     Type = index.Type,
-                    SourceType = index.SourceType
+                    SourceType = index.SourceType,
+                    IsStale = false // for sharding we can't determine 
                 };
 
                 i++;
