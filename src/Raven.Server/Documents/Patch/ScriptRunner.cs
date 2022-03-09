@@ -70,11 +70,11 @@ namespace Raven.Server.Documents.Patch
             return new ScriptRunner(db, configuration, enableClr);
         }
 
-        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr)
+        public ScriptRunner(DocumentDatabase db, RavenConfiguration configuration, bool enableClr, IJavaScriptOptions jsOptions = null)
         {
             _db = db;
             _configuration = configuration;
-            JsOptions = db?.JsOptions ?? _configuration.JavaScript;
+            JsOptions = jsOptions ?? db?.JsOptions ?? _configuration.JavaScript;
             _enableClr = enableClr;
             _creationTime = DateTime.UtcNow;
         }

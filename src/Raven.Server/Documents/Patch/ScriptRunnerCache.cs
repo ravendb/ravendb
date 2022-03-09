@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Patch
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                ScriptRunner runner = new ScriptRunner(_database, _configuration, EnableClr);
+                ScriptRunner runner = new ScriptRunner(_database, _configuration, EnableClr, jsOptions);
                 script.GenerateScript(runner);
                 runner.ScriptType = script.GetType().Name;
                 return runner;
