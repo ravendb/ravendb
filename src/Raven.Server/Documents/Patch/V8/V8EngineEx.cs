@@ -97,14 +97,7 @@ namespace Raven.Server.Documents.Patch.V8
                 string strictModeFlag = jsOptions.StrictMode ? "--use_strict" : "--no-use_strict";
                 string[] optionsCmd = {strictModeFlag};
                 Engine.SetFlagsFromCommandLine(optionsCmd);
-                MaxDuration = (int)jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
-            }
-            
-            public int MaxDuration = 0;
-
-            public int RefineMaxDuration(int timeout)
-            {
-                return timeout > 0 ? timeout : MaxDuration;
+                _contextNative.MaxDuration = (int)jsOptions.MaxDuration.GetValue(TimeUnit.Milliseconds);
             }
             
             // -----------------------global object related-----------------------------
@@ -118,6 +111,7 @@ namespace Raven.Server.Documents.Patch.V8
                     if (_implicitNullV8.IsEmpty)
                     {
                         _implicitNullV8 = Engine.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+                        Engine.AddToLastMemorySnapshotBefore(_implicitNullV8);
                     }
                     return _implicitNullV8;
                 }
@@ -130,6 +124,7 @@ namespace Raven.Server.Documents.Patch.V8
                     if (_explicitNullV8.IsEmpty)
                     {
                         _explicitNullV8 = Engine.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+                        Engine.AddToLastMemorySnapshotBefore(_explicitNullV8);
                     }
                     return _explicitNullV8;
                 }
@@ -168,6 +163,7 @@ namespace Raven.Server.Documents.Patch.V8
                     if (_jsonStringifyV8.IsEmpty)
                     {
                         _jsonStringifyV8 = Engine.Execute("JSON.stringify", "JSON.stringify", true, 0);
+                        Engine.AddToLastMemorySnapshotBefore(_jsonStringifyV8);
                     }
                     return _jsonStringifyV8;
                 }
@@ -195,7 +191,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder,
                                 keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8));
+                        Engine.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderBlittableObjectInstance;
                 }
@@ -210,7 +206,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderTask = Engine.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
                         _typeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(Task));
+                        Engine.GlobalObject.SetProperty(typeof(Task), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderTask;
                 }
@@ -225,7 +221,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderTimeSeriesSegmentObjectInstance = Engine.RegisterType<TimeSeriesSegmentObjectInstanceV8>(null, false);
                         _typeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder, TimeSeriesSegmentObjectInstanceV8>((TimeSeriesSegmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8));
+                        Engine.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderTimeSeriesSegmentObjectInstance;
                 }
@@ -240,7 +236,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderCounterEntryObjectInstance = Engine.RegisterType<CounterEntryObjectInstanceV8>(null, false);
                         _typeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder, CounterEntryObjectInstanceV8>((CounterEntryObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8));
+                        Engine.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderCounterEntryObjectInstance;
                 }
@@ -255,7 +251,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderAttachmentNameObjectInstance = Engine.RegisterType<AttachmentNameObjectInstanceV8>(null, false);
                         _typeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder, AttachmentNameObjectInstanceV8>((AttachmentNameObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8));
+                        Engine.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderAttachmentNameObjectInstance;
                 }
@@ -270,7 +266,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderAttachmentObjectInstance = Engine.RegisterType<AttachmentObjectInstanceV8>(null, false);
                         _typeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder, AttachmentObjectInstanceV8>((AttachmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8));
+                        Engine.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderAttachmentObjectInstance;
                 }
@@ -285,7 +281,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderLazyNumberValue = Engine.RegisterType<LazyNumberValue>(null, false);
                         _typeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyNumberValue));
+                        Engine.GlobalObject.SetProperty(typeof(LazyNumberValue), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderLazyNumberValue;
                 }
@@ -300,7 +296,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderLazyStringValue = Engine.RegisterType<LazyStringValue>(null, false);
                         _typeBinderLazyStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<ObjectBinder, LazyStringValue>((LazyStringValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyStringValue));
+                        Engine.GlobalObject.SetProperty(typeof(LazyStringValue), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderLazyStringValue;
                 }
@@ -315,7 +311,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderLazyCompressedStringValue = Engine.RegisterType<LazyCompressedStringValue>(null, false);
                         _typeBinderLazyCompressedStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<ObjectBinder, LazyCompressedStringValue>((LazyCompressedStringValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyCompressedStringValue));
+                        Engine.GlobalObject.SetProperty(typeof(LazyCompressedStringValue), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderLazyCompressedStringValue;
                 }
@@ -330,7 +326,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderRavenServer = Engine.RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite);
                         _typeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<ObjectBinder, RavenServer>((RavenServer)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(RavenServer));
+                        Engine.GlobalObject.SetProperty(typeof(RavenServer), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderRavenServer;
                 }
@@ -345,7 +341,7 @@ namespace Raven.Server.Documents.Patch.V8
                         _typeBinderDocumentDatabase = Engine.RegisterType<DocumentDatabase>(null, true, ScriptMemberSecurity.ReadWrite);
                         _typeBinderDocumentDatabase.OnGetObjectBinder = (tb, obj, initializeBinder)
                             => tb.CreateObjectBinder<ObjectBinder, DocumentDatabase>((DocumentDatabase)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(DocumentDatabase));
+                        Engine.GlobalObject.SetProperty(typeof(DocumentDatabase), addToLastMemorySnapshotBefore: true);
                     }
                     return _typeBinderDocumentDatabase;
                 }
@@ -482,7 +478,7 @@ var process = {
 
         new public object MakeSnapshot(string name)
         {
-            return base.MakeSnapshot(name);
+            return base.MakeMemorySnapshot(name);
         }
 
 
@@ -536,7 +532,7 @@ var process = {
         {
             try
             {
-                return base.Execute(script, throwExceptionOnError, _contextEx?.RefineMaxDuration(timeout) ?? 0);
+                return base.Execute(script, throwExceptionOnError, RefineMaxDuration(timeout));
             }
             finally
             {
@@ -687,23 +683,6 @@ var process = {
             {
             }
             return new DisposableAction(RestoreMaxStatements);
-            
-        }
-        
-        public IDisposable ChangeMaxDuration(int maxDurationNew)
-        {
-            if (_contextEx == null)
-                return new DisposableAction(() => { });
-
-            int maxDurationPrev = _contextEx.MaxDuration;
-
-            void RestoreMaxDuration()
-            {
-                _contextEx.MaxDuration = maxDurationPrev;
-            }
-
-            _contextEx.MaxDuration = maxDurationNew;
-            return new DisposableAction(RestoreMaxDuration);
         }
     }
 }
