@@ -728,7 +728,7 @@ namespace FastTests
             Assert.Equal(expectedVal, val);
         }
 
-        private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
+        protected static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
