@@ -557,7 +557,7 @@ namespace Raven.Server.Documents.Patch
                                 ScriptEngineHandle.MakeSnapshot("single_run");
                             }
 
-#if DEBUG
+#if false //DEBUG
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
                             {

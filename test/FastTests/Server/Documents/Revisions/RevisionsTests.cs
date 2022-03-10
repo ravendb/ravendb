@@ -1462,7 +1462,10 @@ namespace FastTests.Server.Documents.Revisions
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
 
-                for (var i = 0; i < 10; i++)
+                int baseCount = 1;
+                int totalCount = 2 * baseCount;
+                
+                for (var i = 0; i < baseCount; i++)
                 {
                     using (var session = store.OpenAsyncSession())
                     {
@@ -1472,7 +1475,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(1);
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < baseCount; i++)
                 {
                     using (var session = store.OpenAsyncSession())
                     {
@@ -1484,8 +1487,8 @@ namespace FastTests.Server.Documents.Revisions
                 database.Time.UtcDateTime = () => DateTime.UtcNow;
 
                 var statistics = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(21, statistics.CountOfDocuments);
-                Assert.Equal(20, statistics.CountOfRevisionDocuments);
+                Assert.Equal(totalCount + 1, statistics.CountOfDocuments);
+                Assert.Equal(totalCount, statistics.CountOfRevisionDocuments);
 
                 if (useConsole)
                 {
@@ -1498,8 +1501,8 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 statistics = store.Maintenance.Send(new GetStatisticsOperation());
-                Assert.Equal(21, statistics.CountOfDocuments);
-                Assert.Equal(10, statistics.CountOfRevisionDocuments);
+                Assert.Equal(totalCount + 1, statistics.CountOfDocuments);
+                Assert.Equal(baseCount, statistics.CountOfRevisionDocuments);
             }
         }
 
