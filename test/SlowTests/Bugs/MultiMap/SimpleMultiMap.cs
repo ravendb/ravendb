@@ -3,6 +3,7 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,10 +15,11 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Fact]
-        public void CanCreateMultiMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreateMultiMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CatsAndDogs().Execute(store);
 
@@ -35,10 +37,11 @@ namespace SlowTests.Bugs.MultiMap
             }
         }
 
-        [Fact]
-        public void CanQueryUsingMultiMap()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryUsingMultiMap(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CatsAndDogs().Execute(store);
 

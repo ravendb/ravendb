@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,10 +57,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void DeleteCorruption()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DeleteCorruption(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new EntityIndex().Execute(store);
                 new Entity2Index().Execute(store);

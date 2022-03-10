@@ -4,7 +4,7 @@ using Xunit.Abstractions;
 using FastTests;
 
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -19,10 +19,11 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
-        public void CanCreateAndSearchMultiMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreateAndSearchMultiMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new MultiMapIndex();
                 index.Execute(store);

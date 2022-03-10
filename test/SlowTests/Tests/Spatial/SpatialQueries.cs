@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,10 +36,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanRunSpatialQueriesInMemory()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanRunSpatialQueriesInMemory(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialQueriesInMemoryTestIdx().Execute(store);
             }
@@ -51,9 +53,10 @@ namespace SlowTests.Tests.Spatial
             public long Longitude { get; set; }
         }
 
-        [Fact]
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         //Failing test from http://groups.google.com/group/ravendb/browse_thread/thread/7a93f37036297d48/
-        public void CanSuccessfullyDoSpatialQueryOfNearbyLocations()
+        public void CanSuccessfullyDoSpatialQueryOfNearbyLocations(Options options)
         {
             // These items is in a radius of 4 miles (approx 6,5 km)
             var areaOneDocOne = new DummyGeoDoc(55.6880508001, 13.5717346673);
@@ -66,7 +69,7 @@ namespace SlowTests.Tests.Spatial
             // This item is about 3900 miles from areaOne
             var newYork = new DummyGeoDoc(40.7137578228, -74.0126901936);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
 
@@ -109,15 +112,16 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CanSuccessfullyQueryByMiles()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanSuccessfullyQueryByMiles(Options options)
         {
             var myHouse = new DummyGeoDoc(44.757767, -93.355322);
 
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 session.Store(myHouse);

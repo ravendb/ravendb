@@ -27,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -603,8 +604,9 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             }
         }
 
-        [Fact]
-        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice()
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice(RavenTestParameters config)
         {
             const int batchSize = 3;
             string[] collections = { "Users" };
@@ -626,6 +628,8 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
                 {
                     _options?.ModifyDatabaseRecord(record);
                     record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = $"{batchSize}";
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             };
             var times = Enumerable.Range(0, 2)

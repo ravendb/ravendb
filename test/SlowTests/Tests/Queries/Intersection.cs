@@ -11,6 +11,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,19 +23,21 @@ namespace SlowTests.Tests.Queries
         {
         }
 
-        [Fact]
-        public void CanPerformIntersectionQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformIntersectionQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTest(store);
             }
         }
 
-        [Fact]
-        public void CanPerformIntersectionQuery_Linq()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformIntersectionQuery_Linq(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateIndexAndSampleData(store);
 

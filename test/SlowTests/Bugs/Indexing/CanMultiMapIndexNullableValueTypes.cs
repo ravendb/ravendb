@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,10 +29,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public async Task WillNotProduceAnyErrors()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task WillNotProduceAnyErrors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var indexCreationTask = new Companies_ByTurnover();
                 indexCreationTask.Execute(store);

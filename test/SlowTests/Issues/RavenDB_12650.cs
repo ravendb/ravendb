@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new DocumentIndex().Execute(store);
 
@@ -49,7 +51,7 @@ namespace SlowTests.Issues
                         query.ToString());
 
                     var result = query.SingleOrDefault();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.NotNull(result);
                     Assert.Equal("doc-id", result.Id);
                     Assert.Equal("doc name", result.Name);

@@ -3,6 +3,7 @@ using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,10 @@ namespace FastTests.Issues
 
         
         [Theory]
-        [SearchEngineClassData]
-        public void MissingFieldsDataShouldBeCleared(string searchEngine)
+        [RavenData]
+        public void MissingFieldsDataShouldBeCleared(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -53,10 +54,10 @@ namespace FastTests.Issues
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public void MissingFieldsDataShouldBeEvicted(string searchEngine)
+        [RavenData]
+        public void MissingFieldsDataShouldBeEvicted(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {                    
@@ -101,10 +102,10 @@ namespace FastTests.Issues
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public void MissingFieldDataShouldNotBeStoredDuringStreamingQuery(string searchEngine)
+        [RavenData]
+        public void MissingFieldDataShouldNotBeStoredDuringStreamingQuery(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndex().Execute(store);
                 using (var session = store.OpenSession())

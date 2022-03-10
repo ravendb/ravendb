@@ -16,7 +16,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Theory]
-        [RavenData]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldNotOutputNull(Options options)
         {
             using (var store = GetDocumentStore(options))

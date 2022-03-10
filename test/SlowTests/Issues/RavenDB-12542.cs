@@ -3,6 +3,7 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void Single_node_index_query_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Single_node_index_query_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -35,10 +37,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Where_clause_in_index_node_expression_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Where_clause_in_index_node_expression_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new Index_Orders_ByEmployee().Execute(store);
@@ -73,10 +76,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Index_query_expression_inside_edge_expressions_should_throw()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Index_query_expression_inside_edge_expressions_should_throw(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -88,10 +92,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Select_clause_inside_node_expressions_should_throw()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Select_clause_inside_node_expressions_should_throw(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -103,10 +108,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Pattern_match_node_index_query_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Pattern_match_node_index_query_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new IndexOrdersProductsWithPricePerUnit().Execute(store);

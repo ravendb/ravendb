@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,11 +35,12 @@ namespace SlowTests.Bugs.Chripede
             }
         }
 
-        [Fact]
-        public void CanIndexAndQueryOnList()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanIndexAndQueryOnList(Options options)
         {
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 var task = (AbstractIndexCreationTask)Activator.CreateInstance(typeof(Document_Index));

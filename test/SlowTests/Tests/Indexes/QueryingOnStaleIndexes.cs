@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,10 +34,11 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void WillGetStaleResultWhenThereArePendingTasks()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WillGetStaleResultWhenThereArePendingTasks(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Users_ByName();
                 index.Execute(store);

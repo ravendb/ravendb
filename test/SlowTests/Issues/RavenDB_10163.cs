@@ -1,5 +1,6 @@
 ﻿using Raven.Client;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,10 +12,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void SupportForFacetOnAllResults()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SupportForFacetOnAllResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateCameraCostIndex(store);
                 InsertCameraData(store, GetCameras(100));

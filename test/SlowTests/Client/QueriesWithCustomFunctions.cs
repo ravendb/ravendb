@@ -16,6 +16,7 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -28,10 +29,11 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
-        public void Can_Define_Custom_Functions_Inside_Select()
+        [Theory]
+        [RavenData]
+        public void Can_Define_Custom_Functions_Inside_Select(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +59,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task Can_Define_Custom_Functions_Inside_Select_Async()
+        [Theory]
+        [RavenData]
+        public async Task Can_Define_Custom_Functions_Inside_Select_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -86,10 +89,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Timespan()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Timespan(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -116,10 +120,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Timespan_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Timespan_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -146,10 +151,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_DateTime_Properties()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_DateTime_Properties(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -183,10 +189,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_DateTime_Properties_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_DateTime_Properties_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -220,10 +227,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Numbers_And_Booleans()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Numbers_And_Booleans(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -255,10 +263,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Numbers_And_Booleans_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Numbers_And_Booleans_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -290,10 +299,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Inside_Select_Nested()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Inside_Select_Nested(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -327,10 +337,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_Inside_Select_Nested_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_Inside_Select_Nested_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -364,10 +375,11 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Simple_Let()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Simple_Let(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -401,10 +413,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Simple_Let_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Simple_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -438,10 +451,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Let()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Let(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -475,10 +489,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Let_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -512,10 +527,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Multiple_Lets()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Multiple_Lets(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -553,10 +569,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Multiple_Lets_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Multiple_Lets_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -594,10 +611,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Should_Throw_When_Let_Is_Before_Where()
+        [Theory]
+        [RavenData]
+        public void Should_Throw_When_Let_Is_Before_Where(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -620,10 +638,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Should_Throw_When_Let_Is_Before_Where_Async()
+        [Theory]
+        [RavenData]
+        public async Task Should_Throw_When_Let_Is_Before_Where_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -646,10 +665,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Where_and_Load()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Where_and_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -687,10 +707,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Function_With_Where_and_Load_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Function_With_Where_and_Load_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -725,10 +746,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Multiple_Loads()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Multiple_Loads(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -777,10 +799,11 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
             }
         }
 
-        [Fact]
-        public async Task Custom_Function_With_Multiple_Loads_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Function_With_Multiple_Loads_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -829,10 +852,11 @@ from 'Users' as u where u.Name != $p0 select output(u) include timings()",
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Let_And_Load()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Let_And_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -876,10 +900,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Let_And_Load_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Let_And_Load_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -923,10 +948,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Where_and_Load_Array()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Where_and_Load_Array(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -968,10 +994,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Function_With_Where_and_Load_Array_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Function_With_Where_and_Load_Array_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1013,10 +1040,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Where_and_Load_List()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Where_and_Load_List(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1058,10 +1086,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Custom_Function_With_Where_and_Load_List_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Function_With_Where_and_Load_List_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1103,10 +1132,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Multiple_Where_And_Let()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Multiple_Where_And_Let(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1151,10 +1181,11 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Fact]
-        public async Task Custom_Functions_With_Multiple_Where_And_Let_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Functions_With_Multiple_Where_And_Let_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1199,10 +1230,11 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Math_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Math_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1231,10 +1263,11 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Fact]
-        public void Can_Project_Into_Class()
+        [Theory]
+        [RavenData]
+        public void Can_Project_Into_Class(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1262,10 +1295,11 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             }
         }
 
-        [Fact]
-        public void Can_Project_Into_Class_With_Let()
+        [Theory]
+        [RavenData]
+        public void Can_Project_Into_Class_With_Let(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1303,10 +1337,11 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_DateTime_Object()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_DateTime_Object(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1340,10 +1375,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Escape_Hatch()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Escape_Hatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1372,10 +1408,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Escape_Hatch_Inside_Let()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Escape_Hatch_Inside_Let(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1410,10 +1447,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Escape_Hatch_With_Path()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Escape_Hatch_With_Path(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1441,10 +1479,11 @@ from 'Users' as u select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Complex_Loads()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Complex_Loads(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1503,10 +1542,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load()
+        [Theory]
+        [RavenData]
+        public void Should_Throw_With_Proper_Message_When_Using_Wrong_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1534,10 +1574,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_ToList_And_ToArray()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_ToList_And_ToArray(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1579,10 +1620,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Null_Coalescing_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Null_Coalescing_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1620,10 +1662,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Functions_ValueTypeParse_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_ValueTypeParse_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1683,10 +1726,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Nested_Conditional_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Nested_Conditional_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1734,10 +1778,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Functions_String_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_String_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1837,10 +1882,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_ToDictionary_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_ToDictionary_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1899,10 +1945,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_First_And_FirstOrDefault_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_First_And_FirstOrDefault_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1952,10 +1999,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Nested_Query()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Nested_Query(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2010,10 +2058,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Query_On_Index_With_Load()
+        [Theory]
+        [RavenData]
+        public void Query_On_Index_With_Load(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
@@ -2063,10 +2112,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Query_On_Index_With_Load_Into_Class()
+        [Theory]
+        [RavenData]
+        public void Query_On_Index_With_Load_Into_Class(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
@@ -2116,10 +2166,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_GetMetadataFor()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_GetMetadataFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2159,10 +2210,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public async Task Custom_Function_With_GetMetadataFor_Async()
+        [Theory]
+        [RavenData]
+        public async Task Custom_Function_With_GetMetadataFor_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2202,10 +2254,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Can_Load_Static_Value()
+        [Theory]
+        [RavenData]
+        public void Can_Load_Static_Value(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2246,10 +2299,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_RavenQueryMetadata()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_RavenQueryMetadata(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2289,10 +2343,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public async Task QueryCompareExchangeValue()
+        [Theory]
+        [RavenData]
+        public async Task QueryCompareExchangeValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
                 var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
@@ -2323,10 +2378,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public async Task SingleProjectionQueryCompareExchange()
+        [Theory]
+        [RavenData]
+        public async Task SingleProjectionQueryCompareExchange(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
                 var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
@@ -2351,10 +2407,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public async Task QueryCompareExchangeInnerValue()
+        [Theory]
+        [RavenData]
+        public async Task QueryCompareExchangeInnerValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
                 {
@@ -2389,10 +2446,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void QueryCompareExchangeWithNullValue()
+        [Theory]
+        [RavenData]
+        public void QueryCompareExchangeWithNullValue(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2420,10 +2478,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public async Task QueryCompareExchangeWhere()
+        [Theory]
+        [RavenData]
+        public async Task QueryCompareExchangeWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom", "Jerry", 0));
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera", "Zeus", 0));
@@ -2538,10 +2597,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Should_Add_An_Alias_To_Where_Tokens()
+        [Theory]
+        [RavenData]
+        public void Should_Add_An_Alias_To_Where_Tokens(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2595,10 +2655,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_Sum()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_Sum(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var o1 = new Order
                 {
@@ -2698,12 +2759,13 @@ from 'Orders' as o select output(o)", complexLinqQuery.ToString());
             }
         }
 
-        [Fact]
-        public void Can_project_id_property_to_any_name()
+        [Theory]
+        [RavenData]
+        public void Can_project_id_property_to_any_name(Options options)
         {
             //https://issues.hibernatingrhinos.com/issue/RavenDB-9260
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2750,10 +2812,11 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Fact]
-        public void Should_quote_alias_if_its_a_reserved_word()
+        [Theory]
+        [RavenData]
+        public void Should_quote_alias_if_its_a_reserved_word(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2790,10 +2853,11 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Fact]
-        public void Custom_Function_With_ToString()
+        [Theory]
+        [RavenData]
+        public void Custom_Function_With_ToString(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2832,10 +2896,11 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Fact]
-        public void Custom_Functions_Linq_Methods_Support()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_Linq_Methods_Support(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var user = new User
                 {
@@ -2912,10 +2977,11 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)", quer
             }
         }
 
-        [Fact]
-        public void Can_Load_With_Argument_That_Has_Computation()
+        [Theory]
+        [RavenData]
+        public void Can_Load_With_Argument_That_Has_Computation(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -2959,10 +3025,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Project_With_JsonPropertyAttribute()
+        [Theory]
+        [RavenData]
+        public void Can_Project_With_JsonPropertyAttribute(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 var ids = new[] { "ids/1" };
@@ -2983,10 +3050,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Project_With_Json_Property_Rename()
+        [Theory]
+        [RavenData]
+        public void Can_Project_With_Json_Property_Rename(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 session.Store(new Document
@@ -3011,10 +3079,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Project_Where_Id_StartsWith()
+        [Theory]
+        [RavenData]
+        public void Can_Project_Where_Id_StartsWith(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
                 session.Store(new User(), "users/1");
@@ -3031,10 +3100,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Can_Use_DefaultIfEmpty()
+        [Theory]
+        [RavenData]
+        public void Can_Use_DefaultIfEmpty(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var lists = new Lists
                 {
@@ -3083,10 +3153,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_SelectMany()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_SelectMany(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var nestedNode = new Node
                 {
@@ -3142,10 +3213,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public async Task Can_SelectMany_From_Dictionary()
+        [Theory]
+        [RavenData]
+        public async Task Can_SelectMany_From_Dictionary(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -3198,10 +3270,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Nested_Loads_Simple()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Nested_Loads_Simple(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3249,10 +3322,11 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
-        public void Custom_Functions_With_Nested_Loads_Complex()
+        [Theory]
+        [RavenData]
+        public void Custom_Functions_With_Nested_Loads_Complex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3316,11 +3390,12 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void Can_Load_SingleDocument_When_Declare()
+        [Theory]
+        [RavenData]
+        public void Can_Load_SingleDocument_When_Declare(Options options)
         {
             //RavenDB-9637
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3356,12 +3431,13 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void Can_Load_Old_Document_With_Undefined_Member()
+        [Theory]
+        [RavenData]
+        public void Can_Load_Old_Document_With_Undefined_Member(Options options)
         {
             //RavenDB-9638
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3395,10 +3471,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void Can_Do_Null_Comparison_On_Undefined_Member()
+        [Theory]
+        [RavenData]
+        public void Can_Do_Null_Comparison_On_Undefined_Member(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3429,10 +3506,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void IsNullOrEmptySupport()
+        [Theory]
+        [RavenData]
+        public void IsNullOrEmptySupport(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3464,10 +3542,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void IsNullOrWhitespaceSupport()
+        [Theory]
+        [RavenData]
+        public void IsNullOrWhitespaceSupport(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3499,12 +3578,13 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void CanProjectWithEnumerableCount()
+        [Theory]
+        [RavenData]
+        public void CanProjectWithEnumerableCount(Options options)
         {
             //https://issues.hibernatingrhinos.com/issue/RDBC-99
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3533,10 +3613,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-        [Fact]
-        public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject()
+        [Theory]
+        [RavenData]
+        public void WrappedConstantSupportShouldKnowHowToHandleCallExpressionsOnWrappedConstantObject(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -3651,10 +3732,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Fact]
-            public void CanProjectWithArrayParameters()
+            [Theory]
+            [RavenData]
+            public void CanProjectWithArrayParameters(Options options)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 
@@ -3703,10 +3785,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Fact]
-            public void CanProjectWithListParameters()
+            [Theory]
+            [RavenData]
+            public void CanProjectWithListParameters(Options options)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 
@@ -3756,10 +3839,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 }
             }
 
-            [Fact]
-            public void CanProjectWithStringParameter()
+            [Theory]
+            [RavenData]
+            public void CanProjectWithStringParameter(Options options)
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     SetUp(store);
 

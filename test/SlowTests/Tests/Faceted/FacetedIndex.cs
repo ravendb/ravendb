@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -81,55 +82,61 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Remotely(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTest(store, _originalFacets, _originalRangeFacets);
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_Asynchronously()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Remotely_Asynchronously(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTestAsynchronously(store, _originalFacets, _originalRangeFacets);
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Remotely_WithStronglyTypedAPI(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Embedded()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Embedded(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Embedded_WithStronglyTypedAPI(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_Lazy()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Remotely_Lazy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store, _originalFacets, _originalRangeFacets);
 
@@ -164,10 +171,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Setup(store, _originalFacets, _originalRangeFacets);
 

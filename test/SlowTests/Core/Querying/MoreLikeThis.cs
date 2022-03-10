@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Address = SlowTests.Core.Utils.Entities.Address;
 using Post = SlowTests.Core.Utils.Entities.Post;
@@ -17,10 +18,12 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void CanUseBasicMoreLikeThis()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanUseBasicMoreLikeThis(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Posts_ByTitleAndContent();
                 index.Execute(store);
@@ -56,10 +59,12 @@ namespace SlowTests.Core.Querying
         }
 
 
-        [Fact]
-        public void CanUseMoreLikeThisWithIncludes()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanUseMoreLikeThisWithIncludes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Users_ByName();
                 index.Execute(store);

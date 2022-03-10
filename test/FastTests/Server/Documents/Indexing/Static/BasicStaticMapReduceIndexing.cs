@@ -26,7 +26,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public async Task The_simpliest_static_map_reduce_index(RavenDataExplicitConfiguration config)
+        public async Task The_simpliest_static_map_reduce_index(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -119,7 +119,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanPersist(RavenDataExplicitConfiguration config)
+        public async Task CanPersist(RavenTestParameters config)
         {
             IndexDefinition defOne, defTwo;
             string dbName;

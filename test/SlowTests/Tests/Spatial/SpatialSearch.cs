@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,10 +30,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_do_spatial_search_with_client_api(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -90,10 +92,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_do_spatial_search_with_client_api2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -115,10 +118,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api_within_given_capacity()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_do_spatial_search_with_client_api_within_given_capacity(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 
@@ -182,10 +186,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Can_do_spatial_search_with_client_api_addorder()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_do_spatial_search_with_client_api_addorder(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SpatialIdx().Execute(store);
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,11 @@ namespace SlowTests.Issues
 
         private const int USER_COUNT = 500;
 
-        [Fact]
-        public async Task Index_Queries_Should_Not_Return_Deleted_Documents()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Index_Queries_Should_Not_Return_Deleted_Documents(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await new UserIndex().ExecuteAsync(store);
 

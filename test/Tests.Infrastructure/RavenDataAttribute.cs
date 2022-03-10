@@ -47,7 +47,7 @@ public class RavenDataAttribute : DataAttribute
             foreach (var (searchMode, o) in FillOptions(options, SearchEngineMode))
             {
                 var length = 1;
-                if (Data is { Length: > 0 })
+                if (Data is {Length: > 0})
                     length += Data.Length;
 
                 var array = new object[length];
@@ -81,7 +81,7 @@ public class RavenDataAttribute : DataAttribute
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
             };
-
+            coraxOptions.AddToDescription($", {nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Corax)}");
             yield return (RavenSearchEngineMode.Corax, coraxOptions);
         }
 
@@ -94,7 +94,7 @@ public class RavenDataAttribute : DataAttribute
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Lucene";
                 record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Lucene";
             };
-
+            luceneOptions.AddToDescription($", {nameof(RavenDataAttribute.SearchEngineMode)} = {nameof(RavenSearchEngineMode.Lucene)}");
             yield return (RavenSearchEngineMode.Lucene, luceneOptions);
         }
     }

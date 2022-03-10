@@ -5,6 +5,7 @@ using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryAsync_Simple(string searchEngine)
+        [RavenData]
+        public async Task QueryAsync_Simple(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -38,10 +39,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryAsync_With_Where_Clause(string searchEngine)
+        [RavenData]
+        public async Task QueryAsync_With_Where_Clause(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 using (var asyncSession = store.OpenAsyncSession())
                 {
@@ -65,10 +66,10 @@ namespace FastTests.Client
         }
 
         [Theory]
-        [SearchEngineClassData]
-        public async Task QueryAsync_By_Index(string searchEngine)
+        [RavenData]
+        public async Task QueryAsync_By_Index(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 new DogsIndex().Execute(store);
                 

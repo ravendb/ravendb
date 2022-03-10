@@ -35,14 +35,14 @@ namespace SlowTests.Graph
             };
         }
 
-        private List<T> Query<T>(string q, Action<IDocumentStore> mutate = null, StalenessParameters parameters = null)
+        private List<T> Query<T>(Options options, string q, Action<IDocumentStore> mutate = null, StalenessParameters parameters = null)
         {
             if (parameters == null)
             {
                 parameters = StalenessParameters.Default;
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
@@ -65,9 +65,9 @@ namespace SlowTests.Graph
             }
         }
 
-        private void AssertQueryResults(params (string q, int results)[] expected)
+        private void AssertQueryResults(Options options, params (string q, int results)[] expected)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -98,8 +98,9 @@ namespace SlowTests.Graph
 #pragma warning restore 649
         }
 
-        [Fact]
-        public void CanCacheGraphQueries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanCacheGraphQueries(Options options)
         {
             void IssueQuery(IDocumentSession session)
             {
@@ -111,7 +112,7 @@ namespace SlowTests.Graph
                 results[0] = "Jill";
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -128,10 +129,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void CanProjectSameDocumentTwice()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProjectSameDocumentTwice(Options options)
         {
-            var results = Query<OrderAndProduct>(@"
+            var results = Query<OrderAndProduct>(options, @"
 match (Orders as o where id() = 'orders/828-A')-[Lines select Product]->(Products as p)
 select {
     OrderId: id(o),
@@ -146,10 +148,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanProjectEdges()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProjectEdges(Options options)
         {
-            var results = Query<OrderAndProduct>(@"
+            var results = Query<OrderAndProduct>(options, @"
 match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
 select {
     OrderId: id(o),
@@ -166,10 +169,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanSkipAndTake()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanSkipAndTake(Options options)
         {
-            var results = Query<OrderAndProduct>(@"
+            var results = Query<OrderAndProduct>(options, @"
 match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
 select {
     OrderId: id(o),
@@ -183,8 +187,9 @@ Limit 1,1
             Assert.Equal("Ipoh Coffee", res.Product);
         }
 
-        [Fact]
-        public void CanIncludeFromJavaScriptInGraphQueries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIncludeFromJavaScriptInGraphQueries(Options options)
         {
             var rawQuery =
                         @"
@@ -202,23 +207,24 @@ declare function includeProducts(doc)
 match (Orders as o where id() = 'orders/821-A')
 select  includeProducts(o)
 ";
-            TestIncludeQuery(rawQuery);
+            TestIncludeQuery(options, rawQuery);
         }
 
-        [Fact]
-        public void CanIncludeInGraphQueries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanIncludeInGraphQueries(Options options)
         {
             var rawQuery =
                 @"
 match (Orders where id() = 'orders/821-A')
 include Lines.Product
 ";
-            TestIncludeQuery(rawQuery);
+            TestIncludeQuery(options, rawQuery);
         }
 
-        private void TestIncludeQuery(string rawQuery)
+        private void TestIncludeQuery(Options options, string rawQuery)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
@@ -238,10 +244,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_source_node()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_filter_source_node(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -257,10 +264,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_destination_node()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_filter_destination_node(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -276,10 +284,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void Can_filter_edge()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_filter_edge(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -295,10 +304,11 @@ include Lines.Product
             }
         }
 
-        [Fact]
-        public void CanUseEmptyDocumentAlias()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseEmptyDocumentAlias(Options options)
         {
-            var results = Query<Employee>(@"
+            var results = Query<Employee>(options, @"
 match (Employees as e where FirstName='Nancy')-[ReportsTo]->(_ as manager)
 select manager
 ");
@@ -316,10 +326,11 @@ select manager
 
         }
 
-        [Fact]
-        public void CanProjectFromAnonymousAlias()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProjectFromAnonymousAlias(Options options)
         {
-            var results = Query<SimpleQueryResult>(@"
+            var results = Query<SimpleQueryResult>(options, @"
 match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
 ");
             Assert.Equal(1, results.Count);
@@ -328,19 +339,22 @@ match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
             Assert.Equal("Steven", results[0].Boss.FirstName);
         }
 
-        [Fact]
-        public void CanUseDistinctInGraphQueries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseDistinctInGraphQueries(Options options)
         {
-            var results = Query<Product>(@"
+            var results = Query<Product>(options, @"
 match (Orders as o)-[Lines select Product]->(Products)
 select distinct Products");
             Assert.Equal(77, results.Count);
         }
 
-        [Fact]
-        public void CanWaitForNonStaleResults()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanWaitForNonStaleResults(Options options)
         {
-            var results = Query<Product>(@"
+            var results = Query<Product>(options,
+                @"
 with {from index 'Orders/Totals'} as o
 with {from index 'Product/Search'} as p
 match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
@@ -348,10 +362,12 @@ select p", parameters: new StalenessParameters { WaitForIndexing = false, WaitFo
             Assert.Equal(24, results.Count);
         }
 
-        [Fact]
-        public void NotWaitingForNonStaleResultsShouldThrow()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void NotWaitingForNonStaleResultsShouldThrow(Options options)
         {
-            Assert.Throws<TimeoutException>(() => Query<Product>(@"
+            Assert.Throws<TimeoutException>(() => Query<Product>(options,
+                @"
 with {from index 'Orders/Totals'} as o
 with {from index 'Product/Search'} as p
 match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
@@ -363,11 +379,12 @@ select p", mutate: (store) =>
             }, parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0) }));
         }
 
-        [Fact]
-        public void CanFilterIOnEdges()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanFilterIOnEdges(Options options)
         {
             // not a theory because I want to run all queries on a single db
-            AssertQueryResults(
+            AssertQueryResults(options,
                 ("match (Orders as o where id() = 'orders/828-A')-[Lines where ProductName = 'Chang' select Product]->(Products as p)", 1),
                 ("match (Orders as o where id() = 'orders/828-A')-[Lines where ProductName != 'Chang' select Product]->(Products as p)", 2),
                 ("match (Orders as o where id() = 'orders/17-A')-[Lines where Discount > 0 select Product]->(Products as p)", 1),
@@ -387,10 +404,11 @@ select p", mutate: (store) =>
             public string[] MiddleManagement;
         }
 
-        [Fact]
-        public void CanUseMultiHopInQueries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMultiHopInQueries(Options options)
         {
-            var results = Query<EmployeeRelations>(@"
+            var results = Query<EmployeeRelations>(options, @"
 match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees as intermediary) }-[ReportsTo]->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ");
@@ -403,10 +421,11 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             }
         }
 
-        [Fact]
-        public void CanUseMultiHopInQueriesWithScript()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanUseMultiHopInQueriesWithScript(Options options)
         {
-            var results = Query<EmployeeRelations>(@"
+            var results = Query<EmployeeRelations>(options, @"
 match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees as intermediary) }-[ReportsTo]->(Employees as boss)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
@@ -423,10 +442,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanHandleCyclesInGraph()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleCyclesInGraph(Options options)
         {
-            var results = Query<EmployeeRelations>(@"
+            var results = Query<EmployeeRelations>(options, @"
 match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees ) }-[ReportsTo]->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
@@ -477,10 +497,11 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             public string[] Parentage;
         }
 
-        [Fact]
-        public void CanHandleFiltersInMultiHopQueryWithEndNode()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleFiltersInMultiHopQueryWithEndNode(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
 
@@ -498,10 +519,11 @@ select son.Name as Son, evil.Name as Evil")
             }
         }
 
-        [Fact]
-        public void Query_with_non_existing_collection_should_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_with_non_existing_collection_should_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -510,10 +532,11 @@ select son.Name as Son, evil.Name as Evil")
             }
         }
 
-        [Fact]
-        public void CanRecursivelyProjectObjectAsEdge()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanRecursivelyProjectObjectAsEdge(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
 
@@ -546,10 +569,11 @@ select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
             public string Parentage;
         }
 
-        [Fact]
-        public void CanHandleFiltersInMultiHopQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleFiltersInMultiHopQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
                 using (var session = store.OpenSession())
@@ -570,10 +594,11 @@ select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
             }
         }
 
-        [Fact]
-        public void CanCustomizeRecursionBehavior_DefaultsToLazy()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanCustomizeRecursionBehavior_DefaultsToLazy(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
 
@@ -595,10 +620,11 @@ select {
             }
         }
 
-        [Fact]
-        public void CanCustomizeRecursionBehavior_All()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanCustomizeRecursionBehavior_All(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
 
@@ -638,7 +664,12 @@ select {
         [InlineData("longest", new[] { "Bungo", "Mungo", "Balbo Baggins" })]
         public void CanCustomizeRecursionBehavior(string behavior, string[] expected)
         {
-            using (var store = GetDocumentStore())
+            var confg = new RavenTestParameters()
+            {
+                SearchEngine = RavenSearchEngineMode.Lucene
+            };
+            
+            using (var store = GetDocumentStore(Options.ForSearchEngine(confg)))
             {
                 SetupHobbitAncestry(store);
 
@@ -662,10 +693,11 @@ select {
         }
 
 
-        [Fact]
-        public void CanHandleFiltersInMultiHopQuery_WithParameters()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleFiltersInMultiHopQuery_WithParameters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupHobbitAncestry(store);
 

@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,10 +68,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanCorrectlyAggregate()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData]
+        public void CanCorrectlyAggregate(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Orders_All().Execute(store);
 
@@ -252,10 +254,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanCorrectlyAggregate_Ranges()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCorrectlyAggregate_Ranges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Orders_All().Execute(store);
 
@@ -417,10 +420,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void ShouldThrow()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Orders_All().Execute(store);
 

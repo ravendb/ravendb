@@ -9,6 +9,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Task = System.Threading.Tasks.Task;
 using Xunit.Abstractions;
@@ -34,10 +35,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void FunkyIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void FunkyIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

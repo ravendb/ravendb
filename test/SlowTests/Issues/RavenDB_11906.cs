@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -90,10 +91,12 @@ namespace SlowTests.Issues
             public string OtherField { get; set; }
         }
 
-        [Fact]
-        public void SupportForCreateFieldWithOptions()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void SupportForCreateFieldWithOptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index1().Execute(store);
                 new Index1_JavaScript().Execute(store);
@@ -124,10 +127,12 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CheckHighlighting()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CheckHighlighting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index2().Execute(store);
 
@@ -148,7 +153,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var options = new HighlightingOptions
+                    var highlightingOptions = new HighlightingOptions
                     {
                         PreTags = new[] { "<span style='background: yellow'>" },
                         PostTags = new[] { "</span>" }
@@ -157,7 +162,7 @@ namespace SlowTests.Issues
                     var results = session.Advanced
                         .DocumentQuery<Item, Index2>()
                         .WaitForNonStaleResults()
-                        .Highlight("Field", 128, 2, options, out Highlightings fieldHighlighting)
+                        .Highlight("Field", 128, 2, highlightingOptions, out Highlightings fieldHighlighting)
                         .Search("Field", "session")
                         .ToArray();
 

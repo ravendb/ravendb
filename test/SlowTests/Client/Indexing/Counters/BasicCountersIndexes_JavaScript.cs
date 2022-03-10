@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -214,10 +215,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -420,10 +422,11 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -578,10 +581,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BasicMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -737,10 +741,11 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task BasicMapReduceIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -883,10 +888,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllCountersFromCollection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanMapAllCountersFromCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1048,10 +1054,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CanMapAllCounters()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanMapAllCounters(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1147,10 +1154,11 @@ return ({
             }
         }
 
-        [Fact]
-        public async Task BasicMultiMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task BasicMultiMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeriesIndex = new MyMultiMapCounterIndex();
                 await timeSeriesIndex.ExecuteAsync(store);
@@ -1206,10 +1214,11 @@ return ({
             }
         }
 
-        [Fact]
-        public void CounterNamesFor()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CounterNamesFor(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_ByCounterNames();
                 index.Execute(store);

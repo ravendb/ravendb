@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,10 +40,11 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task ShouldProperlyPageResults()
+        [Theory]
+        [RavenData]
+        public async Task ShouldProperlyPageResults(Options options)
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
 
             new UsersAndFiendsIndex().Execute(store);
 

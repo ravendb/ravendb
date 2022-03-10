@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanDoMapOnObject()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDoMapOnObject(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new TestDocumentByName().Execute(store);
 
@@ -71,10 +73,11 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Fact]
-        public void CanDoMapOnObject2()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDoMapOnObject2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = Setup(store);
 
@@ -106,10 +109,11 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Fact]
-        public void CanDoMapOnObject3()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDoMapOnObject3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = Setup(store);
 
@@ -153,10 +157,11 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Fact]
-        public void CanDoMapOnObject4()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanDoMapOnObject4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var testDoc = Setup(store);
 

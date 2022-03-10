@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,10 +29,11 @@ namespace SlowTests.Tests.Faceted
             public decimal Price { get; set; }
         }
 
-        [Fact]
-        public void CanHandleMaxFacet_LowLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleMaxFacet_LowLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -51,10 +53,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleCountFacet_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleCountFacet_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -74,10 +77,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleMaxFacet_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleMaxFacet_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -97,10 +101,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleMinFacet_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleMinFacet_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -119,10 +124,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleSumFacet_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleSumFacet_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -142,10 +148,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleAverageFacet_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleAverageFacet_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -164,10 +171,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanHandleAverageFacetAsync_HighLevel()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanHandleAverageFacetAsync_HighLevel(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -186,10 +194,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanGetAggregationQueryString()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetAggregationQueryString(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 
@@ -202,10 +211,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanGetAggregationQueryString_Async()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetAggregationQueryString_Async(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateAggregationSampleData(store);
 

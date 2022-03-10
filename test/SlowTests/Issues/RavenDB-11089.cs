@@ -12,8 +12,10 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,8 +50,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CustomSerializer_WithSaveChanges_AndQuery()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CustomSerializer_WithSaveChanges_AndQuery(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -62,6 +65,11 @@ namespace SlowTests.Issues
                             serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
                         }
                     };
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -87,8 +95,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CustomSerializer_WithSaveChanges_AndLoad()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CustomSerializer_WithSaveChanges_AndLoad(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -102,6 +111,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -124,8 +138,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanGetResultsUsingTermVectorsAndStorage()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void CanGetResultsUsingTermVectorsAndStorage(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -139,6 +154,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -160,8 +180,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanMakeDynamicDocumentQueriesWithComplexProperties()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void CanMakeDynamicDocumentQueriesWithComplexProperties(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -175,6 +196,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -212,8 +238,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicFacetedSearch_Embedded()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicFacetedSearch_Embedded(RavenTestParameters config)
         {
             var cameras = GetCameras(30);
 
@@ -229,6 +256,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -263,8 +295,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicFacetedSearch_Remotely()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicFacetedSearch_Remotely(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -278,6 +311,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -318,8 +356,9 @@ namespace SlowTests.Issues
             public string FullName { get; set; }
         }
 
-        [Fact]
-        public void Can_Project_Into_Class()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void Can_Project_Into_Class(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -333,6 +372,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -363,8 +407,9 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Project_Into_Class_With_Let()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void Can_Project_Into_Class_With_Let(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -378,6 +423,11 @@ namespace SlowTests.Issues
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -418,8 +468,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanPerformIntersectQuery()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void CanPerformIntersectQuery(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -433,6 +484,11 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -667,8 +723,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void PatchOnEnumShouldWork()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void PatchOnEnumShouldWork(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -682,7 +739,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 string id;
@@ -744,8 +807,9 @@ from 'Users' as user select output(user)", queryAsString);
 
         private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
-        [Fact]
-        public void CanPatch()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanPatch(RavenTestParameters config)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -763,7 +827,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -802,8 +872,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanPatchAndModify()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanPatchAndModify(RavenTestParameters config)
         {
             var user = new User { Numbers = new[] { 66 } };
 
@@ -819,7 +890,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -841,8 +918,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanPatchComplex()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanPatchComplex(RavenTestParameters config)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -860,7 +938,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -1017,8 +1101,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void ProjectInto_ShouldWork()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void ProjectInto_ShouldWork(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(options: new Options
             {
@@ -1032,7 +1117,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 new Index1().Execute(store);
@@ -1061,8 +1152,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanAddToArray()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanAddToArray(RavenTestParameters config)
         {
             var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
@@ -1080,7 +1172,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -1133,8 +1231,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanRemoveFromArray()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanRemoveFromArray(RavenTestParameters config)
         {
             var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
@@ -1153,7 +1252,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -1182,8 +1287,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void CanIncrement()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void CanIncrement(RavenTestParameters config)
         {
             Stuff[] s = new Stuff[3];
             s[0] = new Stuff { Key = 6 };
@@ -1201,7 +1307,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())
@@ -1235,8 +1347,9 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Fact]
-        public void ShouldMergePatchCalls()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
+        public void ShouldMergePatchCalls(RavenTestParameters config)
         {
             var stuff = new Stuff[3];
             stuff[0] = new Stuff { Key = 6 };
@@ -1256,7 +1369,13 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+
             }))
             {
                 using (var session = store.OpenSession())

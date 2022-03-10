@@ -2,6 +2,7 @@
 using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -57,10 +58,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void Can_Use_DynamicBlittableJson_Where()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Can_Use_DynamicBlittableJson_Where(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Filter_key_Index().Execute(store);
 
@@ -94,20 +96,21 @@ namespace SlowTests.Issues
                     s.Advanced.WaitForIndexesAfterSaveChanges();
                     s.SaveChanges();
                 }
-
+                WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenSession())
                 {
                     var booksByJohn = s.Query<Matter, Filter_key_Index>().ToList();
                     Assert.Equal(2, booksByJohn.Count);
                 }
-
+                
             }
         }
 
-        [Fact]
-        public void Can_Use_DynamicBlittableJson_ExtensionMethods()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_Use_DynamicBlittableJson_ExtensionMethods(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index_With_DynamicBlittableJson_Extension_Methods().Execute(store);
 

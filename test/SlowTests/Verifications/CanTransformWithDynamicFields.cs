@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -144,10 +145,11 @@ namespace SlowTests.Verifications
             public string Title { get; set; }
         }
         
-        [Fact]
-        public void WillMapPropertiesOnMapIndexes()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WillMapPropertiesOnMapIndexes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -174,10 +176,11 @@ select {
             }
         }
 
-        [Fact]
-        public void WillMapPropertiesOnMapReduceIndexes()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WillMapPropertiesOnMapReduceIndexes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 

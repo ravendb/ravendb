@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,10 +17,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void CanCompileIndex1()
+        [Theory]
+        [RavenData]
+        public void CanCompileIndex1(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeIndex();
                 store.ExecuteIndex(index);
@@ -70,10 +72,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex2()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanCompileIndex2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeIndex();
                 store.ExecuteIndex(index);
@@ -126,10 +129,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex3()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex3(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserDateTimeDefaultIndex();
                 store.ExecuteIndex(index);
@@ -178,10 +182,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanCompileIndex4()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCompileIndex4(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new LastAccessPerUserTicksIndex();
                 store.ExecuteIndex(index);

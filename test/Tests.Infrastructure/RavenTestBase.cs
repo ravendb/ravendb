@@ -658,7 +658,7 @@ namespace FastTests
                 }
             }
 
-            private void AddToDescription(string descriptionToAdd)
+            internal void AddToDescription(string descriptionToAdd)
             {
                 _descriptionBuilder ??= new StringBuilder();
 

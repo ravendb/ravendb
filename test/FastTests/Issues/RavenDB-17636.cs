@@ -11,6 +11,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Timings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,10 +24,10 @@ public class FilterTests : RavenTestBase
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CanUseFilterAsContextualKeywordForBackwardCompatability(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanUseFilterAsContextualKeywordForBackwardCompatability(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
         // raw
@@ -51,10 +52,10 @@ select filter(a)").Count();
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CanUseFilterWithCollectionQuery(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanUseFilterWithCollectionQuery(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
         Employee result;
@@ -171,10 +172,10 @@ select filter(a)").Count();
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public async Task AsyncCanUseFilterWithCollectionQuery(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public async Task AsyncCanUseFilterWithCollectionQuery(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -234,10 +235,10 @@ select filter(a)").Count();
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CanFilterWithLoad(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanFilterWithLoad(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -285,10 +286,10 @@ select filter(a)").Count();
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CanUseFilterQueryOnMapIndexes(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanUseFilterQueryOnMapIndexes(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems(additional: new() { (new Employee("Frank", "emps/jane", true, 51, new Location(47.623473f, -122.306009f)), "emps/frank") }));
 
 
@@ -509,10 +510,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void InvalidFilterQueriesInLinq(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void InvalidFilterQueriesInLinq(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
         {
             using var session = store.OpenSession();
@@ -524,10 +525,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CanUseFilterQueryOnMapReduce(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CanUseFilterQueryOnMapReduce(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -575,10 +576,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public async Task AsyncCanUseFilterQueryOnMapReduce(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public async Task AsyncCanUseFilterQueryOnMapReduce(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         Insert(store, GetDatabaseItems());
 
         Summary summary;
@@ -608,10 +609,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void ExtendedLinqTest(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void ExtendedLinqTest(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
@@ -652,10 +653,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void CannotUseFacetWithFilter(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void CannotUseFacetWithFilter(Options options)
     {
-        using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+        using (var store = GetDocumentStore(options))
         {
             new BlogIndex().Execute(store);
             var facets = new List<Facet> { new Facet { FieldName = "Tags", Options = new FacetOptions { TermSortMode = FacetTermSortMode.CountDesc } } };
@@ -692,10 +693,10 @@ filter Name = 'Frank'")
     }
 
     [Theory]
-    [SearchEngineClassData(SearchEngineType.Lucene)]
-    public void Timings(string searchEngine)
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+    public void Timings(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+        using var store = GetDocumentStore(options);
         var data = GetDatabaseItems();
         Insert(store, data);
 
