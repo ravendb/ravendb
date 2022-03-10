@@ -1447,11 +1447,11 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory(Skip = "TODO [shlomo] to be repaired, this test breaks the test session")]
+        [Theory]
         [InlineData(false, "Jint")]
         [InlineData(false, "V8")]
-        //[InlineData(true, "Jint")] // TODO [shlomo] temporary switched off as it breaks the test session: At 0:0 {"message":"Cyclic reference detected.","stack":null}
-        //[InlineData(true, "V8")] // TODO [shlomo] temporary switched off as it breaks the test session: Types.ChangeType(): Cannot convert value "1646922237833" (type: 'System.Double') to type 'System.DateTime'. If you are developing the source type yourself, implement the 'IConvertible' interface.
+        [InlineData(true, "Jint")]
+        [InlineData(true, "V8")]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole, string jsEngineType)
         {
             using (var store = GetDocumentStore(Options.ForJavaScriptEngine(jsEngineType)))
