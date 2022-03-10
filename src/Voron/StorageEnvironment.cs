@@ -1438,6 +1438,21 @@ namespace Voron
         {
             throw new InvalidOperationException("Simulation of db creation failure");
         }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal Action ActionToCallDuringFullBackupRighAfterCopyHeaders;
+        }
     }
     
     public class StorageEnvironmentWithType
