@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Raven.Debug.Utils;
+using Sparrow;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {
@@ -70,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 if (fDumpSuccess)
                 {
                     outputFileInfo.Refresh();
-                    cmd.Out.WriteLine($"\tFinished writing {outputFileInfo.Length} bytes.");
+                    cmd.Out.WriteLine($"\tFinished writing {new Size(outputFileInfo.Length, SizeUnit.Bytes)}.");
                     return 0;
                 }
                 else if (ct.IsCancellationRequested)

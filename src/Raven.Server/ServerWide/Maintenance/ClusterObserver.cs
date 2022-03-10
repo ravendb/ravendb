@@ -1187,7 +1187,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                 promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
             {
-                LogMessage($"Can't previous stats for node {promotable}", database: dbName);
+                LogMessage($"Can't find previous stats for node {promotable}", database: dbName);
                 return (false, null);
             }
 

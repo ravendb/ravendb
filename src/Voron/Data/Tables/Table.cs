@@ -489,7 +489,7 @@ namespace Voron.Data.Tables
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new VoronErrorException(
-                        $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                        $"After successfully allocating {new Size(size, SizeUnit.Bytes)}, failed to write them on {Name}");
 
                 // Memory Copy into final position.
                 builder.CopyTo(pos);
@@ -603,7 +603,7 @@ namespace Voron.Data.Tables
                 id = AllocateFromSmallActiveSection(null, size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new VoronErrorException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                    throw new VoronErrorException($"After successfully allocating {new Size(size, SizeUnit.Bytes)}, failed to write them on {Name}");
             }
             else
             {
