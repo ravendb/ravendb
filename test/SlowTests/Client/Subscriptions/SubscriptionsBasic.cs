@@ -1076,7 +1076,8 @@ namespace SlowTests.Client.Subscriptions
                 var workerOptions1 = new SubscriptionWorkerOptions(id1) { Strategy = SubscriptionOpeningStrategy.WaitForFree, MaxErroneousPeriod = maxErroneousPeriod };
 
                 var worker1Ack = new AsyncManualResetEvent();
-                var worker1Retry = new AsyncManualResetEvent();
+                AsyncManualResetEvent worker1Retry = null;
+
                 using var worker1 = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions1, store.Database);
                 worker1.AfterAcknowledgment += _ =>
                 {
@@ -1085,7 +1086,7 @@ namespace SlowTests.Client.Subscriptions
                 };
                 worker1.OnSubscriptionConnectionRetry += exception =>
                 {
-                    worker1Retry.Set();
+                    worker1Retry?.Set();
                 };
                 var t1 = worker1.Run(x => { });
 
@@ -1097,11 +1098,16 @@ namespace SlowTests.Client.Subscriptions
                 await worker1Ack.WaitAsync(_reasonableWaitTime);
 
                 var worker2Ack = new AsyncManualResetEvent();
-                var worker2Retry = new ManualResetEvent(false);
+                ManualResetEvent worker2Retry = null;
                 using var worker2 = store.Subscriptions.GetSubscriptionWorker<Company>(workerOptions1, store.Database);
-                worker2.OnSubscriptionConnectionRetry += exception =>
+                AsyncManualResetEvent worker1AfterRegisterSubscriptionConnection = null;
+                worker2.OnSubscriptionConnectionRetry += async exception =>
                 {
-                    worker2Retry.Set();
+                    worker2Retry?.Set();
+                    if (worker1AfterRegisterSubscriptionConnection == null)
+                        return;
+
+                    await worker1AfterRegisterSubscriptionConnection.WaitAsync(_reasonableWaitTime);
                 };
                 worker2.AfterAcknowledgment += _ =>
                 {
@@ -1114,14 +1120,15 @@ namespace SlowTests.Client.Subscriptions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 var testingStuff = db.ForTestingPurposesOnly();
 
-                var worker1Interrupt = new AsyncManualResetEvent();
+                var subscriptionInterrupt = new AsyncManualResetEvent();
                 using (testingStuff.CallDuringWaitForChangedDocuments(() =>
                        {
-                           worker1Interrupt.Set();
+                           worker1Retry ??= new AsyncManualResetEvent();
+                           subscriptionInterrupt.Set();
                            throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null };
                        }))
                 {
-                    await worker1Interrupt.WaitAsync(_reasonableWaitTime);
+                    await subscriptionInterrupt.WaitAsync(_reasonableWaitTime);
                 }
 
                 await worker1Retry.WaitAsync(_reasonableWaitTime);
@@ -1132,12 +1139,11 @@ namespace SlowTests.Client.Subscriptions
                 }
 
                 await worker2Ack.WaitAsync(_reasonableWaitTime);
-                await Task.Delay(maxErroneousPeriod * 2);
 
-                var worker1AfterRegisterSubscriptionConnection = new AsyncManualResetEvent();
-                worker1Interrupt.Reset(true);
+                var waitedForFreeDuration = (maxErroneousPeriod * 2).Ticks;
                 var failed = false;
-                using (testingStuff.CallAfterRegisterSubscriptionConnection(time =>
+                worker1AfterRegisterSubscriptionConnection = new AsyncManualResetEvent();
+                using (testingStuff.CallAfterRegisterSubscriptionConnection(_ =>
                        {
                            if (worker2Retry.WaitOne(_reasonableWaitTime) == false)
                            {
@@ -1145,16 +1151,19 @@ namespace SlowTests.Client.Subscriptions
                            }
                            worker1Retry.Reset(true);
                            worker1AfterRegisterSubscriptionConnection.Set();
-                           throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null, RegisterConnectionDurationInTicks = time };
+                           throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null, RegisterConnectionDurationInTicks = waitedForFreeDuration };
                        }))
                 {
+                    subscriptionInterrupt.Reset(true);
                     using (testingStuff.CallDuringWaitForChangedDocuments(() =>
                            {
-                               worker1Interrupt.Set();
+                               // drop subscription
+                               worker2Retry ??= new ManualResetEvent(false);
+                               subscriptionInterrupt.Set();
                                throw new SubscriptionDoesNotBelongToNodeException($"DROPPED BY TEST") { AppropriateNode = null };
                            }))
                     {
-                        Assert.True(await worker1Interrupt.WaitAsync(_reasonableWaitTime));
+                        Assert.True(await subscriptionInterrupt.WaitAsync(_reasonableWaitTime));
                     }
 
                     await worker1AfterRegisterSubscriptionConnection.WaitAsync(_reasonableWaitTime);
