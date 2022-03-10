@@ -583,9 +583,10 @@ namespace Raven.Server.Documents.Patch
                                     }
                                 }
 #if DEBUG
+                                var resStr = "";
                                 using (var jsResStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes))
                                 {
-                                    var resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
+                                    resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
                                 }
 #endif
 
