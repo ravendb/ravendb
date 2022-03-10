@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void MustReturnOneResult()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MustReturnOneResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new EmailSequenceWithStatusIndex().Execute(store);
 
@@ -52,7 +54,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var results = session.Query<EmailSequenceWithStatusIndex.Result, EmailSequenceWithStatusIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
-
+                    WaitForUserToContinueTheTest(store);                    
                     Assert.Equal(1, results.Count);
                 }
             }

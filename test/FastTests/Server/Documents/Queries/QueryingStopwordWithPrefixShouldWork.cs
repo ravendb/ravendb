@@ -2,6 +2,7 @@
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,10 +29,10 @@ namespace FastTests.Server.Documents.Queries
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Lucene)]
-        public void CanQueryStopwordsWithPrefix(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryStopwordsWithPrefix(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 var index = new FooByBar();
                 index.Execute(store);

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,10 +34,11 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public async Task changing_index_priority_needs_to_set_it_on_index_instance_as_well()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task changing_index_priority_needs_to_set_it_on_index_instance_as_well(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new FakeIndex().Execute(store);
 
@@ -52,10 +54,12 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
-        public void set_auto_index_priority()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void set_auto_index_priority(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,10 +50,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanEnumerateQueryOnDriversIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanEnumerateQueryOnDriversIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -74,10 +76,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanEnumerateDummiedMapResult()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanEnumerateDummiedMapResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 
@@ -103,10 +106,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanCountByQueryOnDriversIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCountByQueryOnDriversIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateData(store);
 

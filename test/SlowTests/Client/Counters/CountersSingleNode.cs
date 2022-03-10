@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -894,10 +895,11 @@ namespace SlowTests.Client.Counters
             public int Count { get; set; }
         }
 
-        [Fact]
-        public void ShouldThrowOnAttemptToAddCounterToArtificailDoc()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ShouldThrowOnAttemptToAddCounterToArtificailDoc(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersByAge().Execute(store);
                 using (var session = store.OpenSession())

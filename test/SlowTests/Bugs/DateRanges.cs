@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,10 +21,11 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
-        public void CanQueryByDate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryByDate(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -49,10 +51,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanQueryByDateRange_LowerThan()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryByDateRange_LowerThan(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -78,10 +81,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void CanQueryByDateRange_GreaterThan()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanQueryByDateRange_GreaterThan(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,10 +40,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task LowLevelRemoteStreamAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task LowLevelRemoteStreamAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 
@@ -73,10 +75,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task HighLevelRemoteStreamAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task HighLevelRemoteStreamAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 
@@ -106,10 +109,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task HighLevelLocalStreamWithFilterAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task HighLevelLocalStreamWithFilterAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
@@ -147,10 +151,12 @@ namespace SlowTests.Issues
                 }
             }
         }
-        [Fact]
-        public async Task LowLevelEmbeddedStreamAsync()
+        
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task LowLevelEmbeddedStreamAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByActive().Execute(store);
 

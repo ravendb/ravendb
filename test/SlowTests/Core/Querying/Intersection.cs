@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 using FastTests;
 using Raven.Client.Documents;
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using TShirt = SlowTests.Core.Utils.Entities.TShirt;
@@ -19,10 +19,12 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void CanPerformIntersectQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanPerformIntersectQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new TShirtIndex().Execute(store);
 

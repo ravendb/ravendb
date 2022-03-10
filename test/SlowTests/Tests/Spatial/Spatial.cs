@@ -5,6 +5,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,10 +65,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void WeirdSpatialResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WeirdSpatialResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -108,10 +110,11 @@ namespace SlowTests.Tests.Spatial
         }
 
 
-        [Fact]
-        public void MatchSpatialResults()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void MatchSpatialResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -170,10 +173,11 @@ namespace SlowTests.Tests.Spatial
             public double Longitude { get; set; }
         }
 
-        [Fact]
-        public void WeirdSpatialResults2()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void WeirdSpatialResults2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -205,10 +209,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void SpatialSearchWithSwedishCulture()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SpatialSearchWithSwedishCulture(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

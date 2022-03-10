@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.Indexing
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanUseExactInAutoIndex(RavenDataExplicitConfiguration config)
+        public async Task CanUseExactInAutoIndex(RavenTestParameters config)
         {            
             using (var store = GetDocumentStore(new Options
             {
@@ -159,7 +159,7 @@ namespace SlowTests.Server.Documents.Indexing
 
         [Theory]
         [RavenExplicitData]
-        public async Task ShouldExtendMappingOfTheSameField(RavenDataExplicitConfiguration config)
+        public async Task ShouldExtendMappingOfTheSameField(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
                    {
@@ -216,7 +216,7 @@ namespace SlowTests.Server.Documents.Indexing
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(RavenDataExplicitConfiguration config)
+        public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
                    {

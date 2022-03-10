@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -57,10 +58,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public async Task ShouldNotConvertUriToStringWhenIndexing()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task ShouldNotConvertUriToStringWhenIndexing(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new WebActivityIndex().Execute(store);
 

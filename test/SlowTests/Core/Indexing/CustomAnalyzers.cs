@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Highlighting;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 using Xunit;
@@ -24,10 +25,12 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
-        public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]
+        public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_SortByName().Execute(store);
 
@@ -67,10 +70,12 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
-        public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]
+        public void CreateAndQuerySimpleIndexWithCustomAnalyzersAndFieldOptions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Companies_CustomAnalyzers().Execute(store);
 

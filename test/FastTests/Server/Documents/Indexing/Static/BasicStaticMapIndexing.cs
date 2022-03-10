@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanInheritConfiguration(RavenDataExplicitConfiguration config)
+        public async Task CanInheritConfiguration(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -125,7 +125,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanPersist(RavenDataExplicitConfiguration config)
+        public async Task CanPersist(RavenTestParameters config)
         {
 
             IndexDefinition indexDefinition1, indexDefinition2;
@@ -265,7 +265,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public void StalenessCalculationShouldWorkForAllDocsIndexes(RavenDataExplicitConfiguration config)
+        public void StalenessCalculationShouldWorkForAllDocsIndexes(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -358,7 +358,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
         [Theory]
         [RavenExplicitData]
-        public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly(RavenDataExplicitConfiguration config)
+        public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString()))
             {

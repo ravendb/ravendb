@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +34,7 @@ namespace SlowTests.Bugs
             public string Name { get; set; }
         }
 
-        private DocumentStore SetupSampleData()
+        private DocumentStore SetupSampleData(Options options)
         {
             var blogOne = new Blog
             {
@@ -63,7 +64,7 @@ namespace SlowTests.Bugs
                                 }
             };
 
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(options);
             using (var s = store.OpenSession())
             {
                 s.Store(blogOne);
@@ -103,10 +104,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void ShouldRespectDefaultOperator()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldRespectDefaultOperator(Options options)
         {
-            using (var store = SetupSampleData())
+            using (var store = SetupSampleData(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -120,10 +122,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void ShouldRespectDefaultOperatorCombinedWithSelectFields()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldRespectDefaultOperatorCombinedWithSelectFields(Options options)
         {
-            using (var store = SetupSampleData())
+            using (var store = SetupSampleData(options))
             {
                 using (var s = store.OpenSession())
                 {

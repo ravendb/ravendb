@@ -15,14 +15,15 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async Task TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow(Options options)
         {
             var exportPath = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");
 
             DatabaseStatistics initialStats;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | DatabaseItemType.Attachments | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
                 await operation.WaitForCompletionAsync();
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var operation = await store.Smuggler.ImportAsync(
                     new DatabaseSmugglerImportOptions
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
                 }
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var operation = await store.Smuggler.ImportAsync(
                     new DatabaseSmugglerImportOptions

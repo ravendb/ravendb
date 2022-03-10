@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using System.Linq;
 using Xunit;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -94,10 +95,11 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
-        public void StoreIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StoreIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new YieldSearch();
                 index.Execute(store);

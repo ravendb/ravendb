@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,10 +43,11 @@ namespace SlowTests.Tests.Track
             }
         }
 
-        [Fact]
-        public void SyncWorks()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SyncWorks(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
 
@@ -61,10 +63,11 @@ namespace SlowTests.Tests.Track
             }
         }
 
-        [Fact]
-        public async Task AsyncShouldWorkToo()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task AsyncShouldWorkToo(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Fill(store);
                 Indexes.WaitForIndexing(store);

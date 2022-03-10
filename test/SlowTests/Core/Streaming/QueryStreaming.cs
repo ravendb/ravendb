@@ -14,8 +14,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,10 +29,11 @@ namespace SlowTests.Core.Streaming
         {
         }
 
-        [Fact]
-        public void CanStreamQueryResults()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanStreamQueryResults(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -78,10 +81,11 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact]
-        public void CanStreamQueryResultsWithQueryStatistics()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanStreamQueryResultsWithQueryStatistics(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -131,10 +135,11 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact]
-        public async Task CanStreamQueryResultsWithQueryStatisticsAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanStreamQueryResultsWithQueryStatisticsAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -191,10 +196,11 @@ namespace SlowTests.Core.Streaming
             public int Index { get; set; }
         }
 
-        [Fact]
-        public void TestFailingProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TestFailingProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -238,12 +244,18 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact]
-        public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow()
+        [Theory]
+        [RavenExplicitData]
+        public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow(RavenTestParameters config)
         {
             using var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.FindClrType = (t, b) => "SomeType"
+                ModifyDocumentStore = s => s.Conventions.FindClrType = (t, b) => "SomeType",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                }
             });
 
             var objs = Enumerable.Range(0, 50000).Select(_ => new Dictionary<string, string>
@@ -316,10 +328,11 @@ namespace SlowTests.Core.Streaming
             }
         }
         
-        [Fact]
-        public void Streaming_Results_Should_Sort_Properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void Streaming_Results_Should_Sort_Properly(Options options)
         {
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.ExecuteIndex(new FooIndex());
 

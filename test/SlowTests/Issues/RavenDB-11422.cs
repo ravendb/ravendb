@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,10 +68,11 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
-        public void VerifyIndexScore_Map_SimpleProjection_CollectionQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void VerifyIndexScore_Map_SimpleProjection_CollectionQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -108,10 +110,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_Map_SimpleProjection_AutoIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void VerifyIndexScore_Map_SimpleProjection_AutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -151,10 +154,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_Map_SimpleProjection_StaticIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyIndexScore_Map_SimpleProjection_StaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index1().Execute(store);
 
@@ -196,10 +200,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_MapReduce_SimpleProjection_AutoIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void VerifyIndexScore_MapReduce_SimpleProjection_AutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -244,10 +249,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_MapReduce_SimpleProjection_StaticIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyIndexScore_MapReduce_SimpleProjection_StaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByAge().Execute(store);
 
@@ -296,10 +302,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_Map_JsProjection_CollectionQuery()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void VerifyIndexScore_Map_JsProjection_CollectionQuery(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -339,10 +346,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_Map_JsProjection_AutoIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void VerifyIndexScore_Map_JsProjection_AutoIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -383,10 +391,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_Map_JsProjection_StaticIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyIndexScore_Map_JsProjection_StaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Index1().Execute(store);
 
@@ -428,10 +437,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void VerifyIndexScore_MapReduce_JsProjection_StaticIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void VerifyIndexScore_MapReduce_JsProjection_StaticIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByAge().Execute(store);
 

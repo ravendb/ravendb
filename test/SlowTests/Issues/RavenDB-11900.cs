@@ -1,6 +1,8 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,11 +69,17 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
-        public void CanUseFindProjectedPropertyNameForIndexToGetDotNotationInProjections()
+        [Theory]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseFindProjectedPropertyNameForIndexToGetDotNotationInProjections(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                },
                 ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex = 
                     (indexedType, indexedName, path, prop) => path + prop
             }))
@@ -107,10 +115,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void WhenFindProjectedPropertyNameForIndexIsNullShouldFallbackToFindPropertyNameForIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhenFindProjectedPropertyNameForIndexIsNullShouldFallbackToFindPropertyNameForIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndex2().Execute(store);
 
@@ -143,11 +152,17 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void WhenFindProjectedPropertyNameForIndexReturnsNullShouldFallbackToFindPropertyNameForIndex()
+        [Theory]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void WhenFindProjectedPropertyNameForIndexReturnsNullShouldFallbackToFindPropertyNameForIndex(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                },
                 ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex = 
                     (indexedType, indexedName, path, prop) => null
             }))
@@ -182,12 +197,18 @@ namespace SlowTests.Issues
 
             }
         }
-
-        [Fact]
-        public void CanUseDifferentConventionsPerIndex()
+        
+        [Theory]
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanUseDifferentConventionsPerIndex(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
+                },
                 ModifyDocumentStore = s =>
                 {
                     s.Conventions.FindProjectedPropertyNameForIndex = (indexedType, indexedName, path, prop) =>

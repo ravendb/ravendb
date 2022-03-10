@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,10 +16,11 @@ namespace SlowTests.Graph
         {
         }
 
-        [Fact]
-        public void Can_query_with_vertices_source_from_map_reduce_index()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_query_with_vertices_source_from_map_reduce_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -45,10 +47,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Can_query_with_vertices_source_from_map_index()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_query_with_vertices_source_from_map_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -69,10 +72,11 @@ namespace SlowTests.Graph
         }
 
         //having map/reduce index as destination vertex source makes no sense
-        [Fact]
-        public void Cannot_query_with_vertices_as_destination_taken_from_map_reduce_index()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Cannot_query_with_vertices_as_destination_taken_from_map_reduce_index(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);
@@ -89,10 +93,11 @@ namespace SlowTests.Graph
         }
 
         //having map/reduce index as destination vertex source makes no sense
-        [Fact]
-        public void Cannot_query_with_vertices_as_destination_taken_from_map_reduce_index_in_multiple_hop_queries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Cannot_query_with_vertices_as_destination_taken_from_map_reduce_index_in_multiple_hop_queries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 Indexes.WaitForIndexing(store);

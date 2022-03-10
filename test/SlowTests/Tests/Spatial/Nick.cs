@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,10 +36,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void Test()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Test(Options options)
         {
-            using (IDocumentStore store = GetDocumentStore())
+            using (IDocumentStore store = GetDocumentStore(options))
             {
                 using (IDocumentSession session = store.OpenSession())
                 {

@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
@@ -29,10 +30,11 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
-        public async Task CanPutUpdateAndDeleteMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanPutUpdateAndDeleteMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string usersByname = "users/byName";
 
@@ -58,10 +60,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetTermsForIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGetTermsForIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -94,10 +97,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanGetTermsForIndex_WithPaging()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGetTermsForIndex_WithPaging(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -130,10 +134,11 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public void CanQueryForMetadataAndIndexEntriesOnly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryForMetadataAndIndexEntriesOnly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -188,12 +193,13 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanGetIndexNames()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanGetIndexNames(Options options)
         {
             var index1 = new Users_ByName();
             var index2 = new Posts_ByTitleAndContent();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 index1.Execute(store);
                 index2.Execute(store);
@@ -205,11 +211,12 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
-        public async Task CanResetIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanResetIndex(Options options)
         {
             var index = new Users_ByName();
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 index.Execute(store);
                 using (var session = store.OpenSession())

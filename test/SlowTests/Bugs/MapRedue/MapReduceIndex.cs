@@ -9,6 +9,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,10 +31,11 @@ namespace SlowTests.Bugs.MapRedue
             };
         }
 
-        [Fact]
-        public void MapReduceIndexTest()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MapReduceIndexTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new VersionedDocuments().Execute(store);
 

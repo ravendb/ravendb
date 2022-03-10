@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,10 +43,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void OfTypeAfterSelectShouldWorkFine()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void OfTypeAfterSelectShouldWorkFine(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new UsersIndex2().Execute(store);
                 using (var session = store.OpenSession())

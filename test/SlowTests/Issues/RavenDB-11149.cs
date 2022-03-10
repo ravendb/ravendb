@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,10 +38,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void EmptyParameterListShouldNotMatchSimple()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void EmptyParameterListShouldNotMatchSimple(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -80,10 +82,11 @@ where
             }
         }
 
-        [Fact]
-        public void EmptyParameterListShouldNotMatch()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void EmptyParameterListShouldNotMatch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

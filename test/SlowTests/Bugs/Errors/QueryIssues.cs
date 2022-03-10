@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,12 @@ namespace SlowTests.Bugs.Errors
         {
         }
 
-        [Fact]
-        public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CompanyIndex().Execute(store);
                 using (var session = store.OpenSession())

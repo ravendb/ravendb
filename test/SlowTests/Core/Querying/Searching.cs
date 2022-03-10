@@ -14,7 +14,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using SlowTests.Core.Utils.Indexes;
-
+using Tests.Infrastructure;
 using Xunit;
 
 using Camera = SlowTests.Core.Utils.Entities.Camera;
@@ -30,10 +30,11 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Fact]
-        public void CanSearchByMultipleTerms()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSearchByMultipleTerms(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
@@ -85,10 +86,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanSearchByMultipleFields()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSearchByMultipleFields(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
@@ -156,10 +158,12 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanDoSpatialSearch()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-17966")]
+        public void CanDoSpatialSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var eventsSpatialIndex = new Events_SpatialIndex();
                 eventsSpatialIndex.Execute(store);
@@ -240,10 +244,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanDoSearchBoosting()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanDoSearchBoosting(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -278,10 +283,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanProvideSuggestionsAndLazySuggestions()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanProvideSuggestionsAndLazySuggestions(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Users_ByName().Execute(store);
 
@@ -331,10 +337,11 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformFacetedSearchAndLazyFacatedSearch()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformFacetedSearchAndLazyFacatedSearch(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new CameraCost().Execute(store);
 

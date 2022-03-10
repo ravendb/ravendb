@@ -21,8 +21,8 @@ namespace SlowTests.Tests.Sorting
         {
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void basic_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
@@ -94,8 +94,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void number_and_decimal_alphanumeric_sort(Options options)
         {
             var titles = new List<string>
@@ -147,8 +147,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void basic_sequence_of_characters(Options options)
         {
             var titles = new List<string>
@@ -204,8 +204,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void order_by_two_parameters_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
@@ -255,8 +255,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void order_by_two_parameters_first_alphanumeric_than_long(Options options)
         {
             var localTracks = new List<Track>();
@@ -307,8 +307,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void order_by_two_parameters_first_long_than_alphanumeric(Options options)
         {
             var localTracks = new List<Track>();
@@ -415,7 +415,7 @@ namespace SlowTests.Tests.Sorting
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineDataWithRandomSeed]
         public async Task random_words_using_document_query(int seed)
         {
@@ -578,8 +578,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void dynamic_query_should_work(Options options)
         {
             var titles = new List<string>
@@ -640,8 +640,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void OrderByPrefixes(Options options)
         {
             var localTracks = new List<Track>();
@@ -703,8 +703,8 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
-        [RavenData]
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void NumbersTests(Options options)
         {
             var localTracks = new List<Track>();

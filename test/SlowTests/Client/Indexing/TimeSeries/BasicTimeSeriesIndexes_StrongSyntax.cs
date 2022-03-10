@@ -9,9 +9,11 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -308,10 +310,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void BasicMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = RavenTestHelper.UtcToday;
                 var now2 = now1.AddSeconds(1);
@@ -468,10 +471,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task BasicMapIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapIndexWithLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
 
@@ -628,10 +632,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void BasicMapReduceIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BasicMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var today = RavenTestHelper.UtcToday;
                 var tomorrow = today.AddDays(1);
@@ -809,11 +814,12 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task BasicMapReduceIndexWithLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMapReduceIndexWithLoad(Options options)
         {
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     var today = RavenTestHelper.UtcToday;
 
@@ -958,10 +964,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeriesFromCollection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllTimeSeriesFromCollection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1104,10 +1111,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void CanMapAllTimeSeries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanMapAllTimeSeries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);
@@ -1295,12 +1303,13 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task BasicMultiMapIndex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task BasicMultiMapIndex(Options options)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var timeSeriesIndex = new MyMultiMapTsIndex();
                 await timeSeriesIndex.ExecuteAsync(store);
@@ -1356,8 +1365,9 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void SupportForEscapedCollectionAndTimeSeriesNames()
+        [Theory]
+        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
+        public void SupportForEscapedCollectionAndTimeSeriesNames(RavenTestParameters config)
         {
             using (var store = GetDocumentStore(new Options
             {
@@ -1367,6 +1377,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
                         return "Companies With Space";
 
                     return null;
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
             }))
             {
@@ -1386,7 +1401,13 @@ namespace SlowTests.Client.Indexing.TimeSeries
                         return "Companies With Space";
 
                     return null;
+                },
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
                 }
+                
             }))
             {
                 var timeSeriesIndex = new MyTsIndex_WithSpace();
@@ -1406,7 +1427,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 AssertIndex(store, indexDefinition, "HeartRate");
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(config.Options))
             {
                 var timeSeriesIndex = new MyTsIndex_WithSpace();
                 timeSeriesIndex.Conventions = store.Conventions;
@@ -1496,12 +1517,13 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void TimeSeriesNamesFor()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void TimeSeriesNamesFor(Options options)
         {
             var now = DateTime.UtcNow.Date;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new Companies_ByTimeSeriesNames();
                 index.Execute(store);
@@ -1548,10 +1570,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public async Task CanCalculateNumberOfReferencesCorrectly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task CanCalculateNumberOfReferencesCorrectly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var countersIndex = new MyMultiMapTsIndex_Load();
                 var indexName = countersIndex.IndexName;
@@ -1645,10 +1668,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Fact]
-        public void ShouldUseOriginalTimeSeriesName()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ShouldUseOriginalTimeSeriesName(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new MyTsIndex_AllDocs();
                 index.Execute(store);

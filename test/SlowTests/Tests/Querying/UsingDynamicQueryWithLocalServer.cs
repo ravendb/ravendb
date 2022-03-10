@@ -12,6 +12,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,8 +24,9 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicQueryUsingClientLinqQueryWithNestedCollection(Options options)
         {
             var blogOne = new Blog
             {
@@ -51,7 +53,7 @@ namespace SlowTests.Tests.Querying
                  }
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -75,8 +77,9 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryUsingClientLinqQuery()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicQueryUsingClientLinqQuery(Options options)
         {
             var blogOne = new Blog
             {
@@ -94,7 +97,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -118,10 +121,11 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void QueryForASpecificTypeDoesNotBringBackOtherTypes()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void QueryForASpecificTypeDoesNotBringBackOtherTypes(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -139,8 +143,9 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryUsingClientLuceneQuery()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicQueryUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog
             {
@@ -158,7 +163,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Rhinos"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
                 {
@@ -183,8 +188,9 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicQueryWithHighlightingUsingClientLuceneQuery(Options options)
         {
             var blogOne = new Blog
             {
@@ -202,7 +208,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string blogOneId;
                 string blogTwoId;
@@ -219,15 +225,15 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
-                    var options = new HighlightingOptions
+                    var highlightingOptions = new HighlightingOptions
                     {
                         PreTags = new[] { "*" },
                         PostTags = new[] { "*" }
                     };
 
                     var results = s.Advanced.DocumentQuery<Blog>()
-                        .Highlight("Title", 18, 2, options, out Highlightings titleHighlightings)
-                        .Highlight("Category", 18, 2, options, out Highlightings categoryHighlightings)
+                        .Highlight("Title", 18, 2, highlightingOptions, out Highlightings titleHighlightings)
+                        .Highlight("Category", 18, 2, highlightingOptions, out Highlightings categoryHighlightings)
                         .Search("Title", "target word")
                         .Search("Category", "rhinos")
                         .WaitForNonStaleResults()
@@ -243,8 +249,9 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicQueryWithHighlighting()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicQueryWithHighlighting(Options options)
         {
             var blogOne = new Blog
             {
@@ -262,7 +269,7 @@ namespace SlowTests.Tests.Querying
                 Category = "Los Rhinos"
             };
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 string blogOneId;
                 string blogTwoId;
@@ -297,10 +304,11 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAgainstSimpleIndex()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ExecutesQueryWithHighlightingsAgainstSimpleIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
@@ -365,10 +373,11 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ExecutesQueryWithHighlightingsAgainstMapReduceIndex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string indexName = "BlogsForHighlightingMRTests";
                 store.Maintenance.Send(new PutIndexesOperation(new[] {
@@ -438,10 +447,11 @@ namespace SlowTests.Tests.Querying
             }
         }
 
-        [Fact]
-        public void ExecutesQueryWithHighlightingsAndProjections()
+        [RavenTheory(RavenTestCategory.Highlighting)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void ExecutesQueryWithHighlightingsAndProjections(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 const string indexName = "BlogsForHighlightingTests";
                 store.Maintenance.Send(new PutIndexesOperation(new[] {

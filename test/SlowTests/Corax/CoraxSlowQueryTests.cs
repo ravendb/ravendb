@@ -246,10 +246,10 @@ namespace SlowTests.Corax
         }
 
         [Theory]
-        [SearchEngineClassData(SearchEngineType.Corax)]
-        public void CanSearchOnLists(string searchEngine)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void CanSearchOnLists(Options options)
         {
-            using var store = GetDocumentStore(Options.ForSearchEngine(searchEngine));
+            using var store = GetDocumentStore(options);
             {
                 using var s = store.OpenSession();
                 s.Store(new ListOfNames(new []{"Maciej", "Gracjan", "Marcin", "Arek", "Tomek", "Pawel"}));

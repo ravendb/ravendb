@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,12 +16,13 @@ namespace SlowTests.Tests.Faceted
         {
         }
 
-        [Fact]
-        public void CanPerformDynamicFacetedSearch_Embedded()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicFacetedSearch_Embedded(Options options)
         {
             var cameras = GetCameras(30);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 CreateCameraCostIndex(store);
 
@@ -53,10 +55,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact]
-        public void CanPerformDynamicFacetedSearch_Remotely()
+        [RavenTheory(RavenTestCategory.Facets)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanPerformDynamicFacetedSearch_Remotely(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var cameras = GetCameras(30);
 

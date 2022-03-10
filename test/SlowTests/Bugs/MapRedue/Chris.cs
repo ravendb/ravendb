@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,28 +13,31 @@ namespace SlowTests.Bugs.MapRedue
         {
         }
 
-        [Fact]
-        public void CanMakeIndexWork()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanMakeIndexWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new GroupIndex2().Execute(store);
             }
         }
 
-        [Fact]
-        public void IndexWithoutLetShouldWork()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithoutLetShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithoutLet().Execute(store);
             }
         }
 
-        [Fact]
-        public void IndexWithLetShouldWork()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexWithLetShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new IndexWithLet().Execute(store);
             }

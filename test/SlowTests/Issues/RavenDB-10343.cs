@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -78,10 +79,11 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectAndProject()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectAndProject(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -183,10 +185,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectAndProjectWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectAndProjectWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -304,10 +307,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectAndProjectWhere_UsingSeassionLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectAndProjectWhere_UsingSeassionLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -425,10 +429,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanQueryWithLoadFromSelectAndProjectWhereAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryWithLoadFromSelectAndProjectWhereAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -546,10 +551,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryFromStaticIndexWithLoadFromSelectAndProject()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryFromStaticIndexWithLoadFromSelectAndProject(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new LatestBuildsIndex().Execute(store);
 
@@ -670,10 +676,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectWithMemberAccessProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectWithMemberAccessProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -748,10 +755,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectWithMemberAccessProjection_UsingSessionLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectWithMemberAccessProjection_UsingSessionLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -826,10 +834,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectWithoutProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectWithoutProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -894,10 +903,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadFromSelectWithoutProjectionWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadFromSelectWithoutProjectionWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -968,10 +978,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadWithStringParameterFromSelectWithoutProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadWithStringParameterFromSelectWithoutProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1043,10 +1054,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryWithLoadWithWrappedConstantParameterFromSelectWithoutProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryWithLoadWithWrappedConstantParameterFromSelectWithoutProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1122,10 +1134,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new LatestBuildsIndex().Execute(store);
 
@@ -1210,10 +1223,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection_UsingSessionLoad()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection_UsingSessionLoad(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new LatestBuildsIndex().Execute(store);
 
@@ -1298,10 +1312,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanQueryFromStaticIndexWithLoadFromSelectWithoutProjectionAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanQueryFromStaticIndexWithLoadFromSelectWithoutProjectionAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new LatestBuildsIndex().Execute(store);
 
@@ -1386,10 +1401,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanSelectMemberAccessOfLoadedDocument()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSelectMemberAccessOfLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -1451,10 +1467,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanSelectNestedMemberOfLoadedDocument()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSelectNestedMemberOfLoadedDocument(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -1530,10 +1547,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void CanSelectMemberAccessOfLoadedDocumentWhere()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanSelectMemberAccessOfLoadedDocumentWhere(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())
@@ -1605,10 +1623,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public async Task CanSelectMemberAccessOfLoadedDocumentWhereAsync()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task CanSelectMemberAccessOfLoadedDocumentWhereAsync(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
 
                 using (var session = store.OpenSession())

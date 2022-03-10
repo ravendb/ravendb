@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -136,9 +137,13 @@ namespace SlowTests.Tests.Spatial
                         .ToList();
                 }
             }
-
-            [Theory]
-            [CriticalCultures]
+            
+            [RavenTheory(RavenTestCategory.Spatial)]
+            // [RavenData(CultureInfo.InvariantCulture, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+            // [RavenData(CultureInfo.CurrentCulture, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+            // [RavenData(new CultureInfo("NL"), SearchEngineMode = RavenSearchEngineMode.Lucene)] // Uses comma instead of point: 12,34
+            // [RavenData(new CultureInfo("tr-TR"), SearchEngineMode = RavenSearchEngineMode.Lucene)] // "The Turkey Test"
+            [CultureTheory]
             public void ShouldMatchMakeFacetsOnLocation(CultureInfo criticalCulture)
             {
                 Initialize();

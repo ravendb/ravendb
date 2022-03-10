@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,10 +14,11 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Fact]
-        public void CanGetDataFromMultipleDocumentSources()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanGetDataFromMultipleDocumentSources(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PostCountsByUser_WithName().Execute(store);
 
@@ -55,10 +57,11 @@ namespace SlowTests.Bugs.MultiMap
 
         }
 
-        [Fact]
-        public void CanQueryFromMultipleSources()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryFromMultipleSources(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PostCountsByUser_WithName().Execute(store);
 
@@ -97,10 +100,11 @@ namespace SlowTests.Bugs.MultiMap
             }
         }
 
-        [Fact]
-        public void CanQueryFromMultipleSources2()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanQueryFromMultipleSources2(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new PostCountsByUser_WithName().Execute(store);
 
@@ -138,10 +142,11 @@ namespace SlowTests.Bugs.MultiMap
             }
         }
 
-        [Fact]
-        public void JustQuerying()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void JustQuerying(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

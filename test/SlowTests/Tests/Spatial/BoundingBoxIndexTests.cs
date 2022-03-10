@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,8 +15,9 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
-        public void BoundingBoxTest()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void BoundingBoxTest(Options options)
         {
             // X XXX X
             // X XXX X
@@ -28,7 +30,7 @@ namespace SlowTests.Tests.Spatial
             var rectangle2 = "6 6 10 10";
             var rectangle3 = "0 0 6 6";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 new BBoxIndex().Execute(store);

@@ -9,6 +9,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -88,10 +89,11 @@ namespace SlowTests.Tests.DistinctFacets
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
-        public void CanGetDistinctResult()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetDistinctResult(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
 
@@ -110,10 +112,11 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact]
-        public void CanGetDistinctResult_WithPaging()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CanGetDistinctResult_WithPaging(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
 
@@ -133,10 +136,11 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact]
-        public void DistinctResult_WithFacets_ShouldThrow()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void DistinctResult_WithFacets_ShouldThrow(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 SetupData(store);
 

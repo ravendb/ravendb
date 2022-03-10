@@ -2,6 +2,7 @@
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,10 +28,10 @@ namespace FastTests.Issues
         }
         
         [Theory]
-        [SearchEngineClassData]
-        public void Test(string searchEngine)
+        [RavenData]
+        public void Test(Options options)
         {
-            using (var store = GetDocumentStore(Options.ForSearchEngine(searchEngine)))
+            using (var store = GetDocumentStore(options))
             {
                 new PeopleIndex().Execute(store);
 

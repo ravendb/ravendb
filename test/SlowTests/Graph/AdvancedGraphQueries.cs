@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Order = Tests.Infrastructure.Entities.Order;
 using Product = Tests.Infrastructure.Entities.Product;
@@ -22,10 +23,11 @@ namespace SlowTests.Graph
         {
         }
 
-        [Fact]
-        public void Can_query_with_edge_defined_in_embedded_object()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_query_with_edge_defined_in_embedded_object(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -40,10 +42,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Do_not_leak_last_alias_in_recursive()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Do_not_leak_last_alias_in_recursive(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
 
@@ -58,10 +61,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
 
@@ -100,11 +104,12 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_should_return_data_in_proper_form()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_should_return_data_in_proper_form(Options options)
         //note: for more information see https://issues.hibernatingrhinos.com/issue/RavenDB-12088
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -126,10 +131,11 @@ namespace SlowTests.Graph
 
 
 
-        [Fact]
-        public void Graph_query_missing_FROM_vertex_should_fail_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_missing_FROM_vertex_should_fail_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -142,10 +148,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_missing_TO_vertex_should_fail_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_missing_TO_vertex_should_fail_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
@@ -158,10 +165,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_empty_recursive_clause_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_empty_recursive_clause_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -174,10 +182,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_recursive_clause_with_edge_only_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_recursive_clause_with_edge_only_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -190,10 +199,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_recursive_clause_that_ends_on_edge_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_recursive_clause_that_ends_on_edge_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -206,10 +216,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Graph_query_recursive_clause_that_ends_on_vertex_and_has_vertex_afterward_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Graph_query_recursive_clause_that_ends_on_vertex_and_has_vertex_afterward_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -223,10 +234,11 @@ namespace SlowTests.Graph
         }
           
 
-        [Fact]
-        public void Query_with_duplicate_implicit_aliases_in_select_should_fail_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_with_duplicate_implicit_aliases_in_select_should_fail_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -263,10 +275,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Query_with_duplicate_explicit_aliases_in_select_should_fail_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_with_duplicate_explicit_aliases_in_select_should_fail_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -303,10 +316,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Query_with_multiple_hops_in_the_same_direction_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_with_multiple_hops_in_the_same_direction_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -356,10 +370,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Query_with_multiple_hops_that_are_cycle_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Query_with_multiple_hops_that_are_cycle_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -412,10 +427,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void FindTwoFriendliesWhoPointToTheSameVertex()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FindTwoFriendliesWhoPointToTheSameVertex(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -454,10 +470,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Can_filter_in_graph_queries_with_array_edges()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Can_filter_in_graph_queries_with_array_edges(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
@@ -481,10 +498,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void FindFriendlies()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FindFriendlies(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
@@ -511,10 +529,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Only_undefined_alias_in_SELECT_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Only_undefined_alias_in_SELECT_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
@@ -527,10 +546,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Proper_and_undefined_alias_in_SELECT_should_properly_fail()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Proper_and_undefined_alias_in_SELECT_should_properly_fail(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
@@ -543,10 +563,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void FindFriendlies_with_javascript_select_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void FindFriendlies_with_javascript_select_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 WaitForUserToContinueTheTest(store);
@@ -574,10 +595,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Match_without_any_parameters_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Match_without_any_parameters_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var one = store.OpenSession())
@@ -595,10 +617,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -621,10 +644,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_and_edge_filter_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_and_edge_filter_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -655,10 +679,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_and_edge_filter_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_and_edge_filter_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -689,10 +714,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -715,10 +741,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -758,10 +785,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_single_destination_should_return_empty_results()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_single_destination_should_return_empty_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -784,10 +812,11 @@ namespace SlowTests.Graph
                 }
             }
         }
-        [Fact]
-        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_multiple_possible_destination_should_return_empty_results()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_multiple_possible_destination_should_return_empty_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -814,10 +843,11 @@ namespace SlowTests.Graph
                 }
             }
         }
-        [Fact]
-        public void Make_sure_cycles_are_handled_in_multi_hop_queries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Make_sure_cycles_are_handled_in_multi_hop_queries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -857,10 +887,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Make_sure_cycles_and_where_expression_are_handled_in_multi_hop_queries()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Make_sure_cycles_and_where_expression_are_handled_in_multi_hop_queries(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -924,10 +955,11 @@ namespace SlowTests.Graph
             public string Ancestor { get; set; }
         }
 
-        [Fact]
-        public void Multi_hop_without_select_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Multi_hop_without_select_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -967,10 +999,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Make_sure_cycles_are_handled_in_multi_hop_queries_with_multiple_multihop_edge_clauses()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Make_sure_cycles_are_handled_in_multi_hop_queries_with_multiple_multihop_edge_clauses(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1012,10 +1045,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Projection_of_edge_array_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Projection_of_edge_array_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1062,10 +1096,11 @@ namespace SlowTests.Graph
             }
         }                
 
-        [Fact(DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
-        public void Edge_array_with_filter_should_work()
+        [RavenTheory(RavenTestCategory.None, DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Edge_array_with_filter_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1098,11 +1133,12 @@ namespace SlowTests.Graph
                 }
             }
         }        
-
-        [Fact(DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Projection_with_edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
-        public void Projection_with_edge_array_with_filter_should_work()
+        
+        [RavenTheory(RavenTestCategory.None, DisplayName = "SlowTests.Graph.AdvancedGraphQueries.Projection_with_edge_array_with_filter_should_work() -> Relevant for RavenDB-12206")]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Projection_with_edge_array_with_filter_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1151,10 +1187,11 @@ namespace SlowTests.Graph
             }
         }        
 
-        [Fact]
-        public void Queries_with_non_existing_fields_in_node_filter_should_be_excluded_from_results()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Queries_with_non_existing_fields_in_node_filter_should_be_excluded_from_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1182,10 +1219,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Queries_with_non_existing_fields_in_simple_edge_filter_should_be_excluded_from_results()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Queries_with_non_existing_fields_in_simple_edge_filter_should_be_excluded_from_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -1213,10 +1251,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Queries_with_non_existing_fields_in_complex_edge_filter_should_be_excluded_from_results()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Queries_with_non_existing_fields_in_complex_edge_filter_should_be_excluded_from_results(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -1230,10 +1269,11 @@ namespace SlowTests.Graph
         }
 
 
-        [Fact]
-        public void Projection_of_complex_edge_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Projection_of_complex_edge_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 Indexes.WaitForIndexing(store);
@@ -1258,10 +1298,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Projection_of_complex_edge_with_filter_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Projection_of_complex_edge_with_filter_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 Indexes.WaitForIndexing(store);
@@ -1300,10 +1341,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Edge_projection_in_multi_hop_query_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Edge_projection_in_multi_hop_query_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -1331,10 +1373,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Edge_projection_to_javascript_object_in_multi_hop_query_should_work()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Edge_projection_to_javascript_object_in_multi_hop_query_should_work(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 
@@ -1363,10 +1406,11 @@ namespace SlowTests.Graph
             }
         }   
 
-        [Fact]
-        public void Longest_recursion_should_work_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Longest_recursion_should_work_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 
@@ -1383,10 +1427,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Shortest_and_lazy_recursion_should_work_properly()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Shortest_and_lazy_recursion_should_work_properly(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
@@ -1410,10 +1455,11 @@ namespace SlowTests.Graph
             }
         }
 
-        [Fact]
-        public void Should_include_ids_when_fetching_documents_in_projection()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void Should_include_ids_when_fetching_documents_in_projection(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 using (var session = store.OpenSession())

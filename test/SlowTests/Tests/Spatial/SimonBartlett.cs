@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Spatial4n.Core.Context.Nts;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -59,10 +60,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void LineStringsShouldIntersect()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void LineStringsShouldIntersect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -89,10 +91,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void CirclesShouldNotIntersect()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void CirclesShouldNotIntersect(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -121,10 +124,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void GeohashIndexDefaultLevel_LineStringShouldNotThrowException()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void GeohashIndexDefaultLevel_LineStringShouldNotThrowException(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeoIndex());
@@ -152,10 +156,11 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Fact]
-        public void GeohashIndexLevel7_LineStringShouldNotThrowException()
+        [RavenTheory(RavenTestCategory.Spatial)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void GeohashIndexLevel7_LineStringShouldNotThrowException(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Initialize();
                 store.ExecuteIndex(new GeohashIndexLevel7());

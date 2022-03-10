@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,21 +29,23 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
-        public void CanCreate()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CanCreate(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new Dec().Execute(store);
             }
         }
 
-        [Fact]
-        public void IgnoresLocale()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IgnoresLocale(Options options)
         {
             using (CultureHelper.EnsureCulture(new CultureInfo("de")))
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(options))
                 {
                     new Dec().Execute(store);
                 }

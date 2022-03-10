@@ -4,6 +4,7 @@ using Xunit;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -54,10 +55,11 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void IndexNullChecks()
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void IndexNullChecks(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var john = new Person { Pet = new Pet { Age = 2316 }, Name = "john" };
                 var jeff = new Person { Pet = null, Name = "jeff" };
