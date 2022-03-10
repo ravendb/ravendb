@@ -305,21 +305,26 @@ namespace Raven.Server.Documents
 
         private static void UpdateGlobalBucketStats(DocumentsOperationContext context, int bucket, int documentSize, long modifiedTicks)
         {
-            var table = context.Transaction.InnerTransaction.OpenTable(BucketStatsSchema, GlobalBucketsTreeSlice);
+            var table = context.Transaction.InnerTransaction.OpenTable(BucketStatsSchema, GlobalBucketStatsSlice);
 
             TableValueReader existing;
-            using (context.Allocator.Allocate(sizeof(long), out ByteString buffer))
+            int count = 1, size = documentSize;
+            using (GetBucketKeyByteString(context.Allocator, bucket, out var buffer))
             using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
             {
-                *(int*)buffer.Ptr = bucket;
-                table.ReadByKey(keySlice, out existing);
+                if (table.ReadByKey(keySlice, out existing))
+                {
+                    count += TableValueToInt((int)BucketStatsTable.Count, ref existing);
+                    size += TableValueToInt((int)BucketStatsTable.Size, ref existing);
+                }
             }
-
+            
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(bucket);
-                tvb.Add(documentSize);
+                tvb.Add(size);
                 tvb.Add(modifiedTicks);
+                tvb.Add(count);
 
                 if (existing.Pointer == null)
                 {

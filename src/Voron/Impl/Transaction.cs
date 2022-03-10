@@ -161,7 +161,6 @@ namespace Voron.Impl
             if (tableTree == null)
                 return null;
 
-
             value = new Table(schema, clonedName, this, tableTree, schema.TableType);
             _tables[clonedName] = value;
             return value;
