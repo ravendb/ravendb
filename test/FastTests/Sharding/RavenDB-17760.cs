@@ -68,54 +68,60 @@ namespace FastTests.Sharding
 
                 Assert.False(notOnAnyShard);
             }
+        }
 
+        [Fact]
+        public async Task CanGetBucketStats()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+            var buckets = new int[3];
 
-            /*var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
-
-            // get all documents from all shards, and map them to bucket number
-            var buckets = new Dictionary<long, List<Document>>();
-            foreach (var db2 in dbs)
+            for (int i = 0; i < 3; i++)
             {
-                var storage = db.DocumentsStorage;
-                using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
+                var suffix = $"suffix{i}";
+                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
                 {
-                    var items = storage.GetDocumentsFrom(context, etag: 0, start: 0, take: int.MaxValue);
-                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+                    var bucket = ShardedContext.GetShardId(txContext, suffix);
+                    Assert.DoesNotContain(bucket, buckets);
+                    buckets[i] = bucket;
+
+                }
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int j = 0; j < 100; j++)
                     {
-                        foreach (var item in items)
-                        {
-                            var bucket = ShardedContext.GetShardId(txContext, item.Id);
-                            if (buckets.TryGetValue(bucket, out var list) == false)
-                            {
-                                buckets[bucket] = list = new List<Document>();
-                            }
-                            list.Add(item);
-                        }
+                        await session.StoreAsync(new User(), $"users/{j}${suffix}");
                     }
+
+                    await session.SaveChangesAsync();
                 }
             }
 
-            // foreach bucket, get all the docs in this bucket (from all shards)
-            // and assert that it matches the mapping we constructed earlier 
-
-            foreach (var kvp in buckets)
+            for (int i = 0; i < buckets.Length; i++)
             {
-                var key = kvp.Key;
-                var docsInBucket = new List<Document>();
-                foreach (var db4 in dbs)
+                var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+                var notOnAnyShard = true;
+                foreach (var shardedDb in dbs)
                 {
-                    var storage = db.DocumentsStorage;
-                    using (storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (shardedDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var items = storage.GetDocumentsByBucketFrom(context, bucket: 11, etag: 0);
-                        docsInBucket.AddRange(items);
+                        var stats = shardedDb.DocumentsStorage.GetBucketStats(context, buckets[i]);
+                        if (stats == null)
+                            continue;
+
+                        notOnAnyShard = false;
+                        Assert.Equal(100, stats.Count);
+                        Assert.True(stats.Size > 0);
+                        Assert.True(stats.LastAccessed != default);
+                        
+                        break;
                     }
                 }
 
-                Assert.True(kvp.Value.SequenceEqual(docsInBucket.OrderBy(d => d.Etag)));
-            }*/
+                Assert.False(notOnAnyShard);
+            }
         }
 
     }

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
 
         private static readonly Slice DocsBucketAndEtagSlice;
         internal static readonly Slice GlobalBucketStatsSlice;
-        internal static readonly Slice GlobalBucketsTreeSlice;
+        internal static readonly Slice BucketsSizeSlice;
 
 
         public static readonly TableSchema DocsSchema = new TableSchema
@@ -110,7 +110,8 @@ namespace Raven.Server.Documents
         {
             BucketId,
             Size,
-            LastAccessed
+            LastAccessed,
+            Count
         }
 
         static DocumentsStorage()
@@ -134,7 +135,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "GlobalFullChangeVector", ByteStringType.Immutable, out GlobalFullChangeVectorSlice);
 
                 Slice.From(ctx, "GlobalBucketStats", ByteStringType.Immutable, out GlobalBucketStatsSlice);
-                Slice.From(ctx, "GlobalBucketsTree", ByteStringType.Immutable, out GlobalBucketsTreeSlice);
+                Slice.From(ctx, "BucketsSize", ByteStringType.Immutable, out BucketsSizeSlice);
             }
             /*
             Collection schema is:
@@ -181,9 +182,17 @@ namespace Raven.Server.Documents
 
             BucketStatsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)BucketStatsTable.BucketId, 
+                StartIndex = (int)BucketStatsTable.BucketId,
+                Count = 1,
                 IsGlobal = true, 
                 Name = GlobalBucketStatsSlice
+            });
+            BucketStatsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)BucketStatsTable.BucketId,
+                Count = 2,
+                IsGlobal = false, // todo 
+                Name = BucketsSizeSlice
             });
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
@@ -337,8 +346,8 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsBucketAndEtagSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-                    tx.CreateTree(GlobalBucketsTreeSlice);
-
+                    
+                    BucketStatsSchema.Create(tx, GlobalBucketStatsSlice, 32);
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
@@ -1076,7 +1085,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
-            using (GetBucketAndEtagPrefixSlice(context.Allocator, bucket, etag, out var buffer))
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
             using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
             using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
             {
@@ -1084,6 +1093,26 @@ namespace Raven.Server.Documents
                 {
                     yield return TableValueToDocument(context, ref result.Result.Reader);
                 }
+            }
+        }
+
+        public BucketStats GetBucketStats(DocumentsOperationContext context, int bucket)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(BucketStatsSchema, GlobalBucketStatsSlice);
+
+            using (GetBucketKeyByteString(context.Allocator, bucket, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            {
+                if (table.ReadByKey(keySlice, out var existing) == false)
+                    return null;
+
+                return new BucketStats
+                {
+                    BucketId = bucket,
+                    Size = TableValueToInt((int)BucketStatsTable.Size, ref existing),
+                    Count = TableValueToInt((int)BucketStatsTable.Count, ref existing),
+                    LastAccessed = TableValueToDateTime((int)BucketStatsTable.LastAccessed, ref existing)
+                };
             }
         }
 
@@ -2591,13 +2620,23 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagPrefixSlice(
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketAndEtagByteString(
             ByteStringContext allocator, int bucket, long etag,
             out ByteString buffer)
         {
             var scope = allocator.Allocate(sizeof(int) + sizeof(long), out buffer);
             *(int*)buffer.Ptr = bucket;
             *(long*)(buffer.Ptr + sizeof(int)) = Bits.SwapBytes(etag);
+
+            return scope;
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBucketKeyByteString(
+            ByteStringContext allocator, int bucket,
+            out ByteString buffer)
+        {
+            var scope = allocator.Allocate(sizeof(int), out buffer);
+            *(int*)buffer.Ptr = bucket;
 
             return scope;
         }
@@ -2670,6 +2709,13 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int TableValueToInt(int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out _);
+            return *(int*)ptr;
         }
     }
 
