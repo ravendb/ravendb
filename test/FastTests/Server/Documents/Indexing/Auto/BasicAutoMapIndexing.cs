@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CheckDispose(RavenDataExplicitConfiguration config)
+        public async Task CheckDispose(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         
         [Theory]
         [RavenExplicitData]
-        public async Task CanPersist(RavenDataExplicitConfiguration config)
+        public async Task CanPersist(RavenTestParameters config)
         {
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
             {
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanDelete(RavenDataExplicitConfiguration config)
+        public async Task CanDelete(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabase(modifyConfiguration: dictionary => dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString()))
                 await CanDeleteInternal(database);
@@ -198,7 +198,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanReset(RavenDataExplicitConfiguration config)
+        public async Task CanReset(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
                 await CanResetInternal(database);
@@ -254,7 +254,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public void SimpleIndexing(RavenDataExplicitConfiguration config)
+        public void SimpleIndexing(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -417,7 +417,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public void WriteErrors(RavenDataExplicitConfiguration config)
+        public void WriteErrors(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -456,7 +456,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public void Errors2(RavenDataExplicitConfiguration config)
+        public void Errors2(RavenTestParameters config)
         {
             var times = new[]
             {
@@ -905,7 +905,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public void Errors(RavenDataExplicitConfiguration config)
+        public void Errors(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -947,8 +947,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Theory]
-        [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
-        public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(RavenDataExplicitConfiguration config)
+        [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(RavenTestParameters config)
         {
             void WaitForIndexDeletion(DocumentDatabase database, string indexName)
             {
@@ -1264,7 +1264,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task IndexCreationOptions(RavenDataExplicitConfiguration config)
+        public async Task IndexCreationOptions(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -1289,7 +1289,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task LockMode(RavenDataExplicitConfiguration config)
+        public async Task LockMode(RavenTestParameters config)
         {
             using (var database = CreateDocumentDatabaseForSearchEngine(config))
             {
@@ -1316,7 +1316,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(RavenDataExplicitConfiguration config)
+        public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(RavenTestParameters config)
         {
             string indexStoragePath;
             string indexName;
@@ -1372,7 +1372,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanDeleteFaultyIndex(RavenDataExplicitConfiguration config)
+        public async Task CanDeleteFaultyIndex(RavenTestParameters config)
         {
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database, modifyConfiguration: dictionary => GetModificationDictionaryForSearchEngine(dictionary, config)))
             {
@@ -1440,7 +1440,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        private static void GetModificationDictionaryForSearchEngine(Dictionary<string, string> dictionary, RavenDataExplicitConfiguration config)
+        private static void GetModificationDictionaryForSearchEngine(Dictionary<string, string> dictionary, RavenTestParameters config)
         {
             dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
         }

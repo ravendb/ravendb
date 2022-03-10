@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanUseSimpleReduction(RavenDataExplicitConfiguration config)
+        public async Task CanUseSimpleReduction(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var mri = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
@@ -120,7 +120,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanDelete(RavenDataExplicitConfiguration config)
+        public async Task CanDelete(RavenTestParameters config)
         {
             const long numberOfUsers = 10;
 
@@ -233,7 +233,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task DefinitionOfAutoMapReduceIndexIsPersisted(RavenDataExplicitConfiguration config)
+        public async Task DefinitionOfAutoMapReduceIndexIsPersisted(RavenTestParameters config)
         {
             string dbName;
 
@@ -336,7 +336,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanGroupByNestedFieldAndAggregateOnCollection(RavenDataExplicitConfiguration config)
+        public async Task CanGroupByNestedFieldAndAggregateOnCollection(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition(
@@ -398,7 +398,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public void CanStoreAndReadReduceStats(RavenDataExplicitConfiguration config)
+        public void CanStoreAndReadReduceStats(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
@@ -448,7 +448,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanUpdateByChangingValue(RavenDataExplicitConfiguration config)
+        public async Task CanUpdateByChangingValue(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
@@ -526,7 +526,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task CanUpdateByChangingReduceKey(RavenDataExplicitConfiguration config)
+        public async Task CanUpdateByChangingReduceKey(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
@@ -607,7 +607,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
         [Theory]
         [RavenExplicitData]
-        public async Task GroupByMultipleFields(RavenDataExplicitConfiguration config)
+        public async Task GroupByMultipleFields(RavenTestParameters config)
         {
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Orders", new[]
