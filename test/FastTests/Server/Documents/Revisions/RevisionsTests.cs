@@ -1462,7 +1462,7 @@ namespace FastTests.Server.Documents.Revisions
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);
 
-                int baseCount = 1;
+                int baseCount = 10;
                 int totalCount = 2 * baseCount;
                 
                 for (var i = 0; i < baseCount; i++)
