@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -140,6 +141,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
+                    Debug.Assert(e.InnerException is not KeyNotFoundException,
+                        $"Got a '{nameof(KeyNotFoundException)}' while analyzing maintenance stats on node {_nodeTag} : {e}");
+
                     LogMessage($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", e);
                 }
                 finally
