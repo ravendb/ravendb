@@ -178,9 +178,9 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddMapReferenceError(key, message);
         }
 
-        public void AddReduceError(string message)
+        public void AddReduceError(string message, string reduceKey = null)
         {
-            _stats.AddReduceError(message);
+            _stats.AddReduceError(message, reduceKey);
         }
 
         public void RecordMapAttempt()
