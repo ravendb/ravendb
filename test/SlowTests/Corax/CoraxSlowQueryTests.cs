@@ -28,7 +28,7 @@ namespace SlowTests.Corax
 
         [Theory]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
-        public void CompoundOrderByWithPagination(RavenDataExplicitConfiguration config, int size = 10_000)
+        public void CompoundOrderByWithPagination(RavenTestParameters config, int size = 10_000)
         {
             List<Result> expected = new();
             var option = new Options()

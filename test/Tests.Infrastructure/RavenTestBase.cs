@@ -1241,7 +1241,7 @@ namespace FastTests
             {
             }
 
-            public static Options ForSearchEngine(RavenDataExplicitConfiguration config)
+            public static Options ForSearchEngine(RavenTestParameters config)
             {
                 return new Options() { ModifyDatabaseRecord = d =>
                     {

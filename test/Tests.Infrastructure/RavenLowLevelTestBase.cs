@@ -49,7 +49,7 @@ namespace FastTests
             });
         }
 
-        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(RavenDataExplicitConfiguration config)
+        protected DocumentDatabase CreateDocumentDatabaseForSearchEngine(RavenTestParameters config)
         {
             return CreateDocumentDatabase(modifyConfiguration: dictionary =>
                 dictionary[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString());
