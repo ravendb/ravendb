@@ -6,6 +6,10 @@ public class DocumentWithOrderByFields : Document
 {
     public List<(string Field, string Value)> OrderByFields;
 
+    private DocumentWithOrderByFields()
+    {
+    }
+
     public void AddOrderByField(string fieldName, string value)
     {
         OrderByFields ??= new List<(string Field, string Value)>();

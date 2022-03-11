@@ -9,10 +9,12 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.Sharding.ShardResultStreaming;
+using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Operations;
+using Raven.Server.Documents.Sharding.Streaming;
 using Raven.Server.Json;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
@@ -158,7 +160,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         private class ShardedCollectionPreviewCommand : ShardedCommandAsStream
         {
-            public ShardedCollectionPreviewCommand(ShardedRequestHandler handler, int start, int pageSize) : base(handler, Documents.ShardedHandlers.ShardedCommands.Headers.IfNoneMatch)
+            public ShardedCollectionPreviewCommand(ShardedRequestHandler handler, int start, int pageSize) : base(handler, Documents.Sharding.Commands.Headers.IfNoneMatch)
             {
                 var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
                 queryString[Web.RequestHandler.StartParameter] = start.ToString();

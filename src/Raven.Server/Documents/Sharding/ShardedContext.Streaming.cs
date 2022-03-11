@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Replication.Senders;
-using Raven.Server.Documents.ShardedHandlers.ContinuationTokens;
-using Raven.Server.Documents.Sharding.ShardResultStreaming;
-using Raven.Server.Documents.Sharding.ShardResultStreaming.ShardResultComparer;
+using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
+using Raven.Server.Documents.Sharding.Streaming;
+using Raven.Server.Documents.Sharding.Streaming.Comparers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -19,12 +18,6 @@ namespace Raven.Server.Documents.Sharding
 
         public class ShardedStreaming
         {
-            private ShardedContext _shardedContext;
-            public ShardedStreaming(ShardedContext shardedContext)
-            {
-                _shardedContext = shardedContext;
-            }
-
             public async ValueTask<Memory<ShardStreamItem<long>>> ReadCombinedLongAsync(
                 CombinedReadContinuationState combinedState,
                 string name)
@@ -104,7 +97,7 @@ namespace Raven.Server.Documents.Sharding
             public async IAsyncEnumerable<ShardStreamItem<T>> StreamCombinedArray<T>(
                 CombinedReadContinuationState combinedState,
                 string name,
-                Func<BlittableJsonReaderObject, T> converter, 
+                Func<BlittableJsonReaderObject, T> converter,
                 Comparer<ShardStreamItem<T>> comparer)
             {
                 var shards = combinedState.States.Length;
@@ -133,8 +126,8 @@ namespace Raven.Server.Documents.Sharding
             public async IAsyncEnumerable<ShardStreamItem<T>> PagedShardedStream<T>(
                 CombinedReadContinuationState combinedState,
                 string name,
-                Func<BlittableJsonReaderObject, T> converter, 
-                Comparer<ShardStreamItem<T>> comparer, 
+                Func<BlittableJsonReaderObject, T> converter,
+                Comparer<ShardStreamItem<T>> comparer,
                 ShardedPagingContinuation pagingContinuation)
             {
                 var pageSize = pagingContinuation.PageSize;
@@ -157,14 +150,14 @@ namespace Raven.Server.Documents.Sharding
                 ShardedPagingContinuation pagingContinuation)
             {
                 return PagedShardedStream(
-                    combinedState, 
-                    name, 
-                    ShardResultConverter.BlittableToDocumentConverter, 
+                    combinedState,
+                    name,
+                    ShardResultConverter.BlittableToDocumentConverter,
                     StreamDocumentByLastModifiedComparer.Instance,
                     pagingContinuation);
             }
 
-            private class YieldStreamArray<T,TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
+            private class YieldStreamArray<T, TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
             {
                 private readonly Func<BlittableJsonReaderObject, TInner> _converter;
                 private readonly int _shard;
@@ -185,23 +178,5 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
         }
-    }
-
-    public class CombinedStreamResult
-    {
-        public Memory<StreamResult> Results;
-
-        public async ValueTask<CombinedReadContinuationState> InitializeAsync(ShardedContext shardedContext, CancellationToken token)
-        {
-            var state = new CombinedReadContinuationState(shardedContext, this);
-            await state.InitializeAsync(token);
-            return state;
-        }
-    }
-
-    public class ShardStreamItem<T>
-    {
-        public T Item;
-        public int Shard;
     }
 }

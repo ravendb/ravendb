@@ -20,7 +20,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.ShardedHandlers;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;

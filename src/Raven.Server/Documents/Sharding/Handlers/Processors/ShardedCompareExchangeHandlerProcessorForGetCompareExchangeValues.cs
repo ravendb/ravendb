@@ -1,0 +1,19 @@
+﻿using JetBrains.Annotations;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Web.System.Processors;
+using Sparrow.Utils;
+
+namespace Raven.Server.Documents.Sharding.Handlers.Processors;
+
+internal class ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<ShardedRequestHandler>
+{
+    public ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues([NotNull] ShardedRequestHandler requestHandler, [NotNull] string databaseName) 
+        : base(requestHandler, databaseName)
+    {
+    }
+
+    protected override void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long durationInMs, long totalDocumentsSizeInBytes)
+    {
+        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Pawel, DevelopmentHelper.Severity.Minor, "Implement AddPagingPerformanceHint");
+    }
+}
