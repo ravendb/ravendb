@@ -1379,30 +1379,30 @@ namespace FastTests
 
             public static Options ForMode(RavenDatabaseMode mode)
             {
+                var options = new Options();
                 switch (mode)
                 {
                     case RavenDatabaseMode.Single:
-                        var single = new Options();
-                        single.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
+                        options.DatabaseMode = RavenDatabaseMode.Single;
+                        options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Single)}");
 
-                        return single;
+                        return options;
                     case RavenDatabaseMode.Sharded:
-                        var sharded = new Options
+
+                        options.ModifyDatabaseRecord = record =>
                         {
-                            ModifyDatabaseRecord = record =>
+                            record.Shards = new[]
                             {
-                                record.Shards = new[]
-                                {
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
                                     new DatabaseTopology(),
-                                };
-                            }
+                            };
                         };
 
-                        sharded.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
+                        options.DatabaseMode = RavenDatabaseMode.Sharded;
+                        options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");
 
-                        return sharded;
+                        return options;
                     case RavenDatabaseMode.All:
                     default:
                         throw new ArgumentOutOfRangeException(nameof(mode), mode, null);
@@ -1561,6 +1561,10 @@ namespace FastTests
                     _encrypted = value;
                 }
             }
+
+            public RavenDatabaseMode DatabaseMode { get; private set; }
+
+            public RavenSearchEngineMode SearchEngineMode { get; internal set; }
 
             private void AssertNotFrozen()
             {
