@@ -31,7 +31,7 @@ namespace SlowTests.Cluster
         [Fact]
         public async Task NotifyAfterServerRestart()
         {
-            using (var store = GetDocumentStore(new Options {RunInMemory =  false}))
+            using (var store = GetDocumentStore(new Options { RunInMemory = false }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -61,16 +61,16 @@ namespace SlowTests.Cluster
             using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             using (var store2 = GetDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User(), "users/1");
-                    session.SaveChanges();
+                    await session.StoreAsync(new User(), "users/1");
+                    await session.SaveChangesAsync();
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     session.CountersFor("users/1").Increment("likes");
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 var documentDatabase = await GetDatabase(store.Database);
@@ -81,22 +81,30 @@ namespace SlowTests.Cluster
                     Thread.Sleep(12345);
                 }))
                 {
-                    var cts = new CancellationTokenSource();
-                    var task = BackgroundWork(store2, cts);
+                    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+                    var task = BackgroundWorkAsync(store2, cts);
 
-                    await WaitForIndexCreation(store2);
+                    await WaitForIndexCreationAsync(store2, cts.Token);
 
-                    await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true));
-                    await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, false));
+                    await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true), cts.Token);
+                    await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, false), cts.Token);
 
-                    using (var session = store.OpenSession())
+                    using (var session = store.OpenAsyncSession())
                     {
                         session.CountersFor("users/1").Increment("likes");
-                        session.SaveChanges();
+                        await session.SaveChangesAsync(cts.Token);
                     }
 
                     cts.Cancel();
-                    task.Wait();
+
+                    try
+                    {
+                        task.Wait(TimeSpan.FromSeconds(60));
+                    }
+                    catch
+                    {
+                        // ignored
+                    }
                 }
             }
         }
@@ -120,20 +128,20 @@ namespace SlowTests.Cluster
             }
         }
 
-        internal static async Task WaitForIndexCreation(DocumentStore store)
+        internal static async Task WaitForIndexCreationAsync(DocumentStore store, CancellationToken token)
         {
-            while (store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes == 0)
+            while ((await store.Maintenance.SendAsync(new GetStatisticsOperation(), token)).CountOfIndexes == 0)
             {
-                await Task.Delay(1000);
+                await Task.Delay(1000, token);
             }
         }
 
-        internal static async Task BackgroundWork(DocumentStore store2, CancellationTokenSource cts)
+        internal static async Task BackgroundWorkAsync(DocumentStore store2, CancellationTokenSource cts)
         {
             while (cts.IsCancellationRequested == false)
             {
-                await new UsersIndex().ExecuteAsync(store2);
-                await Task.Delay(1000);
+                await new UsersIndex().ExecuteAsync(store2, token: cts.Token);
+                await Task.Delay(1000, cts.Token);
             }
         }
 

@@ -116,6 +116,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
+        private bool _isInitialWrite = true;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
 
@@ -307,7 +308,7 @@ namespace Raven.Client.Documents.BulkInsert
                     WriteString(id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
-                    await FlushIfNeeded().ConfigureAwait(false);
+                    _currentWriter.Flush();
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
@@ -316,6 +317,8 @@ namespace Raven.Client.Documents.BulkInsert
                     }
 
                     _currentWriter.Write('}');
+
+                    await FlushIfNeeded().ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -352,7 +355,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task FlushIfNeeded()
         {
-            _currentWriter.Flush();
+            await _currentWriter.FlushAsync().ConfigureAwait(false);
 
             if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
                 _asyncWrite.IsCompleted)
@@ -364,7 +367,18 @@ namespace Raven.Client.Documents.BulkInsert
                 _backgroundWriter = tmp;
                 _currentWriter.BaseStream.SetLength(0);
                 ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                _asyncWrite = WriteToRequestBodyStreamAsync(buffer);
+            }
+        }
+
+        private async Task WriteToRequestBodyStreamAsync(ArraySegment<byte> buffer)
+        {
+            await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
+
+            if (_isInitialWrite)
+            {
+                _isInitialWrite = false;
+                await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
             }
         }
 
