@@ -332,6 +332,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             return (valueType, fieldValue);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static UnaryMatchOperation UnaryMatchOperationTranslator(OperatorType current) => current switch
         {
             OperatorType.Equal => UnaryMatchOperation.Equals,
@@ -343,6 +344,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
         };
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static OperatorType GetNegated(OperatorType current) =>
             current switch
             {
@@ -357,6 +359,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 _ => throw new ArgumentOutOfRangeException(nameof(current), current, null)
             };
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static MatchCompareFieldType OrderTypeFieldConverter(OrderByFieldType original) =>
             original switch
             {
@@ -417,6 +420,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Boosting
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ComparerType GetComparerType(bool ascending, int fieldId) => (ascending, fieldId) switch
         {
             (_, ScoreId) => ComparerType.Boosting,

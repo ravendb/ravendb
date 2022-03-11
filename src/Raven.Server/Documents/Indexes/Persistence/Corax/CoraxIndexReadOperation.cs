@@ -57,6 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
             if (isDistinctCount)
                 pageSize = int.MaxValue;
+
             var position = query.Start;
 
             var take = pageSize + position;
@@ -78,6 +79,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int docsToLoad = pageSize;
             using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
             int queryStart = query.Start;
+            bool hasHighlights = query.Metadata.HasHighlightings;
 
             while (true)
             {
@@ -96,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
                     bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
-
+                    
                     if (fetchedDocument.Document != null)
                     {
                         var qr = GetQueryResult(fetchedDocument.Document, ref markedAsSkipped);
@@ -121,6 +123,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                             yield return qr;
                         }
+                    }
+
+                    QueryResult CreateQueryResult(Document d)
+                    {
+                        return new QueryResult
+                        {
+                            Result = d
+                        };
                     }
                 }
 

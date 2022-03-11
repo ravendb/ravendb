@@ -88,6 +88,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             ExplanationOptions explanationOptions = null;
 
+            // The reason why we keep distincts counts here, is because at the Lucene level there is no sorting unique accesse like we have 
+            // in Corax with the SortingMatch. We have to know the page size to account for that. 
             var pageSize = query.PageSize;
             var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
             if (isDistinctCount)
@@ -115,14 +117,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var returnedResults = 0;
 
+            // We are going to get the actual Lucene query evaluator. 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             
             using (var queryFilter = GetQueryFilter(_index, query, documentsContext, skippedResults, scannedDocuments, retriever, queryTimings))
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new LuceneIndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
+                // Most of the housekeeping work to be done at this level is for keeping track of duplicates, sorting and filtering when necesary. 
+
                 if (query.Metadata.HasHighlightings)
                 {
+                    // If we have highlightings then we need to setup the Lucene objects that will attach to the evaluator in order
+                    // to retrieve the fields and perform the transformations required by Highlightings. 
                     using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
                         SetupHighlighter(query, luceneQuery, documentsContext);
                 }
@@ -131,12 +138,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     token.ThrowIfCancellationRequested();
 
+                    // We are going to execute the query (EVAL) and the crawl the results in batches and in-order of score.                    
                     TopDocs search;
                     using (luceneScope?.Start())
                         search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
 
                     totalResults.Value = search.TotalHits;
 
+                    // We need to filter out search results that had already been seen in previous batches.
                     scope.RecordAlreadyPagedItemsInPreviousPage(search, token);
 
                     for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
@@ -145,18 +154,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                         var scoreDoc = search.ScoreDocs[position];
 
+                        // Retrieve the actual index entry from the Lucene index. 
                         global::Lucene.Net.Documents.Document document;
                         using (luceneScope?.Start())
                             document = _searcher.Doc(scoreDoc.Doc, _state);
-
-                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);
                         
+                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);                        
                         if (retriever.TryGetKey(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
-                        {
+                        {      
+                            // If either there is no valid projection or we have already seen this document before, we are skipping. 
                             skippedResults.Value++;
                             continue;
                         }
-                        
+
+                        // We apply a document scan script if required.                       
                         var filterResult = queryFilter?.Apply(ref retrieverInput, key, _state);
                         if (filterResult is not null and not FilterResult.Accepted)
                         {
@@ -166,6 +177,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                 break;
                         }
                         
+                        // We are going to return the documents to the caller in a streaming fashion.
                         bool markedAsSkipped = false;
                         var r = retriever.Get(ref retrieverInput, token);
                         if (r.Document != null)
@@ -199,6 +211,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                         QueryResult CreateQueryResult(Document d)
                         {
+                            // We check again if we are going to be including this document.                             
                             if (scope.TryIncludeInResults(d) == false)
                             {
                                 d?.Dispose();
@@ -216,6 +229,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                             if (isDistinctCount == false)
                             {
+                                // If there are highlightings we retrieve them.
                                 Dictionary<string, Dictionary<string, string[]>> highlightings = null;
                                 if (query.Metadata.HasHighlightings)
                                 {
@@ -223,6 +237,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                         highlightings = GetHighlighterResults(query, _searcher, scoreDoc, d, document, documentsContext);
                                 }
 
+                                // If we have been asked for explanations, we get them. 
                                 ExplanationResult explanation = null;
                                 if (query.Metadata.HasExplanations)
                                 {
@@ -235,6 +250,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                     }
                                 }
 
+                                // We return the document to the caller. 
                                 return new QueryResult { Result = d, Highlightings = highlightings, Explanation = explanation };
                             }
                             return default;

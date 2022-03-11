@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax;
 using Lucene.Net.Search;
@@ -33,21 +34,23 @@ namespace Raven.Server.Documents.Queries.Results
         public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
         {
             LuceneDocument = luceneDocument;
-            CoraxEntry = default;
             State = state;
             Score = score;
-            DocumentId = string.Empty;
             KnownFields = null;
+
+            CoraxEntry = default;
+            Unsafe.SkipInit(out DocumentId);
         }
 
         public RetrieverInput(IndexFieldsMapping knownFields, IndexEntryReader coraxEntry, string id)
         {
             CoraxEntry = coraxEntry;
             KnownFields = knownFields;
-            LuceneDocument = null;
-            State = null;
-            Score = null;
             DocumentId = id;
+
+            Unsafe.SkipInit(out LuceneDocument);
+            Unsafe.SkipInit(out State);
+            Unsafe.SkipInit(out Score);
         }
     }
 }

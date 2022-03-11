@@ -9,6 +9,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -66,10 +67,10 @@ namespace SlowTests.Tests.Querying
         }
 
         [Theory]
-        [InlineData("session")]
-        public void SearchWithHighlightes(string q)
+        [RavenData("session", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void SearchWithHighlightes(Options options, string q)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +87,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var session = store.OpenSession())
                 {
-                    var options = new HighlightingOptions
+                    var highlightingOptions = new HighlightingOptions
                     {
                         PreTags = new[] { "<span style='background: yellow'>" },
                         PostTags = new[] { "</span>" }
@@ -94,9 +95,9 @@ namespace SlowTests.Tests.Querying
 
                     var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
                         .WaitForNonStaleResults()
-                        .Highlight("Title", 128, 2, options, out Highlightings titleHighlighting)
-                        .Highlight("Slug", 128, 2, options, out Highlightings slugHighlighting)
-                        .Highlight("Content", 128, 2, options, out Highlightings contentHighlighting)
+                        .Highlight("Title", 128, 2, highlightingOptions, out Highlightings titleHighlighting)
+                        .Highlight("Slug", 128, 2, highlightingOptions, out Highlightings slugHighlighting)
+                        .Highlight("Content", 128, 2, highlightingOptions, out Highlightings contentHighlighting)
                         .Search("Slug", q).Boost(15)
                         .Search("Title", q).Boost(12)
                         .Search("Content", q)
