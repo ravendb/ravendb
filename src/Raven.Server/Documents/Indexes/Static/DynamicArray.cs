@@ -105,6 +105,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return base.TryConvert(binder, out result);
         }
 
+        public dynamic this[int i]
+        {
+            get { return ElementAt(i); }
+        }
+
         IEnumerator<object> IEnumerable<object>.GetEnumerator()
         {
             return GetEnumerator();
@@ -380,7 +385,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     ? new DynamicArray(Enumerable.ThenByDescending(orderedEnumerable, keySelector, comparer))
                     : new DynamicArray(Enumerable.ThenBy(orderedEnumerable, keySelector, comparer));
             }
-            
+
             if (_inner is not DynamicArray dynamicArray)
             {
                 return descending
@@ -395,8 +400,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return dynamicArray.CreateOrderedEnumerable(keySelector, comparer, descending, depth - 1);
         }
-        
-        
+
+
         public IOrderedEnumerable<object> CreateOrderedEnumerable<TKey>(Func<object, TKey> keySelector, IComparer<TKey> comparer, bool descending)
         {
             return CreateOrderedEnumerable(keySelector, comparer, descending, 32);

@@ -224,8 +224,6 @@ namespace FastTests
 
                 if (File.Exists(serverCertificatePath) == false)
                 {
-                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Generating cert file: {serverCertificatePath} (caller: {caller})");
-
                     try
                     {
                         certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
@@ -241,8 +239,6 @@ namespace FastTests
                     try
                     {
                         File.WriteAllBytes(serverCertificatePath, certBytes);
-
-                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Certificate {serverCertificatePath} generated successfully");
                     }
                     catch (Exception e)
                     {

@@ -438,7 +438,6 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var c = 0L;
                 var db = GetDocumentDatabaseInstanceFor(store1).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

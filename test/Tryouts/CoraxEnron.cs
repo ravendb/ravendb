@@ -220,7 +220,7 @@ namespace Tryouts
                             indexWriter.Index(id, data, knownFields);
                             justIndex += indexOnlySp.ElapsedMilliseconds;
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             Console.WriteLine(id);
                             throw;
