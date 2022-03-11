@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.CSharp.RuntimeBinder;
@@ -21,6 +22,7 @@ using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Size = Sparrow.Size;
 
 namespace Raven.Client.Documents.Conventions
@@ -45,7 +47,9 @@ namespace Raven.Client.Documents.Conventions
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
         };
 
-        private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
+        private static readonly bool DefaultDisableTcpCompression;
+
+        private static Dictionary<Type, string> CachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
@@ -147,6 +151,20 @@ namespace Raven.Client.Documents.Conventions
 
         static DocumentConventions()
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                try
+                {
+                    ZstdLib.GetMaxCompression(1);
+                }
+                catch
+                {
+                    DefaultDisableTcpCompression = true;
+                }
+            }
+#endif
+
             Default.Freeze();
             DefaultForServer.Freeze();
         }
@@ -208,6 +226,8 @@ namespace Raven.Client.Documents.Conventions
             _maxContextSizeToKeep = PlatformDetails.Is32Bits == false
                 ? new Size(1, SizeUnit.Megabytes)
                 : new Size(256, SizeUnit.Kilobytes);
+
+            _disableTcpCompression = DefaultDisableTcpCompression;
         }
 
         private bool _frozen;
@@ -838,7 +858,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public static string DefaultGetCollectionName(Type t)
         {
-            if (_cachedDefaultTypeCollectionNames.TryGetValue(t, out var result))
+            if (CachedDefaultTypeCollectionNames.TryGetValue(t, out var result))
                 return result;
 
             if (t.Name.Contains("<>"))
@@ -874,12 +894,12 @@ namespace Raven.Client.Documents.Conventions
                 result = Inflector.Pluralize(t.Name);
             }
 
-            var temp = new Dictionary<Type, string>(_cachedDefaultTypeCollectionNames)
+            var temp = new Dictionary<Type, string>(CachedDefaultTypeCollectionNames)
             {
                 [t] = result
             };
 
-            _cachedDefaultTypeCollectionNames = temp;
+            CachedDefaultTypeCollectionNames = temp;
             return result;
         }
 
@@ -1106,11 +1126,11 @@ namespace Raven.Client.Documents.Conventions
             // multiple capital letters, so probably something that we want to preserve caps on.
             return collectionName;
         }
-        
+
         public static string DefaultFindPropertyNameForIndex(Type indexedType, string indexedName, string path, string prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
-        
+
         public static string DefaultFindPropertyNameForDynamicIndex(Type indexedType, string indexedName, string path, string prop) => path + prop;
-        
+
         private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
         {
             foreach (var propertyInfo in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
