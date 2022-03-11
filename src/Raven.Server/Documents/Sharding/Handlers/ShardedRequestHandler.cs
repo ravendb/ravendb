@@ -1,17 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Server.Config.Settings;
-using Raven.Server.Documents.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -29,9 +23,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         public ShardedContinuationTokensHandler ContinuationTokens;
 
+        public ShardedClusterHandler Cluster;
+
         public ShardedRequestHandler()
         {
             ContinuationTokens = new ShardedContinuationTokensHandler(this);
+            Cluster = new ShardedClusterHandler(this);
         }
 
         public override void Init(RequestHandlerContext context)
@@ -76,27 +73,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     tasks.Add(db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout));
                 }
                 await Task.WhenAll(tasks);
-            }
-        }
-
-        protected async Task WaitForExecutionOfRaftCommands(JsonOperationContext context, List<long> raftIndexIds)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Should be modified after we migrate to ShardedExecutor");
-
-            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
-            {
-                var timeToWait = ServerStore.Configuration.Cluster.OperationTimeout.GetValue(TimeUnit.Milliseconds) * raftIndexIds.Count;
-                cts.CancelAfter(TimeSpan.FromMilliseconds(timeToWait));
-
-                var requestExecutors = ShardedContext.RequestExecutors;
-                var waitingTasks = new Task[requestExecutors.Length];
-
-                var waitForDatabaseCommands = new WaitForRaftCommands(raftIndexIds);
-                for (var index = 0; index < requestExecutors.Length; index++)
-                {
-                    waitingTasks[index] = requestExecutors[index].ExecuteAsync(waitForDatabaseCommands, context, token: cts.Token);
-                }
-                await Task.WhenAll(waitingTasks);
             }
         }
     }
