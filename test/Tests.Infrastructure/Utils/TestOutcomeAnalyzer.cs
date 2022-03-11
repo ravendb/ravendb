@@ -53,6 +53,8 @@ namespace Tests.Infrastructure.Utils
             if (exception == null)
                 return false;
 
+            return false;
+
             if (NightlyBuildTheoryAttribute.IsNightlyBuild)
                 return true;
             
