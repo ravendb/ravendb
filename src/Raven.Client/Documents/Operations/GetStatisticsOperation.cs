@@ -3,13 +3,11 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
     public class GetStatisticsOperation : IMaintenanceOperation<DatabaseStatistics>
     {
-        private readonly int? _shard;
         private readonly string _debugTag;
         private readonly string _nodeTag;
 
@@ -17,34 +15,24 @@ namespace Raven.Client.Documents.Operations
         {
         }
 
-        internal GetStatisticsOperation(int shard)
+        internal GetStatisticsOperation(string debugTag, string nodeTag = null)
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
-            _shard = shard;
-        }
-
-        internal GetStatisticsOperation(string debugTag, string nodeTag = null, int? shard = null)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
             _debugTag = debugTag;
             _nodeTag = nodeTag;
-            _shard = shard;
         }
 
         public RavenCommand<DatabaseStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetStatisticsCommand(_debugTag, _nodeTag, _shard);
+            return new GetStatisticsCommand(_debugTag, _nodeTag);
         }
 
         internal class GetStatisticsCommand : RavenCommand<DatabaseStatistics>
         {
             private readonly string _debugTag;
-            private readonly int? _shard;
 
-            public GetStatisticsCommand(string debugTag, string nodeTag, int? shard)
+            public GetStatisticsCommand(string debugTag, string nodeTag)
             {
                 _debugTag = debugTag;
-                _shard = shard;
                 SelectedNodeTag = nodeTag;
             }
 
@@ -54,13 +42,6 @@ namespace Raven.Client.Documents.Operations
                 if (_debugTag != null)
                 {
                     url += "?" + _debugTag;
-                }
-
-                if (_shard.HasValue)
-                {
-                    if (_debugTag == null)
-                        url += "?";
-                    url += $"&shard={_shard}";
                 }
 
                 return new HttpRequestMessage

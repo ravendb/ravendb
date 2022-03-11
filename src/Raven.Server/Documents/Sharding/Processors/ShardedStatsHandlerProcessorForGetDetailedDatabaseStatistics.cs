@@ -5,7 +5,8 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Processors

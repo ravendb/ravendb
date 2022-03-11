@@ -21,7 +21,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -38,13 +37,11 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Platform;
-using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -665,7 +662,8 @@ namespace FastTests
 
                 StaleStatus StaleStatus(int? shardId = null)
                 {
-                    var databaseStatistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag, shardId));
+                    var executor = shardId.HasValue ? admin.ForShard(shardId.Value) : admin;
+                    var databaseStatistics = executor.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                     var indexes = databaseStatistics.Indexes
                         .Where(x => x.State != IndexState.Disabled);
 
@@ -742,7 +740,7 @@ namespace FastTests
             {
                 for (var i = 0; i < 3; i++)
                 {
-                    var statistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag, i));
+                    var statistics = admin.ForShard(i).Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                     allIndexes.AddRange(statistics.Indexes);
                 }
             }
