@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var token = GetOrCreateContinuationToken(context);
+                var token = ContinuationTokens.GetOrCreateContinuationToken(context);
 
                 var op = new ShardedCollectionDocumentsOperation(token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);

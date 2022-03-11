@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Sharding.Handlers;
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Sharding.Commands
             Url = handler.RelativeShardUrl;
             Content = content;
 
-            handler.AddHeaders(this, headers);
+            AddDefaultHeaders(this, headers);
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -35,8 +36,8 @@ namespace Raven.Server.Documents.Sharding.Commands
             url = $"{node.Url}/databases/{node.Database}{Url}";
             var message = new HttpRequestMessage
             {
-                Method = Method, 
-                Content = Content == null ? null : new BlittableJsonContent(async (stream)=> await Content.WriteJsonToAsync(stream)),
+                Method = Method,
+                Content = Content == null ? null : new BlittableJsonContent(async (stream) => await Content.WriteJsonToAsync(stream)),
             };
             foreach ((string key, string value) in Headers)
             {
@@ -54,8 +55,23 @@ namespace Raven.Server.Documents.Sharding.Commands
             Response = response;
             return base.ProcessResponse(context, cache, response, url);
         }
+
+        public void AddDefaultHeaders(ShardedBaseCommand<T> command, Headers headers)
+        {
+            if (headers == Commands.Headers.None)
+                return;
+
+            if (headers.HasFlag(Commands.Headers.IfMatch))
+                command.Headers["If-Match"] = Handler.GetStringFromHeaders("If-Match");
+
+            if (headers.HasFlag(Commands.Headers.IfNoneMatch))
+                command.Headers["If-None-Match"] = Handler.GetStringFromHeaders("If-None-Match");
+
+            if (headers.HasFlag(Commands.Headers.Sharded))
+                command.Headers[Constants.Headers.Sharded] = "true";
+        }
     }
-    
+
     public enum Headers
     {
         None,

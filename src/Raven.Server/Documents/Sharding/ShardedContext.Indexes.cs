@@ -17,9 +17,7 @@ namespace Raven.Server.Documents.Sharding;
 
 public partial class ShardedContext
 {
-    private readonly ShardedIndexesCache _indexes;
-
-    public ShardedIndexesCache Indexes => _indexes;
+    public readonly ShardedIndexesCache Indexes;
 
     public class ShardedIndexesCache
     {
