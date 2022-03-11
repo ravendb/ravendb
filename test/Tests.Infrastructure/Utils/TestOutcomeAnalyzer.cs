@@ -18,7 +18,7 @@ namespace Tests.Infrastructure.Utils
             new Regex(@"Something is wrong, throwing to avoid hanging", RegexOptions.Compiled),
             new Regex(@"Waited for \S* but the command was not applied in this time.", RegexOptions.Compiled)
         };
-        
+
         private readonly Context _context;
 
         public TestOutcomeAnalyzer(Context context)
@@ -48,6 +48,9 @@ namespace Tests.Infrastructure.Utils
 
         public bool ShouldSaveDebugPackage()
         {
+            return false;
+
+            /*
             var exception = Exception;
 
             if (exception == null)
@@ -65,6 +68,7 @@ namespace Tests.Infrastructure.Utils
                 return false;
 
             return TimeoutExceptionMessageRegexes.Any(r => r.IsMatch(innerException.Message));
+            */
         }
     }
 }

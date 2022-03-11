@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -34,6 +36,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutJavaScript()
         {
+            if (HttpContext.Features.Get<IHttpAuthenticationFeature>() is RavenServer.AuthenticateConnection feature && Database.Configuration.Indexing.RequireAdminToDeployJavaScriptIndexes)
+            {
+                if (feature.CanAccess(Database.Name, requireAdmin: true, requireWrite: true) == false)
+                    throw new AuthorizationException("Deployments of JavaScript indexes has been restricted to admin users only");
+            }
+
             await PutInternal(validatedAsAdmin: false);
         }
 
