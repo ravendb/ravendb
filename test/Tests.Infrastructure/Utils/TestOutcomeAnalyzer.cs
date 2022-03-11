@@ -48,12 +48,13 @@ namespace Tests.Infrastructure.Utils
 
         public bool ShouldSaveDebugPackage()
         {
+            return false;
+
+            /*
             var exception = Exception;
 
             if (exception == null)
                 return false;
-
-            return false;
 
             if (NightlyBuildTheoryAttribute.IsNightlyBuild)
                 return true;
@@ -67,6 +68,7 @@ namespace Tests.Infrastructure.Utils
                 return false;
 
             return TimeoutExceptionMessageRegexes.Any(r => r.IsMatch(innerException.Message));
+            */
         }
     }
 }
