@@ -98,8 +98,8 @@ namespace Voron.Impl.Backup
                 long allocatedPages;
                 var writePersistentContext = new TransactionPersistentContext(true);
                 var readPersistentContext = new TransactionPersistentContext(true);
-                using (var txw = env.NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite)) // so no new journal files will be created
                 using (env.Journal.Applicator.TakeFlushingLock()) // prevent from running JournalApplicator.UpdateDatabaseStateAfterSync() concurrently
+                using (var txw = env.NewLowLevelTransaction(writePersistentContext, TransactionFlags.ReadWrite)) // so no new journal files will be created
                 {
                     txr = env.NewLowLevelTransaction(readPersistentContext, TransactionFlags.Read);// now have snapshot view
                     allocatedPages = dataPager.NumberOfAllocatedPages;
