@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Commands;
-using Raven.Server.Documents.Sharding.Commands;
-using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -17,7 +15,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
-    public class ShardedRequestHandler : RequestHandler
+    public partial class ShardedRequestHandler : RequestHandler
     {
         public ShardedContext ShardedContext;
         public TransactionContextPool ContextPool;
@@ -26,6 +24,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public HttpMethod Method;
         public string RelativeShardUrl;
         public string BaseShardUrl;
+
+        public ShardExecutor ShardExecutor => ShardedContext.ShardExecutor;
+
+        public ShardedContinuationTokensHandler ContinuationTokens;
+
+        public ShardedRequestHandler()
+        {
+            ContinuationTokens = new ShardedContinuationTokensHandler(this);
+        }
 
         public override void Init(RequestHandlerContext context)
         {
@@ -51,31 +58,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
             BaseShardUrl = url.Substring(relativeIndex);
             RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
-        }
-
-        protected internal ShardedPagingContinuation GetOrCreateContinuationToken(JsonOperationContext context)
-        {
-            var qToken = GetStringQueryString(ContinuationToken.ContinuationTokenQueryString, required: false);
-            var token = ContinuationToken.FromBase64<ShardedPagingContinuation>(context, qToken) ??
-                        new ShardedPagingContinuation(ShardedContext, GetStart(), GetPageSize());
-            return token;
-        }
-
-        public ShardExecutor ShardExecutor => ShardedContext.ShardExecutor;
-
-        public void AddHeaders<T>(ShardedBaseCommand<T> command, Headers header)
-        {
-            if (header == Headers.None)
-                return;
-
-            if (header.HasFlag(Headers.IfMatch))
-                command.Headers["If-Match"] = GetStringFromHeaders("If-Match");
-
-            if (header.HasFlag(Headers.IfNoneMatch))
-                command.Headers["If-None-Match"] = GetStringFromHeaders("If-None-Match");
-
-            if (header.HasFlag(Headers.Sharded))
-                command.Headers[Constants.Headers.Sharded] = "true";
         }
 
         public override async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)

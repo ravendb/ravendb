@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Sharding
 
             _serverStore = serverStore;
             _record = record;
-            _indexes = new ShardedIndexesCache(serverStore, record);
+            Indexes = new ShardedIndexesCache(serverStore, record);
 
             _lastClientConfigurationIndex = serverStore.LastClientConfigurationIndex;
 

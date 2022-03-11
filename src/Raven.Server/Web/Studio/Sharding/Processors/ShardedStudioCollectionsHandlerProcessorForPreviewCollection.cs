@@ -45,7 +45,7 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
 
         _releaseContext = RequestHandler.ContextPool.AllocateOperationContext(out _context);
 
-        _continuationToken = RequestHandler.GetOrCreateContinuationToken(_context);
+        _continuationToken = RequestHandler.ContinuationTokens.GetOrCreateContinuationToken(_context);
 
         var op = new ShardedCollectionPreviewOperation(RequestHandler, _continuationToken, _context);
         var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
