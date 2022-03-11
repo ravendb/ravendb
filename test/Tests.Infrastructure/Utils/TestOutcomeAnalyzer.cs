@@ -48,6 +48,8 @@ namespace Tests.Infrastructure.Utils
 
         public bool ShouldSaveDebugPackage()
         {
+            return true;
+
             var exception = Exception;
 
             if (exception == null)
