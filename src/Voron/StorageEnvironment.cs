@@ -83,7 +83,7 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
-        private NativeMemory.ThreadStats _currentWriteTransactionHolder;
+        internal NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCreation = new ReaderWriterLockSlim();

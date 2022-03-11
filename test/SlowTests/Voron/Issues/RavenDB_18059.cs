@@ -10,7 +10,7 @@ using Voron.Util.Settings;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Voron.Issues;
 
 public class RavenDB_18059 : StorageTest
 {
@@ -91,5 +91,58 @@ public class RavenDB_18059 : StorageTest
                 }
             }
         }
+    }
+
+
+    [Fact]
+    public void FullBackupMustNotDeadlockWithFlush()
+    {
+        RequireFileBasedPager();
+        var random = new Random(2);
+        var buffer = new byte[8192];
+        random.NextBytes(buffer);
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var tree = tx.CreateTree("foo");
+
+            for (int i = 0; i < 5000; i++)
+            {
+                tree.Add("items/" + i, new MemoryStream(buffer));
+            }
+
+            tx.Commit();
+        }
+
+        var voronDataDir = new VoronPathSetting(DataDir);
+
+        var backupCompleted = false;
+        Exception backupException = null;
+
+        Thread backup = new Thread(() =>
+        {
+            try
+            {
+                BackupMethods.Full.ToFile(Env, voronDataDir.Combine("voron-test.backup"));
+
+                backupCompleted = true;
+            }
+            catch (Exception e)
+            {
+                backupException = e;
+            }
+        });
+
+        Env.Journal.Applicator.ForTestingPurposesOnly().OnApplyLogsToDataFileUnderFlushingLock += () =>
+        {
+            backup.Start();
+        };
+
+        Env.FlushLogToDataFile();
+
+        backup.Join(TimeSpan.FromSeconds(60));
+
+        Assert.Null(backupException);
+        Assert.True(backupCompleted);
     }
 }
