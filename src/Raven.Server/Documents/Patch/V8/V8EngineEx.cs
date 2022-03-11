@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Patch.V8
         private static PoolWithLevels<V8EngineEx>? _pool;
 
         public static int MemoryChecksMode;
-        public static bool IsMemoryChecksOnStatic => MemoryChecksMode > 0; // TODO [shlomo] to restore
+        public static bool IsMemoryChecksOnStatic => false; // MemoryChecksMode > 0; // TODO [shlomo] to restore
         public static JsConverter JsConverterInstance;
 
         public static PoolWithLevels<V8EngineEx> GetPool(IJavaScriptOptions jsOptions)
