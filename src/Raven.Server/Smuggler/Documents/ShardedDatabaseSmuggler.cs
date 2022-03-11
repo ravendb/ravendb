@@ -11,8 +11,8 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.ShardedHandlers;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -60,7 +60,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             result.Indexes.Start();
 
-            var configuration = DatabasesLandlord.CreateConfiguration(_server.Server.ServerStore, _databaseRecord.DatabaseName, _databaseRecord.Settings);
+            var configuration = DatabasesLandlord.CreateDatabaseConfiguration(_server.Server.ServerStore, _databaseRecord.DatabaseName, _databaseRecord.Settings);
 
             await foreach (var index in _source.GetIndexesAsync())
             {

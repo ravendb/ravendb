@@ -35,7 +35,7 @@ public partial class ShardedContext
         {
             _serverStore = serverStore;
 
-            _configuration = DatabasesLandlord.CreateConfiguration(_serverStore, record.DatabaseName, record.Settings);
+            _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, record.DatabaseName, record.Settings);
             _scriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);
 
             UpdateConfiguration(record.DatabaseName, record.Settings);
@@ -60,7 +60,7 @@ public partial class ShardedContext
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Add a test for updated configuration (for projections)");
 
-            _configuration = DatabasesLandlord.CreateConfiguration(_serverStore, databaseName, settings);
+            _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, databaseName, settings);
             _scriptRunnerCache.UpdateConfiguration(_configuration);
         }
 
