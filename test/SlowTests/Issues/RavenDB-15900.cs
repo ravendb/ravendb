@@ -48,7 +48,6 @@ namespace SlowTests.Issues
             using (var store = new DocumentStore { Database = database, Urls = new[] { leader.WebUrl } }.Initialize())
             {
                 leader.ServerStore.Engine.StateMachine.Validator = new TestCommandValidator();
-                var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
 
                 var cmd = new RachisConsensusTestBase.TestCommandWithRaftId("test", RaftIdGenerator.NewId());
 
@@ -90,7 +89,7 @@ namespace SlowTests.Issues
                 {
                     await WaitForValueAsync(async () =>
                     {
-                        documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
+                        var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
                         using (documentDatabase.ServerStore.Engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (var tx = context.OpenReadTransaction())
                         {
