@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reflection;
 using FastTests;
-using Raven.Server.Config;
 using Xunit.Sdk;
 
 namespace Tests.Infrastructure;
@@ -70,7 +69,7 @@ public class RavenDataAttribute : DataAttribute
             yield return (RavenDatabaseMode.Sharded, RavenTestBase.Options.ForMode(RavenDatabaseMode.Sharded));
     }
 
-    internal static IEnumerable<(RavenSearchEngineMode SearchMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
+    internal static IEnumerable<(RavenSearchEngineMode SearchEngineMode, RavenTestBase.Options Options)> FillOptions(RavenTestBase.Options options, RavenSearchEngineMode mode)
     {
         //if (mode.HasFlag(RavenSearchEngineMode.Corax))
         //{
@@ -88,6 +87,7 @@ public class RavenDataAttribute : DataAttribute
         if (mode.HasFlag(RavenSearchEngineMode.Lucene))
         {
             var luceneOptions = options.Clone();
+            luceneOptions.SearchEngineMode = RavenSearchEngineMode.Lucene;
 
             //luceneOptions.ModifyDatabaseRecord += record =>
             //{
