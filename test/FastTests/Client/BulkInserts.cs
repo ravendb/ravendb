@@ -7,13 +7,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +25,7 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BulkInsert)]
         [InlineData(false)]
         public async Task Simple_Bulk_Insert(bool useSsl)
         {
@@ -72,7 +72,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public async Task Simple_Bulk_Insert_Should_Work()
         {
             var fooBars = new[]
@@ -135,7 +135,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
         {
             using (var store = GetDocumentStore())
@@ -164,7 +164,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanUseCustomSerializer()
         {
             IJsonSerializer jsonSerializer = null;
@@ -210,7 +210,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void CanUseNewtonsoftSerializer()
         {
             JsonSerializer jsonSerializer = null;
@@ -264,7 +264,7 @@ namespace FastTests.Client
             }
         }
 
-        public class FooBarIndex : AbstractIndexCreationTask<FooBar>
+        private class FooBarIndex : AbstractIndexCreationTask<FooBar>
         {
             public FooBarIndex()
             {
@@ -275,7 +275,7 @@ namespace FastTests.Client
             }
         }
 
-        public class FooBar : IEquatable<FooBar>
+        private class FooBar : IEquatable<FooBar>
         {
             public string Name { get; set; }
 
