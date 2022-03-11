@@ -33,6 +33,16 @@ namespace Raven.Client.Documents.Operations
             return new MaintenanceOperationExecutor(_store, databaseName);
         }
 
+        public MaintenanceOperationExecutor ForShard(int shardIndex)
+        {
+            var databaseName = ClientShardHelper.ToDatabaseName(_databaseName);
+            var newDatabaseName = ClientShardHelper.ToShardName(databaseName, shardIndex);
+            if (string.Equals(_databaseName, newDatabaseName, StringComparison.OrdinalIgnoreCase))
+                return this;
+
+            return new MaintenanceOperationExecutor(_store, newDatabaseName);
+        }
+
         public void Send(IMaintenanceOperation operation)
         {
             AsyncHelpers.RunSync(() => SendAsync(operation));

@@ -7,7 +7,8 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+using Raven.Server.Documents.Sharding.Handlers;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Sharding.Processors
@@ -20,22 +21,11 @@ namespace Raven.Server.Documents.Sharding.Processors
 
         protected override async ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync()
         {
-            var shard = RequestHandler.GetIntValueQueryString("shard", required: false);
-
             var op = new ShardedStatsOperation();
 
-            DatabaseStatistics stats;
-            if (shard == null)
-            {
-                stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
-                stats.Indexes = GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
-                stats.CountOfIndexes = stats.Indexes.Length;
-            }
-            else
-            {
-                var command = op.CreateCommandForShard(shard.Value);
-                stats = await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shard.Value);
-            }
+            var stats = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op);
+            stats.Indexes = GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
+            stats.CountOfIndexes = stats.Indexes.Length;
 
             return stats;
         }
@@ -94,7 +84,7 @@ namespace Raven.Server.Documents.Sharding.Processors
                 return combined;
             }
 
-            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null, shard);
+            public RavenCommand<DatabaseStatistics> CreateCommandForShard(int shard) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag: null);
 
             internal static void FillDatabaseStatistics(DatabaseStatistics combined, DatabaseStatistics result, ref long totalSizeOnDisk, ref long totalTempBuffersSizeOnDisk)
             {
