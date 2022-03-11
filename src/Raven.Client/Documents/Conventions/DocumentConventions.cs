@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Conventions
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
         };
 
-        private static readonly bool DefaultDisableTcpCompression;
+        private static readonly bool DefaultDisableTcpCompression = false;
 
         private static Dictionary<Type, string> CachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
