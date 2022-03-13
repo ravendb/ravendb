@@ -21,12 +21,12 @@ namespace Raven.Server.Smuggler.Documents
     public class MultiShardedDestination : ISmugglerDestination
     {
         private readonly ShardedContext _shardedContext;
-        private readonly ShardedSmugglerHandler _handler;
+        private readonly ShardedRequestHandler _handler;
         private readonly ISmugglerSource _source;
         private readonly StreamDestination[] _destinations;
         private DatabaseSmugglerOptionsServerSide _options;
 
-        public MultiShardedDestination(ISmugglerSource source, ShardedContext shardedContext, ShardedSmugglerHandler handler)
+        public MultiShardedDestination(ISmugglerSource source, ShardedContext shardedContext, ShardedRequestHandler handler)
         {
             _source = source;
             _shardedContext = shardedContext;

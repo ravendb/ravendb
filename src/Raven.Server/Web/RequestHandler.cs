@@ -572,7 +572,7 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
-        protected Task NoContent(HttpStatusCode statusCode = HttpStatusCode.NoContent)
+        internal Task NoContent(HttpStatusCode statusCode = HttpStatusCode.NoContent)
         {
             NoContentStatus(statusCode);
 

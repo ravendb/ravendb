@@ -34,7 +34,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseRecord databaseRecord,
             ServerStore server,
             ShardedContext shardedContext,
-            ShardedSmugglerHandler handler,
+            ShardedRequestHandler handler,
             DatabaseSmugglerOptionsServerSide options,
             SmugglerResult result, 
             Action<IOperationProgress> onProgress = null, 
