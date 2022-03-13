@@ -45,7 +45,7 @@ class getDocumentsPreviewCommand extends commandBase {
             };
         };
 
-        const args = this.getArgsToUse(this.continuationToken);
+        const args = this.getArgsToUse();
         const url = endpoints.databases.studioCollections.studioCollectionsPreview + this.urlEncodeArgs(args);
         
         return this.query(url, null, this.database, resultsSelector);
@@ -80,7 +80,7 @@ class getDocumentsPreviewCommand extends commandBase {
         return doc;
     }
     
-    private getArgsToUse(continuationToken?: string) {
+    private getArgsToUse() {
         if (this.continuationToken) {
             return {
                 collection: this.collectionName,
