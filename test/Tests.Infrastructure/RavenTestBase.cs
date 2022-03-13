@@ -707,10 +707,22 @@ namespace FastTests
 
             string OutputIndexInfo(int? shard)
             {
-                var perf = admin.Send(new GetIndexPerformanceStatisticsOperation(shard));
-                var errors = admin.Send(new GetIndexErrorsOperation(shard));
-                var stats = admin.Send(new GetIndexesStatisticsOperation(shard));
-
+                IndexPerformanceStats[] perf;
+                IndexErrors[] errors;
+                IndexStats[] stats;
+                if (shard.HasValue == false)
+                {
+                    perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
+                    errors = admin.Send(new GetIndexErrorsOperation());
+                    stats = admin.Send(new GetIndexesStatisticsOperation());
+                }
+                else
+                {
+                    perf = admin.ForShard(shard.Value).Send(new GetIndexPerformanceStatisticsOperation());
+                    errors = admin.ForShard(shard.Value).Send(new GetIndexErrorsOperation());
+                    stats = admin.ForShard(shard.Value).Send(new GetIndexesStatisticsOperation());
+                }
+                
                 var total = new
                 {
                     Errors = errors,

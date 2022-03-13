@@ -13,6 +13,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
@@ -382,101 +383,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task Stats()
         {
-            var name = GetStringQueryString("name", required: false);
-
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            {
-                IndexStats[] indexesStats;
-                using (context.OpenReadTransaction())
-                {
-                    if (string.IsNullOrEmpty(name))
-                    {
-                        indexesStats = Database.IndexStore
-                            .GetIndexes()
-                            .OrderBy(x => x.Name)
-                            .Select(x =>
-                            {
-                                try
-                                {
-                                    return x.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context);
-                                }
-                                catch (OperationCanceledException)
-                                {
-                                    // we probably closed the indexing thread
-                                    return new IndexStats
-                                    {
-                                        Name = x.Name,
-                                        Type = x.Type,
-                                        State = x.State,
-                                        Status = x.Status,
-                                        LockMode = x.Definition.LockMode,
-                                        Priority = x.Definition.Priority,
-                                    };
-                                }
-                                catch (Exception e)
-                                {
-                                    if (Logger.IsOperationsEnabled)
-                                        Logger.Operations($"Failed to get stats of '{x.Name}' index", e);
-
-                                    try
-                                    {
-                                        Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{x.Name}' index",
-                                            $"Exception was thrown on getting stats of '{x.Name}' index",
-                                            AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
-                                    }
-                                    catch (Exception addAlertException)
-                                    {
-                                        if (Logger.IsOperationsEnabled && addAlertException.IsOutOfMemory() == false && addAlertException.IsRavenDiskFullException() == false)
-                                            Logger.Operations($"Failed to add alert when getting error on retrieving stats of '{x.Name}' index", addAlertException);
-                                    }
-
-                                    var state = x.State;
-
-                                    if (e.IsOutOfMemory() == false && 
-                                        e.IsRavenDiskFullException() == false) 
-                                    {
-                                        try
-                                        {
-                                            state = IndexState.Error;
-                                            x.SetState(state, inMemoryOnly: true);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            if (Logger.IsOperationsEnabled)
-                                                Logger.Operations($"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
-                                                    ex);
-                                        }
-                                    }
-
-                                    return new IndexStats
-                                    {
-                                        Name = x.Name,
-                                        Type = x.Type,
-                                        State = state,
-                                        Status = x.Status,
-                                        LockMode = x.Definition.LockMode,
-                                        Priority = x.Definition.Priority,
-                                    };
-                                }
-                            })
-                            .ToArray();
-                    }
-                    else
-                    {
-                        var index = Database.IndexStore.GetIndex(name);
-                        if (index == null)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return;
-                        }
-
-                        indexesStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, calculateMemoryStats: true, queryContext: context) };
-                    }
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-                    writer.WriteIndexesStats(context.Documents, indexesStats);
-            }
+            using (var processor = new IndexHandlerProcessorForGetDatabaseIndexStatistics(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/staleness", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
