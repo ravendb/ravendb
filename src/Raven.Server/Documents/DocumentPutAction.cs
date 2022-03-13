@@ -254,19 +254,14 @@ namespace Raven.Server.Documents
                     tvb.Add((int)flags);
                     tvb.Add(context.GetTransactionMarker());
 
-                    UpdateType updateType;
                     if (oldValue.Pointer == null)
                     {
                         table.Insert(tvb);
-                        updateType = UpdateType.Add;
                     }
                     else
                     {
                         table.Update(oldValue.Id, tvb);
-                        updateType = UpdateType.Update;
                     }
-
-                    _documentsStorage.UpdateBucketStats(context, _documentsStorage.GetBucket(lowerId), sizeToAdd: tvb.Size - oldValue.Size, updateType);
                 }
 
                 if (collectionName.IsHiLo == false)
