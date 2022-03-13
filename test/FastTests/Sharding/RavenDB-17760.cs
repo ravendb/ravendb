@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Utils;
@@ -305,6 +306,104 @@ namespace FastTests.Sharding
             }
         }
 
+        [Fact]
+        public async Task CanGetAttachmentsByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            var toDispose = new List<IDisposable>();
+            try
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    // generate some attachments
+
+                    var rnd = new Random();
+                    var size = 128;
+
+                    for (int i = 10; i < 30; i++)
+                    {
+                        var id = $"users/{i}${suffix}";
+
+                        var b = new byte[size];
+                        rnd.NextBytes(b);
+                        var stream = new MemoryStream(b);
+                        toDispose.Add(stream);
+                        session.Advanced.Attachments.Store(id, $"attachment/{i}", stream);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+            }
+            finally
+            {
+                foreach (var stream in toDispose)
+                {
+                    stream.Dispose();
+                }
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 20;
+                    Assert.Equal(expected, attachments.Count);
+
+                    for (int i = 0; i < attachments.Count; i++)
+                    {
+                        var expectedName = $"attachment/{i + 10}";
+
+                        var item = attachments[i] as AttachmentReplicationItem;
+                        Assert.NotNull(item);
+
+                        Assert.Equal(expectedName, item.Name);
+                    }
+
+                    var fromEtag = attachments[12].Etag;
+                    attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 8;
+                    Assert.Equal(expected, attachments.Count);
+                }
+            }
+        }
 
         private static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database)
         {
