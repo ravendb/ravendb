@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -115,6 +116,8 @@ namespace Raven.Server.Documents
 
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
+            CheckIfShardAndFindItsNumber();
+            
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             try
@@ -201,6 +204,22 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void CheckIfShardAndFindItsNumber()
+        {
+            int separationIndex = Name.IndexOf('$');
+            if (separationIndex < 0)
+                return;
+
+            var start = separationIndex + 1;
+            int.TryParse(Name.AsSpan(start, Name.Length - start), out var shardNumber);
+            
+            _shardProperties = new ShardProperties
+            {
+                Number = shardNumber,
+                DatabaseName = Name[..separationIndex]
+            };
+        }
+
         public void SetIds(RawDatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
         public void SetIds(DatabaseRecord record) => SetIds(record.Topology, record.ShardedDatabaseId);
 
@@ -230,6 +249,15 @@ namespace Raven.Server.Documents
 
         public string Name { get; }
 
+        private class ShardProperties
+        {
+            public int Number;
+            public string DatabaseName;
+        }
+
+        private ShardProperties _shardProperties;
+        private bool IsShard => _shardProperties != null;
+        
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
         public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
@@ -499,15 +527,65 @@ namespace Raven.Server.Documents
             }
         }
 
+        struct ClusterTransactionBatch : IDisposable
+        {
+            private readonly ClusterTransactionCommand.SingleClusterDatabaseCommand[] _data;
+            public int Count = 0;
+
+            public ClusterTransactionBatch(int maxSize)
+            {
+                _data = ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Rent(maxSize);
+            }
+
+            public ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> GetData()
+                => new ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand>(_data, 0, Count);
+
+            public void Add(IEnumerable<ClusterTransactionCommand.SingleClusterDatabaseCommand> data)
+            {
+                foreach (var command in data)
+                {
+                    Add(command);
+                }
+            }
+            
+            public void Add(ClusterTransactionCommand.SingleClusterDatabaseCommand command) => _data[Count++] = command;
+
+            public void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
+        }
+        
         public async Task ExecuteClusterTransaction(TransactionOperationContext context)
         {
-            var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: 256));
+            const int takeCount = 256;
 
-            if (batch.Count == 0)
-                return;
+            using var batch = new ClusterTransactionBatch(takeCount);
 
-            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+            long maxRaftIndex = -1;
+            if (IsShard == false)
+            {
+                var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: takeCount);
+                batch.Add(readCommands);
+                if (batch.Count == 0)
+                    return;
+            }
+            else
+            {
+                var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, _shardProperties.DatabaseName, fromCount: _nextClusterCommand, take: takeCount);
+                
+                foreach (var command in readCommands)
+                {
+                    maxRaftIndex = command.Index; 
+                    if(command.ShardNumber == _shardProperties.Number)
+                        batch.Add(command);
+                }
+                
+                if (batch.Count == 0)
+                {
+                    NotifyIndexIfNeeded();
+                    return;
+                }
+            }
+
+            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch.GetData());
             try
             {
                 //If we get a database shutdown while we process a cluster tx command this
@@ -517,26 +595,32 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                {
                     _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
-                }
-                await ExecuteClusterTransactionOneByOne(batch);
+
+                if (await ExecuteClusterTransactionOneByOne(batch.GetData()))
+                    NotifyIndexIfNeeded();
                 return;
             }
-            foreach (var command in batch)
+            foreach (var command in batch.GetData())
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
+            
+            NotifyIndexIfNeeded();
+
+            void NotifyIndexIfNeeded()
+            {
+                if (maxRaftIndex >= 0)
+                    RachisLogIndexNotifications.NotifyListenersAbout(maxRaftIndex, null);
+            }
         }
 
-        private async Task ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
-            foreach (var command in batch)
+            for (int i = 0; i < batch.Count; i++)
             {
-                var singleCommand = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>
-                {
-                    command
-                };
+                var command = batch[i];
+                var singleCommand = batch.Slice(i, 1);
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
@@ -562,40 +646,58 @@ namespace Raven.Server.Documents
                     await Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
 
-                    return;
+                    return false;
                 }
             }
+
+            return true;
         }
 
         private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
-            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands)
         {
             try
             {
                 var index = command.Index;
                 var options = mergedCommands.Options[index];
-                if (exception == null)
+                Task indexTask = null;
+                if (options.WaitForIndexesTimeout != null)
                 {
-                    Task indexTask = null;
-                    if (options.WaitForIndexesTimeout != null)
-                    {
-                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
-                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                    }
-
-                    var result = new BatchHandler.ClusterTransactionCompletionResult
-                    {
-                        Array = mergedCommands.Replies[index],
-                        IndexTask = indexTask,
-                    };
-                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
-                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
-                    return;
+                    indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                        options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                        mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
                 }
 
-                ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
+                var result = new ClusterTransactionCompletionResult
+                {
+                    Array = mergedCommands.Replies[index],
+                    IndexTask = indexTask,
+                };
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetResult(options.TaskId, result);
+                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+            }
+            catch (Exception e)
+            {
+                // nothing we can do
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                }
+            }
+        }
+
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception)
+        {
+            try
+            {
+                var index = command.Index;
+                var options = mergedCommands.Options[index];
+
+                RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
+                ServerStore.Cluster.ClusterTransactionWaiter.TrySetException(options.TaskId, exception);
             }
             catch (Exception e)
             {

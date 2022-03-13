@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -384,6 +385,65 @@ namespace Raven.Server.ServerWide.Commands
             return RvnAtomicPrefix + docId;
         }
 
+        private readonly struct CommandsPerShard : IDisposable
+        {
+            private readonly BlittableJsonReaderObject[][] _commands = null;
+            private readonly string[][] _ids = null;
+            private readonly int[] _counts = null;
+
+            private readonly int _shardCount;
+            private readonly int _totalCommand;
+
+            public CommandsPerShard(int shardCount, int totalCommand)
+            {
+                _shardCount = shardCount;
+                _totalCommand = totalCommand;
+                
+                _commands = RentArrays<BlittableJsonReaderObject>();
+                _ids = RentArrays<string>();
+                _counts = ArrayPool<int>.Shared.Rent(_shardCount);
+                Array.Clear(_counts);
+            }
+
+            public ArraySegment<BlittableJsonReaderObject> GetCommandPerShard(int shardIndex) 
+                => new ArraySegment<BlittableJsonReaderObject>(_commands[shardIndex], 0, _counts[shardIndex]);
+            public Span<string> GetIdsPerShard(int shardIndex) => _ids[shardIndex].AsSpan(0, _counts[shardIndex]);
+            public int GetCountPerShard(int shardIndex) => _counts[shardIndex];
+            
+            public void Add(string id, BlittableJsonReaderObject command, int shardIndex)
+            {
+                var currentIndex = _counts[shardIndex]++;
+                _commands[shardIndex][currentIndex] = command;
+                _ids[shardIndex][currentIndex] = id;
+            }
+            
+            private T[][] RentArrays<T>()
+            {
+                T[][] fill = ArrayPool<T[]>.Shared.Rent(_shardCount);
+                for (int i = 0; i < _shardCount; i++)
+                {
+                    fill[i] = ArrayPool<T>.Shared.Rent(_totalCommand);
+                }
+                return fill;
+            }
+
+            public void Dispose()
+            {
+                ReturnArrays(_commands);
+                ReturnArrays(_ids);
+                ArrayPool<int>.Shared.Return(_counts);
+            }
+            
+            private void ReturnArrays<T>(T[][] toReturn)
+            {
+                for (int i = 0; i < _shardCount; i++)
+                {
+                    ArrayPool<T>.Shared.Return(toReturn[i]);
+                }
+                ArrayPool<T[]>.Shared.Return(toReturn);
+            }
+        }
+        
         public void SaveCommandsBatch(ClusterOperationContext context, RawDatabaseRecord rawRecord, long index,
             ClusterTransactionWaiter clusterTransactionWaiter)
         {
@@ -400,12 +460,9 @@ namespace Raven.Server.ServerWide.Commands
                 if (SerializedDatabaseCommands.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray commands) == false)
                     throw new InvalidOperationException($"Cluster {nameof(SerializedDatabaseCommands)} don't include the actual commands : {SerializedDatabaseCommands}");
 
-                var commandsPreShard = new DynamicJsonArray[rawRecord.Shards.Length];
-                var shardNames = GetShardNames(rawRecord.DatabaseName, rawRecord.Shards.Length);
-                var prevCountPerShard = GetPrevCountPerShard(context, commandsCountPerDatabase, shardNames);
+                using var perShard = new CommandsPerShard(rawRecord.Shards.Length, commands.Length);
 
-                (long, string)? clusterGuardAddition = Options.DisableAtomicDocumentWrites == true ? null
-                    : (index, rawRecord.GetClusterTransactionId());
+                var prevCountPerShard = GetPrevCount(context, commandsCountPerDatabase, rawRecord.DatabaseName);
 
                 var result = new DynamicJsonArray();
                 foreach (BlittableJsonReaderObject command in commands)
@@ -414,22 +471,30 @@ namespace Raven.Server.ServerWide.Commands
                         throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
                     var shardIndex = ShardedContext.GetShardIndex(context, rawRecord.ShardAllocations, id);
-                    commandsPreShard[shardIndex] ??= new DynamicJsonArray();
-                    commandsPreShard[shardIndex].Add(command);
-                    var currentCount = ++prevCountPerShard[shardIndex];
-                    result.Add(GetCommandResult(rawRecord, command, id, shardIndex, currentCount, clusterGuardAddition));
+                    perShard.Add(id, command, shardIndex);
                 }
 
-                for (int i = 0; i < commandsPreShard.Length; i++)
+                for (int i = 0; i < rawRecord.Shards.Length; i++)
                 {
-                    var shardCommands = commandsPreShard[i] ?? (IEnumerable<object>)Array.Empty<object>();
+                    if (perShard.GetCountPerShard(i) == 0)
+                        continue;
+
+                    var shardCommands = perShard.GetCommandPerShard(i);
+                    var shardCommandIds = perShard.GetIdsPerShard(i);
+
+                    for (int j = 0; j < shardCommands.Count; j++)
+                    {
+                        result.Add(GetCommandResult(rawRecord, shardCommands[j], shardCommandIds[j], i, ++prevCountPerShard, index));
+                    }
+
                     var toSave = context.ReadObject(new DynamicJsonValue
                     {
-                        [nameof(DatabaseCommands)] = shardCommands,
+                        [nameof(SingleClusterDatabaseCommand.ShardNumber)] = i, 
+                        [nameof(DatabaseCommands)] = shardCommands, 
                         [nameof(Options)] = Options.ToJson()
                     }, "serialized-database-commands");
 
-                    SetCommandBatch(context, index, shardNames[i], commandsCountPerDatabase, items, toSave, shardCommands.Count());
+                    SaveCommandBatch(context, index, rawRecord.DatabaseName, commandsCountPerDatabase, items, toSave, shardCommands.Count());
                 }
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
@@ -437,50 +502,31 @@ namespace Raven.Server.ServerWide.Commands
                     if (context.Transaction.InnerTransaction.LowLevelTransaction.Committed == false)
                         return;
 
-                    clusterTransactionWaiter.TrySetResult(Options.TaskId, new ClusterTransactionCompletionResult
-                    {
-                        Array = result
-                    });
+                    clusterTransactionWaiter.TrySetResult(Options.TaskId, new ClusterTransactionCompletionResult {Array = result});
                 };
             }
             else
             {
                 var commands = context.ReadObject(SerializedDatabaseCommands, "serialized-tx-commands");
-                InsertCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
+                SaveCommandBatch(context, index, DatabaseName, commandsCountPerDatabase, items, commands, DatabaseCommandsCount);
             }
         }
 
-        private string[] GetShardNames(string rawRecordDatabaseName, int shardsLength)
+        private static long GetPrevCount(ClusterOperationContext context, Tree commandsCountPerDatabase, string databaseName)
         {
-            var shardNames = new string[shardsLength];
-            for (int i = 0; i < shardsLength; i++)
+            using (GetPrefix(context, databaseName, out var databaseSlice))
             {
-                shardNames[i] = rawRecordDatabaseName + '$' + i;
+                return commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
             }
-            return shardNames;
         }
 
-        private static long[] GetPrevCountPerShard(ClusterOperationContext context, Tree commandsCountPerDatabase, string[] rawRecord)
-        {
-            long[] prevCountPerShard = new long[rawRecord.Length];
-            for (int i = 0; i < prevCountPerShard.Length; i++)
-            {
-                using (GetPrefix(context, rawRecord[i], out var databaseSlice))
-                {
-                    prevCountPerShard[i] = commandsCountPerDatabase.ReadInt64(databaseSlice) ?? 0;
-                }
-            }
-
-            return prevCountPerShard;
-        }
-
-        private static DynamicJsonValue GetCommandResult(
+        private DynamicJsonValue GetCommandResult(
             RawDatabaseRecord rawRecord,
             BlittableJsonReaderObject command,
             string id,
             int shardIndex,
             long currentCommandCount,
-            (long, string)? clusterGuardAddition)
+            long index)
         {
             if (command.TryGet(nameof(ClusterTransactionDataCommand.Type), out string type) == false)
                 throw new InvalidOperationException($"Got command with no type defined: {command}");
@@ -511,25 +557,14 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             var databaseId = rawRecord.Shards[shardIndex].DatabaseTopologyIdBase64;
-            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentCommandCount, clusterGuardAddition);
+            var changeVector = BatchHandler.ClusterTransactionMergedCommand.GetClusterWideChangeVector(databaseId, currentCommandCount, Options.DisableAtomicDocumentWrites == false, index, rawRecord.GetClusterTransactionId());
 
             result[Constants.Documents.Metadata.ChangeVector] = changeVector;
             return result;
         }
 
-        private void InsertCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
-            BlittableJsonReaderObject commands, long commandsCount)
-        {
-            SaveCommandBatch(context, index, databaseName, commandsCountPerDatabase, items, commands, commandsCount, ItemsInsert);
-        }
-        private void SetCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
-            BlittableJsonReaderObject commands, long commandsCount)
-        {
-            SaveCommandBatch(context, index, databaseName, commandsCountPerDatabase, items, commands, commandsCount, ItemsSet);
-        }
-        
         private unsafe void SaveCommandBatch(ClusterOperationContext context, long index, string databaseName, Tree commandsCountPerDatabase, Table items,
-            BlittableJsonReaderObject commands, long commandsCount, Action<Table, TableValueBuilder> saveAction)
+            BlittableJsonReaderObject commands, long commandsCount)
         {
             using (GetPrefix(context, databaseName, out var databaseSlice))
             {
@@ -540,16 +575,13 @@ namespace Raven.Server.ServerWide.Commands
                     tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
                     tvb.Add(commands.BasePointer, commands.Size);
                     tvb.Add(index);
-                    saveAction(items, tvb);
+                    items.Insert(tvb);
                 }
                 using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
                     *(long*)ptr = prevCount + commandsCount;
             }
         }
         
-        static void ItemsInsert(Table items, TableValueBuilder tvb) => items.Insert(tvb);
-        static void ItemsSet(Table items, TableValueBuilder tvb) => items.Set(tvb);
-
         public bool HasDocumentsInTransaction => SerializedDatabaseCommands != null && DatabaseCommandsCount != 0;
 
         public enum TransactionCommandsColumn
@@ -639,6 +671,7 @@ namespace Raven.Server.ServerWide.Commands
             public long Index;
             public long PreviousCount;
             public string Database;
+            public int? ShardNumber; 
 
             public DynamicJsonValue ToJson()
             {
@@ -648,7 +681,8 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(PreviousCount)] = PreviousCount,
                     [nameof(Index)] = Index,
                     [nameof(Options)] = Options.ToJson(),
-                    [nameof(Index)] = new DynamicJsonArray(Commands)
+                    [nameof(Index)] = new DynamicJsonArray(Commands),
+                    [nameof(ShardNumber)] = ShardNumber
                 };
             }
         }
@@ -724,13 +758,16 @@ namespace Raven.Server.ServerWide.Commands
             var keyPtr = reader.Read((int)TransactionCommandsColumn.Key, out size);
             var database = Encoding.UTF8.GetString(keyPtr, size - sizeof(long) - 1);
 
+            blittable.TryGet(nameof(SingleClusterDatabaseCommand.ShardNumber), out int? shardNumber);
+            
             return new SingleClusterDatabaseCommand
             {
                 Options = options,
                 Commands = array,
                 Index = index,
                 PreviousCount = Bits.SwapBytes(*(long*)(keyPtr + size - sizeof(long))),
-                Database = database
+                Database = database,
+                ShardNumber = shardNumber
             };
         }
 

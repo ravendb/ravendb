@@ -317,7 +317,7 @@ namespace SlowTests.Cluster
                 Database = watcherStore.Database, Urls = new[] {leader.WebUrl}, Conventions = new DocumentConventions {DisableTopologyUpdates = true}
             }.Initialize();
             
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 100; i++)
             {
                 var id = $"testObjs/{i}";
                 using (var session = watcherStore.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
