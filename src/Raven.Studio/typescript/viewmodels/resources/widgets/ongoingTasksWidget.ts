@@ -179,9 +179,9 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
     }
     
     private manageParentItemNodes(taskItem: ongoingTaskItem, tag: string, mustAddNode: boolean): void {
-        if (mustAddNode && taskItem.taskCount()) {
+        if (mustAddNode) {
             taskItem.taskNodes().addNode(tag)
-        } else if (!taskItem.taskCount()) {
+        } else {
             taskItem.taskNodes().removeNode(tag)
         }
     }
