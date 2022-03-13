@@ -14,14 +14,14 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected abstract ValueTask<FooterStatistics> GetFooterStatistics();
+        protected abstract ValueTask<FooterStatistics> GetFooterStatisticsAsync();
 
         public override async ValueTask ExecuteAsync()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var stats = await GetFooterStatistics();
+                var stats = await GetFooterStatisticsAsync();
 
                 writer.WriteStartObject();
 

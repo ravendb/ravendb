@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected override ValueTask<FooterStatistics> GetFooterStatistics()
+        protected override ValueTask<FooterStatistics> GetFooterStatisticsAsync()
         {
             var indexes = RequestHandler.Database.IndexStore.GetIndexes().ToList();
 

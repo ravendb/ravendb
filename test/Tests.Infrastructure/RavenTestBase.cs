@@ -1595,6 +1595,7 @@ namespace FastTests
                     ReplicationFactor = ReplicationFactor,
                     RunInMemory = RunInMemory,
                     Server = Server,
+                    DatabaseMode = DatabaseMode,
                     _descriptionBuilder = new StringBuilder(_descriptionBuilder.ToString())
                 };
             }
