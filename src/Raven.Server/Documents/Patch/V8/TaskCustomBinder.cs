@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Patch.V8
     {
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, Task oi, bool keepAlive = false) 
         {
-            return engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.Context.TypeBinderTask, keepAlive: keepAlive);
+            return engine.CreateObjectBinder<TaskCustomBinder>(oi, engine.Context.TypeBinderTask(), keepAlive: keepAlive);
         }
 
         public static InternalHandle GetRunningTaskResult(V8Engine engine, Task task)

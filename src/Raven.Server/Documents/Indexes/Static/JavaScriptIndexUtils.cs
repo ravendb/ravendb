@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes.Static.Utils
         public JsHandle StringifyObject(JsHandle jsValue)
         {
             // json string of the object
-            return EngineHandle.JsonStringify.StaticCall(jsValue);
+            return EngineHandle.JsonStringify().StaticCall(jsValue);
         }
         
         [ThreadStatic]

@@ -38,7 +38,7 @@ var process = {
         public JsHandle ExplicitNull => new(ExplicitNullJint);
 
         private readonly JsHandle _jsonStringify;
-        public JsHandle JsonStringify => _jsonStringify;
+        public JsHandle JsonStringify() => _jsonStringify;
 
         [CanBeNull]
         private IJavaScriptOptions _jsOptions;

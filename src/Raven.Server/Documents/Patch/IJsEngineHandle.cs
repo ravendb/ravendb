@@ -39,8 +39,8 @@ namespace Raven.Server.Documents.Patch
         JsHandle ImplicitNull { get;  }
         
         JsHandle ExplicitNull { get;  }
-        
-        JsHandle JsonStringify { get;  }
+
+        JsHandle JsonStringify();
         
         void ForceGarbageCollection();
 

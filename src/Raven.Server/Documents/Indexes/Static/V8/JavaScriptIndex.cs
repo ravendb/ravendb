@@ -261,8 +261,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (!jsValue.IsStringEx)
             {
-                using (var jsStrRes = EngineHandle.JsonStringify.StaticCall(jsValue))
-                using (var jsStrResNext = EngineHandle.JsonStringify.StaticCall(jsValueNext))
+                using (var jsStrRes = EngineHandle.JsonStringify().StaticCall(jsValue))
+                using (var jsStrResNext = EngineHandle.JsonStringify().StaticCall(jsValueNext))
                     throw new ArgumentException($"{prefix} string argument, but got: {jsValue.Summary}; \nnext argument is: {jsValueNext.Summary}");
             }
         }

@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript.V8
 
         public override InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            return _engine.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentNameObjectInstance, keepAlive: keepAlive);
+            return _engine.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder>(this, EngineEx.Context.TypeBinderAttachmentNameObjectInstance(), keepAlive: keepAlive);
         }
 
         public AttachmentNameObjectInstanceV8(V8EngineEx engineEx, BlittableJsonReaderObject attachmentName) : base(engineEx)

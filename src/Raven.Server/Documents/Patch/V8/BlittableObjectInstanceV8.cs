@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Patch.V8
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstanceV8 boi, bool keepAlive = false)
         {
-            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance, keepAlive: keepAlive);
+            InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance(), keepAlive: keepAlive);
 
             return jsBinder;
         }

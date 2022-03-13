@@ -1917,8 +1917,8 @@ namespace Raven.Server.Documents.Patch
                                     }
                                     else
                                     {
-                                        var valueNewStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valueNew);
-                                        var valuePrevStr = ScriptEngineHandle.JsonStringify.V8.Item.StaticCall(valuePrev);
+                                        var valueNewStr = ScriptEngineHandle.JsonStringify().V8.Item.StaticCall(valueNew);
+                                        var valuePrevStr = ScriptEngineHandle.JsonStringify().V8.Item.StaticCall(valuePrev);
                                         throw new ArgumentException(
                                             $"Can't set argument '{propertyName}' as property on global object as it already exists with value {valuePrevStr}, new value {valueNewStr}");
                                     }

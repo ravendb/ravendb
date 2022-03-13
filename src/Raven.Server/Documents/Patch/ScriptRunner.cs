@@ -547,10 +547,10 @@ namespace Raven.Server.Documents.Patch
                         using (var jsMethod = ScriptEngineHandle.GetGlobalProperty(method))
                         {
                             if (jsMethod.IsUndefined)
-                                throw new InvalidOperationException($"Failed to get global function '{method}', global object is: {ScriptEngineHandle.JsonStringify.StaticCall(ScriptEngineHandle.GlobalObject)}");
+                                throw new InvalidOperationException($"Failed to get global function '{method}', global object is: {ScriptEngineHandle.JsonStringify().StaticCall(ScriptEngineHandle.GlobalObject)}");
                             
                             if (!jsMethod.IsFunction)
-                                throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify.StaticCall(method)}");
+                                throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify().StaticCall(method)}");
 
                             if (ScriptEngineHandle.IsMemoryChecksOn)
                             {
@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Patch
                             var argsStr = "";
                             for (int i = 0; i < _args.Length; i++)
                             {
-                                using (var jsArgStr = ScriptEngineHandle.JsonStringify.StaticCall(_args[i]))
+                                using (var jsArgStr = ScriptEngineHandle.JsonStringify().StaticCall(_args[i]))
                                 {
                                     var argStr = jsArgStr.IsUndefined ? "undefined" : jsArgStr.AsString;
                                     argsStr += argStr + "\n\n";
@@ -584,7 +584,7 @@ namespace Raven.Server.Documents.Patch
                                 }
 #if DEBUG
                                 var resStr = "";
-                                using (var jsResStr = ScriptEngineHandle.JsonStringify.StaticCall(jsRes))
+                                using (var jsResStr = ScriptEngineHandle.JsonStringify().StaticCall(jsRes))
                                 {
                                     resStr = jsResStr.IsUndefined ? "undefined" : jsResStr.AsString;
                                 }
