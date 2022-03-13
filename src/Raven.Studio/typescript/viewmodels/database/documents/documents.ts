@@ -202,9 +202,7 @@ class documents extends shardViewModelBase {
     }
 
     fetchDocs(skip: number, take: number, previewColumns: string[], fullColumns: string[]): JQueryPromise<pagedResultWithAvailableColumns<any>> {
-        const continuationTokenToUse = this.getContinuationTokenToUse();
-        
-        return this.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns, continuationTokenToUse)
+        return this.currentCollection().fetchDocuments(skip, take, previewColumns, fullColumns, this.continuationToken)
             .done((results => {
                 this.continuationToken = results.continuationToken;
                 // results.continuationToken will be null if there are no more results
@@ -219,20 +217,6 @@ class documents extends shardViewModelBase {
                     }
                 }
             }));
-    }
-
-    private getContinuationTokenToUse() {
-        const isShardedDatabase = shardedDatabase.isSharded(this.db);
-        if (!isShardedDatabase) {
-            return null;
-        }
-        
-        const numberOfShards = (this.db as shardedDatabase).shards().length;
-        if (numberOfShards === 1) {
-            return null;
-        }
-        
-        return this.continuationToken;
     }
     
     compositionComplete() {

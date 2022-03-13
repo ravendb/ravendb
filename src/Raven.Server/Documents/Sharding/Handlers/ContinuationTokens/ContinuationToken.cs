@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.ContinuationTokens
 {
     public abstract class ContinuationToken : IDynamicJson
     {
-        public const string ContinuationTokenQueryString = "continuation-token";
+        public const string ContinuationTokenQueryString = "continuationToken";
         public const string PropertyName = "ContinuationToken";
         private static Dictionary<Type, Func<BlittableJsonReaderObject, ContinuationToken>> ConverterCache =
             new Dictionary<Type, Func<BlittableJsonReaderObject, ContinuationToken>>();
