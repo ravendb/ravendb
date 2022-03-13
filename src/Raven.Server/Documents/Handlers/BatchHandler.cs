@@ -128,23 +128,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal static void CheckBackwardCompatibility(HttpContext httpContext, ref bool disableAtomicDocumentWrites)
-        {
-            if (disableAtomicDocumentWrites)
-                return;
-
-            if (RequestRouter.TryGetClientVersion(httpContext, out var clientVersion) == false)
-            {
-                disableAtomicDocumentWrites = true;
-                return;
-            }
-
-            if (clientVersion.Major < 5 || (clientVersion.Major == 5 && clientVersion.Minor < 2))
-            {
-                disableAtomicDocumentWrites = true;
-            }
-        }
-
         public static string BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
         {
             var sb = new StringBuilder();
@@ -388,11 +371,11 @@ namespace Raven.Server.Documents.Handlers
 
         public class ClusterTransactionMergedCommand : TransactionMergedCommand
         {
-            private readonly List<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
+            private readonly ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
             public readonly Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
             public readonly Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions> Options = new Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions>();
 
-            public ClusterTransactionMergedCommand(DocumentDatabase database, List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch) : base(database)
+            public ClusterTransactionMergedCommand(DocumentDatabase database, ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch) : base(database)
             {
                 _batch = batch;
             }
@@ -419,15 +402,13 @@ namespace Raven.Server.Documents.Handlers
                     {
                         ModifiedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     }
-                    (long, string)? clusterGuardAddition = options.DisableAtomicDocumentWrites == true ? null
-                        : (command.Index, Database.ClusterTransactionId);
 
                     if (commands != null)
                     {
                         foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
                             count++;
-                            var changeVector = GetClusterWideChangeVector(Database.DatabaseGroupId, count, clusterGuardAddition);
+                            var changeVector = GetClusterWideChangeVector(Database.DatabaseGroupId, count, options.DisableAtomicDocumentWrites == false, command.Index, Database.ClusterTransactionId);
                             var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
 
                             switch (cmd.Type)
@@ -574,21 +555,20 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
-            public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, (long Index, string ClusterId)? clusterAddition)
+            public static string GetClusterWideChangeVector(string databaseId, long prevCountPerShard, bool addTrxAddition, long index, string clusterTransactionId)
             {
                 var stringBuilder = new StringBuilder(ChangeVectorParser.RaftTag)
                     .Append(':').Append(prevCountPerShard)
                     .Append('-').Append(databaseId);
-                if (clusterAddition.HasValue)
+                if (addTrxAddition)
                 {
                     stringBuilder
                         .Append(',').Append(ChangeVectorParser.TrxnTag)
-                        .Append(':').Append(clusterAddition.Value.Index)
-                        .Append('-').Append(clusterAddition.Value.ClusterId);
+                        .Append(':').Append(index)
+                        .Append('-').Append(clusterTransactionId);
                 }
                 return stringBuilder.ToString();
             }
-
         }
 
         public class MergedBatchCommand : TransactionMergedCommand, IDisposable
@@ -1084,7 +1064,7 @@ namespace Raven.Server.Documents.Handlers
 
     public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.ClusterTransactionMergedCommand>
     {
-        public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
+        public ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
 
         public BatchHandler.ClusterTransactionMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

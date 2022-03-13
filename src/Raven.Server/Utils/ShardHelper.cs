@@ -119,9 +119,17 @@ namespace Raven.Server.Utils
 
         public static IEnumerable<string> GetShardNames(DatabaseRecord record)
         {
-            for (int i = 0; i < record.Shards.Length; i++)
+            var recordDatabaseName = record.DatabaseName;
+            var shardsLength = record.Shards.Length;
+
+            return GetShardNames(recordDatabaseName, shardsLength);
+        }
+
+        public static IEnumerable<string> GetShardNames(string databaseName, int shardsCount)
+        {
+            for (int i = 0; i < shardsCount; i++)
             {
-                yield return $"{record.DatabaseName}${i}";
+                yield return $"{databaseName}${i}";
             }
         }
 

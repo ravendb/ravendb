@@ -562,6 +562,11 @@ namespace SlowTests.Cluster
                     var user = await session.LoadAsync<User>("users/1");
                     Assert.Equal(user1.Name, user.Name);
                 }
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/3");
+                    Assert.Equal(user3.Name, user.Name);
+                }
             }
         }
 
