@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents
         public static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
         private static readonly Slice AttachmentsTombstonesSlice;
+        public static readonly Slice AttachmentsBucketAndEtagSlice;
 
         internal static readonly TableSchema AttachmentsSchema = new TableSchema();
         public static readonly string AttachmentsTombstones = "Attachments.Tombstones";
@@ -61,6 +63,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "AttachmentsMetadata", ByteStringType.Immutable, out AttachmentsMetadataSlice);
                 Slice.From(ctx, "AttachmentsEtag", ByteStringType.Immutable, out AttachmentsEtagSlice);
                 Slice.From(ctx, "AttachmentsHash", ByteStringType.Immutable, out AttachmentsHashSlice);
+                Slice.From(ctx, "AttachmentsBucketAndEtag", ByteStringType.Immutable, out AttachmentsBucketAndEtagSlice);
                 Slice.From(ctx, AttachmentsTombstones, ByteStringType.Immutable, out AttachmentsTombstonesSlice);
             }
 
@@ -79,6 +82,12 @@ namespace Raven.Server.Documents
                 StartIndex = (int)AttachmentsTable.Hash,
                 Count = 1,
                 Name = AttachmentsHashSlice
+            });
+            AttachmentsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKeyForAttachments,
+                IsGlobal = true,
+                Name = AttachmentsBucketAndEtagSlice
             });
         }
 
@@ -126,6 +135,29 @@ namespace Raven.Server.Documents
                 attachment.Stream = stream;
 
                 yield return AttachmentReplicationItem.From(context, attachment);
+            }
+        }
+
+        public IEnumerable<ReplicationBatchItem> GetAttachmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    var attachment = TableValueToAttachment(context, ref result.Result.Reader);
+
+                    var stream = GetAttachmentStream(context, attachment.Base64Hash);
+                    if (stream == null)
+                        ThrowMissingAttachment(attachment.Name);
+
+                    attachment.Stream = stream;
+
+                    yield return AttachmentReplicationItem.From(context, attachment);
+                }
             }
         }
 
@@ -1358,6 +1390,31 @@ namespace Raven.Server.Documents
                     yield return attachment;
                 }
             }
+        }
+
+
+        [IndexEntryKeyGenerator]
+        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+
+            var keyPtr = tvr.Read((int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, out var keySize);
+
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < keySize; sizeOfDocId++)
+            {
+                if (keyPtr[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
+
+            var bucket = ShardedContext.GetShardId(keyPtr, sizeOfDocId);
+            var etagPtr = tvr.Read((int)AttachmentsTable.Etag, out _);
+
+            *(int*)buffer.Ptr = bucket;
+            *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;
+
+            slice = new Slice(buffer);
+            return scope;
         }
     }
 }
