@@ -57,7 +57,7 @@ interface resultsWithTotalCountDto<T> extends resultsDto<T> {
 
 interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDto<T> {
     AvailableColumns: string[];
-    ContinuationToken: string;
+    ContinuationToken?: string;
 }
 
 interface documentDto extends metadataAwareDto {
@@ -443,7 +443,7 @@ interface pagedResultExtended<T> extends pagedResult<T> {
 
 interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
     availableColumns: string[];
-    continuationToken: string;
+    continuationToken?: string;
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";

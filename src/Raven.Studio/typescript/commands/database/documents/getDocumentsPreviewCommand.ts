@@ -34,24 +34,6 @@ class getDocumentsPreviewCommand extends commandBase {
     }
 
     execute(): JQueryPromise<pagedResultWithAvailableColumns<document>> {
-        
-        const argsWithContinuationToken = {
-            collection: this.collectionName,
-            binding: this.previewBindings,
-            fullBinding: this.fullBindings,
-            "continuation-token": this.continuationToken
-        };
-
-        const argsWithSkipAndTake = {
-            collection: this.collectionName,
-            start: this.skip,
-            pageSize: this.take,
-            binding: this.previewBindings,
-            fullBinding: this.fullBindings
-        };
-
-        const args = this.continuationToken ? argsWithContinuationToken : argsWithSkipAndTake;
-
         const resultsSelector = (dto: resultsWithCountAndAvailableColumns<documentDto>, xhr: JQueryXHR): pagedResultWithAvailableColumns<document> => {
             dto.AvailableColumns.push("__metadata");
             return {
@@ -62,8 +44,10 @@ class getDocumentsPreviewCommand extends commandBase {
                 continuationToken: dto.ContinuationToken
             };
         };
-        
+
+        const args = this.getArgsToUse(this.continuationToken);
         const url = endpoints.databases.studioCollections.studioCollectionsPreview + this.urlEncodeArgs(args);
+        
         return this.query(url, null, this.database, resultsSelector);
     }
 
@@ -94,6 +78,25 @@ class getDocumentsPreviewCommand extends commandBase {
         // we don't delete $o, $a, $t from document as it is used to detect if we display fake value
 
         return doc;
+    }
+    
+    private getArgsToUse(continuationToken?: string) {
+        if (this.continuationToken) {
+            return {
+                collection: this.collectionName,
+                binding: this.previewBindings,
+                fullBinding: this.fullBindings,
+                continuationToken: this.continuationToken
+            };
+        }
+
+        return {
+            collection: this.collectionName,
+            start: this.skip,
+            pageSize: this.take,
+            binding: this.previewBindings,
+            fullBinding: this.fullBindings
+        };
     }
 }
 
