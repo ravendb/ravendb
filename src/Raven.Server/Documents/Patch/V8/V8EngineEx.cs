@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch.V8
 
             public void Dispose()
             {
-                JsonStringifyV8.Dispose();
+                JsonStringifyV8().Dispose();
                 
                 if (_contextNative != null)
                 {
@@ -108,11 +108,11 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 get
                 {
-                    if (_implicitNullV8.IsEmpty)
+                    /*if (_implicitNullV8.IsEmpty)
                     {
                         _implicitNullV8 = Engine.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
                         Engine.AddToLastMemorySnapshotBefore(_implicitNullV8);
-                    }
+                    }*/
                     return _implicitNullV8;
                 }
             }
@@ -121,11 +121,11 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 get
                 {
-                    if (_explicitNullV8.IsEmpty)
+                    /*if (_explicitNullV8.IsEmpty)
                     {
                         _explicitNullV8 = Engine.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
                         Engine.AddToLastMemorySnapshotBefore(_explicitNullV8);
-                    }
+                    }*/
                     return _explicitNullV8;
                 }
             }
@@ -144,33 +144,27 @@ namespace Raven.Server.Documents.Patch.V8
             private JsHandle _jsonStringify = JsHandle.Empty;
             private InternalHandle _jsonStringifyV8 = InternalHandle.Empty;
 
-            public JsHandle JsonStringify
+            public JsHandle JsonStringify()
             {
-                get
+                if (_jsonStringify.IsEmpty)
                 {
-                    if (_jsonStringify.IsEmpty)
-                    {
-                        _jsonStringify = new JsHandle(JsonStringifyV8);
-                    }
-                    return _jsonStringify;
+                    _jsonStringify = new JsHandle(JsonStringifyV8());
                 }
+                return _jsonStringify;
             }
 
-            public InternalHandle JsonStringifyV8
+            public InternalHandle JsonStringifyV8()
             {
-                get
+                if (_jsonStringifyV8.IsEmpty)
                 {
-                    if (_jsonStringifyV8.IsEmpty)
-                    {
-                        _jsonStringifyV8 = Engine.Execute("JSON.stringify", "JSON.stringify", true, 0);
-                        Engine.AddToLastMemorySnapshotBefore(_jsonStringifyV8);
-                    }
-                    return _jsonStringifyV8;
+                    _jsonStringifyV8 = Engine.Execute("JSON.stringify", "JSON.stringify", true, 0);
+                    Engine.AddToLastMemorySnapshotBefore(_jsonStringifyV8);
                 }
+                return _jsonStringifyV8;
             }
 
-            private TypeBinder? _typeBinderBlittableObjectInstance;
             private TypeBinder? _typeBinderTask;
+            private TypeBinder? _typeBinderBlittableObjectInstance;
             private TypeBinder? _typeBinderTimeSeriesSegmentObjectInstance;
             private TypeBinder? _typeBinderCounterEntryObjectInstance;
             private TypeBinder? _typeBinderAttachmentNameObjectInstance;
@@ -181,189 +175,168 @@ namespace Raven.Server.Documents.Patch.V8
             private TypeBinder? _typeBinderRavenServer;
             private TypeBinder? _typeBinderDocumentDatabase;
 
-            public TypeBinder? TypeBinderBlittableObjectInstance
+            public TypeBinder? TypeBinderBlittableObjectInstance()
             {
-                get
+                if (_typeBinderBlittableObjectInstance == null)
                 {
-                    if (_typeBinderBlittableObjectInstance == null)
-                    {
-                        _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, true);
-                        _typeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder,
-                                keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderBlittableObjectInstance;
+                    _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder,
+                            keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(BlittableObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderBlittableObjectInstance;
             }
 
-            public TypeBinder? TypeBinderTask
+            public TypeBinder? TypeBinderTask()
             {
-                get
+                if (_typeBinderTask == null)
                 {
-                    if (_typeBinderTask == null)
-                    {
-                        _typeBinderTask = Engine.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite);
-                        _typeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(Task), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderTask;
+                    _typeBinderTask = Engine.RegisterType<Task>(null, false, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                    _typeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(Task), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderTask;
             }
 
-            public TypeBinder? TypeBinderTimeSeriesSegmentObjectInstance
+            public TypeBinder? TypeBinderTimeSeriesSegmentObjectInstance()
             {
-                get
+                if (_typeBinderTimeSeriesSegmentObjectInstance == null)
                 {
-                    if (_typeBinderTimeSeriesSegmentObjectInstance == null)
-                    {
-                        _typeBinderTimeSeriesSegmentObjectInstance = Engine.RegisterType<TimeSeriesSegmentObjectInstanceV8>(null, false);
-                        _typeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder, TimeSeriesSegmentObjectInstanceV8>((TimeSeriesSegmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderTimeSeriesSegmentObjectInstance;
+                    _typeBinderTimeSeriesSegmentObjectInstance = Engine.RegisterType<TimeSeriesSegmentObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderTimeSeriesSegmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<TimeSeriesSegmentObjectInstanceV8.CustomBinder, TimeSeriesSegmentObjectInstanceV8>((TimeSeriesSegmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(TimeSeriesSegmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderTimeSeriesSegmentObjectInstance;
             }
             
-            public TypeBinder? TypeBinderCounterEntryObjectInstance
+            public TypeBinder? TypeBinderCounterEntryObjectInstance()
             {
-                get
+                if (_typeBinderCounterEntryObjectInstance == null)
                 {
-                    if (_typeBinderCounterEntryObjectInstance == null)
-                    {
-                        _typeBinderCounterEntryObjectInstance = Engine.RegisterType<CounterEntryObjectInstanceV8>(null, false);
-                        _typeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder, CounterEntryObjectInstanceV8>((CounterEntryObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderCounterEntryObjectInstance;
+                    _typeBinderCounterEntryObjectInstance = Engine.RegisterType<CounterEntryObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderCounterEntryObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<CounterEntryObjectInstanceV8.CustomBinder, CounterEntryObjectInstanceV8>((CounterEntryObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(CounterEntryObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderCounterEntryObjectInstance;
             }
             
-            public TypeBinder? TypeBinderAttachmentNameObjectInstance
+            public TypeBinder? TypeBinderAttachmentNameObjectInstance()
             {
-                get
+                if (_typeBinderAttachmentNameObjectInstance == null)
                 {
-                    if (_typeBinderAttachmentNameObjectInstance == null)
-                    {
-                        _typeBinderAttachmentNameObjectInstance = Engine.RegisterType<AttachmentNameObjectInstanceV8>(null, false);
-                        _typeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder, AttachmentNameObjectInstanceV8>((AttachmentNameObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderAttachmentNameObjectInstance;
+                    _typeBinderAttachmentNameObjectInstance = Engine.RegisterType<AttachmentNameObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderAttachmentNameObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<AttachmentNameObjectInstanceV8.CustomBinder, AttachmentNameObjectInstanceV8>((AttachmentNameObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(AttachmentNameObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderAttachmentNameObjectInstance;
             }
             
-            public TypeBinder? TypeBinderAttachmentObjectInstance
+            public TypeBinder? TypeBinderAttachmentObjectInstance()
             {
-                get
+                if (_typeBinderAttachmentObjectInstance == null)
                 {
-                    if (_typeBinderAttachmentObjectInstance == null)
-                    {
-                        _typeBinderAttachmentObjectInstance = Engine.RegisterType<AttachmentObjectInstanceV8>(null, false);
-                        _typeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder, AttachmentObjectInstanceV8>((AttachmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderAttachmentObjectInstance;
+                    _typeBinderAttachmentObjectInstance = Engine.RegisterType<AttachmentObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderAttachmentObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<AttachmentObjectInstanceV8.CustomBinder, AttachmentObjectInstanceV8>((AttachmentObjectInstanceV8)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(AttachmentObjectInstanceV8), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderAttachmentObjectInstance;
             }
             
-            public TypeBinder? TypeBinderLazyNumberValue
+            public TypeBinder? TypeBinderLazyNumberValue()
             {
-                get
+                if (_typeBinderLazyNumberValue == null)
                 {
-                    if (_typeBinderLazyNumberValue == null)
-                    {
-                        _typeBinderLazyNumberValue = Engine.RegisterType<LazyNumberValue>(null, false);
-                        _typeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyNumberValue), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderLazyNumberValue;
+                    _typeBinderLazyNumberValue = Engine.RegisterType<LazyNumberValue>(null, false, useLazy: false);
+                    _typeBinderLazyNumberValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<ObjectBinder, LazyNumberValue>((LazyNumberValue)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(LazyNumberValue), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderLazyNumberValue;
             }
             
-            public TypeBinder? TypeBinderLazyStringValue
+            public TypeBinder? TypeBinderLazyStringValue()
             {
-                get
+                if (_typeBinderLazyStringValue == null)
                 {
-                    if (_typeBinderLazyStringValue == null)
-                    {
-                        _typeBinderLazyStringValue = Engine.RegisterType<LazyStringValue>(null, false);
-                        _typeBinderLazyStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<ObjectBinder, LazyStringValue>((LazyStringValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyStringValue), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderLazyStringValue;
+                    _typeBinderLazyStringValue = Engine.RegisterType<LazyStringValue>(null, false, useLazy: false);
+                    _typeBinderLazyStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<ObjectBinder, LazyStringValue>((LazyStringValue)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(LazyStringValue), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderLazyStringValue;
             }
             
-            public TypeBinder? TypeBinderLazyCompressedStringValue
+            public TypeBinder? TypeBinderLazyCompressedStringValue()
             {
-                get
+                if (_typeBinderLazyCompressedStringValue == null)
                 {
-                    if (_typeBinderLazyCompressedStringValue == null)
-                    {
-                        _typeBinderLazyCompressedStringValue = Engine.RegisterType<LazyCompressedStringValue>(null, false);
-                        _typeBinderLazyCompressedStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<ObjectBinder, LazyCompressedStringValue>((LazyCompressedStringValue)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(LazyCompressedStringValue), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderLazyCompressedStringValue;
+                    _typeBinderLazyCompressedStringValue = Engine.RegisterType<LazyCompressedStringValue>(null, false, useLazy: false);
+                    _typeBinderLazyCompressedStringValue.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<ObjectBinder, LazyCompressedStringValue>((LazyCompressedStringValue)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(LazyCompressedStringValue), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderLazyCompressedStringValue;
             }
             
-            public TypeBinder? TypeBinderRavenServer
+            public TypeBinder? TypeBinderRavenServer()
             {
-                get
+                if (_typeBinderRavenServer == null)
                 {
-                    if (_typeBinderRavenServer == null)
-                    {
-                        _typeBinderRavenServer = Engine.RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite);
-                        _typeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<ObjectBinder, RavenServer>((RavenServer)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(RavenServer), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderRavenServer;
+                    _typeBinderRavenServer = Engine.RegisterType<RavenServer>(null, true, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                    _typeBinderRavenServer.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<ObjectBinder, RavenServer>((RavenServer)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(RavenServer), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderRavenServer;
             }
             
-            public TypeBinder? TypeBinderDocumentDatabase
+            public TypeBinder? TypeBinderDocumentDatabase()
             {
-                get
+                if (_typeBinderDocumentDatabase == null)
                 {
-                    if (_typeBinderDocumentDatabase == null)
-                    {
-                        _typeBinderDocumentDatabase = Engine.RegisterType<DocumentDatabase>(null, true, ScriptMemberSecurity.ReadWrite);
-                        _typeBinderDocumentDatabase.OnGetObjectBinder = (tb, obj, initializeBinder)
-                            => tb.CreateObjectBinder<ObjectBinder, DocumentDatabase>((DocumentDatabase)obj, initializeBinder, keepAlive: true);
-                        Engine.GlobalObject.SetProperty(typeof(DocumentDatabase), addToLastMemorySnapshotBefore: true);
-                    }
-                    return _typeBinderDocumentDatabase;
+                    _typeBinderDocumentDatabase = Engine.RegisterType<DocumentDatabase>(null, true, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                    _typeBinderDocumentDatabase.OnGetObjectBinder = (tb, obj, initializeBinder)
+                        => tb.CreateObjectBinder<ObjectBinder, DocumentDatabase>((DocumentDatabase)obj, initializeBinder, keepAlive: true);
+                    Engine.GlobalObject.SetProperty(typeof(DocumentDatabase), addToLastMemorySnapshotBefore: true);
                 }
+                return _typeBinderDocumentDatabase;
             }
             
             public void InitializeGlobal()
             {
-                Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
-
-                var bindersLazy = Engine.BindersLazy;
+                /*var bindersLazy = Engine.BindersLazy;
                 
-                AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance);
-                AddToBindersLazy(bindersLazy, typeof(Task), () => TypeBinderTask);
-                AddToBindersLazy(bindersLazy, typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance);
-                AddToBindersLazy(bindersLazy, typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance);
-                AddToBindersLazy(bindersLazy, typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance);
-                AddToBindersLazy(bindersLazy, typeof(AttachmentObjectInstanceV8), () => TypeBinderAttachmentObjectInstance);
-                AddToBindersLazy(bindersLazy, typeof(LazyNumberValue), () => TypeBinderLazyNumberValue);
-                AddToBindersLazy(bindersLazy, typeof(LazyStringValue), () => TypeBinderLazyStringValue);
-                AddToBindersLazy(bindersLazy, typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue);
-                AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer);
-                AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase);
+                AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance());
+                AddToBindersLazy(bindersLazy, typeof(Task), () => TypeBinderTask());
+                AddToBindersLazy(bindersLazy, typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance());
+                AddToBindersLazy(bindersLazy, typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance());
+                AddToBindersLazy(bindersLazy, typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance());
+                AddToBindersLazy(bindersLazy, typeof(AttachmentObjectInstanceV8), () => TypeBinderAttachmentObjectInstance());
+                AddToBindersLazy(bindersLazy, typeof(LazyNumberValue), () => TypeBinderLazyNumberValue());
+                AddToBindersLazy(bindersLazy, typeof(LazyStringValue), () => TypeBinderLazyStringValue());
+                AddToBindersLazy(bindersLazy, typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue());
+                AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer());
+                AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase());*/
+                
+                var tb = TypeBinderTask();
+                tb = TypeBinderBlittableObjectInstance();
+                tb = TypeBinderTimeSeriesSegmentObjectInstance();
+                tb = TypeBinderCounterEntryObjectInstance();
+                tb = TypeBinderAttachmentNameObjectInstance();
+                tb = TypeBinderAttachmentObjectInstance();
+                tb = TypeBinderLazyNumberValue();
+                tb = TypeBinderLazyStringValue();
+                tb = TypeBinderLazyCompressedStringValue();
+                tb = TypeBinderRavenServer();
+                tb = TypeBinderDocumentDatabase();
+                
+                Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
             }
             
             private void AddToBindersLazy(Dictionary<Type, Func<TypeBinder>> bindersLazy, Type key, Func<TypeBinder> value)
@@ -482,7 +455,7 @@ var process = {
         public JsHandle ImplicitNull => new(Context.ImplicitNullV8);
         public JsHandle ExplicitNull => new(Context.ExplicitNullV8);
 
-        public JsHandle JsonStringify => Context.JsonStringify;
+        public JsHandle JsonStringify() => Context.JsonStringify();
 
         public IDisposable DisableConstraints()
         {
