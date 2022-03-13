@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors
 
         protected abstract ValueTask WaitForIndexNotificationAsync(long index);
 
-        protected async Task UpdateDatabaseRecord(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
+        protected async Task UpdateDatabaseRecordAsync(TransactionOperationContext context, Action<DatabaseRecord, long> action, string raftRequestId, string databaseName)
         {
             if (context == null)
                 throw new ArgumentNullException(nameof(context));

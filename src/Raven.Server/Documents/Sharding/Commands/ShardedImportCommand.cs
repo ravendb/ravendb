@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -51,6 +52,9 @@ namespace Raven.Server.Documents.Sharding.Commands
         {
             _stream = stream;
             _options = options;
+
+            var queryString = HttpUtility.ParseQueryString(handler.HttpContext.Request.QueryString.Value);
+            Url = "/smuggler/import?" + queryString;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

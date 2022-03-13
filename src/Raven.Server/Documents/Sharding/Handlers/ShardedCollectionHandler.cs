@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 StreamOperation.CreateStreamCommand(startsWith: null, matches: null, _token.Pages[shard].Start, _token.PageSize, exclude: null);
         }
 
-        private struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>
+        internal struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>
         {
             public CollectionStatistics Combine(Memory<CollectionStatistics> results)
             {

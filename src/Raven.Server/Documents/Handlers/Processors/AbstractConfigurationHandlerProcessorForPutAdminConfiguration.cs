@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Processors
                 var studioConfigurationJson = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), Constants.Configuration.StudioId);
                 var studioConfiguration = JsonDeserializationServer.StudioConfiguration(studioConfigurationJson);
 
-                await UpdateDatabaseRecord(context, (record, _) =>
+                await UpdateDatabaseRecordAsync(context, (record, _) =>
                 {
                     record.Studio = studioConfiguration;
                 }, RequestHandler.GetRaftRequestIdFromQuery(), GetDatabaseName());
