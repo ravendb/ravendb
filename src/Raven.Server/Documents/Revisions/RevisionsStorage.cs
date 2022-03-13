@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Revisions
         private static readonly Slice RevisionsTombstonesSlice;
         private static readonly Slice RevisionsPrefix;
         public static Slice ResolvedFlagByEtagSlice;
+        public static Slice RevisionsBucketAndEtagSlice;
 
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 
@@ -147,6 +148,7 @@ namespace Raven.Server.Documents.Revisions
                 Slice.From(ctx, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
                 Slice.From(ctx, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
                 Slice.From(ctx, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
+                Slice.From(ctx, "RevisionsBucketAndEtag", ByteStringType.Immutable, out RevisionsBucketAndEtagSlice);
                 Slice.From(ctx, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
@@ -201,6 +203,12 @@ namespace Raven.Server.Documents.Revisions
                 Count = 2,
                 Name = ResolvedFlagByEtagSlice,
                 IsGlobal = true
+            });
+            revisionsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKey,
+                IsGlobal = true,
+                Name = RevisionsBucketAndEtagSlice
             });
         }
 
@@ -1774,6 +1782,21 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        public static IEnumerable<Document> GetRevisionsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(RevisionsSchema.DynamicKeyIndexes[RevisionsBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return TableValueToRevision(context, ref result.Result.Reader);
+                }
+            }
+        }
+
         public IEnumerable<(Document previous, Document current)> GetRevisionsFrom(DocumentsOperationContext context, long etag, long start, long take)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
@@ -1959,6 +1982,12 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
+        }
+
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
+        {
+            return DocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
         }
     }
 }

@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Utils;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -227,6 +231,111 @@ namespace FastTests.Sharding
                     Assert.Equal(expected, tombstones.Count);
                 }
             }
+        }
+
+        [Fact]
+        public async Task CanGetRevisionsByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            await SetupRevisions(Server.ServerStore, store.Database);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // generate some revisions
+                for (int i = 10; i < 30; i++)
+                {
+                    var id = $"users/{i}${suffix}";
+                    var doc = await session.LoadAsync<User>(id);
+                    doc.Name = $"Name/{i}";
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var revisions = RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 40;
+                    Assert.Equal(expected, revisions.Count);
+
+                    var fromEtag = revisions[12].Etag;
+                    revisions = RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 28;
+                    Assert.Equal(expected, revisions.Count);
+                }
+            }
+        }
+
+
+        private static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database)
+        {
+            var configuration = new RevisionsConfiguration
+            {
+                Default = new RevisionsCollectionConfiguration
+                {
+                    Disabled = false,
+                    MinimumRevisionsToKeep = 5
+                },
+                Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                {
+                    ["Users"] = new RevisionsCollectionConfiguration
+                    {
+                        Disabled = false,
+                        PurgeOnDelete = true,
+                        MinimumRevisionsToKeep = 123
+                    }
+                }
+            };
+
+            var index = await RevisionsHelper.SetupRevisions(serverStore, database, configuration);
+
+            var documentDatabases = serverStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(database);
+            foreach (var task in documentDatabases)
+            {
+                var db = await task;
+                await db.RachisLogIndexNotifications.WaitForIndexNotification(index, serverStore.Engine.OperationTimeout);
+            }
+
+            return index;
         }
     }
 }
