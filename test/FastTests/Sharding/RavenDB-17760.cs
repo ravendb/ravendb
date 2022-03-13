@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -142,6 +143,88 @@ namespace FastTests.Sharding
                     conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 8; 
                     Assert.Equal(expected, conflicts.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetTombstonesByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenWriteTransaction())
+                {
+                    // generate some tombstones
+                    for (int i = 10; i < 30; i++)
+                    {
+                        var id = $"users/{i}${suffix}";
+                        db.DocumentsStorage.Delete(context, id, expectedChangeVector: null);
+                    }
+
+                    context.Transaction.Commit();
+                }
+
+                using (context.OpenReadTransaction())
+                {
+                    var tombstones = DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 20; 
+                    Assert.Equal(expected, tombstones.Count);
+
+                    for (int i = 0; i < tombstones.Count; i++)
+                    {
+                        var expectedId = $"users/{i + 10}${suffix}";
+
+                        var item = tombstones[i] as DocumentReplicationItem;
+                        Assert.NotNull(item);
+
+                        var id = item.Id.ToString();
+
+                        Assert.Equal(expectedId, id);
+                    }
+
+
+                    var fromEtag = tombstones[12].Etag;
+                    tombstones = DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 8;
+                    Assert.Equal(expected, tombstones.Count);
                 }
             }
         }

@@ -55,6 +55,7 @@ namespace Raven.Server.Documents
         private static readonly Slice DeletedEtagsSlice;
 
         private static readonly Slice DocsBucketAndEtagSlice;
+        private static readonly Slice TombstonesBucketAndEtagSlice;
 
         public static readonly TableSchema DocsSchema = new TableSchema
         {
@@ -115,6 +116,7 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "CollectionEtags", ByteStringType.Immutable, out CollectionEtagsSlice);
                 Slice.From(ctx, "AllDocsEtags", ByteStringType.Immutable, out AllDocsEtagsSlice);
                 Slice.From(ctx, "DocsBucketAndEtag", ByteStringType.Immutable, out DocsBucketAndEtagSlice);
+                Slice.From(ctx, "TombstonesBucketAndEtag", ByteStringType.Immutable, out TombstonesBucketAndEtagSlice);
                 Slice.From(ctx, "Tombstones", ByteStringType.Immutable, out TombstonesSlice);
                 Slice.From(ctx, "Collections", ByteStringType.Immutable, out CollectionsSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
@@ -166,6 +168,12 @@ namespace Raven.Server.Documents
                 IsGlobal = false,
                 Name = DeletedEtagsSlice
             });
+            TombstonesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKeyForTombstones,
+                IsGlobal = true,
+                Name = TombstonesBucketAndEtagSlice
+            });
 
             void DefineIndexesForDocsSchema(TableSchema docsSchema)
             {
@@ -190,7 +198,7 @@ namespace Raven.Server.Documents
                 });
                 docsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
                 {
-                    GenerateKey = GenerateBucketAndEtagIndexKey,
+                    GenerateKey = GenerateBucketAndEtagIndexKeyForDocuments,
                     IsGlobal = true,
                     Name = DocsBucketAndEtagSlice
                 });
@@ -1304,6 +1312,21 @@ namespace Raven.Server.Documents
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
                 yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+            }
+        }
+
+        public static IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Result.Reader));
+                }
             }
         }
 
@@ -2682,11 +2705,12 @@ namespace Raven.Server.Documents
         }
 
         [IndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
-        }
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDocuments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
+            GenerateBucketAndEtagIndexKey(context, idIndex: (int)DocumentsTable.LowerId, etagIndex: (int)DocumentsTable.Etag, ref tvr, out slice);
 
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTombstones(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
+            GenerateBucketAndEtagIndexKey(context, idIndex: (int)TombstoneTable.LowerId, etagIndex: (int)TombstoneTable.Etag, ref tvr, out slice);
 
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
         {
