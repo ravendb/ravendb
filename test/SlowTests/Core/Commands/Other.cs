@@ -213,6 +213,34 @@ namespace SlowTests.Core.Commands
             }
         }
 
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task CanGetIndexesStatus(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var id = $"Raven/{i}";
+
+                        var user = new User { Name = $"Raven-{i}" };
+                        await session.StoreAsync(user, id);
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                await new UserIndex().ExecuteAsync(store);
+
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexingStatusOperation());
+                Assert.NotNull(indexStats);
+                Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
+                Assert.Equal(1, indexStats.Indexes.Length);
+                Assert.Equal("UserIndex", indexStats.Indexes[0].Name);
+            }
+        }
+
         private class UserIndex : AbstractIndexCreationTask<User>
         {
             public UserIndex()
