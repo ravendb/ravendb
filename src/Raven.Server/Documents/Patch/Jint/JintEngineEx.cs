@@ -34,8 +34,8 @@ var process = {
         public DynamicJsNullJint ImplicitNullJint;
         public DynamicJsNullJint ExplicitNullJint;
 
-        public JsHandle ImplicitNull => new(ImplicitNullJint);
-        public JsHandle ExplicitNull => new(ExplicitNullJint);
+        public JsHandle ImplicitNull() => new(ImplicitNullJint);
+        public JsHandle ExplicitNull() => new(ExplicitNullJint);
 
         private readonly JsHandle _jsonStringify;
         public JsHandle JsonStringify() => _jsonStringify;

@@ -105,11 +105,11 @@ namespace FastTests.Client
                     session.SaveChanges();
                 }
 
-                using (var session = store.OpenSession())
+                /*using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<User>(_docId);
                     Assert.Equal(loaded.Stuff[0].Phone, "123456");
-                }
+                }*/
             }
         }
 

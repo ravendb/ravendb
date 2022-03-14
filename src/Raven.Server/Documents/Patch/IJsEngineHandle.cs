@@ -35,10 +35,10 @@ namespace Raven.Server.Documents.Patch
         IJavaScriptOptions JsOptions { get;  }
         
         bool IsMemoryChecksOn { get;  }
-        
-        JsHandle ImplicitNull { get;  }
-        
-        JsHandle ExplicitNull { get;  }
+
+        JsHandle ImplicitNull();
+
+        JsHandle ExplicitNull();
 
         JsHandle JsonStringify();
         

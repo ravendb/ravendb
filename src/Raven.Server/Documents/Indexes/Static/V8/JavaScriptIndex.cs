@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 InternalHandle jsRes = InternalHandle.Empty;
 
                 if (value.IsNull || value.IsUndefined)
-                    return EngineExV8.Context.ImplicitNullV8.Clone();
+                    return EngineExV8.Context.ImplicitNullV8().Clone();
 
                 if (value.IsNumberOrIntEx)
                     return jsRes.Set(value);
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
                 }
 
-                return EngineExV8.Context.ImplicitNullV8.Clone();
+                return EngineExV8.Context.ImplicitNullV8().Clone();
             }
             catch (Exception e) 
             {
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 InternalHandle jsRes = InternalHandle.Empty;
                 if (args[0].IsNull || args[0].IsUndefined)
-                    return EngineExV8.Context.ImplicitNullV8.Clone();
+                    return EngineExV8.Context.ImplicitNullV8().Clone();
 
                 var argsMsgPrefix = "The load(id, collection) method expects the ";
                 CheckIsStringV8(args[0], args[1], $"{argsMsgPrefix}first");
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (!(doc is DynamicNullObject) && JsIndexUtils.GetValue(doc, out JsHandle jsItemHandle, keepAlive: true))
                     return jsItemHandle.V8.Item;
 
-                return EngineExV8.Context.ImplicitNullV8.Clone();
+                return EngineExV8.Context.ImplicitNullV8().Clone();
             }
             catch (Exception e) 
             {
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 InternalHandle jsRes = InternalHandle.Empty;
                 var keyArgument = args[0];
                 if (keyArgument.IsNull || keyArgument.IsUndefined)
-                    return EngineExV8.Context.ImplicitNullV8.Clone();
+                    return EngineExV8.Context.ImplicitNullV8().Clone();
 
                 if (keyArgument.IsStringEx)
                 {
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     int arrayLength =  keyArgument.ArrayLength;
                     if (arrayLength == 0)
-                        return EngineExV8.Context.ImplicitNullV8.Clone();
+                        return EngineExV8.Context.ImplicitNullV8().Clone();
 
                     var jsItems = new InternalHandle[arrayLength];
                     for (int i = 0; i < arrayLength; i++)
@@ -322,11 +322,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 switch (value)
                 {
                     case null:
-                        return EngineExV8.Context.ImplicitNullV8.Clone();
+                        return EngineExV8.Context.ImplicitNullV8().Clone();
 
                     case DynamicNullObject dno:
                     {
-                        var dynamicNull = dno.IsExplicitNull ? EngineExV8.Context.ExplicitNullV8.Clone() : EngineExV8.Context.ImplicitNullV8.Clone();
+                        var dynamicNull = dno.IsExplicitNull ? EngineExV8.Context.ExplicitNullV8().Clone() : EngineExV8.Context.ImplicitNullV8().Clone();
                         return dynamicNull;
                     }
 
