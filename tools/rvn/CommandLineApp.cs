@@ -118,32 +118,10 @@ namespace rvn
             byte[] zipFile;
             SetupInfo setupInfo;
 
-            if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
-            {
-                return ExitWithError($"'{nameof(parameters.PackageOutputPath)}' file name must end with an extension of .zip", parameters.Command);
-            }
-
             try
             {
                 ExtractSetupInfoObjectFromFile(parameters, out setupInfo);
-            }
-            catch (Exception e)
-            {
-                return ExitWithError($"Failed to load RavenDB Setup parameters from file: {parameters.SetupJsonPath}{Environment.NewLine}Error: {e}", parameters.Command);
-            }
-
-            try
-            {
                 ValidateSetupInfo(setupInfo, parameters);
-            }
-            
-            catch (InvalidOperationException e)
-            {
-                return ExitWithError(e.Message, parameters.Command);
-            }
-
-            try
-            {
                 ValidateSetupOptions(parameters);
             }
             catch (InvalidOperationException e)
@@ -167,15 +145,8 @@ namespace rvn
                     break;
                 }
                 default:
-                    return ExitWithError($"Invalid mode provided.", parameters.Command);
+                    return ExitWithError("Invalid mode provided.", parameters.Command);
             }
-
-            if (Path.HasExtension(parameters.PackageOutputPath) == false)
-            {
-                parameters.PackageOutputPath += ".zip";
-            }
-            
-            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
 
             try
             {
@@ -195,12 +166,12 @@ namespace rvn
         {
             if (string.IsNullOrEmpty(parameters.SetupJsonPath))
             {
-                ExitWithError($"{nameof(parameters.SetupJsonPath)} cannot be empty", parameters.Command);
+                throw new InvalidOperationException("-s|--setup-json-path not provided");
             }
 
             if (File.Exists(parameters.SetupJsonPath) == false)
             {
-                ExitWithError($"{nameof(parameters.SetupJsonPath)} was not provided", parameters.Command);
+                throw new InvalidOperationException($"-s|--setup-json-path path:{parameters.SetupJsonPath} not found");
             }
 
             using (StreamReader file = File.OpenText(parameters.SetupJsonPath))
@@ -238,6 +209,17 @@ namespace rvn
             {
                 setupInfo.Password = parameters.CertPassword;
             }
+            
+            if (Path.HasExtension(parameters.PackageOutputPath) == false)
+            {
+                parameters.PackageOutputPath += ".zip";
+            }
+            else if (Path.GetExtension(parameters.PackageOutputPath)?.Equals(".zip", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException("--package-output-path file name must end with an extension of .zip");
+            }
+
+            parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
         }
 
         private static void ConfigureLogsCommand()
@@ -549,7 +531,7 @@ namespace rvn
 
         private static CommandOption ConfigurePackageOutputFile(CommandLineApplication cmd)
         {
-            return cmd.Option("-o|--package-output-path", "Setup package output path", CommandOptionType.SingleValue);
+            return cmd.Option("-o|--package-output-path", "Setup package output path (default is $DOMAIN.zip where $DOMAIN comes from setup-json file)", CommandOptionType.SingleValue);
         }
 
         private static CommandOption ConfigureCertPath(CommandLineApplication cmd)
@@ -614,16 +596,16 @@ namespace rvn
             switch (parameters.Mode)
             {
                 case OwnCertificate when string.IsNullOrEmpty(parameters.CertificatePath):
-                    throw new InvalidOperationException($"--path option must be set when using '{OwnCertificate}' mode.");
+                    throw new InvalidOperationException($"-c|--cert-path option must be set when using '{OwnCertificate}' mode.");
                 
-                case LetsEncrypt when string.IsNullOrEmpty(parameters.SetupJsonPath):
-                    throw new InvalidOperationException($"-s|--setup-params-path option must be set when using '{LetsEncrypt}' mode.");
-
                 case LetsEncrypt when string.IsNullOrEmpty(parameters.CertificatePath) == false:
                     throw new InvalidOperationException($"-c|--cert-path option must be set only when using '{OwnCertificate}' mode.");
                 
-                case null:
-                case "": throw new InvalidOperationException($"-m|--mode option must be set. Please use either of the two '{OwnCertificate}' or '{LetsEncrypt}'");
+                case LetsEncrypt: return;
+
+                case OwnCertificate: return;
+                
+                default: throw new InvalidOperationException($"{parameters.Mode} mode is invalid{Environment.NewLine}-m|--mode option must be set. Please use either '{OwnCertificate}' or '{LetsEncrypt}'");
             }
         }
         private static int PerformOfflineOperation(Func<string> offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)

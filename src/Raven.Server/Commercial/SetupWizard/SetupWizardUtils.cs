@@ -88,7 +88,7 @@ public static class SetupWizardUtils
                 
                 Debug.Assert(selfSignedCertificate != null);
                 
-                if (parameters.PutCertificateInCluster != null)
+                if (parameters.PutCertificateInCluster != null && parameters.SetupInfo.RegisterClientCert)
                     await parameters.PutCertificateInCluster(selfSignedCertificate,certificateDefinition);
 
                 clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
@@ -97,7 +97,7 @@ public static class SetupWizardUtils
             {
                 throw new InvalidOperationException($"Could not generate a client certificate for '{domain}'.", e);
             }
-
+            
             parameters.RegisterClientCertInOs?.Invoke(parameters.OnProgress, parameters.Progress, clientCert);
 
             return new CompleteClusterConfigurationResult
