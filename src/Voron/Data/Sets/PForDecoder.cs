@@ -209,7 +209,7 @@ namespace Voron.Data.Sets
                 resultValues = ShiftLeftLogicalVariable(resultValues, Vector128.Create(3u, 2u, 1u, 0u));
 
                 value <<= 4;
-                value |= (ulong)HorizontalOr(resultValues);
+                value |= (uint)HorizontalOr(resultValues);
 
                 stateBitVector = Add(stateBitVector, Vector128.Create(4));
 
@@ -223,17 +223,17 @@ namespace Voron.Data.Sets
             shiftIndex += 3;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
             if (bitsToRead == 1)
                 goto End;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
             if (bitsToRead == 2)
                 goto End;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
 
         End:
             return value;
@@ -270,17 +270,17 @@ namespace Voron.Data.Sets
             shiftIndex += 3;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos) >> 3] >> shiftTable[0]) & 1);
             if (bitsToRead == 1)
                 goto End;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
             if (bitsToRead == 2)
                 goto End;
 
             value <<= 1;
-            value |= (ulong)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
+            value |= (uint)((inputBufferPtr[(stateBitPos + 2) >> 3] >> shiftTable[2]) & 1);
 
         End:
             return value;
@@ -294,8 +294,8 @@ namespace Voron.Data.Sets
 
             byte* shiftTable = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(ShiftValue)) + shiftIndex;
 
-            ulong value = (ulong)((inputBufferPtr[(stateBitPos + 0) >> 3] >> shiftTable[0]) & 1) << 1 | 
-                          (ulong)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
+            ulong value = (ulong)(uint)((inputBufferPtr[(stateBitPos + 0) >> 3] >> shiftTable[0]) & 1) << 1 |
+                          (ulong)(uint)((inputBufferPtr[(stateBitPos + 1) >> 3] >> shiftTable[1]) & 1);
 
             outputStateBit = stateBitPos + 2;
             return value;

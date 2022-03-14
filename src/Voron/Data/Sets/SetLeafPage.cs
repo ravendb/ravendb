@@ -690,30 +690,17 @@ namespace Voron.Data.Sets
             var values = RawValues;
             if (values.IsEmpty == false)
             {
-                for (int i = 0; i < values.Length; i++)
-                {
-                    int value = values[i];
+                int value = values[0];
+                if (value < 0)
+                    value &= ~int.MaxValue;
+                if (last == null || last.Value < value)
+                    last = value;
 
-                    if (value < 0)
-                    {
-                        value &= ~int.MaxValue;
-                    }
-                    if (last == null || last.Value < value)
-                        last = value;
-                    break;
-                }
-
-                for (int i = values.Length - 1; i >= 0; i--)
-                {
-                    int value = values[i];
-                    if (value < 0)
-                    {
-                        value &= ~int.MaxValue;
-                    }
-                    if (first == null || first > value)
-                        first = value;
-                    break;
-                }
+                value = values[^1];
+                if (value < 0)
+                    value &= ~int.MaxValue;
+                if (first == null || first > value)
+                    first = value;
             }
 
             Debug.Assert(first != null, nameof(first) + " != null");
