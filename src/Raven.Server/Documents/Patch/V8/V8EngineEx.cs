@@ -104,30 +104,24 @@ namespace Raven.Server.Documents.Patch.V8
             private InternalHandle _implicitNullV8 = InternalHandle.Empty;
             private InternalHandle _explicitNullV8 = InternalHandle.Empty;
 
-            public InternalHandle ImplicitNullV8
+            public InternalHandle ImplicitNullV8()
             {
-                get
+                if (_implicitNullV8.IsEmpty)
                 {
-                    /*if (_implicitNullV8.IsEmpty)
-                    {
-                        _implicitNullV8 = Engine.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
-                        Engine.AddToLastMemorySnapshotBefore(_implicitNullV8);
-                    }*/
-                    return _implicitNullV8;
+                    _implicitNullV8 = Engine.CreateNullValue(); // _implicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+                    Engine.AddToLastMemorySnapshotBefore(_implicitNullV8);
                 }
+                return _implicitNullV8;
             }
             
-            public InternalHandle ExplicitNullV8
+            public InternalHandle ExplicitNullV8()
             {
-                get
+                if (_explicitNullV8.IsEmpty)
                 {
-                    /*if (_explicitNullV8.IsEmpty)
-                    {
-                        _explicitNullV8 = Engine.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
-                        Engine.AddToLastMemorySnapshotBefore(_explicitNullV8);
-                    }*/
-                    return _explicitNullV8;
+                    _explicitNullV8 = Engine.CreateNullValue(); // _explicitNull?.CreateHandle() ?? InternalHandle.Empty; // [shlomo] as DynamicJsNullV8 can't work as in Jint
+                    Engine.AddToLastMemorySnapshotBefore(_explicitNullV8);
                 }
+                return _explicitNullV8;
             }
 
             /*private DynamicJsNullV8? _implicitNull;
@@ -141,17 +135,7 @@ namespace Raven.Server.Documents.Patch.V8
 
 
             
-            private JsHandle _jsonStringify = JsHandle.Empty;
             private InternalHandle _jsonStringifyV8 = InternalHandle.Empty;
-
-            public JsHandle JsonStringify()
-            {
-                if (_jsonStringify.IsEmpty)
-                {
-                    _jsonStringify = new JsHandle(JsonStringifyV8());
-                }
-                return _jsonStringify;
-            }
 
             public InternalHandle JsonStringifyV8()
             {
@@ -162,6 +146,38 @@ namespace Raven.Server.Documents.Patch.V8
                 }
                 return _jsonStringifyV8;
             }
+
+            private JsHandle _jsonStringify = JsHandle.Empty;
+            private JsHandle _implicitNull = JsHandle.Empty;
+            private JsHandle _explicitNull = JsHandle.Empty;
+
+            public JsHandle JsonStringify()
+            {
+                if (_jsonStringify.IsEmpty)
+                {
+                    _jsonStringify = new JsHandle(JsonStringifyV8());
+                }
+                return _jsonStringify;
+            }
+
+            public JsHandle ImplicitNull()
+            {
+                if (_implicitNull.IsEmpty)
+                {
+                    _implicitNull = new JsHandle(ImplicitNullV8());
+                }
+                return _implicitNull;
+            }
+
+            public JsHandle ExplicitNull()
+            {
+                if (_explicitNull.IsEmpty)
+                {
+                    _explicitNull = new JsHandle(ExplicitNullV8());
+                }
+                return _explicitNull;
+            }
+
 
             private TypeBinder? _typeBinderTask;
             private TypeBinder? _typeBinderBlittableObjectInstance;
@@ -179,7 +195,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 if (_typeBinderBlittableObjectInstance == null)
                 {
-                    _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, false, useLazy: false);
+                    _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, true, useLazy: false);
                     _typeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                         => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder,
                             keepAlive: true);
@@ -192,7 +208,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 if (_typeBinderTask == null)
                 {
-                    _typeBinderTask = Engine.RegisterType<Task>(null, false, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                    _typeBinderTask = Engine.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite, useLazy: false);
                     _typeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
                         => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
                     Engine.GlobalObject.SetProperty(typeof(Task), addToLastMemorySnapshotBefore: true);
@@ -310,6 +326,10 @@ namespace Raven.Server.Documents.Patch.V8
             
             public void InitializeGlobal()
             {
+                var h = ImplicitNull();
+                h = ExplicitNull();
+                h = JsonStringify();
+                
                 /*var bindersLazy = Engine.BindersLazy;
                 
                 AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance());
@@ -324,8 +344,8 @@ namespace Raven.Server.Documents.Patch.V8
                 AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer());
                 AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase());*/
                 
-                var tb = TypeBinderTask();
-                tb = TypeBinderBlittableObjectInstance();
+                var tb = TypeBinderBlittableObjectInstance();
+                tb = TypeBinderTask();
                 tb = TypeBinderTimeSeriesSegmentObjectInstance();
                 tb = TypeBinderCounterEntryObjectInstance();
                 tb = TypeBinderAttachmentNameObjectInstance();
@@ -452,8 +472,8 @@ var process = {
 
         public IJavaScriptOptions? JsOptions => Context.JsOptions;
 
-        public JsHandle ImplicitNull => new(Context.ImplicitNullV8);
-        public JsHandle ExplicitNull => new(Context.ExplicitNullV8);
+        public JsHandle ImplicitNull() => Context.ImplicitNull();
+        public JsHandle ExplicitNull() => Context.ExplicitNull();
 
         public JsHandle JsonStringify() => Context.JsonStringify();
 
