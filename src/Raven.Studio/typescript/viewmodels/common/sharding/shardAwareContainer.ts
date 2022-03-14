@@ -119,14 +119,6 @@ class shardAwareContainer extends viewModelBase {
         }
     }
 
-    private viewForAllShards() {
-        const allShards = this.activeDatabase().root;
-        this.effectiveDatabase(allShards);
-        this.shardSelector(null);
-        this.allShardsDialog(null);
-        this.child(new this.childCtr(allShards));
-    }
-    
     private routeToAllShards() {
         if (this.activeDatabase() instanceof shardedDatabase) {
             console.warn("Already using shardedDatabase. Ignoring route request");
@@ -171,7 +163,10 @@ class shardAwareContainer extends viewModelBase {
     }
 
     useAllShards() {
-        this.useDatabase(this.activeDatabase().root);
+        const allShards = this.activeDatabase().root;
+        this.shardSelector(null);
+        this.allShardsDialog(null);
+        this.useDatabase(allShards);
     }
     
     supportsDatabase(db: database): db is shard {
@@ -208,7 +203,7 @@ class shardAwareContainer extends viewModelBase {
             this.effectiveDatabase(activeDatabase);
             this.activateChildView(activeDatabase);
         } else if (this.mode === "allShardsOnly" && activeDatabase instanceof shard) {
-            this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.viewForAllShards()));
+            this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.useAllShards()));
         } else {
             this.shardSelector(new shardSelector(this.shards(), (db, pin) => this.onDatabaseSelected(db, pin)));
         }
