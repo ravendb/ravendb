@@ -1,4 +1,3 @@
-import viewModelBase = require("viewmodels/viewModelBase");
 import endpoints = require("endpoints");
 import moment = require("moment");
 import copyToClipboard = require("common/copyToClipboard");
@@ -17,8 +16,9 @@ import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
 
-class exportDatabase extends viewModelBase {
+class exportDatabase extends shardViewModelBase {
 
     view = require("views/database/tasks/exportDatabase.html");
     setupEncryptionKeyView = require("views/resources/setupEncryptionKey.html");
@@ -43,8 +43,8 @@ class exportDatabase extends viewModelBase {
 
     encryptionSection = ko.observable<setupEncryptionKey>();
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         aceEditorBindingHandler.install();
         
         this.bindToCurrentInstance("customizeConfigurationClicked");
@@ -68,7 +68,7 @@ class exportDatabase extends viewModelBase {
         this.initializeObservables();
         
         const dbName = ko.pureComputed(() => {
-            const db = this.activeDatabase();
+            const db = this.db;
             return db ? db.name : "";
         });
 
@@ -103,7 +103,7 @@ class exportDatabase extends viewModelBase {
     private fetchCollections(): JQueryPromise<Array<string>> {
         const collectionsTask = $.Deferred<Array<string>>();
 
-        new getCollectionsStatsCommand(this.activeDatabase())
+        new getCollectionsStatsCommand(this.db)
             .execute()
             .done((stats: collectionsStats) => {
                 collectionsTask.resolve(stats.collections.map(x => x.name));
@@ -114,7 +114,7 @@ class exportDatabase extends viewModelBase {
     }
 
     private setupDefaultExportFilename(): void {
-        const dbName = this.activeDatabase().name;
+        const dbName = this.db.name;
         const date = moment().format("YYYY-MM-DD HH-mm");
         this.model.exportFileName(`Dump of ${dbName} ${date}`);
     }
@@ -186,7 +186,7 @@ class exportDatabase extends viewModelBase {
 
         const exportArg = this.model.toDto();
 
-        new validateSmugglerOptionsCommand(exportArg, this.activeDatabase())
+        new validateSmugglerOptionsCommand(exportArg, this.db)
             .execute()
             .done(() => this.startDownload(exportArg))
             .fail((response: JQueryXHR) => {
@@ -205,7 +205,7 @@ class exportDatabase extends viewModelBase {
 
     private startDownload(args: Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide) {
         const $form = $("#exportDownloadForm");
-        const db = this.activeDatabase();
+        const db = this.db;
         const $downloadOptions = $("[name=DownloadOptions]", $form);
 
         this.getNextOperationId(db)
@@ -240,7 +240,7 @@ class exportDatabase extends viewModelBase {
     getCommand(commandType: commandLineType) {
         const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
 
-        const db = this.activeDatabase();
+        const db = this.db;
         if (!db) {
             return "";
         }
