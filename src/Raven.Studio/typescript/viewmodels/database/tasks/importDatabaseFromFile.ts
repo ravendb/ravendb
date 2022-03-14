@@ -1,5 +1,4 @@
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import viewModelBase = require("viewmodels/viewModelBase");
 import endpoints = require("endpoints");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
@@ -14,12 +13,13 @@ import EVENTS = require("common/constants/events");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
-import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import generalUtils = require("common/generalUtils");
+import shardViewModelBase from "viewmodels/shardViewModelBase";
+import validateSmugglerOptionsCommand from "commands/database/studio/validateSmugglerOptionsCommand";
 
-class importDatabaseFromFile extends viewModelBase {
+class importDatabaseFromFile extends shardViewModelBase {
 
     view = require("views/database/tasks/importDatabaseFromFile.html");
     smugglerDatabaseRecordView = require("views/database/tasks/smugglerDatabaseRecord.html");
@@ -52,8 +52,8 @@ class importDatabaseFromFile extends viewModelBase {
         transformScript: this.model.transformScript
     });
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
 
         this.bindToCurrentInstance("copyCommandToClipboard", "fileSelected", "customizeConfigurationClicked");
 
@@ -207,7 +207,7 @@ class importDatabaseFromFile extends viewModelBase {
         this.isUploading(true);
 
         const fileInput = document.querySelector(importDatabaseFromFile.filePickerTag) as HTMLInputElement;
-        const db = this.activeDatabase();
+        const db = this.db;
         
         const dtoToValidate = {
             TransformScript: this.model.transformScript()
@@ -268,8 +268,7 @@ class importDatabaseFromFile extends viewModelBase {
     }
     
     private getCommand(commandType: commandLineType) {
-
-        const db = this.activeDatabase();
+        const db = this.db;
         if (!db) {
             return "";
         }

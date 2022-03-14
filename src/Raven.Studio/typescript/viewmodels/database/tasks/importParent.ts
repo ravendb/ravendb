@@ -1,8 +1,12 @@
 import appUrl = require("common/appUrl");
 
 import durandalRouter = require("plugins/router");
+import shardingContext from "viewmodels/common/sharding/shardingContext";
+import viewModelBase from "viewmodels/viewModelBase";
 
-class importParent {
+class importParent extends viewModelBase {
+
+    context: shardingContext;
     
     view = require("views/database/tasks/importParent.html");
     
@@ -13,11 +17,15 @@ class importParent {
     router: DurandalRootRouter;
 
     constructor() {
+        super();
+        
+        this.context = new shardingContext("both");
+        
         this.router = durandalRouter.createChildRouter()
             .map([
                 {
                     route: 'databases/tasks/import/file',
-                    moduleId: require('viewmodels/database/tasks/importDatabaseFromFile'),
+                    moduleId: this.wrapModuleId(require("viewmodels/database/tasks/importDatabaseFromFile")),
                     title: 'Import database from file',
                     nav: true,
                     tabName: "From file (.ravendbdump)",
@@ -26,7 +34,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/migrateRavenDB',
-                    moduleId: require('viewmodels/database/tasks/migrateRavenDbDatabase'),
+                    moduleId: this.wrapModuleId(require('viewmodels/database/tasks/migrateRavenDbDatabase')),
                     title: 'Import database from another RavenDB',
                     tabName: "From RavenDB Server",
                     nav: true,
@@ -35,7 +43,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/csv',
-                    moduleId: require('viewmodels/database/tasks/importCollectionFromCsv'),
+                    moduleId: this.wrapModuleId(require('viewmodels/database/tasks/importCollectionFromCsv')),
                     title: 'Import collection from CSV file',
                     tabName: "From CSV File",
                     nav: true,
@@ -44,7 +52,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/sql',
-                    moduleId: require('viewmodels/database/tasks/importDatabaseFromSql'),
+                    moduleId: this.wrapModuleId(require('viewmodels/database/tasks/importDatabaseFromSql')),
                     title: 'Import from SQL Database',
                     tabName: "From SQL",
                     nav: true,
@@ -53,7 +61,7 @@ class importParent {
                 },
                 {
                     route: 'databases/tasks/import/migrate',
-                    moduleId: require('viewmodels/database/tasks/migrateDatabase'),
+                    moduleId: this.wrapModuleId(require('viewmodels/database/tasks/migrateDatabase')),
                     title: 'Migrate database',
                     tabName: "From NoSQL",
                     nav: true,
@@ -62,6 +70,11 @@ class importParent {
                 }
             ])
             .buildNavigationModel();
+    }
+    
+    wrapModuleId(item: Function) {
+        const container = require('viewmodels/common/sharding/shardAwareContainer');
+        return new container("both", item, this.context);
     }
 }
 

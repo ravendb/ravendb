@@ -33,6 +33,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
             moduleId: require('viewmodels/database/tasks/exportDatabase'),
+            shardingMode: "both",
             title: 'Export Database',
             nav: true,
             css: 'icon-export-database',

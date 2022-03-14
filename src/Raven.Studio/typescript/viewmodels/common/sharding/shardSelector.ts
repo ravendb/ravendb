@@ -90,8 +90,6 @@ class shardSelector extends dialogViewModelBase {
         this.forcePin = ko.pureComputed(() => !this.targetIsLocal());
     }
 
-    
-
     changeShard(shard: shard) {
         this.form.shard(shard);
         
