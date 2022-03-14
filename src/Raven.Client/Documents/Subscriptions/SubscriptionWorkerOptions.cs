@@ -120,7 +120,6 @@ namespace Raven.Client.Documents.Subscriptions
             MaxErroneousPeriod = TimeSpan.FromMinutes(5);
             SendBufferSizeInBytes = DefaultSendBufferSizeInBytes;
             ReceiveBufferSizeInBytes = DefaultReceiveBufferSizeInBytes;
-            ShardedConnectionMaxErroneousPeriod = TimeSpan.FromMinutes(5);
         }
 
         /// <summary>
@@ -184,10 +183,5 @@ namespace Raven.Client.Documents.Subscriptions
         public int ReceiveBufferSizeInBytes { get; set; }
 
         public string WorkerId { get; internal set; }
-
-        /// <summary>
-        /// Maximum amount of time during which a sharded subscription connection may be in erroneous state. Default: 5 minutes
-        /// </summary>
-        public TimeSpan ShardedConnectionMaxErroneousPeriod { get; set; }
     }
 }
