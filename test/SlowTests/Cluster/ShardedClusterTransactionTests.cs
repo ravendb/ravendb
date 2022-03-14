@@ -9,6 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
+using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,7 +39,7 @@ namespace SlowTests.Cluster
             return base.GetDocumentStore(options, caller);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Sharding)]
         [InlineData(1, 1, false)]
         [InlineData(2, 1, false)]
         [InlineData(1, 2, false)]
@@ -74,10 +76,6 @@ namespace SlowTests.Cluster
                 
                 await session.SaveChangesAsync();
 
-                // WaitForUserToContinueTheTest(store);
-
-                //TODO To remove waiting
-                await Task.Delay(2000);
                 using var session2 = store.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide,
@@ -99,25 +97,25 @@ namespace SlowTests.Cluster
             public string Prop { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanCreateClusterTransactionRequest()
         {
             await base.CanCreateClusterTransactionRequest();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanCreateClusterTransactionRequest2()
         {
             await base.CanCreateClusterTransactionRequest2();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ServeSeveralClusterTransactionRequests()
         {
             await base.ServeSeveralClusterTransactionRequests();
         }
 
-        [Theory(Skip = "Should complete shard implementation")]
+        [RavenTheory(RavenTestCategory.Sharding)]
         [InlineData(1)]
         [InlineData(3)]
         [InlineData(5)]
@@ -126,7 +124,7 @@ namespace SlowTests.Cluster
             await base.CanPreformSeveralClusterTransactions(numberOfNodes);
         }
 
-        [Theory(Skip = "Should complete shard implementation")]
+        [RavenTheory(RavenTestCategory.Sharding)]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(10)]
@@ -135,91 +133,91 @@ namespace SlowTests.Cluster
             await base.ClusterTransactionWaitForIndexes(docs);
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Export")]
         public async Task CanImportExportAndBackupWithClusterTransactions()
         {
             await base.CanImportExportAndBackupWithClusterTransactions();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task TestSessionSequance()
         {
             await base.TestSessionSequance();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Unable to run request http://127.0.0.1:42605/databases/ResolveInFavorOfClusterTransaction_1/admin/tasks/external-replication?raft-request-id=65234c2b-a023-4954-889d-cb0975909f11, the database is sharded, but no shared route is defined for this operation!")]
         public async Task ResolveInFavorOfClusterTransaction()
         {
             await base.ResolveInFavorOfClusterTransaction();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task TestCleanUpClusterState()
         {
             await base.TestCleanUpClusterState();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task TestConcurrentClusterSessions()
         {
             await base.TestConcurrentClusterSessions();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task TestSessionMixture()
         {
             await base.TestSessionMixture();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CreateUniqueUser()
         {
             await base.CreateUniqueUser();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task SessionCompareExchangeCommands()
         {
             await base.SessionCompareExchangeCommands();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ClusterTxWithCounters()
         {
             await base.ClusterTxWithCounters();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public void ThrowOnClusterTransactionWithCounters()
         {
             base.ThrowOnClusterTransactionWithCounters();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public void ThrowOnClusterTransactionWithAttachments()
         {
             base.ThrowOnClusterTransactionWithAttachments();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public void ThrowOnClusterTransactionWithTimeSeries()
         {
             base.ThrowOnClusterTransactionWithTimeSeries();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "nable to run request http://127.0.0.1:43631/databases/ModifyDocumentWithRevision_1/admin/revisions/config?raft-request-id=3bed2e80-bbfe-4bf5-917c-356bb9f53ccb, the database is sharded, but no shared route is defined for this operation!")]
         public async Task ModifyDocumentWithRevision()
         {
             await base.ModifyDocumentWithRevision();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task PutDocumentInDifferentCollectionWithRevision()
         {
             await base.PutDocumentInDifferentCollectionWithRevision();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Unable to run request http://127.0.0.1:34165/databases/PutDocumentInDifferentCollection_1/admin/revisions/config?raft-request-id=82a7a3ff-f829-449f-ba02-1f8a992e1196, the database is sharded, but no shared route is defined for this operation!")]
         public async Task PutDocumentInDifferentCollection()
         {
             await base.PutDocumentInDifferentCollection();
@@ -236,56 +234,56 @@ namespace SlowTests.Cluster
         /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
         /// </summary>
         /// <returns></returns>
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "The database 'ClusterTransactionRequestWithRevisions_1' is sharded, can't call this method directly")]
         public async Task ClusterTransactionRequestWithRevisions()
         {
             await base.ClusterTransactionRequestWithRevisions();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ThrowOnUnsupportedOperations()
         {
             await base.ThrowOnUnsupportedOperations();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ThrowOnOptimisticConcurrency()
         {
             await base.ThrowOnOptimisticConcurrency();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ThrowOnOptimisticConcurrencyForSingleDocument()
         {
             await base.ThrowOnOptimisticConcurrencyForSingleDocument();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ThrowOnInvalidTransactionMode()
         {
             await base.ThrowOnInvalidTransactionMode();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanAddNullValueToCompareExchange()
         {
             await base.CanAddNullValueToCompareExchange();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanGetListCompareExchange()
         {
             await base.CanGetListCompareExchange();
         }
 
-        [Fact(Skip = "Should complete shard implementation")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Unable to run request http://127.0.0.1:36453/databases/ClusterTransactionConflict_1/admin/tasks/external-replication?raft-request-id=6ec7f3cd-c8ee-4f1e-a01a-f38cffa10ffb, the database is sharded, but no shared route is defined for this operation!")]
 
         public async Task ClusterTransactionConflict()
         {
             await base.ClusterTransactionConflict();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Sharding)]
         [InlineData("")]
         [InlineData(" ")]
         [InlineData(@"
@@ -295,13 +293,13 @@ namespace SlowTests.Cluster
             await base.ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
         {
             await base.ClusterTransactionShouldBeRedirectedFromPromotableNode();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task ShardedClusterTransaction_WhenStoreTwoDocsToTwoSahrdsInTwoTrxAndTryToGetTheFirst_ShouldNotStuck()
         {
             const string firstDocId = "testObjs/0";
