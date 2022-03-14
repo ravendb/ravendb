@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexingStatusCommand();
         }
 
-        private class GetIndexingStatusCommand : RavenCommand<IndexingStatus>
+        internal class GetIndexingStatusCommand : RavenCommand<IndexingStatus>
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

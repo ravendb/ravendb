@@ -555,42 +555,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Status()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(IndexingStatus.Status));
-                writer.WriteString(Database.IndexStore.Status.ToString());
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(IndexingStatus.Indexes));
-                writer.WriteStartArray();
-                var isFirst = true;
-                foreach (var index in Database.IndexStore.GetIndexes())
-                {
-                    if (isFirst == false)
-                        writer.WriteComma();
-
-                    isFirst = false;
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Name));
-                    writer.WriteString(index.Name);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(IndexingStatus.IndexStatus.Status));
-                    writer.WriteString(index.IsPending ? IndexRunningStatus.Pending.ToString() : index.Status.ToString());
-
-                    writer.WriteEndObject();
-                }
-
-                writer.WriteEndArray();
-
-                writer.WriteEndObject();
-            }
+            using (var processor = new IndexHandlerProcessorForGetIndexesStatus(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
