@@ -68,9 +68,7 @@ class footer {
 
     private fetchStats(): JQueryPromise<Raven.Server.Documents.Studio.FooterStatistics> {
         const db = this.db();
-        shardingTodo("Marcin");
-        const dbToUse = db instanceof shardedDatabase ? db.shards()[0] : db; //TODO: temporary fix!
-        return new getDatabaseFooterStatsCommand(dbToUse)
+        return new getDatabaseFooterStatsCommand(db)
             .execute();
     }
 
