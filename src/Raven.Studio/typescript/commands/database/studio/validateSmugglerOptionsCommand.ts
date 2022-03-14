@@ -1,6 +1,7 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
+import { shardingTodo } from "common/developmentHelper";
 
 class validateSmugglerOptionsCommand extends commandBase {
 
@@ -9,7 +10,15 @@ class validateSmugglerOptionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        return this.post(endpoints.databases.smuggler.smugglerValidateOptions, JSON.stringify(this.smugglerOptions), this.db, { dataType: undefined });
+        shardingTodo("Marcin", "Bind real endpoint!");
+        
+        const fakeResult = $.Deferred<void>();
+        setTimeout(() => fakeResult.resolve());
+        
+        
+        return fakeResult;
+        
+        //return this.post(endpoints.databases.smuggler.smugglerValidateOptions, JSON.stringify(this.smugglerOptions), this.db, { dataType: undefined });
     }
 }
 
