@@ -48,6 +48,9 @@ namespace Tests.Infrastructure.Utils
 
         public bool ShouldSaveDebugPackage()
         {
+            return false;
+
+            /*
             var exception = Exception;
 
             if (exception == null)
@@ -65,6 +68,7 @@ namespace Tests.Infrastructure.Utils
                 return false;
 
             return TimeoutExceptionMessageRegexes.Any(r => r.IsMatch(innerException.Message));
+            */
         }
     }
 }

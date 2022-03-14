@@ -36,20 +36,27 @@ namespace StressTests.Cluster
                         Thread.Sleep(1000);
                 }))
                 {
-                    var cts = new CancellationTokenSource();
-                    var task = ClusterIndexNotificationsTest.BackgroundWork(store2, cts);
+                    using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+                    var task = ClusterIndexNotificationsTest.BackgroundWorkAsync(store2, cts);
 
-                    await ClusterIndexNotificationsTest.WaitForIndexCreation(store2);
+                    await ClusterIndexNotificationsTest.WaitForIndexCreationAsync(store2, cts.Token);
 
                     var e = await Assert.ThrowsAsync<RavenException>(async () =>
                     {
-                        var r = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true));
+                        var r = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true), cts.Token);
                         throw new InvalidOperationException($"Expected to fail, but got: Name={r.Name}, Disabled={r.Disabled}, Success={r.Success}, Reason={r.Reason}");
                     });
                     Assert.True(e.InnerException is TimeoutException);
 
                     cts.Cancel();
-                    Assert.True(task.Wait(TimeSpan.FromSeconds(60)));
+
+                    try
+                    {
+                        task.Wait(TimeSpan.FromSeconds(60));
+                    }
+                    catch
+                    {
+                    }
                 }
             }
         }
