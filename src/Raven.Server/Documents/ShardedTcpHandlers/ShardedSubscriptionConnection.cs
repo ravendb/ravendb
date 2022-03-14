@@ -99,12 +99,6 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         {
             await base.ParseSubscriptionOptionsAsync();
 
-            // old client connected
-            if (_options.ShardedConnectionMaxErroneousPeriod == default)
-            {
-                _options.ShardedConnectionMaxErroneousPeriod = TimeSpan.FromMinutes(5);
-            }
-
             // we want to limit the batch of each shard, to not hold too much memory if there are other batches while batch is proceed
             _options.MaxDocsPerBatch = Math.Min(_options.MaxDocsPerBatch / TcpConnection.ShardedContext.ShardCount, _options.MaxDocsPerBatch);
 
@@ -280,7 +274,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
                 // we are stopping this subscription
                 result.Stopping = true;
-                result.StoppingReason = $"Hit {nameof(SubscriptionWorkerOptions.ShardedConnectionMaxErroneousPeriod)}.";
+                result.StoppingReason = $"Hit {nameof(SubscriptionWorkerOptions.MaxErroneousPeriod)}.";
             }
 
             if (result.Exceptions.Count == _shardWorkers.Count && result.Stopping == false)
@@ -344,7 +338,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
                 return true;
             }
 
-            if (DateTime.UtcNow - shardHolder.LastErrorDateTime.Value <= _options.ShardedConnectionMaxErroneousPeriod)
+            if (DateTime.UtcNow - shardHolder.LastErrorDateTime.Value <= _options.MaxErroneousPeriod)
                 return true;
 
             return false;
