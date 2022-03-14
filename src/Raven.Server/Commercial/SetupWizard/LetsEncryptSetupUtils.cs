@@ -111,7 +111,6 @@ public static class LetsEncryptSetupUtils
                     SetupMode = SetupMode.None,
                     LicenseType = LicenseType.None,
                     Token = token,
-                    RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) => CertificateUtils.RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert),
                     CertificateValidationKeyUsages = true,
                 });
 
