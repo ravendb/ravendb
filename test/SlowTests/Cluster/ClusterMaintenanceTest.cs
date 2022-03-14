@@ -7,14 +7,12 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
@@ -79,7 +77,7 @@ namespace SlowTests.Cluster
                     }
                 });
 
-                for (int i = 0; i < 25; i++)
+                for (int i = 0; i < 100; i++)
                 {
                     if (task.IsFaulted)
                         await task;
@@ -88,7 +86,7 @@ namespace SlowTests.Cluster
                     {
                         var name = GetDatabaseName(new string('a', i));
                         await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name), 2));
-                        //     await store.Maintenance.ForDatabase(name).SendAsync(new CreateSampleDataOperation());
+                        await store.Maintenance.ForDatabase(name).SendAsync(new CreateSampleDataOperation());
                     }
                     catch (ConcurrencyException)
                     {
@@ -98,8 +96,6 @@ namespace SlowTests.Cluster
 
                 client.Dispose();
                 await task;
-
-                WaitForUserToContinueTheTest(store);
             }
         }
 
