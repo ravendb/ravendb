@@ -1003,7 +1003,7 @@ namespace Raven.Server.Rachis
                 {
                     IsForcedElection = forced
                 };
-
+                Console.WriteLine($"{Url} , {_tag} : Switching to candidate state because {reason} forced: {forced} ");
                 Candidate = candidate;
                 SetNewState(RachisState.Candidate, candidate, currentTerm, reason);
                 candidate.Start();

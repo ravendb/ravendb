@@ -61,9 +61,11 @@ namespace Raven.Server.Rachis
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 var election = rv.IsTrialElection ? "Trial" : "Real";
-                                _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                _engine.Log.Info($"{_engine.Url} : Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
                                     $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                             }
+                            Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                              $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
 
                             //We are getting a request to vote for our known leader
                             if (_engine.LeaderTag == rv.Source)
@@ -119,18 +121,24 @@ namespace Raven.Server.Rachis
                             }
 
                             var currentTerm = _engine.CurrentTerm;
+                            Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                              $"Check if win (Sent from:{rv.SendingThread})");
                             if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                             {
                                 if (Follower.CheckIfValidLeader(_engine, _connection, out var negotiation))
                                 {
                                     _electionWon = true;
+                                    Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                      $"_electionWon = true (Sent from:{rv.SendingThread})");
                                     try
                                     {
                                         var follower = new Follower(_engine, negotiation.Term, _connection);
                                         follower.AcceptConnection(negotiation);
                                     }
-                                    catch
+                                    catch (Exception e) 
                                     {
+                                        Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                          $"exception {e} (Sent from:{rv.SendingThread})");
                                         _electionWon = false;
                                         throw;
                                     }
@@ -141,11 +149,15 @@ namespace Raven.Server.Rachis
 
                             if (rv.ElectionResult != ElectionResult.InProgress)
                             {
+                                Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"rv.ElectionResult != ElectionResult.InProgress (Sent from:{rv.SendingThread})");
                                 return;
                             }
 
                             if (rv.Term <= _engine.CurrentTerm)
                             {
+                                Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"My term is higher or equals to yours (Sent from:{rv.SendingThread})");
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
@@ -157,12 +169,23 @@ namespace Raven.Server.Rachis
 
                             if (rv.LastLogTerm < lastLogTerm)
                             {
+                                Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm} (Sent from:{rv.SendingThread})");
+                                // if (_engine.ForTestingPurposes?.first == false)
+                                // {
+                                //     _engine.ForTestingPurposes.first = true;
+                                //      throw new Exception("test ");
+                                //
+                                //     //_connection.Dispose();
+                                // }
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
                                     VoteGranted = false,
                                     Message = $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm}"
                                 });
+                                Console.WriteLine($"{_engine.Url} : Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"My last log term is {lastLogTerm} and higher than yours {rv.LastLogTerm} DONE (Sent from:{rv.SendingThread})");
                                 return;
                             }
 
@@ -185,6 +208,8 @@ namespace Raven.Server.Rachis
 
                             if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                             {
+                                Console.WriteLine($"{_engine.Url} :Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn} (Sent from:{rv.SendingThread})");
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
@@ -220,7 +245,8 @@ namespace Raven.Server.Rachis
                                     }
                                     context.Transaction.Commit();
                                 }
-
+                                Console.WriteLine($"{_engine.Url} :Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"Increasing my term to {{_engine.CurrentTerm}} (Sent from:{rv.SendingThread})");
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = _engine.CurrentTerm,
@@ -235,6 +261,8 @@ namespace Raven.Server.Rachis
                                 if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false
                                     && string.IsNullOrEmpty(currentLeader) == false) // if we are leaderless we can't refuse to cast our vote.
                                 {
+                                    Console.WriteLine($"{_engine.Url} :Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                      $"My leader {currentLeader} is keeping me up to date, so I don't want to vote for you (Sent from:{rv.SendingThread})");
                                     _connection.Send(context, new RequestVoteResponse
                                     {
                                         Term = _engine.CurrentTerm,
@@ -246,6 +274,8 @@ namespace Raven.Server.Rachis
 
                                 if (lastLogTerm == rv.LastLogTerm && lastLogIndex > rv.LastLogIndex)
                                 {
+                                    Console.WriteLine($"{_engine.Url} :Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                      $"My log {lastLogIndex} is more up to date than yours {rv.LastLogIndex} (Sent from:{rv.SendingThread})");
                                     _connection.Send(context, new RequestVoteResponse
                                     {
                                         Term = _engine.CurrentTerm,
@@ -289,12 +319,16 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
+                                Console.WriteLine($"{_engine.Url} :Received 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                                  $"I've voted for you (Sent from:{rv.SendingThread})");
+                                
                                 _connection.Send(context, new RequestVoteResponse
                                 {
                                     Term = rv.Term,
                                     VoteGranted = true,
                                     Message = "I've voted for you"
                                 });
+                                
                             }
                         }
                     }
@@ -305,6 +339,8 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                Console.WriteLine($"{_engine.Url} : " +
+                                  $"Failed to talk to candidate: {_engine.Tag} {Thread.CurrentThread.ManagedThreadId}, {e}");
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"Failed to talk to candidate: {_engine.Tag}", e);

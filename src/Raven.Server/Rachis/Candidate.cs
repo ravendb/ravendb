@@ -52,6 +52,7 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
                     }
+                    Console.WriteLine($"{_engine.Url} , Candidate {_engine.Tag}: Starting elections ");
                     ClusterTopology clusterTopology;
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
@@ -90,6 +91,7 @@ namespace Raven.Server.Rachis
                     {
                         if (voter.Key == _engine.Tag)
                             continue; // we already voted for ourselves
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag}, Start CandidateAmbassador voter {voter.Key} - {voter.Value}");
                         var candidateAmbassador = new CandidateAmbassador(_engine, this, voter.Key, voter.Value);
                         _voters.Add(candidateAmbassador);
                         _engine.AppendStateDisposable(this, candidateAmbassador); // concurrency exception here will dispose the current candidate and it ambassadors
@@ -142,6 +144,7 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
+                            Console.WriteLine($"{_engine.Url} , Candidate {_engine.Tag}: Starting elections {Thread.CurrentThread.ManagedThreadId}");
                             ElectionResult = ElectionResult.Won;
                             _running.Lower();
 

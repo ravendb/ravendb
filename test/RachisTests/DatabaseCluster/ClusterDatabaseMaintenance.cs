@@ -224,8 +224,9 @@ namespace RachisTests.DatabaseCluster
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.SupervisorSamplePeriod)] = "50";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "15";
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Cluster.WorkerSamplePeriod)] = "25";
-
+            Console.WriteLine("Start test DontMoveToRehabOnNoChangeAfterTimeout");
             var cluster = await CreateRaftCluster(clusterSize, watcherCluster: true);
+            Console.WriteLine($"url {cluster.Nodes[0].WebUrl} - {cluster.Nodes[1].WebUrl} - {cluster.Nodes[2].WebUrl}");
             using (var store = GetDocumentStore(new Options
                    {
                        ReplicationFactor = 3, 
@@ -249,7 +250,20 @@ namespace RachisTests.DatabaseCluster
                 await Task.Delay(2 * 1000); // twice the StabilizationTime
 
                 var members = await GetMembersCount(store);
-                Assert.Equal(3, members);
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var info = "Members = { ";
+                foreach (var member in res.Topology.Members)
+                {
+                    info += $"{member}, ";
+                }
+
+                info += "}, Rehab = {";
+                foreach (var rehab in res.Topology.Rehabs)
+                {
+                    info += $"{rehab}, ";
+                }
+                info += "}";
+                Assert.True(3 == members, info);
             }
         }
 

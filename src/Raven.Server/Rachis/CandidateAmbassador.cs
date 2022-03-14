@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Server.Platform.Posix.macOS;
 using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
@@ -128,7 +129,7 @@ namespace Raven.Server.Rachis
                             {
                                 _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to connect to remote peer: " + _url, e);
                             }
-
+                            Console.WriteLine($"{_engine.Url}, {_engine.Tag}, Failed to connect with {_tag}.{Environment.NewLine}, {e}");
                             // wait a bit
                             _candidate.WaitForChangeInState();
                             continue; // we'll retry connecting
@@ -136,7 +137,7 @@ namespace Raven.Server.Rachis
 
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected to {_tag}";
-
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag}, Connected to {_tag}");
                         Stopwatch sp;
                         _connection?.Dispose();
                         _connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, disconnect);
@@ -176,6 +177,7 @@ namespace Raven.Server.Rachis
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                 {
                                     sp = Stopwatch.StartNew();
+                                    Console.WriteLine($"{_engine.Url}, {_engine.Tag}, send  RequestVote {_connection.Dest}");
                                     _connection.Send(context,
                                         new RequestVote
                                         {
@@ -204,7 +206,7 @@ namespace Raven.Server.Rachis
                                         {
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                         }
-
+                                        Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: {message}");
                                         _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
                                         _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
                                         RachisInvalidOperationException.Throw(message);
@@ -218,7 +220,8 @@ namespace Raven.Server.Rachis
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                              $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                         }
-
+                                        Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: Got a negative response " +
+                                                          $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
                                         // change term or given up
@@ -231,7 +234,8 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                          $"for trial elections from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                     }
-
+                                    Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: Got a positive response " +
+                                                      $"for trial elections from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                     TrialElectionWonAtTerm = rvr.Term;
                                     _candidate.WaitForChangeInState();
                                     continue;
@@ -254,7 +258,7 @@ namespace Raven.Server.Rachis
 
                                 if (_engine.Log.IsInfoEnabled)
                                     _engine.Log.Info($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
-
+                                Console.WriteLine($"{_engine.Url}, {_engine.Tag}, Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
                                 if (rvr.Term > currentElectionTerm)
                                 {
                                     var message = $"CandidateAmbassador for {_tag}: found election term {rvr.Term:#,#;;0} " +
@@ -263,7 +267,7 @@ namespace Raven.Server.Rachis
                                     {
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                     }
-
+                                    Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: {message}");
                                     // we need to abort the current elections
                                     _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     _engine.SetNewState(RachisState.Follower, null, rvr.Term, message);
@@ -278,7 +282,8 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
                                                          $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                     }
-
+                                    Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: Got a negative response " +
+                                                      $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
                                     // change term or given up
@@ -291,7 +296,8 @@ namespace Raven.Server.Rachis
                                     _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
                                                      $"from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                 }
-
+                                Console.WriteLine($"{_engine.Url}, {_engine.Tag}, CandidateAmbassador for {_tag}: Got a positive response " +
+                                                  $"from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                 RealElectionWonAtTerm = rvr.Term;
 
                                 var copy = _connection;
@@ -315,11 +321,13 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e) when (RachisConsensus.IsExpectedException(e) || e is RachisConcurrencyException)
                     {
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag},excepation1 {e}");
                         NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
                         break;
                     }
                     catch (TopologyMismatchException e)
                     {
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag},excepation2 {e}");
                         TopologyMismatch = true;
                         NotifyAboutAmbassadorClosing(_connection, currentElectionTerm, e);
                         _candidate.WaitForChangeInState();
@@ -327,6 +335,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine($"{_engine.Url}, {_engine.Tag},excepation3 {e}");
                         Status = AmbassadorStatus.FailedToConnect;
                         StatusMessage = $"Failed to get vote from {_tag}.{Environment.NewLine}" + e.Message;
                         if (_engine.Log.IsInfoEnabled)
@@ -341,6 +350,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                Console.WriteLine($"{_engine.Url}, {_engine.Tag},excepation4 {e}");
                 Status = AmbassadorStatus.FailedToConnect;
                 StatusMessage = $"Failed to talk to {_url}.{Environment.NewLine}" + e;
                 if (_engine.Log.IsInfoEnabled)
