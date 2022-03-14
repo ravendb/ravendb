@@ -11,6 +11,7 @@ using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
@@ -386,7 +387,7 @@ namespace FastTests.Sharding
                     var attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20;
                     Assert.Equal(expected, attachments.Count);
-
+                    
                     for (int i = 0; i < attachments.Count; i++)
                     {
                         var expectedName = $"attachment/{i + 10}";
@@ -401,6 +402,98 @@ namespace FastTests.Sharding
                     attachments = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 8;
                     Assert.Equal(expected, attachments.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetCountersByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // generate some counters
+
+                for (int i = 10; i < 30; i++)
+                {
+                    var id = $"users/{i}${suffix}";
+                    var cf = session.CountersFor(id);
+
+                    for (int j = 1; j <= 5; j++)
+                    {
+                        cf.Increment($"counter/{j}"); 
+                    }
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 20;
+                    Assert.Equal(expected, counters.Count);
+
+                    for (int i = 0; i < counters.Count; i++)
+                    {
+                        var expectedId = $"users/{i + 10}${suffix}";
+
+                        var item = counters[i] as CounterReplicationItem;
+                        Assert.NotNull(item);
+                        Assert.Equal(expectedId, item.Id.ToString());
+
+                        Assert.True(item.Values.TryGet(CountersStorage.CounterNames, out BlittableJsonReaderObject names));
+                        Assert.Equal(5, names.Count);
+
+                        for (int j = 1; j <= 5; j++)
+                        {
+                            Assert.True(names.TryGet($"counter/{j}", out object _));
+                        }
+                    }
+
+                    var fromEtag = counters[10].Etag;
+                    counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 10;
+                    Assert.Equal(expected, counters.Count);
                 }
             }
         }

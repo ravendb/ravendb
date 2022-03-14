@@ -206,7 +206,7 @@ namespace Raven.Server.Documents.Revisions
             });
             revisionsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
             {
-                GenerateKey = GenerateBucketAndEtagIndexKey,
+                GenerateKey = GenerateBucketAndEtagIndexKeyForRevisions,
                 IsGlobal = true,
                 Name = RevisionsBucketAndEtagSlice
             });
@@ -1985,9 +1985,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [IndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return DocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
-        }
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForRevisions(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
+            GenerateBucketAndEtagIndexKey(context, idIndex: (int)RevisionsTable.LowerId, etagIndex: (int)RevisionsTable.Etag, ref tvr, out slice);
     }
 }
