@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 if (_typeBinderBlittableObjectInstance == null)
                 {
-                    _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, true, useLazy: false);
+                    _typeBinderBlittableObjectInstance = Engine.RegisterType<BlittableObjectInstanceV8>(null, false, useLazy: false);
                     _typeBinderBlittableObjectInstance.OnGetObjectBinder = (tb, obj, initializeBinder)
                         => tb.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder, BlittableObjectInstanceV8>((BlittableObjectInstanceV8)obj, initializeBinder,
                             keepAlive: true);
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Patch.V8
             {
                 if (_typeBinderTask == null)
                 {
-                    _typeBinderTask = Engine.RegisterType<Task>(null, true, ScriptMemberSecurity.ReadWrite, useLazy: false);
+                    _typeBinderTask = Engine.RegisterType<Task>(null, false, ScriptMemberSecurity.ReadWrite, useLazy: false);
                     _typeBinderTask.OnGetObjectBinder = (tb, obj, initializeBinder)
                         => tb.CreateObjectBinder<TaskCustomBinder, Task>((Task)obj, initializeBinder, keepAlive: true);
                     Engine.GlobalObject.SetProperty(typeof(Task), addToLastMemorySnapshotBefore: true);
@@ -326,14 +326,10 @@ namespace Raven.Server.Documents.Patch.V8
             
             public void InitializeGlobal()
             {
-                var h = ImplicitNull();
-                h = ExplicitNull();
-                h = JsonStringify();
+                var bindersLazy = Engine.BindersLazy;
                 
-                /*var bindersLazy = Engine.BindersLazy;
-                
-                AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance());
                 AddToBindersLazy(bindersLazy, typeof(Task), () => TypeBinderTask());
+                AddToBindersLazy(bindersLazy, typeof(BlittableObjectInstanceV8), () => TypeBinderBlittableObjectInstance());
                 AddToBindersLazy(bindersLazy, typeof(TimeSeriesSegmentObjectInstanceV8), () => TypeBinderTimeSeriesSegmentObjectInstance());
                 AddToBindersLazy(bindersLazy, typeof(CounterEntryObjectInstanceV8), () => TypeBinderCounterEntryObjectInstance());
                 AddToBindersLazy(bindersLazy, typeof(AttachmentNameObjectInstanceV8), () => TypeBinderAttachmentNameObjectInstance());
@@ -342,10 +338,10 @@ namespace Raven.Server.Documents.Patch.V8
                 AddToBindersLazy(bindersLazy, typeof(LazyStringValue), () => TypeBinderLazyStringValue());
                 AddToBindersLazy(bindersLazy, typeof(LazyCompressedStringValue), () => TypeBinderLazyCompressedStringValue());
                 AddToBindersLazy(bindersLazy, typeof(RavenServer), () => TypeBinderRavenServer());
-                AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase());*/
+                AddToBindersLazy(bindersLazy, typeof(DocumentDatabase), () => TypeBinderDocumentDatabase());
                 
-                var tb = TypeBinderBlittableObjectInstance();
-                tb = TypeBinderTask();
+                /*var tb = TypeBinderTask();
+                tb = TypeBinderBlittableObjectInstance();
                 tb = TypeBinderTimeSeriesSegmentObjectInstance();
                 tb = TypeBinderCounterEntryObjectInstance();
                 tb = TypeBinderAttachmentNameObjectInstance();
@@ -356,6 +352,10 @@ namespace Raven.Server.Documents.Patch.V8
                 tb = TypeBinderRavenServer();
                 tb = TypeBinderDocumentDatabase();
                 
+                var h = ImplicitNull();
+                h = ExplicitNull();
+                h = JsonStringify();*/
+
                 Engine.ExecuteWithReset(ExecEnvCodeV8, "ExecEnvCode");
             }
             
