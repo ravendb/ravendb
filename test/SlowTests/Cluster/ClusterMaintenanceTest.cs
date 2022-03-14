@@ -77,7 +77,7 @@ namespace SlowTests.Cluster
                     }
                 });
 
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < 25; i++)
                 {
                     if (task.IsFaulted)
                         await task;
@@ -86,7 +86,6 @@ namespace SlowTests.Cluster
                     {
                         var name = GetDatabaseName(new string('a', i));
                         await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name), 2));
-                        await store.Maintenance.ForDatabase(name).SendAsync(new CreateSampleDataOperation());
                     }
                     catch (ConcurrencyException)
                     {
