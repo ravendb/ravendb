@@ -1,5 +1,4 @@
 import copyToClipboard = require("common/copyToClipboard");
-import viewModelBase = require("viewmodels/viewModelBase");
 import createSampleDataCommand = require("commands/database/studio/createSampleDataCommand");
 import createSampleDataClassCommand = require("commands/database/studio/createSampleDataClassCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
@@ -11,8 +10,9 @@ import database = require("models/resources/database");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import { highlight, languages } from "prismjs";
+import shardViewModelBase = require("viewmodels/shardViewModelBase");
 
-class createSampleData extends viewModelBase {
+class createSampleData extends shardViewModelBase {
     
     view = require("views/database/tasks/createSampleData.html");
 
@@ -25,8 +25,8 @@ class createSampleData extends viewModelBase {
         return highlight(this.classData(), languages.javascript, "js");
     });
 
-    constructor() {
-        super();
+    constructor(db: database) {
+        super(db);
         aceEditorBindingHandler.install();
     }
 
@@ -34,7 +34,7 @@ class createSampleData extends viewModelBase {
         eventsCollector.default.reportEvent("sample-data", "create");
         this.isBusy(true);
 
-        const db = this.activeDatabase();
+        const db = this.db;
         
         new createSampleDataCommand(db)
             .execute()
@@ -85,7 +85,7 @@ class createSampleData extends viewModelBase {
     }
 
     private fetchCollectionsStats() {
-        new getCollectionsStatsCommand(this.activeDatabase())
+        new getCollectionsStatsCommand(this.db)
             .execute()
             .done(stats => this.onCollectionsFetched(stats));
     }
@@ -99,7 +99,7 @@ class createSampleData extends viewModelBase {
     }
 
     private fetchSampleDataClasses(): JQueryPromise<string> {
-        return new createSampleDataClassCommand(this.activeDatabase())
+        return new createSampleDataClassCommand(this.db)
             .execute()
             .done((results: string) => {
                 this.classData(results);
@@ -107,7 +107,7 @@ class createSampleData extends viewModelBase {
     }
 
     private urlForDatabaseDocuments() {
-        return appUrl.forDocuments("", this.activeDatabase());
+        return appUrl.forDocuments("", this.db);
     }
 }
 

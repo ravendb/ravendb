@@ -41,6 +41,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
             moduleId: require('viewmodels/database/tasks/createSampleData'),
+            shardingMode: "allShardsOnly",
             title: 'Create Sample Data',
             nav: true,
             css: 'icon-create-sample-data',
