@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Patch
                                         jsRes.ThrowOnError();
                                     }
                                 }
-#if DEBUG
+#if false //DEBUG
                                 var resStr = "";
                                 using (var jsResStr = ScriptEngineHandle.JsonStringify().StaticCall(jsRes))
                                 {
