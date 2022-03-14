@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -2714,12 +2713,33 @@ namespace Raven.Server.Documents
 
         internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, int idIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
         {
-            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
-
             var idPtr = tvr.Read(idIndex, out var size);
-            var bucket = ShardedContext.GetShardId(idPtr, size);
+            var etagPtr = tvr.Read(etagIndex, out _);
+
+            return GenerateBucketAndEtagSlice(context, idPtr, size, etagPtr, out slice);
+        }
+
+        internal static ByteStringContext.Scope ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(ByteStringContext context, int keyIndex, int etagIndex, ref TableValueReader tvr, out Slice slice)
+        {
+            var keyPtr = tvr.Read(keyIndex, out var keySize);
+
+            int sizeOfDocId = 0;
+            for (; sizeOfDocId < keySize; sizeOfDocId++)
+            {
+                if (keyPtr[sizeOfDocId] == SpecialChars.RecordSeparator)
+                    break;
+            }
 
             var etagPtr = tvr.Read(etagIndex, out _);
+
+            return GenerateBucketAndEtagSlice(context, keyPtr, sizeOfDocId, etagPtr, out slice);
+        }
+
+        private static ByteStringContext.Scope GenerateBucketAndEtagSlice(ByteStringContext context, byte* idPtr, int idSize, byte* etagPtr, out Slice slice)
+        {
+            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
+
+            var bucket = ShardedContext.GetShardId(idPtr, idSize);
 
             *(int*)buffer.Ptr = bucket;
             *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;

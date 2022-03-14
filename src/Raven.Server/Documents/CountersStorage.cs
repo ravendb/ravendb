@@ -40,6 +40,7 @@ namespace Raven.Server.Documents
         private static readonly Slice CounterTombstoneKey;
         private static readonly Slice AllCounterTombstonesEtagSlice;
         private static readonly Slice CollectionCounterTombstonesEtagsSlice;
+        private static readonly Slice CountersBucketAndEtagSlice;
 
         public const string DbIds = "@dbIds";
         public const string Values = "@vals";
@@ -134,6 +135,8 @@ namespace Raven.Server.Documents
                 Slice.From(ctx, "CounterTombstoneKey", ByteStringType.Immutable, out CounterTombstoneKey);
                 Slice.From(ctx, "AllCounterTombstonesEtagSlice", ByteStringType.Immutable, out AllCounterTombstonesEtagSlice);
                 Slice.From(ctx, "CollectionCounterTombstonesEtagsSlice", ByteStringType.Immutable, out CollectionCounterTombstonesEtagsSlice);
+                Slice.From(ctx, "CountersBucketAndEtag", ByteStringType.Immutable, out CountersBucketAndEtagSlice);
+
             }
             CountersSchema.DefineKey(new TableSchema.IndexDef
             {
@@ -154,6 +157,13 @@ namespace Raven.Server.Documents
             {
                 StartIndex = (int)CountersTable.Etag,
                 Name = CollectionCountersEtagsSlice
+            });
+
+            CountersSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKeyForCounters,
+                IsGlobal = true,
+                Name = CountersBucketAndEtagSlice
             });
 
             CounterTombstonesSchema.DefineKey(new TableSchema.IndexDef
@@ -209,6 +219,32 @@ namespace Raven.Server.Documents
                 // need to change the CounterGroup document to match 4.2 format
                 var converted = ConvertToCaseSensitiveFormat(context, countersItem);
                 yield return converted;
+            }
+        }
+
+        public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool caseInsensitiveNames = true)
+        {
+            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+
+            using (GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    var countersItem = CreateReplicationBatchItem(context, ref result.Result.Reader);
+
+                    if (caseInsensitiveNames)
+                    {
+                        yield return countersItem;
+                        continue;
+                    }
+
+                    // 4.2 replication destination
+                    // need to change the CounterGroup document to match 4.2 format
+                    var converted = ConvertToCaseSensitiveFormat(context, countersItem);
+                    yield return converted;
+                }
             }
         }
 
@@ -2501,6 +2537,10 @@ namespace Raven.Server.Documents
 
             return TableValueToEtag((int)CountersTable.Etag, ref result.Reader);
         }
+
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForCounters(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
+            ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)CountersTable.CounterKey, (int)CountersTable.Etag, ref tvr, out slice);
 
         public class IndexingMethods
         {

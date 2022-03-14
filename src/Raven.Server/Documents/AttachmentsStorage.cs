@@ -9,7 +9,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -1394,27 +1393,8 @@ namespace Raven.Server.Documents
 
 
         [IndexEntryKeyGenerator]
-        internal static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            var scope = context.Allocate(sizeof(long) + sizeof(int), out var buffer);
-
-            var keyPtr = tvr.Read((int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, out var keySize);
-
-            int sizeOfDocId = 0;
-            for (; sizeOfDocId < keySize; sizeOfDocId++)
-            {
-                if (keyPtr[sizeOfDocId] == SpecialChars.RecordSeparator)
-                    break;
-            }
-
-            var bucket = ShardedContext.GetShardId(keyPtr, sizeOfDocId);
-            var etagPtr = tvr.Read((int)AttachmentsTable.Etag, out _);
-
-            *(int*)buffer.Ptr = bucket;
-            *(long*)(buffer.Ptr + sizeof(int)) = *(long*)etagPtr;
-
-            slice = new Slice(buffer);
-            return scope;
-        }
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForAttachments(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
+            ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
+                (int)AttachmentsTable.Etag, ref tvr, out slice);
     }
 }

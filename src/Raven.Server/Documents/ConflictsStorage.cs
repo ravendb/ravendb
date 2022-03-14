@@ -119,7 +119,7 @@ namespace Raven.Server.Documents
             });
             ConflictsSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
             {
-                GenerateKey = GenerateBucketAndEtagIndexKey,
+                GenerateKey = GenerateBucketAndEtagIndexKeyForConflicts,
                 IsGlobal = true,
                 Name = ConflictsBucketAndEtagSlice
             });
@@ -898,11 +898,8 @@ namespace Raven.Server.Documents
             return collection;
         }
 
-
         [IndexEntryKeyGenerator]
-        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKey(ByteStringContext context, ref TableValueReader tvr, out Slice slice)
-        {
-            return DocumentsStorage.GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
-        }
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForConflicts(ByteStringContext context, ref TableValueReader tvr, out Slice slice) => 
+            GenerateBucketAndEtagIndexKey(context, idIndex: (int)ConflictsTable.LowerId, etagIndex: (int)ConflictsTable.Etag, ref tvr, out slice);
     }
 }
