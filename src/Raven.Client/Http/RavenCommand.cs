@@ -60,7 +60,8 @@ namespace Raven.Client.Http
         public TimeSpan? Timeout { get; protected set; }
         public bool CanCache { get; protected set; }
         public bool CanCacheAggressively { get; protected set; }
-        public string SelectedNodeTag { get; protected set; }
+        public string SelectedNodeTag { get; protected internal set; }
+        internal int? SelectedShardNumber { get; set; }
         public int NumberOfAttempts { get; internal set; }
 
         internal long FailoverTopologyEtag = -2;
@@ -72,6 +73,7 @@ namespace Raven.Client.Http
             CanCache = copy.CanCache;
             CanCacheAggressively = copy.CanCacheAggressively;
             SelectedNodeTag = copy.SelectedNodeTag;
+            SelectedShardNumber = copy.SelectedShardNumber;
             ResponseType = copy.ResponseType;
         }
 
@@ -150,8 +152,8 @@ namespace Raven.Client.Http
                 }
 
                 // We do not cache the stream response.
-                using(var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
-                using(var stream = new StreamWithTimeout(uncompressedStream))
+                using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
+                using (var stream = new StreamWithTimeout(uncompressedStream))
                     SetResponseRaw(response, stream, context);
             }
             return ResponseDisposeHandling.Automatic;
@@ -197,7 +199,7 @@ namespace Raven.Client.Http
 
         public virtual void OnResponseFailure(HttpResponseMessage response)
         {
-            
+
         }
         internal void SetTimeout(TimeSpan timeout)
         {
