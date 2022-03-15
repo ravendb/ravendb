@@ -56,7 +56,9 @@
             </div>
         </div>
         <div class="flex-horizontal bg-info padding">
-            <div class="margin-right">To build a cluster, select one of the above options and complete the full wizard in the first node. For new nodes, click here to join them to the cluster. </div>
+            <div class="margin-right"><strong>To build a cluster</strong>, select one of the above options and complete a full wizard flow for the first node.<br>
+                When this wizard is opened for the other nodes,<br>
+                click on 'Continue cluster setup' to join them to the cluster. </div>
             <button class="btn btn-primary" data-bind="click: chooseContinue"><i class="icon-arrow-right"></i><span>Continue cluster setup for new node</span></button>
         </div>
     </div>
@@ -89,7 +91,11 @@
         <i class="icon-info icon-lg"></i>
     </div>
     <div>
-        In order to disable this guide and setup the server manually, please find the 'settings.json' file in your RavenDB installation directory and change the <strong>Setup.Mode</strong> value to <strong>None</strong>
+        <strong>To disable this guide</strong> and setup the server manually:
+        <ul>
+            <li>Open the settings.json file located in your RavenDB installation directory</li>
+            <li>Change the setup mode to None, e.g. "Setup.Mode: "None"</li>
+        </ul>
     </div>
 </div>
 <div class="bg-experimental padding flex-horizontal margin-top">
