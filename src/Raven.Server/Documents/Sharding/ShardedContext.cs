@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -14,6 +15,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server.Documents.Sharding
 {

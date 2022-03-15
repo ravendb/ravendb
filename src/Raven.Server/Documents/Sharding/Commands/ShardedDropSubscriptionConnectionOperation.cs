@@ -1,8 +1,9 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Operations;
 
-namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+namespace Raven.Server.Documents.Sharding.Commands;
 
 public readonly struct ShardedDropSubscriptionConnectionOperation : IShardedOperation
 {

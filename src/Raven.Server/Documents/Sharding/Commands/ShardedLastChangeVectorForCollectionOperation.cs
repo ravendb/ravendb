@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Http;
+using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+namespace Raven.Server.Documents.Sharding.Commands;
 
 public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
 {
