@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -469,7 +470,7 @@ namespace FastTests.Sharding
             {
                 using (context.OpenReadTransaction())
                 {
-                    var counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: 0).ToList();
+                    var counters = CountersStorage.GetCountersByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20;
                     Assert.Equal(expected, counters.Count);
 
@@ -491,9 +492,93 @@ namespace FastTests.Sharding
                     }
 
                     var fromEtag = counters[10].Etag;
-                    counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    counters = CountersStorage.GetCountersByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 10;
                     Assert.Equal(expected, counters.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetTimeSeriesByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            var baseline = DateTime.UtcNow;
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // generate some timeseries
+
+
+                for (int i = 10; i < 30; i++)
+                {
+                    var id = $"users/{i}${suffix}";
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int j = 1; j <= 100; j++)
+                    {
+                        tsf.Append(baseline.AddSeconds(j), j);
+                    }
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var segments = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 20;
+                    Assert.Equal(expected, segments.Count);
+
+                    for (int i = 0; i < segments.Count; i++)
+                    {
+                        var expectedNumberOfEntries = 100;
+                        Assert.Equal(expectedNumberOfEntries, segments[i].Segment.NumberOfEntries);
+                    }
+
+                    var fromEtag = segments[10].Etag;
+                    segments = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 10;
+                    Assert.Equal(expected, segments.Count);
                 }
             }
         }
