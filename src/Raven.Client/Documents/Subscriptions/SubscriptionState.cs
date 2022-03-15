@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public string Query { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
-        public Dictionary<string, string> NextBatchStartingPointChangeVectors { get; set; }
+        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled,
-                [nameof(NextBatchStartingPointChangeVectors)] = NextBatchStartingPointChangeVectors?.ToJson()
+                [nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson()
             };
 
             return djv;

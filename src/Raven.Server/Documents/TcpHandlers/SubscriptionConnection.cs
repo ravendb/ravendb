@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _subscriptionConnectionsState.Initialize(this, afterSubscribe: true);
 
 
-            await SendNoopAck();
+            await SendNoopAckAsync();
             await WriteJsonAsync(new DynamicJsonValue
             {
                 [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
@@ -765,7 +765,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
 
                 await SendHeartBeatAsync("Waiting for changed documents");
-                await SendNoopAck();
+                await SendNoopAckAsync();
             } while (CancellationTokenSource.IsCancellationRequested == false);
             return false;
         }
@@ -1115,7 +1115,7 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        protected override Task SendNoopAck()
+        protected override Task SendNoopAckAsync()
         {
             return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, Options.SubscriptionName,
                 nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), NonExistentBatch, docsToResend: null, ShardName);

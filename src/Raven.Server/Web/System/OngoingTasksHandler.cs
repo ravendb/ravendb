@@ -28,7 +28,6 @@ using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
@@ -1238,13 +1237,13 @@ namespace Raven.Server.Web.System
                             SubscriptionState subscriptionState = null;
                             if (name == null)
                             {
-                                subscriptionState = ServerStore.Cluster.Subscriptions.ReadById(context, Database.Name, key);
+                                subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, Database.Name, key);
                             }
                             else
                             {
                                 try
                                 {
-                                    subscriptionState = ServerStore.Cluster.Subscriptions.Read(context, Database.Name, name);
+                                    subscriptionState = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, Database.Name, name);
                                 }
                                 catch (SubscriptionDoesNotExistException)
                                 {
@@ -1270,7 +1269,7 @@ namespace Raven.Server.Web.System
                                 TaskId = subscriptionState.SubscriptionId,
                                 Query = subscriptionState.Query,
                                 ChangeVectorForNextBatchStartingPoint = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-                                NextBatchStartingPointChangeVectors = subscriptionState.NextBatchStartingPointChangeVectors,
+                                ChangeVectorForNextBatchStartingPointPerShard = subscriptionState.ChangeVectorForNextBatchStartingPointPerShard,
                                 SubscriptionId = subscriptionState.SubscriptionId,
                                 SubscriptionName = subscriptionState.SubscriptionName,
                                 LastBatchAckTime = subscriptionState.LastBatchAckTime,

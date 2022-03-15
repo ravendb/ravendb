@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Subscriptions;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.ServerWide.Context;
@@ -14,7 +15,7 @@ public class SubscriptionsClusterStorage
         _cluster = cluster;
     }
 
-    public SubscriptionState Read(TransactionOperationContext context, string databaseName, string name)
+    public SubscriptionState ReadSubscriptionStateByName(TransactionOperationContext context, string databaseName, string name)
     {
         var subscriptionBlittable = _cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
 
@@ -25,13 +26,13 @@ public class SubscriptionsClusterStorage
         return subscriptionState;
     }
 
-    public SubscriptionState ReadById(TransactionOperationContext context, string databaseName, long id)
+    public SubscriptionState ReadSubscriptionStateById(TransactionOperationContext context, string databaseName, long id)
     {
         var name = GetSubscriptionNameById(context, databaseName, id);
         if (string.IsNullOrEmpty(name))
             throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
 
-        return Read(context, databaseName, name);
+        return ReadSubscriptionStateByName(context, databaseName, name);
     }
 
     public string GetSubscriptionNameById(TransactionOperationContext context, string databaseName, long id)
@@ -50,9 +51,27 @@ public class SubscriptionsClusterStorage
         return null;
     }
 
-    public BlittableJsonReaderObject ReadBlittable<T>(TransactionOperationContext<T> context, string databaseName, string name) where T : RavenTransaction
+    public BlittableJsonReaderObject ReadSubscriptionStateRaw<T>(TransactionOperationContext<T> context, string databaseName, string name) where T : RavenTransaction
     {
         var subscriptionBlittable = _cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseName, name));
         return subscriptionBlittable;
+    }
+
+    public static IEnumerable<SubscriptionState> GetAllSubscriptionsWithoutState(TransactionOperationContext serverStoreContext, string database, int start, int take)
+    {
+        foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverStoreContext, SubscriptionState.SubscriptionPrefix(database)))
+        {
+            if (start > 0)
+            {
+                start--;
+                continue;
+            }
+
+            if (take-- <= 0)
+                yield break;
+
+            var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
+            yield return subscriptionState;
+        }
     }
 }

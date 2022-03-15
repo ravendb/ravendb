@@ -15,6 +15,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
@@ -60,12 +61,12 @@ namespace Raven.Server.Documents.ShardedHandlers
                 {
                     if (id == null)
                     {
-                        state = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, options.Name);
+                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, ShardedContext.DatabaseName, options.Name);
                         id = state.SubscriptionId;
                     }
                     else
                     {
-                        state = ServerStore.Cluster.Subscriptions.ReadById(context, ShardedContext.DatabaseName, id.Value);
+                        state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, ShardedContext.DatabaseName, id.Value);
 
                         // keep the old subscription name
                         if (options.Name == null)
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                         try
                         {
                             // check the name
-                            state = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, options.Name);
+                            state = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, ShardedContext.DatabaseName, options.Name);
                             id = state.SubscriptionId;
                         }
                         catch (SubscriptionDoesNotExistException)
@@ -136,7 +137,7 @@ namespace Raven.Server.Documents.ShardedHandlers
 
             var (etag, _) = await ServerStore.SendToLeaderAsync(new PutShardedSubscriptionCommand(ShardedContext.DatabaseName, options.Query, options.MentorNode, GetRaftRequestIdFromQuery())
             {
-                InitialChangeVectorsCollection = changeVectorValidationResult.ChangeVectorsCollection,
+                InitialChangeVectorPerShard = changeVectorValidationResult.ChangeVectorsCollection,
                 InitialChangeVector = changeVectorValidationResult.InitialChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = id,
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
                         break;
                     case Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        result.ChangeVectorsCollection = (await ShardedContext.GetLastDocumentChangeVectorForCollection(sub.Collection)).LastChangeVectors;
+                        result.ChangeVectorsCollection = (await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(sub.Collection, ShardedContext.DatabaseName))).LastChangeVectors;
                         foreach ((string key, string value) in result.ChangeVectorsCollection)
                         {
                             try
@@ -231,7 +232,7 @@ namespace Raven.Server.Documents.ShardedHandlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var subscription = ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, name);
+                var subscription = ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, ShardedContext.DatabaseName, name);
 
                 foreach (var topology in ShardedContext.ShardsTopology)
                 {
@@ -271,7 +272,7 @@ namespace Raven.Server.Documents.ShardedHandlers
                 var subscriptions = new List<SubscriptionState>();
                 if (string.IsNullOrEmpty(name) && id == null)
                 {
-                    var allSubs = SubscriptionStorage.GetAllSubscriptionsWithoutState(context, ShardedContext.DatabaseName, start, pageSize);
+                    var allSubs = SubscriptionsClusterStorage.GetAllSubscriptionsWithoutState(context, ShardedContext.DatabaseName, start, pageSize);
                     if (allSubs == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -296,8 +297,8 @@ namespace Raven.Server.Documents.ShardedHandlers
                 else
                 {
                     var subscription = id == null 
-                        ? ServerStore.Cluster.Subscriptions.Read(context, ShardedContext.DatabaseName, name)
-                        : ServerStore.Cluster.Subscriptions.ReadById(context, ShardedContext.DatabaseName, id.Value);
+                        ? ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, ShardedContext.DatabaseName, name)
+                        : ServerStore.Cluster.Subscriptions.ReadSubscriptionStateById(context, ShardedContext.DatabaseName, id.Value);
 
                     if (subscription == null)
                     {

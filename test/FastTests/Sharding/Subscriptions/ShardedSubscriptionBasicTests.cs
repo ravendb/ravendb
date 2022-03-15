@@ -142,7 +142,7 @@ namespace FastTests.Sharding.Subscriptions
                 }
 
                 using var client = new HttpClient();
-                var url = Uri.EscapeUriString($"{store.Urls.First()}/databases/{store.Database}/subscriptions/try?pageSize=10");
+                var url = $"{store.Urls.First()}/databases/{Uri.EscapeDataString(store.Database)}/subscriptions/try?pageSize=10";
                 var tryout = new SubscriptionTryout() { Query = "from Users" };
                 var serializeObject = JsonConvert.SerializeObject(tryout);
                 var data = new StringContent(serializeObject, Encoding.UTF8, "application/json");

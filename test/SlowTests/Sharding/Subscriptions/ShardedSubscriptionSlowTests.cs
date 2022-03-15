@@ -425,7 +425,7 @@ namespace SlowTests.Sharding.Subscriptions
                     cvBigger = cvNew.ToArray().SerializeVector();
                     Assert.True(await ackFirstCV.WaitAsync(_reasonableWaitTime));
 
-                    DatabasesLandlord.DatabaseSearchResult result = GetSharededDatabaseInstancesFor(store);
+                    DatabasesLandlord.DatabaseSearchResult result = Server.ServerStore.DatabasesLandlord.TryGetOrCreateDatabase(store.Database);
                     Assert.Equal(DatabasesLandlord.DatabaseSearchResult.Status.Sharded, result.DatabaseStatus);
                     Assert.NotNull(result.ShardedContext);
 
@@ -433,7 +433,7 @@ namespace SlowTests.Sharding.Subscriptions
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        subscriptionState = Server.ServerStore.Cluster.Subscriptions.Read(context, store.Database, subscriptionId);
+                        subscriptionState = Server.ServerStore.Cluster.Subscriptions.ReadSubscriptionStateByName(context, store.Database, subscriptionId);
                     }
                     foreach (var db in shards)
                     {

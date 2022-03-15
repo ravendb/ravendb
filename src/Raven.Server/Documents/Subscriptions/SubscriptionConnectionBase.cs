@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected abstract Task ReportExceptionAsync(SubscriptionError error, Exception e);
         protected abstract Task OnClientAckAsync();
-        protected abstract Task SendNoopAck();
+        protected abstract Task SendNoopAckAsync();
         internal abstract Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync();
 
         protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer, IDisposable tcpConnectionDisposable,
@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Subscriptions
                 }
 
                 await SendHeartBeatAsync("Waiting for client ACK");
-                await SendNoopAck();
+                await SendNoopAckAsync();
             }
 
             CancellationTokenSource.Token.ThrowIfCancellationRequested();

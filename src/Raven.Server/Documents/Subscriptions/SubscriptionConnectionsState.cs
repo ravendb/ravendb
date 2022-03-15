@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (string.IsNullOrEmpty(connection.ShardName) == false)
             {
-                if (connection.SubscriptionState.NextBatchStartingPointChangeVectors == null || connection.SubscriptionState.NextBatchStartingPointChangeVectors.TryGetValue(connection.ShardName, out string cv) == false)
+                if (connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard == null || connection.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(connection.ShardName, out string cv) == false)
                 {
                     LastChangeVectorSent = null;
                 }
