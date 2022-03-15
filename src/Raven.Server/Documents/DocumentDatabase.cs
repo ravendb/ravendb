@@ -527,13 +527,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        struct ClusterTransactionBatch : IDisposable
+        private struct ClusterTransactionBatchCollector : IDisposable
         {
+            private readonly int _maxSize;
             private readonly ClusterTransactionCommand.SingleClusterDatabaseCommand[] _data;
             public int Count = 0;
 
-            public ClusterTransactionBatch(int maxSize)
+            public ClusterTransactionBatchCollector(int maxSize)
             {
+                _maxSize = maxSize;
                 _data = ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Rent(maxSize);
             }
 
@@ -548,7 +550,12 @@ namespace Raven.Server.Documents
                 }
             }
             
-            public void Add(ClusterTransactionCommand.SingleClusterDatabaseCommand command) => _data[Count++] = command;
+            public void Add(ClusterTransactionCommand.SingleClusterDatabaseCommand command)
+            {
+                if (Count >= _maxSize)
+                    throw new ArgumentOutOfRangeException($"Tried to add beyong the capacity - {nameof(Count)}:{Count}, {nameof(_maxSize)}:{_maxSize}");
+                _data[Count++] = command;
+            }
 
             public void Dispose() => ArrayPool<ClusterTransactionCommand.SingleClusterDatabaseCommand>.Shared.Return(_data);
         }
@@ -557,14 +564,15 @@ namespace Raven.Server.Documents
         {
             const int takeCount = 256;
 
-            using var batch = new ClusterTransactionBatch(takeCount);
+            using var batchCollector = new ClusterTransactionBatchCollector(takeCount);
 
             long maxRaftIndex = -1;
+            long maxCommandCount = -1;
             if (IsShard == false)
             {
                 var readCommands = ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: takeCount);
-                batch.Add(readCommands);
-                if (batch.Count == 0)
+                batchCollector.Add(readCommands);
+                if (batchCollector.Count == 0)
                     return;
             }
             else
@@ -574,18 +582,20 @@ namespace Raven.Server.Documents
                 foreach (var command in readCommands)
                 {
                     maxRaftIndex = command.Index; 
+                    maxCommandCount = command.PreviousCount + command.Commands.Length; 
                     if(command.ShardNumber == _shardProperties.Number)
-                        batch.Add(command);
+                        batchCollector.Add(command);
                 }
                 
-                if (batch.Count == 0)
+                if (batchCollector.Count == 0)
                 {
-                    NotifyIndexIfNeeded();
+                    NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
                     return;
                 }
             }
 
-            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch.GetData());
+            var batch = batchCollector.GetData();
+            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
             try
             {
                 //If we get a database shutdown while we process a cluster tx command this
@@ -595,26 +605,27 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                    _logger.Info($"Failed to execute cluster transaction batch (count: {batchCollector.Count}), will retry them one-by-one.", e);
 
-                if (await ExecuteClusterTransactionOneByOne(batch.GetData()))
-                    NotifyIndexIfNeeded();
+                if (await ExecuteClusterTransactionOneByOne(batch))
+                    NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
                 return;
             }
-            foreach (var command in batch.GetData())
+            foreach (var command in batch)
             {
                 OnClusterTransactionCompletion(command, mergedCommands);
             }
             
-            NotifyIndexIfNeeded();
-
-            void NotifyIndexIfNeeded()
+            NotifyIndexIfNeeded(maxRaftIndex, maxCommandCount);
+        }
+        void NotifyIndexIfNeeded(long index, long count)
+        {
+            if (index >= 0)
             {
-                if (maxRaftIndex >= 0)
-                    RachisLogIndexNotifications.NotifyListenersAbout(maxRaftIndex, null);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                _nextClusterCommand = count;
             }
         }
-
         private async Task<bool> ExecuteClusterTransactionOneByOne(ArraySegment<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             for (int i = 0; i < batch.Count; i++)
