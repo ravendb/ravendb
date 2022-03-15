@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteDatabaseStatistics(context, result);
+                writer.WriteDetailedDatabaseStatistics(context, result);
         }
     }
 }
