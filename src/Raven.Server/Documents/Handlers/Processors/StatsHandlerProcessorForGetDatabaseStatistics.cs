@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
@@ -14,7 +15,9 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected override ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync()
+        protected override bool SupportsCurrentNode => true;
+
+        protected override ValueTask<DatabaseStatistics> GetResultForCurrentNodeAsync()
         {
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
@@ -25,6 +28,13 @@ namespace Raven.Server.Documents.Handlers.Processors
 
                 return ValueTask.FromResult(stats);
             }
+        }
+
+        protected override async ValueTask<DatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DatabaseStatistics> command, string nodeTag)
+        {
+            //await RequestHandler.ExecuteForNodeAsync(command, nodeTag);
+
+            return command.Result;
         }
 
         internal static void FillDatabaseStatistics(DatabaseStatistics stats, QueryOperationContext context, DocumentDatabase database)
@@ -91,6 +101,5 @@ namespace Raven.Server.Documents.Handlers.Processors
                     stats.LastIndexingTime = index.LastIndexingTime;
             }
         }
-
     }
 }

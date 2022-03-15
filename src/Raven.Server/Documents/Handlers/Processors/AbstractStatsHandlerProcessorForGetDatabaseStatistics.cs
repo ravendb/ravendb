@@ -1,13 +1,14 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerReadProcessor<DatabaseStatistics, TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -15,16 +16,16 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected abstract ValueTask<DatabaseStatistics> GetDatabaseStatisticsAsync();
-
-        public override async ValueTask ExecuteAsync()
+        protected override RavenCommand<DatabaseStatistics> CreateCommandForNode(string nodeTag)
         {
-            var databaseStats = await GetDatabaseStatisticsAsync();
+            return new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag);
+        }
 
+        protected override async ValueTask WriteResultAsync(DatabaseStatistics result)
+        {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteDatabaseStatistics(context, databaseStats);
-
+                writer.WriteDatabaseStatistics(context, result);
         }
     }
 }

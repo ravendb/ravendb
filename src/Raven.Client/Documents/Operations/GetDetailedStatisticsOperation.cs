@@ -21,16 +21,22 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<DetailedDatabaseStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DetailedDatabaseStatisticsCommand(_debugTag);
+            return new GetDetailedStatisticsCommand(_debugTag);
         }
 
-        internal class DetailedDatabaseStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
+        internal class GetDetailedStatisticsCommand : RavenCommand<DetailedDatabaseStatistics>
         {
             private readonly string _debugTag;
 
-            public DetailedDatabaseStatisticsCommand(string debugTag)
+            public GetDetailedStatisticsCommand(string debugTag)
+                : this(debugTag, nodeTag: null)
+            {
+            }
+
+            internal GetDetailedStatisticsCommand(string debugTag, string nodeTag)
             {
                 _debugTag = debugTag;
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

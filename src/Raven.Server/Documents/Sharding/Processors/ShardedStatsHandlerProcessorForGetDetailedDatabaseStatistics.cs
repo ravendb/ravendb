@@ -17,52 +17,20 @@ namespace Raven.Server.Documents.Sharding.Processors
         {
         }
 
-        protected override string GetDatabaseName()
+        protected override bool SupportsCurrentNode => false;
+
+        protected override ValueTask<DetailedDatabaseStatistics> GetResultForCurrentNodeAsync()
         {
-            return RequestHandler.ShardedContext.DatabaseName;
+            throw new NotSupportedException();
         }
 
-        protected override async ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync()
+        protected override async ValueTask<DetailedDatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DetailedDatabaseStatistics> command, string nodeTag)
         {
-            var operation = new ShardedDetailedStatsOperation();
+            var shardNumber = GetShardNumber();
 
-            var detailedStatistics = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(operation);
-            detailedStatistics.Indexes = ShardedStatsHandlerProcessorForGetDatabaseStatistics.GetDatabaseIndexesFromRecord(RequestHandler.ShardedContext.DatabaseRecord);
-            detailedStatistics.CountOfIndexes = detailedStatistics.Indexes.Length;
+            await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, shardNumber);
 
-            return detailedStatistics;
-        }
-
-        private readonly struct ShardedDetailedStatsOperation : IShardedOperation<DetailedDatabaseStatistics>
-        {
-            public DetailedDatabaseStatistics Combine(Memory<DetailedDatabaseStatistics> results)
-            {
-                var span = results.Span;
-                if (span.Length == 0)
-                    return null;
-
-                var combined = new DetailedDatabaseStatistics
-                {
-                    DatabaseChangeVector = null,
-                    DatabaseId = null,
-                    Indexes = Array.Empty<IndexInformation>()
-                };
-
-                long totalSizeOnDisk = 0;
-                long totalTempBuffersSizeOnDisk = 0;
-                foreach (var result in span)
-                {
-                    ShardedStatsHandlerProcessorForGetDatabaseStatistics.ShardedStatsOperation.FillDatabaseStatistics(combined, result, ref totalSizeOnDisk, ref totalTempBuffersSizeOnDisk);
-                    combined.CountOfTimeSeriesDeletedRanges += result.CountOfTimeSeriesDeletedRanges;
-                }
-
-                combined.SizeOnDisk = new Size(totalSizeOnDisk);
-                combined.TempBuffersSizeOnDisk = new Size(totalTempBuffersSizeOnDisk);
-
-                return combined;
-            }
-
-            public RavenCommand<DetailedDatabaseStatistics> CreateCommandForShard(int shard) => new GetDetailedStatisticsOperation.DetailedDatabaseStatisticsCommand(debugTag: null);
+            return command.Result;
         }
     }
 }

@@ -1,14 +1,14 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStatsHandlerProcessorForGetDetailedDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerReadProcessor<DetailedDatabaseStatistics, TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -17,31 +17,16 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected abstract string GetDatabaseName();
-
-        protected abstract ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync();
-
-        public override async ValueTask ExecuteAsync()
+        protected override RavenCommand<DetailedDatabaseStatistics> CreateCommandForNode(string nodeTag)
         {
-            var databaseName = GetDatabaseName();
-            var databaseStats = await GetDatabaseStatisticsAsync();
-
-            GetDetailedDatabaseStatistics(databaseStats, databaseName);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteDetailedDatabaseStatistics(context, databaseStats);
+            return new GetDetailedStatisticsOperation.GetDetailedStatisticsCommand(debugTag: null, nodeTag);
         }
 
-        public void GetDetailedDatabaseStatistics(DetailedDatabaseStatistics stats, string databaseName)
+        protected override async ValueTask WriteResultAsync(DetailedDatabaseStatistics result)
         {
-            using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-            using (serverContext.OpenReadTransaction())
-            {
-                stats.CountOfIdentities = RequestHandler.ServerStore.Cluster.GetNumberOfIdentities(serverContext, databaseName);
-                stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(serverContext, databaseName);
-                stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(serverContext, databaseName);
-            }
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
+                writer.WriteDatabaseStatistics(context, result);
         }
     }
 }

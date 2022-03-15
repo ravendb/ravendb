@@ -1,9 +1,9 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
@@ -13,12 +13,9 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected override string GetDatabaseName()
-        {
-            return ShardHelper.ToDatabaseName(RequestHandler.Database.Name);
-        }
+        protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<DetailedDatabaseStatistics> GetDatabaseStatisticsAsync()
+        protected override ValueTask<DetailedDatabaseStatistics> GetResultForCurrentNodeAsync()
         {
             using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
             using (context.OpenReadTransaction())
@@ -31,6 +28,13 @@ namespace Raven.Server.Documents.Handlers.Processors
 
                 return ValueTask.FromResult(stats);
             }
+        }
+
+        protected override async ValueTask<DetailedDatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DetailedDatabaseStatistics> command, string nodeTag)
+        {
+            //await RequestHandler.ExecuteForNodeAsync(command, nodeTag);
+
+            return command.Result;
         }
     }
 }
