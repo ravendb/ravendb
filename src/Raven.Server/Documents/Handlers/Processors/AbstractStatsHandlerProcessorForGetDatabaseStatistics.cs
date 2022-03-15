@@ -16,10 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected override RavenCommand<DatabaseStatistics> CreateCommandForNode(string nodeTag)
-        {
-            return new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag);
-        }
+        protected override RavenCommand<DatabaseStatistics> CreateCommandForNode(string nodeTag) => new GetStatisticsOperation.GetStatisticsCommand(debugTag: null, nodeTag);
 
         protected override async ValueTask WriteResultAsync(DatabaseStatistics result)
         {

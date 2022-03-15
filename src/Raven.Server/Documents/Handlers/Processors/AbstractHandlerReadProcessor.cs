@@ -20,7 +20,7 @@ internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, T
 
     protected abstract ValueTask<TResult> GetResultForCurrentNodeAsync();
 
-    protected abstract ValueTask<TResult> GetResultForRemoteNodeAsync(RavenCommand<TResult> command, string nodeTag);
+    protected abstract Task<TResult> GetResultForRemoteNodeAsync(RavenCommand<TResult> command);
 
     protected abstract ValueTask WriteResultAsync(TResult result);
 
@@ -36,7 +36,7 @@ internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, T
         else
         {
             var command = CreateCommandForNode(nodeTag);
-            result = await GetResultForRemoteNodeAsync(command, nodeTag);
+            result = await GetResultForRemoteNodeAsync(command);
         }
 
         await WriteResultAsync(result);

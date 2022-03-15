@@ -17,12 +17,9 @@ namespace Raven.Server.Documents.Sharding.Processors
 
         protected override bool SupportsCurrentNode => false;
 
-        protected override ValueTask<DatabaseStatistics> GetResultForCurrentNodeAsync()
-        {
-            throw new NotSupportedException();
-        }
+        protected override ValueTask<DatabaseStatistics> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
 
-        protected override async ValueTask<DatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DatabaseStatistics> command, string nodeTag)
+        protected override async Task<DatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DatabaseStatistics> command)
         {
             var shardNumber = GetShardNumber();
 
