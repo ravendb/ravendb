@@ -1782,7 +1782,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public static IEnumerable<Document> GetRevisionsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<Document> GetRevisionsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             
