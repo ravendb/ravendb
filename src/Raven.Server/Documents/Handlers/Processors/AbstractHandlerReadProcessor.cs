@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -44,7 +45,7 @@ internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, T
 
     protected int GetShardNumber()
     {
-        return RequestHandler.GetIntValueQueryString("shardNumber", required: true).Value;
+        return RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: true).Value;
     }
 
     private bool IsCurrentNode(out string nodeTag)
@@ -62,6 +63,6 @@ internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, T
 
     private string GetNodeTag(bool required)
     {
-        return RequestHandler.GetStringQueryString("nodeTag", required);
+        return RequestHandler.GetStringQueryString(Constants.QueryString.NodeTag, required);
     }
 }
