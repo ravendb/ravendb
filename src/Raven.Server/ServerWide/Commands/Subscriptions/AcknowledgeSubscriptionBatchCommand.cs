@@ -8,7 +8,6 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -19,7 +18,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForShardCommand
+    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand
     {
         public string ChangeVector;
         public string LastKnownSubscriptionChangeVector; // Now this used only for backward compatibility
@@ -31,7 +30,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public long? BatchId;
         public List<DocumentRecord> DocumentsToResend; // documents that were updated while this batch was processing 
-
+        public string ShardName;
+        
         // for serialization
         private AcknowledgeSubscriptionBatchCommand() { }
 
@@ -175,6 +175,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
             json[nameof(BatchId)] = BatchId;
+            json[nameof(ShardName)] = ShardName;
             if (DocumentsToResend != null)
                 json[nameof(DocumentsToResend)] = new DynamicJsonArray(DocumentsToResend);
         }

@@ -3,21 +3,19 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
-using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class UpdateSubscriptionClientConnectionTime : UpdateValueForShardCommand
+    public class UpdateSubscriptionClientConnectionTime : UpdateValueForDatabaseCommand
     {
         public string SubscriptionName;
         public string NodeTag;
         public bool HasHighlyAvailableTasks;
         public DateTime LastClientConnectionTime;
-
+        public string ShardName;
         private UpdateSubscriptionClientConnectionTime()
         {
         }
@@ -60,6 +58,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
+            json[nameof(ShardName)] = ShardName;
         }
     }
 }

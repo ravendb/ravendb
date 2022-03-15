@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private readonly MemoryStream _buffer = new MemoryStream();
         public readonly SubscriptionConnectionStats Stats;
-        public ShardData Shard;
+        public string ShardName;
 
         private SubscriptionConnectionStatsScope _connectionScope;
         private SubscriptionConnectionStatsScope _pendingConnectionScope;
@@ -111,11 +111,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public ParsedSubscription Subscription;
 
-        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy) 
-            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable,
-            ShardHelper.IsShardedName(tcpConnection.DocumentDatabase.Name) ? ShardHelper.ToDatabaseName(tcpConnection.DocumentDatabase.Name) : tcpConnection.DocumentDatabase.Name,
-            CancellationTokenSource.CreateLinkedTokenSource(tcpConnection.DocumentDatabase.DatabaseShutdown))
-            {
+        public SubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer bufferToCopy, string database)
+            : base(tcpConnection, serverStore, bufferToCopy, tcpConnectionDisposable, database, tcpConnection.DocumentDatabase.DatabaseShutdown)
+        {
             _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, tcpConnection.ProtocolVersion);
             Stats = new SubscriptionConnectionStats();
 
@@ -126,10 +124,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task InitAsync()
         {
-            Shard = TcpConnection.DocumentDatabase.ShardedDatabaseName == null 
-                ? null 
-                : new ShardData { ShardName = TcpConnection.DocumentDatabase.Name };
-
             await ParseSubscriptionOptionsAsync();
             var message = CreateStatusMessage(ConnectionStatus.Create);
             AddToStatusDescription(message);
@@ -170,7 +164,7 @@ namespace Raven.Server.Documents.TcpHandlers
             });
 
             await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
-                SubscriptionState.SubscriptionName, Database, Shard, SubscriptionState.MentorNode);
+                SubscriptionState.SubscriptionName, Database, ShardName, SubscriptionState.MentorNode);
         }
 
         private async Task<(IDisposable DisposeOnDisconnect, long RegisterConnectionDurationInTicks)> SubscribeAsync()
@@ -327,7 +321,18 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                var connection = new SubscriptionConnection(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer);
+                SubscriptionConnection connection;
+                if (tcpConnectionOptions.DocumentDatabase.ShardedDatabaseName == null)
+                {
+                  connection = new SubscriptionConnection(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer, tcpConnectionOptions.DocumentDatabase.Name);
+                }
+                else
+                {
+                    connection = new SubscriptionConnection(server, tcpConnectionOptions, subscriptionConnectionInProgress, buffer, tcpConnectionOptions.DocumentDatabase.ShardedDatabaseName)
+                    {
+                        ShardName = tcpConnectionOptions.DocumentDatabase.Name
+                    };
+                }
 
                 try
                 {
@@ -1112,8 +1117,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
         protected override Task SendNoopAck()
         {
-            return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(Shard, SubscriptionId, Options.SubscriptionName,
-                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), NonExistentBatch, docsToResend: null);
+            return TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId, Options.SubscriptionName,
+                nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange), NonExistentBatch, docsToResend: null, ShardName);
         }
 
         internal override Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync()
@@ -1121,12 +1126,12 @@ namespace Raven.Server.Documents.TcpHandlers
             return GetReplyFromClientInternalAsync();
         }
 
-        protected override (string, string, string) GetStatusMessageDetails()
+        protected override (string DbNameStr, string ClientType, string SubsType) GetStatusMessageDetails()
         {
             string dbNameStr;
             string clientType;
             string subsType;
-            if (Shard == null)
+            if (string.IsNullOrEmpty(ShardName))
             {
                 dbNameStr = $"for database '{Database}'";
                 clientType = "'client worker'";
@@ -1135,7 +1140,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             else
             {
-                dbNameStr = $"for shard '{Shard.ShardName}'";
+                dbNameStr = $"for shard '{ShardName}'";
                 clientType = "'sharded worker'";
                 subsType = "sharded subscription";
 

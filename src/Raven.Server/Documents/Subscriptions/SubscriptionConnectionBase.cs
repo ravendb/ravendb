@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Subscriptions
         internal abstract Task<SubscriptionConnectionClientMessage> GetReplyFromClientAsync();
 
         protected SubscriptionConnectionBase(TcpConnectionOptions tcpConnection, ServerStore serverStore, JsonOperationContext.MemoryBuffer memoryBuffer, IDisposable tcpConnectionDisposable,
-            string database, CancellationTokenSource cts)
+            string database, CancellationToken token)
         {
             TcpConnection = tcpConnection;
             _serverStore = serverStore;
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Subscriptions
             _tcpConnectionDisposable = tcpConnectionDisposable;
 
             Database = database;
-            CancellationTokenSource = cts;
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnectionBase>(database);
 
             ClientUri = tcpConnection.TcpClient.Client.RemoteEndPoint.ToString();
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Subscriptions
             Info
         }
 
-        protected abstract (string, string, string) GetStatusMessageDetails();
+        protected abstract (string DbNameStr, string ClientType, string SubsType) GetStatusMessageDetails();
 
         protected string CreateStatusMessage(ConnectionStatus status, string info = null)
         {
@@ -463,11 +463,6 @@ namespace Raven.Server.Documents.Subscriptions
 
                 RecentSubscriptionStatuses?.Clear();
             }
-        }
-
-        public class ShardData
-        {
-            public string ShardName;
         }
     }
 }

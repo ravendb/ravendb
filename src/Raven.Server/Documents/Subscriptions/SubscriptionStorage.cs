@@ -108,30 +108,32 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task<long> RecordBatchRevisions(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string subscriptionName, List<RevisionRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchRevisions(long subscriptionId, string subscriptionName, List<RevisionRecord> list, string previouslyRecordedChangeVector, string lastRecordedChangeVector, string shardName)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(_databaseName, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
-            return await RecordBatchInternal(shardData, command);
+            return await RecordBatchInternal(shardName, command);
         }
 
-        public async Task<long> RecordBatchDocuments(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string subscriptionName, List<DocumentRecord> list, List<string> deleted, string previouslyRecordedChangeVector, string lastRecordedChangeVector)
+        public async Task<long> RecordBatchDocuments(long subscriptionId, string subscriptionName, List<DocumentRecord> list, List<string> deleted, string previouslyRecordedChangeVector, string lastRecordedChangeVector, string shardName)
         {
             var command = new RecordBatchSubscriptionDocumentsCommand(_databaseName, subscriptionId, subscriptionName, list, previouslyRecordedChangeVector, lastRecordedChangeVector, _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId())
             {
                 Deleted = deleted
             };
-            return await RecordBatchInternal(shardData, command);
+            return await RecordBatchInternal(shardName, command);
         }
 
-        private async Task<long> RecordBatchInternal(SubscriptionConnectionBase.ShardData shardData, RecordBatchSubscriptionDocumentsCommand command)
+        private async Task<long> RecordBatchInternal(string shardName, RecordBatchSubscriptionDocumentsCommand command)
         {
-            PopulateShardDataIfNeeded(shardData, command);
+            if (string.IsNullOrEmpty(shardName) == false)
+                command.ShardName = shardName;
+
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             return etag;
         }
 
-        public async Task AcknowledgeBatchProcessed(SubscriptionConnectionBase.ShardData shardData, long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend)
+        public async Task AcknowledgeBatchProcessed(long subscriptionId, string name, string changeVector, long? batchId, List<DocumentRecord> docsToResend, string shardName)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_databaseName, RaftIdGenerator.NewId())
             {
@@ -144,14 +146,13 @@ namespace Raven.Server.Documents.Subscriptions
                 BatchId = batchId,
                 DocumentsToResend = docsToResend,
             };
-
-            PopulateShardDataIfNeeded(shardData, command);
-
+            if (string.IsNullOrEmpty(shardName) == false)
+                command.ShardName = shardName;
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
-        public async Task UpdateClientConnectionTime(long id, string name, string database, SubscriptionConnectionBase.ShardData shardData, string mentorNode = null)
+        public async Task UpdateClientConnectionTime(long id, string name, string database, string shardName, string mentorNode = null)
         {
             var command = new UpdateSubscriptionClientConnectionTime(database, RaftIdGenerator.NewId())
             {
@@ -160,18 +161,10 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionName = name,
                 LastClientConnectionTime = DateTime.UtcNow,
             };
-
-            PopulateShardDataIfNeeded(shardData, command);
+            if (string.IsNullOrEmpty(shardName) == false)
+                command.ShardName = shardName;
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-        }
-
-        private static void PopulateShardDataIfNeeded(SubscriptionConnectionBase.ShardData shardData, UpdateValueForShardCommand command)
-        {
-            if (shardData == null)
-                return;
-
-            command.ShardName = shardData.ShardName;
         }
 
         public SubscriptionState GetSubscriptionFromServerStore(string name)

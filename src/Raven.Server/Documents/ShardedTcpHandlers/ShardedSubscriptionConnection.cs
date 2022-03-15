@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         public  AsyncManualResetEvent _mre;
 
         private ShardedSubscriptionConnection(ServerStore serverStore, TcpConnectionOptions tcpConnection, IDisposable tcpConnectionDisposable, JsonOperationContext.MemoryBuffer buffer)
-            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.ShardedContext.DatabaseName, CancellationTokenSource.CreateLinkedTokenSource(tcpConnection.ShardedContext.DatabaseShutdown))
+            : base(tcpConnection, serverStore, buffer, tcpConnectionDisposable, tcpConnection.ShardedContext.DatabaseName, tcpConnection.ShardedContext.DatabaseShutdown)
         {
             _mre = new AsyncManualResetEvent();
         }
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             }
         }
 
-        protected override (string, string, string) GetStatusMessageDetails()
+        protected override (string DbNameStr, string ClientType, string SubsType) GetStatusMessageDetails()
         {
             string dbNameStr = $"for sharded database '{Database}' on '{_serverStore.NodeTag}'";
             string clientType = $"'client worker' with IP '{TcpConnection.TcpClient.Client.RemoteEndPoint}'";
