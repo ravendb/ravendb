@@ -1,30 +1,11 @@
 name: conventions
 
 on:
-  pull_request_target
+  pull_request
 
 jobs:
 
-  job1:
-    name: Label
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Parse Label
-        run: |
-          $label="${{ github.event.pull_request.base.ref }}".split("/")[-1]
-          echo "newLabel=$label" >> $env:GITHUB_ENV
-      - name: Set Label
-        env:
-          githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
-          repoName: ${{ github.event.repository.name }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
-          Raven_Enable_Per_Test_Logging: 'true'
-        if: contains(github.event.pull_request.labels.*.name, env.newLabel) == false && (startsWith( github.event.pull_request.base.ref, 'v' ) || startsWith( github.event.pull_request.base.ref, 'feature' ))
-        run: ./scripts/githubActions/set_github_label.ps1 -owner ${{env.githubOwner}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.newLabel}}
-
-  job2:
+  claSigned:
     name: CLA Signed
     runs-on: windows-latest
     steps:
@@ -36,7 +17,7 @@ jobs:
         if: github.event.pull_request.base.repo.owner.login == 'ravendb' && github.event.repository.name == 'ravendb'
         run: ./scripts/githubActions/claSigned.ps1
 
-  job3:
+  conventions:
     name: Commit Conventions
     runs-on: windows-latest
     strategy:
@@ -71,9 +52,9 @@ jobs:
           name: pass_status_whitespace
           path: status_whitespace.txt
 
-  job4:
+  slackReport:
     if: always()
-    needs: job3
+    needs: conventions
     name: Generate Slack notification message
     runs-on: ubuntu-latest
     

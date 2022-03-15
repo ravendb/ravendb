@@ -207,10 +207,19 @@ namespace Tests.Infrastructure
             await Task.WhenAll(nonDeleted.Select(n =>
                 n.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, deleteResult.RaftCommandIndex + 1)));
 
-            await WaitForDatabaseToBeDeleted(store, database, TimeSpan.FromSeconds(15));
+            Assert.True(await WaitForDatabaseToBeDeleted(store, database, TimeSpan.FromSeconds(15)), await Task.Run(async () =>
+            {
+                var sb = new StringBuilder($"database '{database}' was not deleted after 15 seconds");
+                sb.AppendLine("debug logs : ");
+                await GetClusterDebugLogsAsync(sb);
+                return sb.ToString();
+            }));
 
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
-            Assert.Equal(1, record.UnusedDatabaseIds.Count);
+            await WaitAndAssertForValueAsync(async () =>
+            {
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+                return record.UnusedDatabaseIds.Count;
+            }, expectedVal: 1, timeout: 10_000);
         }
 
         public static async Task<bool> WaitForDatabaseToBeDeleted(IDocumentStore store, string databaseName, TimeSpan timeout)
