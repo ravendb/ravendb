@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -30,6 +34,31 @@ namespace Raven.Server.Documents
             Logger = LoggingSource.Instance.GetLogger(Database.Name, GetType().FullName);
 
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+        }
+
+        private static ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutorForDatabases = new ConcurrentDictionary<string, Lazy<RequestExecutor>>();
+
+        public RequestExecutor RequestExecutorForDatabase
+        {
+            get
+            {
+                var lazy = _requestExecutorForDatabases.GetOrAdd(Database.Name,
+                    new Lazy<RequestExecutor>(() => 
+                        RequestExecutor.Create(new[] { Server.WebUrl }, Database.Name, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), 
+                        LazyThreadSafetyMode.ExecutionAndPublication));
+
+                return lazy.Value;
+            }
+        }
+
+        public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command)
+        {
+            var requestExecutor = RequestExecutorForDatabase;
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                await requestExecutor.ExecuteAsync(command, ctx);
+                return command.Result;
+            }
         }
 
         public Task CheckForChanges(RequestHandlerContext context)

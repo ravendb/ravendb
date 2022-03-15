@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
@@ -30,11 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors
             }
         }
 
-        protected override async ValueTask<DetailedDatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DetailedDatabaseStatistics> command, string nodeTag)
-        {
-            //await RequestHandler.ExecuteForNodeAsync(command, nodeTag);
-
-            return command.Result;
-        }
+        protected override Task<DetailedDatabaseStatistics> GetResultForRemoteNodeAsync(RavenCommand<DetailedDatabaseStatistics> command) => 
+            RequestHandler.ExecuteRemoteAsync(command);
     }
 }
