@@ -8,9 +8,8 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.ShardedTcpHandlers;
-using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -23,7 +22,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.ShardedHandlers
+namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedSubscriptionsHandler : ShardedRequestHandler
     {

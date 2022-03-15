@@ -35,7 +35,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+using Raven.Server.Documents.Sharding.Commands;
 using Raven.Server.Documents.Studio;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide;
