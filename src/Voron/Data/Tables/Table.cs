@@ -687,13 +687,13 @@ namespace Voron.Data.Tables
         private void ThrowBadWriter(int size, long id, bool compressed)
         {
             throw new VoronErrorException(
-                $"After successfully allocating {size:#,#;;0} bytes (id: {id} compressed: {compressed}), failed to write them on {Name}");
+                $"After successfully allocating {new Size(size, SizeUnit.Bytes)} bytes (id: {id} compressed: {compressed}), failed to write them on {Name}");
         }
 
         private void ThrowBadAllocation(int size)
         {
             throw new VoronErrorException(
-                $"After changing active sections, failed to allocate {size:#,#;;0} bytes on {Name}");
+                $"After changing active sections, failed to allocate {new Size(size, SizeUnit.Bytes)} bytes on {Name}");
         }
 
         public class CompressionDictionariesHolder : IDisposable
