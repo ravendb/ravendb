@@ -337,6 +337,27 @@ namespace FastTests.Corax
         }
 
         [Fact]
+        public void SimpleDistinct()
+        {
+            var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };
+            var entry2 = new IndexEntry { Id = "entry/2", Content = new string[] { "mountain" }, };
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] { entry1, entry2 }, CreateKnownFields(bsc));
+
+            {
+                Span<long> ids = stackalloc long[16];
+
+                using var searcher = new IndexSearcher(Env);          
+                var match1 = searcher.DistinctQuery("Content", "highway");               
+                Assert.Equal(2, match1.Fill(ids));
+
+                var match2 = searcher.DistinctQuery("Content", "mountain");               
+                Assert.Equal(1, match2.Fill(ids));
+            }
+        }
+
+        [Fact]
         public void AllOr()
         {
             var entry1 = new IndexEntry { Id = "entry/1", Content = new string[] { "road", "lake" }, };

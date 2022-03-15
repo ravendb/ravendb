@@ -55,6 +55,19 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch DistinctQuery(string field, string term)
+    {
+        return DistinctQuery(field, term, default(NullScoreFunction));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public MultiTermMatch DistinctQuery<TScoreFunction>(string field, string term, TScoreFunction scoreFunction)
+        where TScoreFunction : IQueryScoreFunction
+    {
+        return MultiTermMatchBuilder<TScoreFunction, DistinctTermProvider>(field, term, scoreFunction, false, Constants.IndexSearcher.NonAnalyzer);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public MultiTermMatch ExistsQuery(string field)
     {
         return ExistsQuery(field, default(NullScoreFunction));
@@ -237,6 +250,17 @@ public partial class IndexSearcher
             return MultiTermMatch.Create(
                 MultiTermBoostingMatch<ExistsTermProvider>.Create(
                     this, new ExistsTermProvider(this, _transaction.Allocator, terms, field), scoreFunction));
+        }
+
+        if (typeof(TTermProvider) == typeof(DistinctTermProvider))
+        {
+            if (typeof(TScoreFunction) == typeof(NullScoreFunction))
+                return MultiTermMatch.Create(new MultiTermMatch<DistinctTermProvider>(_transaction.Allocator,
+                    new DistinctTermProvider(this, _transaction.Allocator, terms, field, slicedTerm)));
+
+            return MultiTermMatch.Create(
+                MultiTermBoostingMatch<DistinctTermProvider>.Create(
+                    this, new DistinctTermProvider(this, _transaction.Allocator, terms, field, slicedTerm), scoreFunction));
         }
 
         return MultiTermMatch.CreateEmpty(_transaction.Allocator);

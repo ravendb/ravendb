@@ -18,11 +18,7 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]        
         public static bool EndsWith(this Slice s1, ReadOnlySpan<byte> s2)
         {
-            var term = s1.AsReadOnlySpan();
-            
-            return term.Length > 1 
-                ? s1.AsReadOnlySpan()[..(term.Length - 1)].EndsWith(s2)
-                : s1.AsReadOnlySpan().EndsWith(s2);
+            return s1.AsReadOnlySpan().EndsWith(s2);
         }
     }
 }
