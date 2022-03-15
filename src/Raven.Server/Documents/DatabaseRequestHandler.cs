@@ -36,24 +36,9 @@ namespace Raven.Server.Documents
             context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
 
-        private static ConcurrentDictionary<string, Lazy<RequestExecutor>> _requestExecutorForDatabases = new ConcurrentDictionary<string, Lazy<RequestExecutor>>();
-
-        public RequestExecutor RequestExecutorForDatabase
-        {
-            get
-            {
-                var lazy = _requestExecutorForDatabases.GetOrAdd(Database.Name,
-                    new Lazy<RequestExecutor>(() => 
-                        RequestExecutor.Create(new[] { Server.WebUrl }, Database.Name, Server.Certificate.Certificate, DocumentConventions.DefaultForServer), 
-                        LazyThreadSafetyMode.ExecutionAndPublication));
-
-                return lazy.Value;
-            }
-        }
-
         public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command)
         {
-            var requestExecutor = RequestExecutorForDatabase;
+            var requestExecutor = Database.RequestExecutor;
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 await requestExecutor.ExecuteAsync(command, ctx);
@@ -130,7 +115,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected static async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context,  string raftRequestId, string databaseName, RequestHandler requestHandler, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
+        protected static async Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, string databaseName, RequestHandler requestHandler, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
         {
             if (await requestHandler.CanAccessDatabaseAsync(databaseName, requireAdmin: true, requireWrite: true) == false)
                 return (-1, default);
@@ -148,7 +133,7 @@ namespace Raven.Server.Documents
             return (index, configurationJson);
         }
 
-        protected Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context,  string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
+        protected Task<(long Index, T Configuration)> DatabaseConfigurations<T>(SetupFunc<T> setupConfigurationFunc, TransactionOperationContext context, string raftRequestId, T configurationJson, RefAction<T> beforeSetupConfiguration = null)
         {
             return DatabaseConfigurations(setupConfigurationFunc, context, raftRequestId, Database.Name, this, configurationJson, beforeSetupConfiguration);
         }
@@ -206,10 +191,10 @@ namespace Raven.Server.Documents
         {
             return numberOfResults > Database.Configuration.PerformanceHints.MaxNumberOfResults;
         }
-        
+
         protected internal void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, long numberOfResults, int pageSize, long duration, long totalDocumentsSizeInBytes)
         {
-            if(ShouldAddPagingPerformanceHint(numberOfResults))
+            if (ShouldAddPagingPerformanceHint(numberOfResults))
                 Database.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
     }
