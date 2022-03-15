@@ -1314,7 +1314,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<ReplicationBatchItem> GetTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 

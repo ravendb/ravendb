@@ -204,7 +204,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static IEnumerable<DocumentConflict> GetConflictsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        public IEnumerable<DocumentConflict> GetConflictsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 

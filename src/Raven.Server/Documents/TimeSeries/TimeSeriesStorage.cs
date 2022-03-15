@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice AllDeletedRangesEtagSlice;
         private static readonly Slice CollectionDeletedRangesEtagsSlice;
         private static readonly Slice TimeSeriesBucketAndEtagSlice;
+        private static readonly Slice DeletedRangesBucketAndEtagSlice;
 
         internal static readonly TableSchema TimeSeriesSchema = new TableSchema
         {
@@ -71,6 +72,8 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "AllDeletedRangesEtag", ByteStringType.Immutable, out AllDeletedRangesEtagSlice);
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
                 Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
+                Slice.From(ctx, "DeletedRangesBucketAndEtag", ByteStringType.Immutable, out DeletedRangesBucketAndEtagSlice);
+
             }
 
             TimeSeriesSchema.DefineKey(new TableSchema.IndexDef
@@ -120,6 +123,13 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 StartIndex = (int)DeletedRangeTable.Etag,
                 Name = CollectionDeletedRangesEtagsSlice
+            });
+
+            DeleteRangesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKeyForDeletedRanges,
+                IsGlobal = true,
+                Name = DeletedRangesBucketAndEtagSlice
             });
         }
 
@@ -2386,6 +2396,24 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag, long toEtag = long.MaxValue)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+
+            using (DocumentsStorage.GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    var item = CreateDeletedRangeItem(context, ref result.Result.Reader);
+                    if (item.Etag > toEtag)
+                        yield break;
+                    yield return item;
+                }
+            }
+        }
+
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -2825,6 +2853,10 @@ namespace Raven.Server.Documents.TimeSeries
         [IndexEntryKeyGenerator]
         private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
             DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey, etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
+
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForDeletedRanges(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
+            DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)DeletedRangeTable.RangeKey, etagIndex: (int)DeletedRangeTable.Etag, ref tvr, out slice);
 
         internal enum TimeSeriesTable
         {

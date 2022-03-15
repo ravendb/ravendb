@@ -12,6 +12,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -141,13 +142,13 @@ namespace FastTests.Sharding
 
                 using (context.OpenReadTransaction())
                 {
-                    var conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20; // 2 conflicts per doc
                     Assert.Equal(expected, conflicts.Count);
 
 
                     var fromEtag = conflicts[12].Etag;
-                    conflicts = ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    conflicts = db.DocumentsStorage.ConflictsStorage.GetConflictsByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 8; 
                     Assert.Equal(expected, conflicts.Count);
                 }
@@ -211,7 +212,7 @@ namespace FastTests.Sharding
 
                 using (context.OpenReadTransaction())
                 {
-                    var tombstones = DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: 0).ToList();
+                    var tombstones = db.DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20; 
                     Assert.Equal(expected, tombstones.Count);
 
@@ -229,7 +230,7 @@ namespace FastTests.Sharding
 
 
                     var fromEtag = tombstones[12].Etag;
-                    tombstones = DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    tombstones = db.DocumentsStorage.GetTombstonesByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 8;
                     Assert.Equal(expected, tombstones.Count);
                 }
@@ -296,12 +297,12 @@ namespace FastTests.Sharding
             {
                 using (context.OpenReadTransaction())
                 {
-                    var revisions = RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: 0).ToList();
+                    var revisions = db.DocumentsStorage.RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 40;
                     Assert.Equal(expected, revisions.Count);
 
                     var fromEtag = revisions[12].Etag;
-                    revisions = RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    revisions = db.DocumentsStorage.RevisionsStorage.GetRevisionsByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 28;
                     Assert.Equal(expected, revisions.Count);
                 }
@@ -470,7 +471,7 @@ namespace FastTests.Sharding
             {
                 using (context.OpenReadTransaction())
                 {
-                    var counters = CountersStorage.GetCountersByBucketFrom(context, bucket, etag: 0).ToList();
+                    var counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: 0).ToList();
                     var expected = 20;
                     Assert.Equal(expected, counters.Count);
 
@@ -492,7 +493,7 @@ namespace FastTests.Sharding
                     }
 
                     var fromEtag = counters[10].Etag;
-                    counters = CountersStorage.GetCountersByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    counters = db.DocumentsStorage.CountersStorage.GetCountersByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 10;
                     Assert.Equal(expected, counters.Count);
                 }
@@ -526,8 +527,6 @@ namespace FastTests.Sharding
 
             using (var session = store.OpenAsyncSession())
             {
-                // generate some timeseries
-
 
                 for (int i = 10; i < 30; i++)
                 {
@@ -579,6 +578,105 @@ namespace FastTests.Sharding
                     segments = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsByBucketFrom(context, bucket, etag: fromEtag).ToList();
                     expected = 10;
                     Assert.Equal(expected, segments.Count);
+                }
+            }
+        }
+
+
+        [Fact]
+        public async Task CanGetTimeSeriesDeletedRangesByBucket()
+        {
+            using var store = GetShardedDocumentStore();
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).First();
+
+            const string suffix = "suffix";
+            int bucket;
+            using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+            {
+                bucket = ShardedContext.GetShardId(txContext, suffix);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    await session.StoreAsync(new User(), $"users/{j}${suffix}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // generate some timeseries
+
+                for (int i = 10; i < 30; i++)
+                {
+                    var id = $"users/{i}${suffix}";
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int j = 1; j <= 100; j++)
+                    {
+                        tsf.Append(baseline.AddDays(j), j);
+                    }
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                // generate some timeseries-deleted-ranges items
+
+                for (int i = 10; i < 30; i++)
+                {
+                    var id = $"users/{i}${suffix}";
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    tsf.Delete(baseline.AddDays(10), baseline.AddDays(90));
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            db = null;
+            var dbs = await Task.WhenAll(Server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database));
+            foreach (var shard in dbs)
+            {
+                using (shard.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var docs = shard.DocumentsStorage.GetDocumentsByBucketFrom(context, bucket, etag: 0).ToList();
+                    if (docs.Count == 0)
+                        continue;
+
+                    db = shard;
+                    break;
+                }
+            }
+
+            Assert.NotNull(db);
+
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var deletedRanges = db.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(context, bucket, etag: 0).ToList();
+                    var expected = 20;
+                    Assert.Equal(expected, deletedRanges.Count);
+
+                    for (int i = 0; i < deletedRanges.Count; i++)
+                    {
+                        Assert.Equal(baseline.AddDays(10), deletedRanges[i].From);
+                        Assert.Equal(baseline.AddDays(90), deletedRanges[i].To);
+                    }
+
+                    var fromEtag = deletedRanges[10].Etag;
+                    deletedRanges = db.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesByBucketFrom(context, bucket, etag: fromEtag).ToList();
+                    expected = 10;
+                    Assert.Equal(expected, deletedRanges.Count);
                 }
             }
         }
