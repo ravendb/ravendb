@@ -6,12 +6,14 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -92,11 +94,13 @@ namespace Raven.Server.Documents
 
         public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
+        private readonly Lazy<RequestExecutor> _requestExecutor;
+
         public void ResetIdleTime()
         {
             _lastIdleTicks = DateTime.MinValue.Ticks;
         }
-        
+
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
@@ -188,6 +192,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new AsyncManualResetEvent(DatabaseShutdown);
                 IdentityPartsSeparator = '/';
+                _requestExecutor = new Lazy<RequestExecutor>(() => RequestExecutor.Create(new[] { ServerStore.Server.WebUrl }, Name, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
             }
             catch (Exception)
             {
@@ -207,6 +212,8 @@ namespace Raven.Server.Documents
         }
 
         public ServerStore ServerStore => _serverStore;
+
+        public RequestExecutor RequestExecutor => _requestExecutor.Value;
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
@@ -865,6 +872,14 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _hasClusterTransaction");
             exceptionAggregator.Execute(_hasClusterTransaction);
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _hasClusterTransaction");
+
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing _requestExecutor");
+            exceptionAggregator.Execute(() =>
+            {
+                if (_requestExecutor.IsValueCreated)
+                    _requestExecutor.Value.Dispose();
+            });
+            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed _requestExecutor");
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Finished dispose");
 
