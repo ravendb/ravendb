@@ -1,0 +1,68 @@
+﻿@sharding-color: @color-4;
+
+.sharding-controll {
+    display: flex;
+    align-items: center;
+    margin-bottom: -40px;
+    position: absolute;
+    right: @gutter-xxs;
+    top: @gutter-xxs;
+    border: 1px solid @sharding-color;
+
+    &.pinned {
+        position: static;
+        right: auto;
+        top: auto;
+        background-color: @sharding-color;
+        color: @gray-800;
+        margin-bottom: 0;
+    }
+
+    .sharding-message {
+        text-transform: uppercase;
+        padding: @gutter-xxs @gutter;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: .15em;
+        line-height: 1em;
+
+        .separator {
+            display: inline-block;
+            margin: 0 @gutter-sm;
+        }
+    }
+
+    .shard-selector {
+        display: flex;
+        text-transform: uppercase;
+        padding: @gutter-xxs @gutter-xs;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: .15em;
+        line-height: 1em;
+        align-items: center;
+
+        i {
+            font-size: 18px;
+            margin-right: @gutter-xxs;
+        }
+    }
+
+    .btn {
+        background-color: @sharding-color;
+        color: @gray-800;
+        border: none;
+
+        &:hover {
+            background-color: @white;
+        }
+    }
+}
+
+.shard-aware-container {
+    flex-grow: 1;
+
+    &.pinned {
+        box-shadow: 0 0 0 2px inset @sharding-color;
+    }
+}
