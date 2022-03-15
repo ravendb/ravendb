@@ -155,8 +155,8 @@ namespace Voron.Impl.Paging
                     catch (Exception e)
                     {
                             throw new InsufficientMemoryException(
-                                $"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} bytes to {nextWorkingSetSize:#,#;;0} bytes but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
-                                                              $"Failed to increase the max working set size so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
+                                $"Need to increase the min working set size from {new Size(currentProcess.MinWorkingSet.ToInt64(), SizeUnit.Bytes)} to {new Size(nextWorkingSetSize, SizeUnit.Bytes)} but the max working set size was too small: {new Size(currentProcess.MaxWorkingSet.ToInt64(), SizeUnit.Bytes)}. " +
+                                $"Failed to increase the max working set size so we can lock {new Size(sizeToLock, SizeUnit.Bytes)} for {FileName}. With encrypted " +
                                                               "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                               "and aborting the current operation.", e);
                     }
@@ -171,7 +171,7 @@ namespace Voron.Impl.Paging
                 catch (Exception e)
                 {
                         throw new InsufficientMemoryException(
-                            $"Failed to increase the min working set size to {nextWorkingSetSize:#,#;;0} bytes so we can lock {sizeToLock:#,#;;0} bytes for {FileName}. With encrypted " +
+                            $"Failed to increase the min working set size to {new Size(nextWorkingSetSize, SizeUnit.Bytes)} so we can lock {new Size(sizeToLock, SizeUnit.Bytes)} for {FileName}. With encrypted " +
                                                           "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                           "and aborting the current operation.", e);
                 }
@@ -185,7 +185,7 @@ namespace Voron.Impl.Paging
             }
 
             var msg =
-                $"Unable to lock memory for {FileName} with size {sizeToLock:#,#;;0} bytes), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
+                $"Unable to lock memory for {FileName} with size {new Size(sizeToLock, SizeUnit.Bytes)}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
             if (PlatformDetails.RunningOnPosix)
             {
                 msg +=
@@ -194,7 +194,7 @@ namespace Voron.Impl.Paging
             else
             {
                 msg +=
-                    $"Already tried to raise the the process min working set to {currentProcess.MinWorkingSet.ToInt64():#,#;;0} bytes but still got a failure.{Environment.NewLine}";
+                    $"Already tried to raise the the process min working set to {new Size(currentProcess.MinWorkingSet.ToInt64(), SizeUnit.Bytes)} but still got a failure.{Environment.NewLine}";
             }
 
             msg += "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
