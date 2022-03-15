@@ -3,7 +3,9 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
@@ -26,6 +28,9 @@ namespace Raven.Server.Documents.Handlers.Processors
                 StatsHandlerProcessorForGetDatabaseStatistics.FillDatabaseStatistics(stats, context, RequestHandler.Database);
 
                 stats.CountOfTimeSeriesDeletedRanges = RequestHandler.Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context.Documents);
+                stats.CountOfIdentities = RequestHandler.ServerStore.Cluster.GetNumberOfIdentities(context.Server, RequestHandler.Database.Name);
+                stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(context.Server, RequestHandler.Database.Name);
+                stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context.Server, RequestHandler.Database.Name);
 
                 return ValueTask.FromResult(stats);
             }
