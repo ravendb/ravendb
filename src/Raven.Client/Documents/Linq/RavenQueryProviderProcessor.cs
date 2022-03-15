@@ -3195,9 +3195,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             for (int i = 0; i < visitor.Parameters?.Count; i++)
             {
-                if (i > 0)
-                    paramsBuilder.Append(", ");
-                paramsBuilder.Append(visitor.Parameters[i]);
+                var param = visitor.Parameters[i];
+                if (!tsQueryText.Contains($" as {param}"))
+                {
+                    if (i > 0)
+                        paramsBuilder.Append(", ");
+                    paramsBuilder.Append(param);
+                }
             }
 
             var parameters = paramsBuilder.ToString();
