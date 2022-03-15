@@ -7,14 +7,13 @@ using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +25,7 @@ namespace FastTests.Sharding
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetDocumentsByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -82,7 +81,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetConflictsByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -155,7 +154,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetTombstonesByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -237,7 +236,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetRevisionsByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -309,7 +308,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetAttachmentsByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -408,7 +407,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetCountersByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -500,7 +499,7 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetTimeSeriesByBucket()
         {
             using var store = GetShardedDocumentStore();
@@ -582,8 +581,7 @@ namespace FastTests.Sharding
             }
         }
 
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanGetTimeSeriesDeletedRangesByBucket()
         {
             using var store = GetShardedDocumentStore();
