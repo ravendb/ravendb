@@ -1,22 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.ShardedHandlers.ShardedCommands;
 using Raven.Server.Documents.ShardedTcpHandlers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
-using Sparrow.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding
 {
@@ -60,7 +57,7 @@ namespace Raven.Server.Documents.Sharding
                 // TODO: pool request executors?
                 RequestExecutors[i] = RequestExecutor.Create(
                     urls,
-                    GetShardedDatabaseName(i),
+                    ShardHelper.ToShardName(DatabaseName, i),
                     serverStore.Server.Certificate.Certificate,
                     new DocumentConventions());
             }
@@ -169,30 +166,6 @@ namespace Raven.Server.Documents.Sharding
             var lastClientConfigurationIndex = _record.Client?.Etag ?? 0;
             var actual = Hashing.Combine(lastClientConfigurationIndex, _lastClientConfigurationIndex);
             return actual > clientConfigurationEtag;
-        }
-
-        public string GetShardedDatabaseName(int index = 0)
-        {
-            if (index >= _record.Shards.Length)
-                throw new InvalidOperationException($"Requested shard '{index}' of database '{DatabaseName}' but shards length '{_record.Shards.Length}'.");
-
-            return _record.DatabaseName + "$" + index;
-        }
-
-        public List<string> GetShardedDatabaseNames()
-        {
-            var list = new List<string>();
-            for (int i = 0; i < ShardCount; i++)
-            {
-                list.Add(GetShardedDatabaseName(i));
-            }
-            return list;
-        }
-
-        public async Task<LastChangeVectorForCollectionCombinedResult> GetLastDocumentChangeVectorForCollection(string collection)
-        {
-            var res = await ShardExecutor.ExecuteParallelForAllAsync(new ShardedLastChangeVectorForCollectionOperation(collection, DatabaseName));
-            return res;
         }
 
         public void Dispose()

@@ -10,12 +10,13 @@ namespace Raven.Server.ServerWide.Commands.Sharding;
 
 public class PutShardedSubscriptionCommand : PutSubscriptionCommand
 {
-    public Dictionary<string, string> InitialChangeVectorsCollection;
+    public Dictionary<string, string> InitialChangeVectorPerShard;
 
-    public PutShardedSubscriptionCommand()
+    private PutShardedSubscriptionCommand()
     {
 
     }
+
     public PutShardedSubscriptionCommand(string databaseName, string query, string mentor, string uniqueRequestId) : base(databaseName, query, mentor,
         uniqueRequestId)
     {
@@ -26,15 +27,15 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
         if (InitialChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
         {
             // use current change vectors saved in state
-            InitialChangeVectorsCollection = existingSubscriptionState.NextBatchStartingPointChangeVectors;
+            InitialChangeVectorPerShard = existingSubscriptionState.ChangeVectorForNextBatchStartingPointPerShard;
             return;
         }
 
-        if (InitialChangeVectorsCollection == null || InitialChangeVectorsCollection.Count == 0)
+        if (InitialChangeVectorPerShard == null || InitialChangeVectorPerShard.Count == 0)
             return;
 
         // start from LastDocument (the CVs were validated in handler)
-        InitialChangeVectorsCollection = existingSubscriptionState.NextBatchStartingPointChangeVectors;
+        InitialChangeVectorPerShard = existingSubscriptionState.ChangeVectorForNextBatchStartingPointPerShard;
         // remove the old state from storage
         RemoveSubscriptionStateFromStorage(context, subscriptionId);
     }
@@ -44,7 +45,7 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
         // the CVs were validated in handler
     }
 
-    protected override DynamicJsonValue Builder(long subscriptionId)
+    protected override DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
     {
         return new SubscriptionState
         {
@@ -55,13 +56,13 @@ public class PutShardedSubscriptionCommand : PutSubscriptionCommand
             Disabled = Disabled,
             MentorNode = MentorNode,
             LastClientConnectionTime = null,
-            NextBatchStartingPointChangeVectors = InitialChangeVectorsCollection
+            ChangeVectorForNextBatchStartingPointPerShard = InitialChangeVectorPerShard
         }.ToJson();
     }
 
     public override void FillJson(DynamicJsonValue json)
     {
         base.FillJson(json);
-        json[nameof(InitialChangeVectorsCollection)] = InitialChangeVectorsCollection?.ToJson();
+        json[nameof(InitialChangeVectorPerShard)] = InitialChangeVectorPerShard?.ToJson();
     }
 }

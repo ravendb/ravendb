@@ -5,39 +5,38 @@ using Raven.Client.Http;
 using Raven.Server.Json;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
+namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands;
+
+public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
 {
-    public readonly struct ShardedLastChangeVectorForCollectionOperation : IShardedOperation<LastChangeVectorForCollectionResult, LastChangeVectorForCollectionCombinedResult>
+    private readonly string _collection;
+    private readonly string _database;
+
+    public ShardedLastChangeVectorForCollectionOperation(string collection, string database)
     {
-        private readonly string _collection;
-        private readonly string _database;
-
-        public ShardedLastChangeVectorForCollectionOperation(string collection, string database)
-        {
-            _collection = collection;
-            _database = database;
-        }
-
-        public LastChangeVectorForCollectionCombinedResult Combine(Memory<LastChangeVectorForCollectionResult> results)
-        {
-            var dic = new Dictionary<string, string>();
-            var array = results.Span;
-            for (var i = 0; i < array.Length; i++)
-            {
-                dic.Add($"{_database}${i}", array[i].LastChangeVector);
-            }
-
-            return new LastChangeVectorForCollectionCombinedResult
-            {
-                Collection = _collection,
-                LastChangeVectors = dic
-            };
-        }
-
-        public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shard) => new LastChangeVectorForCollectionCommand(_collection);
+        _collection = collection ?? throw new ArgumentNullException(nameof(collection));
+        _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
-    public class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
+    public LastChangeVectorForCollectionCombinedResult Combine(Memory<LastChangeVectorForCollectionResult> results)
+    {
+        var dic = new Dictionary<string, string>();
+        var array = results.Span;
+        for (var i = 0; i < array.Length; i++)
+        {
+            dic.Add($"{_database}${i}", array[i].LastChangeVector);
+        }
+
+        return new LastChangeVectorForCollectionCombinedResult
+        {
+            Collection = _collection,
+            LastChangeVectors = dic
+        };
+    }
+
+    public RavenCommand<LastChangeVectorForCollectionResult> CreateCommandForShard(int shard) => new LastChangeVectorForCollectionCommand(_collection);
+
+    private class LastChangeVectorForCollectionCommand : RavenCommand<LastChangeVectorForCollectionResult>
     {
         private readonly string _collection;
 
@@ -71,16 +70,16 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 
         public override bool IsReadRequest => true;
     }
+}
 
-    public class LastChangeVectorForCollectionResult
-    {
-        public string Collection { get; set; }
-        public string LastChangeVector { get; set; }
-    }
+public class LastChangeVectorForCollectionResult
+{
+    public string Collection { get; set; }
+    public string LastChangeVector { get; set; }
+}
 
-    public class LastChangeVectorForCollectionCombinedResult
-    {
-        public string Collection { get; set; }
-        public Dictionary<string, string> LastChangeVectors { get; set; }
-    }
+public class LastChangeVectorForCollectionCombinedResult
+{
+    public string Collection { get; set; }
+    public Dictionary<string, string> LastChangeVectors { get; set; }
 }

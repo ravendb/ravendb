@@ -18,14 +18,14 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
         private readonly TransactionOperationContext _context;
         private readonly SubscriptionTryout _tryout;
         private readonly int _pageSize;
-        private readonly int? _timeLimit;
+        private readonly int? _timeLimitInSec;
 
-        public ShardedSubscriptionTryoutOperation(TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimit)
+        public ShardedSubscriptionTryoutOperation(TransactionOperationContext context, SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
         {
             _context = context;
             _tryout = tryout;
             _pageSize = pageSize;
-            _timeLimit = timeLimit;
+            _timeLimitInSec = timeLimitInSec;
         }
 
         public GetDocumentsResult Combine(Memory<GetDocumentsResult> results)
@@ -54,28 +54,28 @@ namespace Raven.Server.Documents.ShardedHandlers.ShardedCommands
 
         public RavenCommand<GetDocumentsResult> CreateCommandForShard(int shard)
         {
-            return new SubscriptionTryoutCommand(_tryout, _pageSize, _timeLimit);
+            return new SubscriptionTryoutCommand(_tryout, _pageSize, _timeLimitInSec);
         }
 
         private class SubscriptionTryoutCommand : RavenCommand<GetDocumentsResult>
         {
             private readonly SubscriptionTryout _tryout;
             private readonly int _pageSize;
-            private readonly int? _timeLimit;
+            private readonly int? _timeLimitInSec;
 
-            public SubscriptionTryoutCommand(SubscriptionTryout tryout, int pageSize, int? timeLimit)
+            public SubscriptionTryoutCommand(SubscriptionTryout tryout, int pageSize, int? timeLimitInSec)
             {
                 _tryout = tryout;
                 _pageSize = pageSize;
-                _timeLimit = timeLimit;
+                _timeLimitInSec = timeLimitInSec;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/subscriptions/try?pageSize={_pageSize}";
-                if (_timeLimit.HasValue)
+                if (_timeLimitInSec.HasValue)
                 {
-                    url += $"&timeLimit={_timeLimit}";
+                    url += $"&timeLimit={_timeLimitInSec}";
                 }
 
                 var request = new HttpRequestMessage

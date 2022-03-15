@@ -17,6 +17,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -126,7 +127,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             return Task.CompletedTask;
         }
 
-        protected override Task SendNoopAck()
+        protected override Task SendNoopAckAsync()
         {
             return Task.CompletedTask;
         }
@@ -143,8 +144,8 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             for (int i = 0; i < TcpConnection.ShardedContext.ShardCount; i++)
             {
                 var re = TcpConnection.ShardedContext.RequestExecutors[i];
-                var shard = TcpConnection.ShardedContext.GetShardedDatabaseName(i);
-                SubscriptionShardHolder worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
+                var shard = ShardHelper.ToShardName(TcpConnection.ShardedContext.DatabaseName, i);
+                var worker = CreateShardedWorkerHolder(shard, re, lastErrorDateTime: null);
 
                 _shardWorkers.Add(shard, worker);
             }
@@ -160,11 +161,8 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
         {
             var shardWorker = new ShardedSubscriptionWorker(_options, shard, re, parent: this);
 
-            var holder = new SubscriptionShardHolder
+            var holder = new SubscriptionShardHolder(shardWorker, shardWorker.RunInternalAsync(CancellationTokenSource.Token), re)
             {
-                Worker = shardWorker, 
-                PullingTask = shardWorker.RunInternalAsync(CancellationTokenSource.Token), 
-                RequestExecutor = re,
                 LastErrorDateTime = lastErrorDateTime
             };
 
@@ -202,7 +200,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         private void ThrowStoppingSubscriptionException(HandleBatchFromWorkersResult result)
         {
-            throw new ShardingSubscriptionException(
+            throw new ShardedSubscriptionException(
                 $"Stopping sharded subscription '{_options.SubscriptionName}' with id '{SubscriptionId}' " +
                 $"for database '{TcpConnection.ShardedContext.DatabaseName}' because " +
                 $"shard {string.Join(", ", result.Exceptions.Keys)} workers failed. " +
@@ -224,7 +222,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
                 using (var old = _shardWorkers[shard])
                 {
-                    var holder = CreateShardedWorkerHolder(shard, _shardWorkers[shard].RequestExecutor, old.LastErrorDateTime);
+                    var holder = CreateShardedWorkerHolder(shard, old.RequestExecutor, old.LastErrorDateTime);
                     _shardWorkers[shard] = holder;
                 }
             }
@@ -327,7 +325,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             await batch.ConfirmFromShardSubscriptionConnectionTcs.Task;
 
             // send confirm to client and continue processing
-            await SendConfirmToClient();
+            await SendConfirmToClientAsync();
         }
 
         private bool CanContinueSubscription(SubscriptionShardHolder shardHolder)
@@ -383,7 +381,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard '{shard}' got ack from client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
         }
 
-        internal async Task SendConfirmToClient()
+        internal async Task SendConfirmToClientAsync()
         {
             AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, $"Shard subscription connection '{SubscriptionId}' send confirm to client '{TcpConnection.TcpClient.Client.RemoteEndPoint}'."));
             await WriteJsonAsync(new DynamicJsonValue
@@ -409,10 +407,17 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
         private class SubscriptionShardHolder : IDisposable
         {
-            public ShardedSubscriptionWorker Worker;
-            public Task PullingTask;
+            public readonly ShardedSubscriptionWorker Worker;
+            public readonly Task PullingTask;
+            public readonly RequestExecutor RequestExecutor;
             public DateTime? LastErrorDateTime;
-            public RequestExecutor RequestExecutor;
+
+            public SubscriptionShardHolder(ShardedSubscriptionWorker worker, Task pullingTask, RequestExecutor requestExecutor)
+            {
+                Worker = worker;
+                PullingTask = pullingTask;
+                RequestExecutor = requestExecutor;
+            }
 
             public void Dispose()
             {

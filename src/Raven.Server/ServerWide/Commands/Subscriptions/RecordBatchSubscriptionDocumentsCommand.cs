@@ -7,7 +7,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -174,7 +173,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 return;
             }
 
-            state.NextBatchStartingPointChangeVectors.TryGetValue(ShardName, out string cvInStorage);
+            state.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage);
             if (cvInStorage != PreviouslyRecordedChangeVector)
             {
                 throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't record sharded subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {cvInStorage}, received value: {PreviouslyRecordedChangeVector}.");
@@ -189,13 +188,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                     ChangeVectorUtils.MergeVectors(CurrentChangeVector, subscriptionState.ChangeVectorForNextBatchStartingPoint);
                 return;
             }
-            if (subscriptionState.NextBatchStartingPointChangeVectors.TryGetValue(ShardName, out string cvInStorage))
+            if (subscriptionState.ChangeVectorForNextBatchStartingPointPerShard.TryGetValue(ShardName, out string cvInStorage))
             {
-                subscriptionState.NextBatchStartingPointChangeVectors[ShardName] = ChangeVectorUtils.MergeVectors(cvInStorage, CurrentChangeVector);
+                subscriptionState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = ChangeVectorUtils.MergeVectors(cvInStorage, CurrentChangeVector);
             }
             else
             {
-                subscriptionState.NextBatchStartingPointChangeVectors[ShardName] = CurrentChangeVector;
+                subscriptionState.ChangeVectorForNextBatchStartingPointPerShard[ShardName] = CurrentChangeVector;
             }
         }
 

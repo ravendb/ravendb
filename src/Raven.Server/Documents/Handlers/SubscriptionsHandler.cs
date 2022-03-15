@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(SubscriptionState.SubscriptionId)] = state.SubscriptionId,
                 [nameof(SubscriptionState.SubscriptionName)] = state.SubscriptionName,
                 [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = state.ChangeVectorForNextBatchStartingPoint,
-                [nameof(SubscriptionState.NextBatchStartingPointChangeVectors)] = state.NextBatchStartingPointChangeVectors?.ToJson(),
+                [nameof(SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard)] = state.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
                 [nameof(SubscriptionState.Query)] = state.Query,
                 [nameof(SubscriptionState.Disabled)] = state.Disabled,
                 [nameof(SubscriptionState.LastClientConnectionTime)] = state.LastClientConnectionTime,
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Handlers
                     ["State"] = new DynamicJsonValue()
                     {
                         ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.NextBatchStartingPointChangeVectors?.ToJson(),
+                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
                         ["Query"] = r.SubscriptionState.Query
                     },
                     ["Connection"] = GetSubscriptionConnectionJson(r)
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
                     ["State"] = new DynamicJsonValue()
                     {
                         ["LatestChangeVectorClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPoint,
-                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.NextBatchStartingPointChangeVectors?.ToJson(),
+                        ["LatestChangeVectorsClientACKnowledged"] = r.SubscriptionState.ChangeVectorForNextBatchStartingPointPerShard?.ToJson(),
                         ["Query"] = r.SubscriptionState.Query
                     },
                     ["Connection"] = GetSubscriptionConnectionJson(r)

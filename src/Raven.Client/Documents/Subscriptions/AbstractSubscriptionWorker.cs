@@ -757,7 +757,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (ex is AggregateException ae)
             {
-                if (ex is ShardingSubscriptionException)
+                if (ex is ShardedSubscriptionException)
                     return (false, null);
 
                 foreach (var exception in ae.InnerExceptions)

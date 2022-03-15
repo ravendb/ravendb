@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string SubscriptionName { get; set; }
         public long SubscriptionId { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
-        public Dictionary<string, string> NextBatchStartingPointChangeVectors { get; set; }
+        public Dictionary<string, string> ChangeVectorForNextBatchStartingPointPerShard { get; set; }
         public DateTime? LastBatchAckTime { get; set; }
         public bool Disabled { get; set; }
         public DateTime? LastClientConnectionTime { get; set; }
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint;
-            json[nameof(NextBatchStartingPointChangeVectors)] = NextBatchStartingPointChangeVectors?.ToJson();
+            json[nameof(ChangeVectorForNextBatchStartingPointPerShard)] = ChangeVectorForNextBatchStartingPointPerShard?.ToJson();
             json[nameof(LastBatchAckTime)] = LastBatchAckTime;
             json[nameof(Disabled)] = Disabled;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;

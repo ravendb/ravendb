@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public string MentorNode;
 
         // for serialization
-        public PutSubscriptionCommand() { }
+        protected PutSubscriptionCommand() { }
 
         public PutSubscriptionCommand(string databaseName, string query, string mentor, string uniqueRequestId) : base(databaseName, uniqueRequestId)
         {
@@ -86,7 +86,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         AssertValidChangeVector();
                     }
 
-                    using (var receivedSubscriptionState = context.ReadObject(Builder(subscriptionId), SubscriptionName))
+                    using (var receivedSubscriptionState = context.ReadObject(CreateSubscriptionStateAsJson(subscriptionId), SubscriptionName))
                     {
                         ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, receivedSubscriptionState);
                     }
@@ -96,7 +96,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
         }
 
-        protected virtual DynamicJsonValue Builder(long subscriptionId)
+        protected virtual DynamicJsonValue CreateSubscriptionStateAsJson(long subscriptionId)
         {
             var json = new SubscriptionState
             {
