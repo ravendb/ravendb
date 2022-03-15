@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 var token = ContinuationTokens.GetOrCreateContinuationToken(context);
 
-                var op = new ShardedCollectionDocumentsOperation(token);
+                var op = new ShardedStreamDocumentsOperation(token);
                 var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
                 using var streams = await results.InitializeAsync(ShardedContext, HttpContext.RequestAborted);
 
@@ -88,17 +88,34 @@ namespace Raven.Server.Documents.Sharding.Handlers
             public string ContinuationToken;
         }
 
-        private readonly struct ShardedCollectionDocumentsOperation : IShardedStreamableOperation
+        public readonly struct ShardedStreamDocumentsOperation : IShardedStreamableOperation
         {
+            private readonly string _startsWith;
+            private readonly string _matches;
+            private readonly string _exclude;
+            private readonly string _startAfter;
             private readonly ShardedPagingContinuation _token;
 
-            public ShardedCollectionDocumentsOperation(ShardedPagingContinuation token)
+            public ShardedStreamDocumentsOperation(ShardedPagingContinuation token)
             {
+                _startsWith = null;
+                _matches = null;
+                _exclude = null;
+                _startAfter = null;
+                _token = token;
+            }
+
+            public ShardedStreamDocumentsOperation(string startsWith, string matches, string exclude, string startAfter, ShardedPagingContinuation token)
+            {
+                _startsWith = startsWith;
+                _matches = matches;
+                _exclude = exclude;
+                _startAfter = startAfter;
                 _token = token;
             }
 
             public RavenCommand<StreamResult> CreateCommandForShard(int shard) =>
-                StreamOperation.CreateStreamCommand(startsWith: null, matches: null, _token.Pages[shard].Start, _token.PageSize, exclude: null);
+                StreamOperation.CreateStreamCommand(_startsWith, _matches, _token.Pages[shard].Start, _token.PageSize, _exclude, _startAfter);
         }
 
         internal struct ShardedCollectionStatisticsOperation : IShardedOperation<CollectionStatistics>

@@ -157,6 +157,14 @@ namespace Raven.Server.Documents.Sharding
                     pagingContinuation);
             }
 
+            public async IAsyncEnumerable<Document> GetDocumentsAsync(CombinedReadContinuationState documents, ShardedPagingContinuation pagingContinuation, string resultPropertyName = "Results")
+            {
+                await foreach (var result in PagedShardedDocumentsByLastModified(documents, resultPropertyName, pagingContinuation))
+                {
+                    yield return result.Item;
+                }
+            }
+
             private class YieldStreamArray<T, TInner> : AsyncDocumentSession.AbstractYieldStream<T> where T : ShardStreamItem<TInner>
             {
                 private readonly Func<BlittableJsonReaderObject, TInner> _converter;

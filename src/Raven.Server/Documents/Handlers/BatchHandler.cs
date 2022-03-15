@@ -57,12 +57,12 @@ namespace Raven.Server.Documents.Handlers
                     if (contentType == null ||
                         contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                     {
-                        await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
+                        await commandBuilder.BuildCommandsAsync(context, RequestBodyStream(), Database.IdentityPartsSeparator);
                     }
                     else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                              contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                     {
-                        await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
+                        await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType, Database.IdentityPartsSeparator);
                     }
                     else
                         ThrowNotSupportedType(contentType);
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                         AddStringToHttpContext(log, TrafficWatchChangeType.BulkDocs);
                     }
                 }
-                
+
                 using (var command = await commandBuilder.GetCommand(context))
                 {
                     if (command.IsClusterTransaction)

@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents;
+﻿using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -67,6 +68,21 @@ namespace FastTests.Sharding
                     var u = s.Load<User>("users/1");
                     Assert.NotNull(u);
                     Assert.Equal("Oren", u.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public async Task CanPutAndGetItem2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                PutEntity(store, new DynamicJsonValue {["Name"] = "Oren",}, "users/1");
+
+                using (var s = store.Commands())
+                {
+                    var documents = await s.GetAsync(start: 0, pageSize: 100);
+                    Assert.Equal(1, documents.Count());
                 }
             }
         }

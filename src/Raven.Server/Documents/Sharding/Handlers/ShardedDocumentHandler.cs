@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,11 +11,13 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Server.Documents.Sharding.Commands;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers
 {
@@ -66,7 +69,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (id[^1] == '|')
                 {
                     // note that we use the _overall_ database for this, not the specific shards
-                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, '/', ShardedContext.DatabaseName, GetRaftRequestIdFromQuery());
+                    var (_, clusterId, _) = await ServerStore.GenerateClusterIdentityAsync(id, ShardedContext.IdentitySeparator, ShardedContext.DatabaseName, GetRaftRequestIdFromQuery());
                     id = clusterId;
                 }
                 
@@ -116,7 +119,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (TrafficWatchManager.HasRegisteredClients) //TODO - sharding: do we need that here?
                     AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
 
-                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+                if (ids.Count > 0)
+                {
+                    await GetDocumentsByIdAsync(ids, includePaths, etag, metadataOnly, context);
+                }
+                else
+                {
+                    await GetDocumentsAsync(context, metadataOnly);
+                }
             }
         }
 
@@ -144,7 +154,14 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (TrafficWatchManager.HasRegisteredClients) //TODO - sharding: do we need that here?
                     AddStringToHttpContext(idsStringValues.ToString(), TrafficWatchChangeType.Documents);
 
-                await GetDocumentsAsync(ids, includePaths, etag, metadataOnly, context);
+                if (ids.Length > 0)
+                {
+                    await GetDocumentsByIdAsync(ids, includePaths, etag, metadataOnly, context);
+                }
+                else
+                {
+                    await GetDocumentsAsync(context, metadataOnly);
+                }
             }
         }
 
@@ -201,7 +218,67 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
         }
 
-        private async Task GetDocumentsAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
+        private async Task GetDocumentsAsync(TransactionOperationContext context, bool metadataOnly)
+        {
+            var token = ContinuationTokens.GetOrCreateContinuationToken(context);
+
+            /*
+            var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+            if (GetStringFromHeaders("If-None-Match") == databaseChangeVector)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+            HttpContext.Response.Headers["ETag"] = "\"" + databaseChangeVector + "\"";*/
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Major, "Support returning Not Modified");
+
+            var etag = GetLongQueryString("etag", false);
+            if (etag != null)
+                throw new NotSupportedException("Passing etag to a sharded database is not supported");
+
+            ShardedCollectionHandler.ShardedStreamDocumentsOperation op;
+            
+            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
+            if (isStartsWith)
+            {
+                op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(
+                    HttpContext.Request.Query["startsWith"],
+                    HttpContext.Request.Query["matches"],
+                    HttpContext.Request.Query["exclude"],
+                    HttpContext.Request.Query["startAfter"], 
+                    token);
+            }
+            else // recent docs
+            {
+                op = new ShardedCollectionHandler.ShardedStreamDocumentsOperation(token);
+            }
+
+            var sw = Stopwatch.StartNew();
+            var results = await ShardExecutor.ExecuteParallelForAllAsync(op);
+            using var streams = await results.InitializeAsync(ShardedContext, HttpContext.RequestAborted);
+            var documents = ShardedContext.Streaming.GetDocumentsAsync(streams, token);
+
+            long numberOfResults;
+            long totalDocumentsSizeInBytes;
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+
+                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly, HttpContext.RequestAborted);
+                writer.WriteComma();
+                writer.WriteContinuationToken(context, token);
+
+                writer.WriteEndObject();
+            }
+
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "Add paging performance hint");
+            //AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocumentsAsync), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds, totalDocumentsSizeInBytes);
+        }
+
+        private async Task GetDocumentsByIdAsync(StringValues ids, StringValues includePaths, string etag, bool metadataOnly, TransactionOperationContext context)
         {
             //TODO - sharding: make sure we maintain the order of returned results
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -267,7 +344,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                         var result = (BlittableJsonReaderObject)cmdResults[index];
                         foreach (string includePath in includePaths)
                         {
-                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, '/');
+                            IncludeUtil.GetDocIdFromInclude(result, includePath, missingIncludes, ShardedContext.IdentitySeparator);
                         }
 
                         results[match] = result;

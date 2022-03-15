@@ -91,13 +91,8 @@ public class ShardedStudioCollectionsHandlerProcessorForPreviewCollection : Abst
         return false;
     }
 
-    protected override async IAsyncEnumerable<Document> GetDocumentsAsync()
-    {
-        await foreach (var doc in _requestHandler.ShardedContext.Streaming.PagedShardedDocumentsByLastModified(_combinedReadState, nameof(PreviewCollectionResult.Results), _continuationToken))
-        {
-            yield return doc.Item;
-        }
-    }
+    protected override IAsyncEnumerable<Document> GetDocumentsAsync() =>
+        RequestHandler.ShardedContext.Streaming.GetDocumentsAsync(_combinedReadState, _continuationToken);
 
     protected override async ValueTask<List<string>> GetAvailableColumnsAsync()
     {

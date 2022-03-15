@@ -41,12 +41,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream());
+                    await commandBuilder.BuildCommandsAsync(context, RequestBodyStream(), ShardedContext.IdentitySeparator);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType);
+                    await commandBuilder.ParseMultipart(context, RequestBodyStream(), HttpContext.Request.ContentType, ShardedContext.IdentitySeparator);
                 }
                 else
                     BatchHandler.ThrowNotSupportedType(contentType);
