@@ -222,7 +222,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool caseInsensitiveNames = true)
+        public static IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool caseInsensitiveNames = true)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 

@@ -43,6 +43,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice DeletedRangesKey;
         private static readonly Slice AllDeletedRangesEtagSlice;
         private static readonly Slice CollectionDeletedRangesEtagsSlice;
+        private static readonly Slice TimeSeriesBucketAndEtagSlice;
 
         internal static readonly TableSchema TimeSeriesSchema = new TableSchema
         {
@@ -69,6 +70,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Slice.From(ctx, "DeletedRangesKey", ByteStringType.Immutable, out DeletedRangesKey);
                 Slice.From(ctx, "AllDeletedRangesEtag", ByteStringType.Immutable, out AllDeletedRangesEtagSlice);
                 Slice.From(ctx, "CollectionDeletedRangesEtags", ByteStringType.Immutable, out CollectionDeletedRangesEtagsSlice);
+                Slice.From(ctx, "TimeSeriesBucketAndEtag", ByteStringType.Immutable, out TimeSeriesBucketAndEtagSlice);
             }
 
             TimeSeriesSchema.DefineKey(new TableSchema.IndexDef
@@ -90,6 +92,13 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 StartIndex = (int)TimeSeriesTable.Etag,
                 Name = CollectionTimeSeriesEtagsSlice
+            });
+
+            TimeSeriesSchema.DefineIndex(new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateBucketAndEtagIndexKeyForTimeSeries, 
+                IsGlobal = true, 
+                Name = TimeSeriesBucketAndEtagSlice
             });
 
             DeleteRangesSchema.DefineKey(new TableSchema.IndexDef
@@ -2313,6 +2322,21 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
+        {
+            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+
+            using (DocumentsStorage.GetBucketAndEtagByteString(context.Allocator, bucket, etag, out var buffer))
+            using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+            using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+            {
+                foreach (var result in table.SeekForwardFromPrefix(TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], keySlice, prefix, 0))
+                {
+                    yield return CreateTimeSeriesSegmentItem(context, ref result.Result.Reader);
+                }
+            }
+        }
+
         internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
@@ -2803,6 +2827,10 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
         }
+
+        [IndexEntryKeyGenerator]
+        private static ByteStringContext.Scope GenerateBucketAndEtagIndexKeyForTimeSeries(ByteStringContext context, ref TableValueReader tvr, out Slice slice) =>
+            DocumentsStorage.ExtractIdFromKeyAndGenerateBucketAndEtagIndexKey(context, keyIndex: (int)TimeSeriesTable.TimeSeriesKey, etagIndex: (int)TimeSeriesTable.Etag, ref tvr, out slice);
 
         internal enum TimeSeriesTable
         {
