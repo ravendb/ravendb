@@ -1168,6 +1168,30 @@ namespace Sparrow.Json
             return stream;
         }
 
+        public IDisposable CheckoutMemoryStream(out MemoryStream ms)
+        {
+            ms = CheckoutMemoryStream();
+
+            return new ReturnMemoryStreamToContext(this, ms);
+        }
+
+        private readonly struct ReturnMemoryStreamToContext : IDisposable
+        {
+            private readonly JsonOperationContext _context;
+            private readonly MemoryStream _ms;
+
+            public ReturnMemoryStreamToContext(JsonOperationContext context, MemoryStream ms)
+            {
+                _context = context;
+                _ms = ms;
+            }
+
+            public void Dispose()
+            {
+                _context.ReturnMemoryStream(_ms);
+            }
+        }
+
         private const long MemoryStreamCacheThreshold = Constants.Size.Megabyte;
         private const int MemoryStreamCacheMaxCapacityInBytes = 64 * Constants.Size.Megabyte;
 
