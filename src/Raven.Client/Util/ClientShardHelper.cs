@@ -2,13 +2,13 @@
 {
     internal static class ClientShardHelper
     {
-        public static string ToShardName(string database, int shard)
+        public static string ToShardName(string database, int shardNumber)
         {
             var name = ToDatabaseName(database);
 
             int shardIndex = name.IndexOf('$');
             if (shardIndex == -1)
-                return $"{name}${shard}";
+                return $"{name}${shardNumber}";
 
             return name;
         }

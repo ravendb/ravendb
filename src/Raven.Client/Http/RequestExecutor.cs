@@ -1329,9 +1329,14 @@ namespace Raven.Client.Http
             {
                 Debug.Assert(raftCommand.RaftUniqueRequestId != null, $"Forget to create an id for {command.GetType()}?");
 
-                var raftRequestString = "raft-request-id=" + raftCommand.RaftUniqueRequestId;
-                builder.Query = builder.Query?.Length > 1 ? $"{builder.Query.Substring(1)}&{raftRequestString}" : raftRequestString;
+                builder.Query = AppendToQuery(builder.Query, "raft-request-id", raftCommand.RaftUniqueRequestId);
             }
+
+            if (command.SelectedNodeTag != null)
+                builder.Query = AppendToQuery(builder.Query, Constants.QueryString.NodeTag, command.SelectedNodeTag);
+
+            if (command.SelectedShardNumber != null)
+                builder.Query = AppendToQuery(builder.Query, Constants.QueryString.ShardNumber, command.SelectedShardNumber.ToString());
 
             if (ShouldBroadcast(command))
             {
@@ -1344,6 +1349,11 @@ namespace Raven.Client.Http
             request.RequestUri = builder.Uri;
 
             return request;
+
+            static string AppendToQuery(string query, string key, string value)
+            {
+                return query?.Length > 1 ? $"{query.Substring(1)}&{key}={value}" : $"{key}={value}";
+            }
         }
 
         public event Action<StringBuilder> AdditionalErrorInformation;

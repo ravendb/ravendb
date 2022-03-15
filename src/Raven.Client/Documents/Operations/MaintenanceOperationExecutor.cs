@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
@@ -11,15 +12,19 @@ namespace Raven.Client.Documents.Operations
     public class MaintenanceOperationExecutor
     {
         private readonly DocumentStoreBase _store;
+        private readonly string _nodeTag;
+        private readonly int? _shardNumber;
         private readonly string _databaseName;
         private RequestExecutor _requestExecutor;
         private ServerOperationExecutor _serverOperationExecutor;
 
         private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _store.GetRequestExecutor(_databaseName) : null);
 
-        public MaintenanceOperationExecutor(DocumentStoreBase store, string databaseName = null)
+        internal MaintenanceOperationExecutor(DocumentStoreBase store, string databaseName = null, string nodeTag = null, int? shardNumber = null)
         {
             _store = store;
+            _nodeTag = nodeTag;
+            _shardNumber = shardNumber;
             _databaseName = databaseName ?? store.Database;
         }
 
@@ -30,17 +35,40 @@ namespace Raven.Client.Documents.Operations
             if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new MaintenanceOperationExecutor(_store, databaseName);
+            return new MaintenanceOperationExecutor(_store, databaseName, _nodeTag, _shardNumber);
         }
 
-        public MaintenanceOperationExecutor ForShard(int shardIndex)
+        public MaintenanceOperationExecutor ForNode(string nodeTag)
+        {
+            if (string.Equals(_nodeTag, nodeTag, StringComparison.OrdinalIgnoreCase))
+                return this;
+
+            return new MaintenanceOperationExecutor(_store, _databaseName, nodeTag, _shardNumber);
+        }
+
+        public MaintenanceOperationExecutor ForShard(int shardNumber)
         {
             var databaseName = ClientShardHelper.ToDatabaseName(_databaseName);
-            var newDatabaseName = ClientShardHelper.ToShardName(databaseName, shardIndex);
+            var newDatabaseName = ClientShardHelper.ToShardName(databaseName, shardNumber);
             if (string.Equals(_databaseName, newDatabaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new MaintenanceOperationExecutor(_store, newDatabaseName);
+            return new MaintenanceOperationExecutor(_store, newDatabaseName, _nodeTag, shardNumber: null);
+        }
+
+        /// <summary>
+        /// For internal use only
+        /// </summary>
+        internal MaintenanceOperationExecutor ForShardWithProxy(int shardNumber)
+        {
+            if (_nodeTag == null)
+                throw new InvalidOperationException($"NodeTag cannot be null. First use '.{nameof(ForNode)}' method.");
+
+            var databaseName = ClientShardHelper.ToDatabaseName(_databaseName); // we want orchestrator to proxy
+            if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase) && _shardNumber == shardNumber)
+                return this;
+
+            return new MaintenanceOperationExecutor(_store, databaseName, _nodeTag, shardNumber);
         }
 
         public void Send(IMaintenanceOperation operation)
@@ -58,6 +86,8 @@ namespace Raven.Client.Documents.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
+                ApplyNodeTagAndShardNumberToCommandIfSet(command);
+
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
             }
         }
@@ -67,6 +97,7 @@ namespace Raven.Client.Documents.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
+                ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return command.Result;
@@ -88,6 +119,7 @@ namespace Raven.Client.Documents.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(RequestExecutor.Conventions, context);
+                ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 var node = command.SelectedNodeTag ?? command.Result.OperationNodeTag;
@@ -100,6 +132,7 @@ namespace Raven.Client.Documents.Operations
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(RequestExecutor.Conventions, context);
+                ApplyNodeTagAndShardNumberToCommandIfSet(command);
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return new Operation<TResult>(RequestExecutor, () => _store.Changes(_databaseName), RequestExecutor.Conventions, command.Result.Result, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.OperationNodeTag);
@@ -111,6 +144,16 @@ namespace Raven.Client.Documents.Operations
             if (RequestExecutor == null)
                 throw new InvalidOperationException("Cannot use Maintenance without a database defined, did you forget to call ForDatabase?");
             return RequestExecutor.ContextPool.AllocateOperationContext(out context);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ApplyNodeTagAndShardNumberToCommandIfSet<T>(RavenCommand<T> command)
+        {
+            if (_nodeTag != null)
+                command.SelectedNodeTag = _nodeTag;
+
+            if (_shardNumber != null)
+                command.SelectedShardNumber = _shardNumber.Value;
         }
     }
 }
