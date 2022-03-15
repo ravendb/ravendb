@@ -757,7 +757,7 @@ namespace Voron
 
         private void ThrowCommittedAndFlushedTransactionNotFoundInActiveOnes(LowLevelTransaction llt)
         {
-            throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}");
+            throw new InvalidOperationException($"The transaction with ID '{llt.Id}' got committed and flushed but it wasn't found in the {nameof(ActiveTransactions)}. (Debug details: tx id of {nameof(llt.ActiveTransactionNode)} - {llt.ActiveTransactionNode?.Value?.Id}");
         }
 
         internal void WriteTransactionStarted()
