@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
                 return ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
             }
 
-            public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator = '/')
+            public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator)
             {
                 var state = new JsonParserState();
                 using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
                 return commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[^1] == '|';
             }
 
-            public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType)
+            public async Task ParseMultipart(JsonOperationContext context, Stream stream, string contentType, char separator)
             {
                 var boundary = MultipartRequestHelper.GetBoundary(
                     MediaTypeHeaderValue.Parse(contentType),
@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.Handlers
                     var bodyStream = Handler.GetBodyStream(section);
                     if (i == 0)
                     {
-                        await BuildCommandsAsync(context, bodyStream);
+                        await BuildCommandsAsync(context, bodyStream, separator);
                         continue;
                     }
 

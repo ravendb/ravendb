@@ -47,6 +47,12 @@ namespace Raven.Server.Documents.Sharding
             where TFailureMode : struct, IFailureMode
             => ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TResult>(shards, operation);
 
+        public Task ExecuteForShardsAsync<TExecutionMode, TFailureMode>(Memory<int> shards,
+            IShardedOperation operation)
+            where TExecutionMode : struct, IExecutionMode
+            where TFailureMode : struct, IFailureMode
+            => ExecuteForShardsAsync<TExecutionMode, TFailureMode, object, object>(shards, operation);
+
         public async Task<TCombinedResult> ExecuteForShardsAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(Memory<int> shards, IShardedOperation<TResult, TCombinedResult> operation)
             where TExecutionMode : struct, IExecutionMode
             where TFailureMode : struct, IFailureMode
@@ -55,97 +61,132 @@ namespace Raven.Server.Documents.Sharding
             var commands = ArrayPool<CommandHolder<TResult>>.Shared.Rent(shards.Length);
             try
             {
-                for (position = 0; position < shards.Span.Length; position++)
-                {
-                    int shard = shards.Span[position];
+                position = await ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(shards, operation, commands);
 
-                    var cmd = operation.CreateCommandForShard(shard);
-                    commands[position].Shard = shard;
-                    commands[position].Command = cmd;
+                if (operation is IShardedOperation)
+                    return default;
 
-                    var executor = _shardedContext.RequestExecutors[shard];
-                    var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
-                    commands[position].ContextReleaser = release;
-
-                    var t = executor.ExecuteAsync(cmd, ctx);
-                    commands[position].Task = t;
-
-                    if (typeof(TExecutionMode) == typeof(OneByOneExecution))
-                    {
-                        try
-                        {
-                            await t;
-                        }
-                        catch
-                        {
-                            if (typeof(TFailureMode) == typeof(ThrowOnFailure))
-                                throw;
-                        }
-                    }
-                }
-
-                for (var i = 0; i < position; i++)
-                {
-                    var holder = commands[i];
-                    try
-                    {
-                        await holder.Task;
-                    }
-                    catch (Exception e)
-                    {
-                        if (typeof(TFailureMode) == typeof(ThrowOnFailure))
-                            throw;
-
-                        _exceptions ??= new Dictionary<int, Exception>();
-                        _exceptions[holder.Shard] = e;
-                    }
-                }
-
-                var resultsArray = ArrayPool<TResult>.Shared.Rent(position);
-                try
-                {
-                    for (int i = 0; i < position; i++)
-                    {
-                        resultsArray[i] = commands[i].Command.Result;
-                    }
-
-                    var result = operation.Combine(new Memory<TResult>(resultsArray, 0, position));
-                    if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
-                    {
-                        if (result == null)
-                            return default;
-
-                        var blittable = result as BlittableJsonReaderObject;
-                        return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
-                    }
-                    return result;
-                }
-                finally
-                {
-                    ArrayPool<TResult>.Shared.Return(resultsArray);
-                }
+                return BuildResults(operation, position, commands);
             }
             finally
             {
-                if (commands != null)
+                for (var index = 0; index < position; index++)
                 {
-                    for (var index = 0; index < position; index++)
+                    var command = commands[index];
+                    try
                     {
-                        var command = commands[index];
-                        try
-                        {
-                            command.ContextReleaser?.Dispose();
-                            command.ContextReleaser = null; // we set it to null, since we pool it and might get old values if not cleared
-                        }
-                        catch
-                        {
-                            // ignore
-                        }
+                        command.ContextReleaser?.Dispose();
+                        command.ContextReleaser = null; // we set it to null, since we pool it and might get old values if not cleared
                     }
+                    catch
+                    {
+                        // ignore
+                    }
+                }
 
-                    ArrayPool<CommandHolder<TResult>>.Shared.Return(commands);
+                ArrayPool<CommandHolder<TResult>>.Shared.Return(commands);
+            }
+        }
+
+        private static TCombinedResult BuildResults<TResult, TCombinedResult>(
+            IShardedOperation<TResult, TCombinedResult> operation, 
+            int position, 
+            CommandHolder<TResult>[] commands)
+        {
+            TCombinedResult result;
+            TResult[] resultsArray = null;
+            RavenCommand<TResult>[] cmdResultsArray = null;
+            try
+            {
+                resultsArray = ArrayPool<TResult>.Shared.Rent(position);
+                cmdResultsArray = ArrayPool<RavenCommand<TResult>>.Shared.Rent(position);
+
+                for (int i = 0; i < position; i++)
+                {
+                    cmdResultsArray[i] = commands[i].Command;
+                }
+
+                var commandsMemory = new Memory<RavenCommand<TResult>>(cmdResultsArray, 0, position);
+                var resultsMemory = new Memory<TResult>(resultsArray, 0, position);
+                result = operation.CombineCommands(commandsMemory, resultsMemory);
+
+                if (typeof(TCombinedResult) == typeof(BlittableJsonReaderObject))
+                {
+                    if (result == null)
+                        return default;
+
+                    var blittable = result as BlittableJsonReaderObject;
+                    return (TCombinedResult)(object)blittable.Clone(operation.CreateOperationContext());
+                }
+
+                return result;
+            }
+            finally
+            {
+                if (resultsArray != null)
+                    ArrayPool<TResult>.Shared.Return(resultsArray);
+
+                if (cmdResultsArray != null)
+                    ArrayPool<RavenCommand<TResult>>.Shared.Return(cmdResultsArray);
+            }
+        }
+
+        private async Task<int> ExecuteAsync<TExecutionMode, TFailureMode, TResult, TCombinedResult>(
+            Memory<int> shards, 
+            IShardedOperation<TResult, TCombinedResult> operation, 
+            CommandHolder<TResult>[] commands)
+
+            where TExecutionMode : struct, IExecutionMode 
+            where TFailureMode : struct, IFailureMode
+        {
+            int position;
+            for (position = 0; position < shards.Span.Length; position++)
+            {
+                int shard = shards.Span[position];
+
+                var cmd = operation.CreateCommandForShard(shard);
+                commands[position].Shard = shard;
+                commands[position].Command = cmd;
+
+                var executor = _shardedContext.RequestExecutors[shard];
+                var release = executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);
+                commands[position].ContextReleaser = release;
+
+                var t = executor.ExecuteAsync(cmd, ctx);
+                commands[position].Task = t;
+
+                if (typeof(TExecutionMode) == typeof(OneByOneExecution))
+                {
+                    try
+                    {
+                        await t;
+                    }
+                    catch
+                    {
+                        if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                            throw;
+                    }
                 }
             }
+
+            for (var i = 0; i < position; i++)
+            {
+                var holder = commands[i];
+                try
+                {
+                    await holder.Task;
+                }
+                catch (Exception e)
+                {
+                    if (typeof(TFailureMode) == typeof(ThrowOnFailure))
+                        throw;
+
+                    _exceptions ??= new Dictionary<int, Exception>();
+                    _exceptions[holder.Shard] = e;
+                }
+            }
+
+            return position;
         }
 
         public struct CommandHolder<T>
