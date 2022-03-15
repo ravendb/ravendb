@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -142,6 +143,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
+                    Debug.Assert(e.InnerException is not KeyNotFoundException,
+                        $"Got a '{nameof(KeyNotFoundException)}' while analyzing maintenance stats on node {_nodeTag} : {e}");
+
                     LogMessage($"An error occurred while analyzing maintenance stats on node {_nodeTag}.", e);
                 }
                 finally
@@ -1280,7 +1284,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                 promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
             {
-                LogMessage($"Can't previous stats for node {promotable}", database: dbName);
+                LogMessage($"Can't find previous stats for node {promotable}", database: dbName);
                 return (false, null);
             }
 
@@ -1339,7 +1343,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 LogMessage($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag}/{mentorsEtag})", database: dbName);
 
-                if (msg.Equals(topology.DemotionReasons[promotable]) == false)
+                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                    msg.Equals(demotionReason) == false)
                 {
                     topology.DemotionReasons[promotable] = msg;
                     topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
@@ -1348,14 +1353,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            var indexesCatchedUp = CheckIndexProgress(
+            var indexesCaughtUp = CheckIndexProgress(
                 promotablePrevDbStats.LastEtag,
                 promotablePrevDbStats.LastIndexStats,
                 promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats,
                 out var reason);
 
-            if (indexesCatchedUp)
+            if (indexesCaughtUp)
             {
                 LogMessage($"We try to promote the database '{dbName}' on {promotable} to be a full member", database: dbName);
 

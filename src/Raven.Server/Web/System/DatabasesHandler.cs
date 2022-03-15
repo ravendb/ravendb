@@ -188,13 +188,22 @@ namespace Raven.Server.Web.System
                             name,
                             "Too many clients creations",
                             "There has been a lot of topology updates (more than 20) for the same client id in less than a minute. " +
-                            $"Last one from ({HttpContext.Connection.RemoteIpAddress} as " +
-                            $"{HttpContext.Connection.ClientCertificate?.FriendlyName ?? HttpContext.Connection.ClientCertificate?.Thumbprint ?? "<unsecured>"})" +
+                            $"Last one from ({HttpContext.Connection.RemoteIpAddress} as ({GetCertificateInfo()}) " +
                             "This is usually an indication that you are creating a large number of DocumentStore instance. " +
                             "Are you creating a Document Store per request, instead of using DocumentStore as a singleton? ",
                             AlertType.HighClientCreationRate,
                             NotificationSeverity.Warning
                         ));
+
+                    string GetCertificateInfo()
+                    {
+                        if (HttpContext.Connection.ClientCertificate == null)
+                            return "<unsecured>";
+
+                        return string.IsNullOrEmpty(HttpContext.Connection.ClientCertificate.FriendlyName) == false
+                            ? HttpContext.Connection.ClientCertificate.FriendlyName
+                            : HttpContext.Connection.ClientCertificate.Thumbprint;
+                    }
                 }
             }
         }
