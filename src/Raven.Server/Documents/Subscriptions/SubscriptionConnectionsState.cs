@@ -86,9 +86,9 @@ namespace Raven.Server.Documents.Subscriptions
                 }
 
 
-            if (connection.Shard != null)
+            if (string.IsNullOrEmpty(connection.ShardName) == false)
             {
-                if (connection.SubscriptionState.NextBatchStartingPointChangeVectors == null || connection.SubscriptionState.NextBatchStartingPointChangeVectors.TryGetValue(connection.Shard.ShardName, out string cv) == false)
+                if (connection.SubscriptionState.NextBatchStartingPointChangeVectors == null || connection.SubscriptionState.NextBatchStartingPointChangeVectors.TryGetValue(connection.ShardName, out string cv) == false)
                 {
                     LastChangeVectorSent = null;
                 }
@@ -199,12 +199,13 @@ namespace Raven.Server.Documents.Subscriptions
 
         public Task AcknowledgeBatch(SubscriptionConnection connection, long batchId, List<DocumentRecord> addDocumentsToResend)
         {
-            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(connection.Shard,
+            return connection.TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
                 SubscriptionId,
                 SubscriptionName,
                 connection.LastSentChangeVectorInThisConnection ?? nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                 batchId,
-                addDocumentsToResend);
+                addDocumentsToResend,
+                connection.ShardName);
         }
 
         public long GetLastEtagSent()

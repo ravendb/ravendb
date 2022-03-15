@@ -18,7 +18,7 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class RecordBatchSubscriptionDocumentsCommand :  UpdateValueForShardCommand
+    public class RecordBatchSubscriptionDocumentsCommand :  UpdateValueForDatabaseCommand
     {
         public long SubscriptionId;
         public string SubscriptionName;
@@ -29,6 +29,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public List<DocumentRecord> Documents;
         public List<string> Deleted;
         public List<RevisionRecord> Revisions;
+        public string ShardName;
 
         public RecordBatchSubscriptionDocumentsCommand()
         {
@@ -86,7 +87,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(existingValue);
 
-                var topology = ShardName == null ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
+                var topology = string.IsNullOrEmpty(ShardName) ? record.Topology : record.Shards[ShardHelper.TryGetShardIndex(ShardName)];
                 var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
                 var appropriateNode = topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, lastResponsibleNode);
                 if (appropriateNode == null && record.DeletionInProgress.ContainsKey(NodeTag))
@@ -211,7 +212,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(PreviouslyRecordedChangeVector)] = PreviouslyRecordedChangeVector;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
-            if(Documents != null)
+            json[nameof(ShardName)] = ShardName;
+            if (Documents != null)
                 json[nameof(Documents)] = new DynamicJsonArray(Documents);
             if(Revisions != null)
                 json[nameof(Revisions)] = new DynamicJsonArray(Revisions);
