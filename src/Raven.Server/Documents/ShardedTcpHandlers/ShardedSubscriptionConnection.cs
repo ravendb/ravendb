@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.ShardedTcpHandlers
 
             var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
             using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var buffer = new MemoryStream())
+            using (context.CheckoutMemoryStream(out var buffer))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, buffer))
             {
                 foreach (var doc in batch._batchFromServer.Messages)
