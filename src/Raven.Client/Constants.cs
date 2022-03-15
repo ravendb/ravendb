@@ -20,6 +20,17 @@ namespace Raven.Client
             }
         }
 
+        internal class QueryString
+        {
+            private QueryString()
+            {
+            }
+
+            public const string NodeTag = "nodeTag";
+
+            public const string ShardNumber = "shardNumber";
+        }
+
         public class Headers
         {
             private Headers()

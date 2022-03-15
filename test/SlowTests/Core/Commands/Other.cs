@@ -36,7 +36,7 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanGetStatistics(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -50,7 +50,21 @@ namespace SlowTests.Core.Commands
         }
 
         [Theory]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public async Task GetStatistics_ShouldThrow_ForShardedDatabase(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new GetStatisticsOperation()));
+                Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
+
+                e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new GetDetailedStatisticsOperation()));
+                Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
+            }
+        }
+
+        [Theory]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanGetDatabaseStatistics(Options options)
         {
             using (var store = GetDocumentStore(options))
