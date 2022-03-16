@@ -1061,7 +1061,7 @@ namespace SlowTests.MailingList
                                       AnyResult = e.DictionaryOfIntegers.Any(),
                                       AnyWithPredicateResult = e.DictionaryOfIntegers.Any(x => x.Value > 1),
 
-                                      SkipResult = e.DictionaryOfIntegers.Skip(1).ToDictionary(x=>x.Key, x=>x.Value),
+                                      SkipResult = e.DictionaryOfIntegers.Skip(1).ToDictionary(x => x.Key, x => x.Value),
                                       SkipLastResult = e.DictionaryOfIntegers.SkipLast(1).ToDictionary(x => x.Key, x => x.Value),
                                       TakeResult = e.DictionaryOfIntegers.Take(3).ToDictionary(x => x.Key, x => x.Value),
                                       TakeLastResult = e.DictionaryOfIntegers.TakeLast(3).ToDictionary(x => x.Key, x => x.Value),
@@ -1076,7 +1076,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class Visitor
+        private class Visitor
         {
             public string Id { get; set; }
             public Dictionary<int, int> DictionaryOfIntegers { get; set; }
@@ -1085,14 +1085,14 @@ namespace SlowTests.MailingList
             public Dictionary<int, int> DictionaryOfIntegersToExcept { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public Dictionary<DateTime, int> LoginCountByDate { get; set; }
             public List<decimal> ListOfDecimals { get; set; }
         }
 
-        public class Employee
+        private class Employee
         {
             public string Id { get; set; }
             public Dictionary<DateTime, int> LoginCountByDate { get; set; }

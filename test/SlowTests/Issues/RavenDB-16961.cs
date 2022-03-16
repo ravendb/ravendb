@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Graph;
 using FastTests.Server.Replication;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations;
@@ -13,6 +12,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -121,7 +121,7 @@ namespace SlowTests.Issues
                 IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
-                
+
                 var val = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))

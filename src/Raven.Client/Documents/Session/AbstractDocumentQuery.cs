@@ -7,7 +7,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -38,7 +37,7 @@ namespace Raven.Client.Documents.Session
     {
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
         private const string DefaultParameterPrefix = "p";
-        private static readonly List<string> _pregeneratedParametersWithDefaultPrefix = Enumerable.Range(0, 128).Select(i => $"{DefaultParameterPrefix}{i.ToInvariantString()}").ToList(); 
+        private static readonly List<string> _pregeneratedParametersWithDefaultPrefix = Enumerable.Range(0, 128).Select(i => $"{DefaultParameterPrefix}{i.ToInvariantString()}").ToList();
         protected QueryOperator DefaultOperator;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -59,7 +58,7 @@ namespace Raven.Client.Documents.Session
         /// Whether to negate the next operation in Filter
         /// </summary>
         protected bool NegateFilter;
-        
+
         /// <summary>
         /// The index to query
         /// </summary>
@@ -68,19 +67,19 @@ namespace Raven.Client.Documents.Session
         public string CollectionName { get; }
 
         private int _currentClauseDepth;
-        
+
         protected string QueryRaw;
-        
+
         internal bool IsFilterActive { get { return FilterModeStack.Any() && FilterModeStack.Peek() is true; } }
-        
-        protected Stack<bool> FilterModeStack = new ();
-        
+
+        protected Stack<bool> FilterModeStack = new();
+
         protected Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
 
         protected bool IsGroupBy;
-        
+
 
         /// <summary>
         /// The session for this query
@@ -110,11 +109,7 @@ namespace Raven.Client.Documents.Session
 
         protected LinkedList<QueryToken> OrderByTokens = new LinkedList<QueryToken>();
 
-        protected LinkedList<QueryToken> WithTokens = new LinkedList<QueryToken>();
-
         protected LinkedList<QueryToken> FilterTokens = new();
-
-        protected QueryToken GraphRawQuery { get; private set; }
 
         /// <summary>
         ///   which record to start reading from
@@ -127,7 +122,7 @@ namespace Raven.Client.Documents.Session
         /// Limits filter clause.
         /// </summary>
         protected int? FilterLimit;
-        
+
         /// <summary>
         /// Timeout for this query
         /// </summary>
@@ -137,7 +132,7 @@ namespace Raven.Client.Documents.Session
         /// Should we wait for non stale results
         /// </summary>
         protected bool TheWaitForNonStaleResults;
-        
+
         /// <summary>
         /// Holds the query stats
         /// </summary>
@@ -234,7 +229,6 @@ namespace Raven.Client.Documents.Session
         /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
         public void WaitForNonStaleResults(TimeSpan? waitTimeout = null)
         {
-            //Graph queries may set this property multiple times
             if (TheWaitForNonStaleResults)
             {
                 if (Timeout == null || waitTimeout.HasValue && Timeout < waitTimeout.Value)
@@ -347,11 +341,6 @@ namespace Raven.Client.Documents.Session
             if (QueryRaw != null)
                 throw new InvalidOperationException(
                     "RawQuery was called, cannot modify this query by calling on operations that would modify the query (such as Where, Select, OrderBy, GroupBy, etc)");
-        }
-
-        public void GraphQuery(string query)
-        {
-            GraphRawQuery = new GraphQueryToken(query);
         }
 
         public void RawQuery(string query)
@@ -740,7 +729,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
             AssertMethodIsCurrentlySupported(nameof(WhereIn));
-            
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             var tokens = GetCurrentWhereTokens();
@@ -954,36 +943,36 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void AndAlso()
         {
-            AndAlso(wrapPreviousQueryClauses:false);
+            AndAlso(wrapPreviousQueryClauses: false);
         }
-        
+
         /// <summary>
         ///   Wraps previous query with clauses and adds an AND operator to the given query
         /// </summary>
         public void AndAlso(bool wrapPreviousQueryClauses)
         {
             var tokens = GetCurrentWhereTokens();
-            
+
             if (tokens.Last == null)
                 return;
 
             if (tokens.Last.Value is QueryOperatorToken)
                 throw new InvalidOperationException("Cannot add AND, previous token was already an operator token.");
-            
+
             if (wrapPreviousQueryClauses == false)
             {
                 tokens.AddLast(QueryOperatorToken.And);
             }
             else
-            { 
+            {
                 tokens.AddFirst(OpenSubclauseToken.Create());
                 tokens.AddLast(CloseSubclauseToken.Create());
                 tokens.AddLast(QueryOperatorToken.And);
             }
         }
-        
-        
-        
+
+
+
         /// <summary>
         ///   Add an OR to the query
         /// </summary>
@@ -1013,13 +1002,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 _modeStack = modeStack;
                 _modeStack.Push(@on);
             }
-            
+
             public void Dispose()
             {
                 _modeStack.Pop();
             }
         }
-        
+
         /// <summary>
         ///   Specifies a boost weight to the last where clause.
         ///   The higher the boost factor, the more relevant the term will be.
@@ -1103,7 +1092,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void Proximity(int proximity)
         {
             AssertMethodIsCurrentlySupported(nameof(Proximity));
-            
+
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null || whereToken.WhereOperator != WhereOperator.Search)
@@ -1251,15 +1240,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var queryText = new StringBuilder();
 
             BuildDeclare(queryText);
-            if (GraphRawQuery != null)
-            {
-                BuildWith(queryText);
-                BuildGraphQuery(queryText);
-            }
-            else
-            {
-                BuildFrom(queryText);
-            }
+            BuildFrom(queryText);
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
@@ -1267,26 +1248,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             BuildFilter(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
-            
+
             if (compatibilityMode == false)
                 BuildPagination(queryText);
 
             return queryText.ToString();
-        }
-
-        private void BuildGraphQuery(StringBuilder queryText)
-        {
-            GraphRawQuery.WriteTo(queryText);
-        }
-
-        private void BuildWith(StringBuilder queryText)
-        {
-            //TODO: need to aggragate with parameters into this instance parameter list, assert and strip parameters from with clauses
-            foreach (var with in WithTokens)
-            {
-                with.WriteTo(queryText);
-                queryText.AppendLine();
-            }
         }
 
         /// <inheritdoc />
@@ -1601,7 +1567,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             writer
                 .Append(" filter ");
-            
+
             var token = FilterTokens.First;
             while (token != null)
             {
@@ -1612,7 +1578,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 token = token.Next;
             }
         }
-        
+
         private void BuildOrderBy(StringBuilder writer)
         {
             if (OrderByTokens.Count == 0)
@@ -1620,7 +1586,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             writer
                 .Append(" order by ");
-                
+
             var token = OrderByTokens.First;
             while (token != null)
             {
@@ -1860,7 +1826,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             if (IsFilterActive == false)
                 return;
-            
+
             throw new InvalidQueryException(
                 $"{methodName} is currently unsupported for {nameof(LinqExtensions.Filter)}. If you want to use {methodName} in where method you have to put it before \"Filter\".");
         }
@@ -1870,7 +1836,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             if (IsFilterActive)
                 return FilterTokens;
-            
+
             if (_isInMoreLikeThis == false)
                 return WhereTokens;
 
@@ -1920,7 +1886,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     SelectTokens.AddLast(fieldsToFetch);
             }
         }
-        
+
         /// <summary>
         ///   Adds an alias to the FieldName of each where token
         /// </summary>
@@ -1966,7 +1932,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token.AddAliasToPath(fromAlias);
                 }
             }
-            
+
             return fromAlias;
         }
 

@@ -25,7 +25,6 @@ namespace Raven.Server.Documents.Queries
     {
         private const int NumberOfRetries = 3;
 
-        private readonly GraphQueryRunner _graph;
         private readonly StaticIndexQueryRunner _static;
         private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
@@ -38,7 +37,6 @@ namespace Raven.Server.Documents.Queries
                 ? (AbstractQueryRunner)new InvalidQueryRunner(database)
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
-            _graph = new GraphQueryRunner(database);
             _currentlyRunningQueries = new ConcurrentSet<ExecutingQueryInfo>();
         }
 
@@ -55,8 +53,6 @@ namespace Raven.Server.Documents.Queries
 
                 return _collection;
             }
-            if (query.Metadata.IsGraph)
-                return _graph;
 
             return _static;
         }
@@ -89,7 +85,7 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
-                    
+
                     await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
@@ -264,7 +260,7 @@ namespace Raven.Server.Documents.Queries
                         throw;
 
                     lastException = e;
-                    
+
                     WaitForIndexBeingLikelyReplacedDuringQuery().GetAwaiter().GetResult();
                 }
             }
@@ -457,7 +453,7 @@ namespace Raven.Server.Documents.Queries
             var executingQueryInfo = new ExecutingQueryInfo(queryStartTime, name, query, queryId, isStreaming, token);
 
             _currentlyRunningQueries.TryAdd(executingQueryInfo);
-            
+
             return new QueryMarker(this, executingQueryInfo);
         }
 

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Graph;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -13,6 +12,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

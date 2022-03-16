@@ -68,13 +68,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public IAsyncGraphQuery<T> AsyncGraphQuery<T>(string query)
-        {
-            var documentQuery = new AsyncDocumentQuery<T>(this, null, null, false);
-            documentQuery.GraphQuery(query);
-            return documentQuery;
-        }
-
         /// <summary>
         /// Get the accessor for advanced operations
         /// </summary>

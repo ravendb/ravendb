@@ -4,7 +4,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
@@ -21,7 +20,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// A query against a Raven index
     /// </summary>
-    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IGraphQuery<T>, IDocumentQueryGenerator, IAbstractDocumentQueryImpl<T>
+    public partial class DocumentQuery<T> : AbstractDocumentQuery<T, DocumentQuery<T>>, IDocumentQuery<T>, IRawDocumentQuery<T>, IDocumentQueryGenerator, IAbstractDocumentQueryImpl<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
@@ -122,24 +121,6 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
 
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
-        {
-            UsingDefaultOperator(queryOperator);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
-        {
-            WaitForNonStaleResults(waitTimeout);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AddParameter(string name, object value)
-        {
-            AddParameter(name, value);
-            return this;
-        }
-
         /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
@@ -197,25 +178,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
-        {
-            AfterStreamExecuted(action);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
-        {
-            BeforeQueryExecuted(beforeQueryExecuted);
-            return this;
-        }
-
         IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
-        {
-            AfterQueryExecuted(action);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
             AfterQueryExecuted(action);
             return this;
@@ -316,24 +279,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Skip(int count)
-        {
-            Skip(count);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Statistics(out QueryStatistics stats)
-        {
-            Statistics(out stats);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Take(int count)
-        {
-            Take(count);
-            return this;
-        }
-
         /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Statistics(out QueryStatistics stats)
         {
@@ -359,24 +304,6 @@ namespace Raven.Client.Documents.Session
         IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.NoCaching()
-        {
-            NoCaching();
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.NoTracking()
-        {
-            NoTracking();
-            return this;
-        }
-
-        IGraphQuery<T> IQueryBase<T, IGraphQuery<T>>.Timings(out QueryTimings timings)
-        {
-            Timings(out timings);
             return this;
         }
 
@@ -732,14 +659,14 @@ namespace Raven.Client.Documents.Session
             WhereRegex(fieldName, pattern);
             return this;
         }
-        
+
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();
             return this;
         }
-        
+
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso(bool wrapPreviousQueryClauses)
         {
@@ -927,82 +854,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IGraphQuery<T> WithEdges(string alias, string edgeSelector, string query)
-        {
-            WithTokens.AddLast(new WithEdgesToken(alias, edgeSelector, query));
-            return this;
-        }
-
-        public IGraphQuery<T> With<TOther>(string alias, string rawQuery)
-        {
-            return WithInternal(alias, (DocumentQuery<TOther>)Session.Advanced.RawQuery<TOther>(rawQuery));
-        }
-
-        public IGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query)
-        {
-            var queryInspector = (RavenQueryInspector<TOther>)query;
-            var docQuery = (DocumentQuery<TOther>)queryInspector.GetDocumentQuery(x => x.ParameterPrefix = $"w{WithTokens.Count}p");
-            return WithInternal(alias, docQuery);
-        }
-
-        public IGraphQuery<T> With<TOther>(string alias, Func<IDocumentQueryBuilder, IDocumentQuery<TOther>> queryFactory)
-        {
-            var docQuery = (DocumentQuery<TOther>)queryFactory(new DocumentQueryBuilder(Session, $"w{WithTokens.Count}p"));
-            return WithInternal(alias, docQuery);
-        }
-
-        private class DocumentQueryBuilder : IDocumentQueryBuilder
-        {
-            private readonly IDocumentSession _session;
-            private readonly string _parameterPrefix;
-
-            public DocumentQueryBuilder(IDocumentSession session, string parameterPrefix)
-            {
-                _session = session;
-                _parameterPrefix = parameterPrefix;
-            }
-
-            public IDocumentQuery<T1> DocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
-            {
-                var query = (DocumentQuery<T1>)_session.Advanced.DocumentQuery<T1, TIndexCreator>();
-                query.ParameterPrefix = _parameterPrefix;
-                return query;
-            }
-
-            public IDocumentQuery<T1> DocumentQuery<T1>(string indexName = null, string collectionName = null, bool isMapReduce = false)
-            {
-                var query = (DocumentQuery<T1>)_session.Advanced.DocumentQuery<T1>(indexName, collectionName, isMapReduce);
-                query.ParameterPrefix = _parameterPrefix;
-                return query;
-            }
-        }
-
-        private IGraphQuery<T> WithInternal<TOther>(string alias, DocumentQuery<TOther> docQuery)
-        {
-            if (docQuery.SelectTokens?.Count > 0)
-            {
-                throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
-            }
-
-            foreach (var keyValue in docQuery.QueryParameters)
-            {
-                QueryParameters.Add(keyValue.Key, keyValue.Value);
-            }
-
-            WithTokens.AddLast(new WithToken(alias, docQuery.ToString()));
-
-            if (docQuery.TheWaitForNonStaleResults)
-            {
-                TheWaitForNonStaleResults = true;
-                if (Timeout == null || Timeout < docQuery.Timeout)
-                {
-                    Timeout = docQuery.Timeout;
-                }
-            }
-
-            return this;
-        }
-
         /// <inheritdoc />
         T IDocumentQueryBase<T>.First()
         {
@@ -1177,7 +1028,7 @@ namespace Raven.Client.Documents.Session
                 WhereTokens = new LinkedList<QueryToken>(WhereTokens),
                 OrderByTokens = new LinkedList<QueryToken>(OrderByTokens),
                 GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
-                FilterTokens =  new LinkedList<QueryToken>(FilterTokens),
+                FilterTokens = new LinkedList<QueryToken>(FilterTokens),
                 QueryParameters = new Parameters(QueryParameters),
                 FilterModeStack = new Stack<bool>(FilterModeStack),
                 Start = Start,

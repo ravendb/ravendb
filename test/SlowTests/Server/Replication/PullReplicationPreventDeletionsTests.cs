@@ -40,14 +40,18 @@ namespace SlowTests.Server.Replication
 
             using var hubStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => hubDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
             });
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
             });
-            
+
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
 
@@ -59,11 +63,13 @@ namespace SlowTests.Server.Replication
             }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pullRepHub",
-                new ReplicationHubAccess {Name = "hubAccess1", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))}));
+                new ReplicationHubAccess { Name = "hubAccess1", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)) }));
 
             await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
-                Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
             }));
 
             await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
@@ -77,18 +83,18 @@ namespace SlowTests.Server.Replication
             using (var s = sinkStore.OpenAsyncSession())
             {
 
-                dynamic user1 = new {Source = "Sink"};
+                dynamic user1 = new { Source = "Sink" };
                 await s.StoreAsync(user1, "users/insink/1");
-                
-                dynamic user2 = new {Source = "Sink"};
+
+                dynamic user2 = new { Source = "Sink" };
                 await s.StoreAsync(user2, "users/insink/2");
-                
+
                 await s.SaveChangesAsync();
             }
 
             using (var s = hubStore.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Source = "Hub"}, "users/inhub/1");
+                await s.StoreAsync(new { Source = "Hub" }, "users/inhub/1");
                 await s.SaveChangesAsync();
             }
 
@@ -158,12 +164,16 @@ namespace SlowTests.Server.Replication
 
             using var hubStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => hubDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
             });
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
             });
 
             //setup expiration
@@ -174,15 +184,18 @@ namespace SlowTests.Server.Replication
 
             await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
-                Name = "pullRepHub", Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink
+                Name = "pullRepHub",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink
             }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pullRepHub",
-                new ReplicationHubAccess {Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))}));
+                new ReplicationHubAccess { Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)) }));
 
             await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
-                Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
             }));
 
             await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
@@ -195,11 +208,11 @@ namespace SlowTests.Server.Replication
 
             using (var s = sinkStore.OpenAsyncSession())
             {
-                dynamic user1 = new {Source = "Sink"};
+                dynamic user1 = new { Source = "Sink" };
                 await s.StoreAsync(user1, "users/insink/1");
                 s.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
-                dynamic user2 = new {Source = "Sink"};
+                dynamic user2 = new { Source = "Sink" };
                 await s.StoreAsync(user2, "users/insink/2");
                 s.Advanced.GetMetadataFor(user2)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
@@ -208,7 +221,7 @@ namespace SlowTests.Server.Replication
 
             using (var s = hubStore.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Source = "Hub"}, "users/inhub/1");
+                await s.StoreAsync(new { Source = "Hub" }, "users/inhub/1");
                 await s.SaveChangesAsync();
             }
 
@@ -262,12 +275,16 @@ namespace SlowTests.Server.Replication
 
             using var hubStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => hubDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => hubDatabase
             });
 
             using var sinkStore = GetDocumentStore(new RavenTestBase.Options
             {
-                AdminCertificate = adminCert, ClientCertificate = adminCert, ModifyDatabaseName = x => sinkDatabase
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = x => sinkDatabase
             });
 
             //setup expiration
@@ -284,11 +301,13 @@ namespace SlowTests.Server.Replication
             }));
 
             await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pullRepHub",
-                new ReplicationHubAccess {Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert))}));
+                new ReplicationHubAccess { Name = "hubAccess", CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)) }));
 
             await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
-                Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                Database = hubStore.Database,
+                Name = hubStore.Database + "ConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
             }));
 
             await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
@@ -301,11 +320,11 @@ namespace SlowTests.Server.Replication
 
             using (var s = sinkStore.OpenAsyncSession())
             {
-                dynamic user1 = new {Source = "Sink"};
+                dynamic user1 = new { Source = "Sink" };
                 await s.StoreAsync(user1, "users/insink/1");
                 s.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
-                dynamic user2 = new {Source = "Sink"};
+                dynamic user2 = new { Source = "Sink" };
                 await s.StoreAsync(user2, "users/insink/2");
                 s.Advanced.GetMetadataFor(user2)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
 
@@ -314,7 +333,7 @@ namespace SlowTests.Server.Replication
 
             using (var s = hubStore.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Source = "Hub"}, "users/inhub/1");
+                await s.StoreAsync(new { Source = "Hub" }, "users/inhub/1");
                 await s.SaveChangesAsync();
             }
 
@@ -391,17 +410,17 @@ namespace SlowTests.Server.Replication
 
             //create artificial doc in sink
             var artificialId = "";
-            
+
             await new Users_ByName_Count().ExecuteAsync(sinkStore);
-            
+
             using (var s = sinkStore.OpenAsyncSession())
             {
                 User user1 = new() { Name = "stav", Source = "Sink" };
                 await s.StoreAsync(user1, "users/insink/1");
-                
+
                 User user2 = new() { Name = "stav", Source = "Sink" };
                 await s.StoreAsync(user2, "users/insink/2");
-                
+
                 await s.SaveChangesAsync();
             }
 
@@ -535,13 +554,13 @@ namespace SlowTests.Server.Replication
             //create doc in sink
             using (var s = sinkStore.OpenAsyncSession())
             {
-                dynamic user1 = new User {Source = "Sink"};
+                dynamic user1 = new User { Source = "Sink" };
                 await s.StoreAsync(user1, "users/insink/1");
                 s.Advanced.GetMetadataFor(user1)[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.AddMinutes(10);
-                
+
                 await s.SaveChangesAsync();
             }
-            
+
             //create revision
             using (var s = sinkStore.OpenAsyncSession())
             {
@@ -556,7 +575,7 @@ namespace SlowTests.Server.Replication
                 await s.StoreAsync(new { Source = "Hub" }, "users/inhub/1");
                 await s.SaveChangesAsync();
             }
-            
+
             Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
 
             //make sure hub got both docs and expires gets deleted
@@ -565,7 +584,7 @@ namespace SlowTests.Server.Replication
                 //check hub got both docs
                 var doc1 = await h.LoadAsync<dynamic>("users/insink/1");
                 Assert.NotNull(doc1);
-                
+
                 //check expired does not exist in users/insink/1
                 IMetadataDictionary metadata = h.Advanced.GetMetadataFor(doc1);
                 Assert.False(metadata?.ContainsKey(Constants.Documents.Metadata.Expires));
@@ -608,9 +627,11 @@ namespace SlowTests.Server.Replication
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
-        public class User
+        private class User
         {
+#pragma warning disable CS0649
             public string Id;
+#pragma warning restore CS0649
             public string Name;
             public string Source;
         }

@@ -7,7 +7,6 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public abstract class QueryVisitor
     {
-
         public void Visit(Query q)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -20,9 +19,6 @@ namespace Raven.Server.Documents.Queries.AST
             if (q.From.From != null)
                 VisitFromClause(q.From.From, q.From.Alias, q.From.Filter, q.From.Index);
 
-            if (q.GraphQuery != null)
-                VisitGraph(q.GraphQuery);
-
             if (q.GroupBy != null)
             {
                 VisitGroupByExpression(q.GroupBy);
@@ -32,12 +28,12 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 VisitWhereClause(q.Where);
             }
-            
+
             if (q.Filter != null)
             {
                 VisitFilterClause(q.Filter);
             }
-            
+
             if (q.OrderBy != null)
             {
                 VisitOrderBy(q.OrderBy);
@@ -84,68 +80,14 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(filter);
         }
 
-        public virtual void VisitMatchExpression(QueryExpression expr)
-        {
-            VisitExpression(expr);
-        }
-
-        public void VisitGraph(GraphQuery q)
-        {
-            VisitWithClauses(q.WithDocumentQueries);
-
-            VisitWithEdgePredicates(q.WithEdgePredicates);
-
-            if (q.MatchClause != null)
-                VisitMatchExpression(q.MatchClause);
-
-            if (q.Where != null)
-                VisitExpression(q.Where);
-
-            if (q.Include != null)
-                VisitInclude(q.Include);
-
-            if (q.OrderBy != null)
-                VisitOrderBy(q.OrderBy);
-
-            if (q.DeclaredFunctions != null)
-                VisitDeclaredFunctions(q.DeclaredFunctions);
-
-            if (q.SelectFunctionBody.FunctionText != null)
-                VisitSelectFunctionBody(q.SelectFunctionBody.FunctionText);
-        }
-
-        public virtual void VisitWithClauses(Dictionary<StringSegment, (bool isImplicitAlias, Query withQuery)> expression)
-        {
-            foreach (var withClause in expression)
-                Visit(withClause.Value.withQuery);
-        }
-        public virtual void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
-        {
-            foreach (var withEdgesClause in expression)
-                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
-        }
-
-        public virtual void VisitWithEdgesExpression(string alias, WithEdgesExpression expression)
-        {
-            if (expression.Where != null)
-                VisitWhereClause(expression.Where);
-
-            if (expression.OrderBy != null)
-                VisitOrderBy(expression.OrderBy);
-        }
-
-        public virtual void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
-        {
-        }
-
         public virtual void VisitLimit(ValueExpression limit)
         {
-            
+
         }
 
         public virtual void VisitOffset(ValueExpression offset)
         {
-            
+
         }
 
         public virtual void VisitInclude(List<QueryExpression> includes)
@@ -158,12 +100,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitUpdate(StringSegment update)
         {
-            
+
         }
 
         public virtual void VisitSelectFunctionBody(StringSegment func)
         {
-            
+
         }
 
         public virtual void VisitNegatedExpression(NegatedExpression expr)
@@ -264,9 +206,6 @@ namespace Raven.Server.Documents.Queries.AST
                 case ExpressionType.Negated:
                     VisitNegatedExpression((NegatedExpression)expr);
                     break;
-                case ExpressionType.Pattern:
-                    VisitPatternMatchElementExpression((PatternMatchElementExpression)expr);
-                    break;
                 default:
                     GetValueThrowInvalidExprType(expr);
                     break;
@@ -283,7 +222,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitValue(ValueExpression expr)
         {
-            
+
         }
 
         public virtual void VisitIn(InExpression expr)
@@ -303,12 +242,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitField(FieldExpression field)
         {
-            
+
         }
 
         public virtual void VisitTrue()
         {
-            
+
         }
 
         private static void GetValueThrowInvalidExprType(QueryExpression expr)
@@ -327,17 +266,17 @@ namespace Raven.Server.Documents.Queries.AST
 
         public virtual void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
-            
+
         }
 
         public virtual void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
-            
+
         }
 
         public virtual void VisitDeclaredFunction(StringSegment name, string func, DeclaredFunction.FunctionType type)
         {
-            
+
         }
     }
 }

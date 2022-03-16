@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -23,6 +22,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -138,15 +138,15 @@ namespace SlowTests.Cluster
             using var leader = GetNewServer();
             using var follower = GetNewServer();
             using (var store = GetDocumentStore(new Options
-                   {
-                       Server = leader
-                   }))
+            {
+                Server = leader
+            }))
             {
                 var expiry = DateTime.Now.AddMinutes(2);
                 var compareExchanges = new Dictionary<string, User>();
                 await AddCompareExchangesWithExpire(count, compareExchanges, store, expiry);
                 await AssertCompareExchanges(compareExchanges, store, expiry);
-                
+
                 using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leader.WebUrl, null))
                 using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
                 {
@@ -158,12 +158,12 @@ namespace SlowTests.Cluster
 
 
                 using (var fStore = GetDocumentStore(new Options
-                       {
-                           Server = follower,
-                           CreateDatabase = false,
-                           ModifyDatabaseName = _ => store.Database,
-                           ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
-                       }))
+                {
+                    Server = follower,
+                    CreateDatabase = false,
+                    ModifyDatabaseName = _ => store.Database,
+                    ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+                }))
                 {
                     await AssertCompareExchanges(compareExchanges, store, expiry);
 
@@ -195,9 +195,9 @@ namespace SlowTests.Cluster
             var nodesCount = 7;
             using var leader = GetNewServer();
             using (var store = GetDocumentStore(new Options
-                   {
-                       Server = leader
-                   }))
+            {
+                Server = leader
+            }))
             {
                 var now = DateTime.UtcNow;
                 var expiry = now.AddMinutes(2);

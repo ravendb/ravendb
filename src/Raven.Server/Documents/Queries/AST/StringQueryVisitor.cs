@@ -8,7 +8,6 @@ namespace Raven.Server.Documents.Queries.AST
     public class StringQueryVisitor : QueryVisitor
     {
         protected readonly StringBuilder _sb;
-        private int _indent;
 
         public StringQueryVisitor(StringBuilder sb)
         {
@@ -65,7 +64,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (isDistinct)
                 _sb.Append("DISTINCT ");
-            
+
             VisitExpressionList(select);
             _sb.AppendLine();
         }
@@ -136,7 +135,7 @@ namespace Raven.Server.Documents.Queries.AST
             base.VisitWhereClause(where);
             _sb.AppendLine();
         }
-        
+
         public override void VisitFilterClause(QueryExpression where)
         {
             EnsureSpace();
@@ -204,7 +203,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (expr.Value == ValueTokenType.Parameter)
                 _sb.Append("$");
-            
+
             _sb.Append(expr.Token.Value.Replace("'", "\\'"));
 
             if (expr.Value == ValueTokenType.String)
@@ -259,10 +258,6 @@ namespace Raven.Server.Documents.Queries.AST
             if (_sb.Length != 0 && _sb[_sb.Length - 1] != '\n')
             {
                 _sb.AppendLine();
-            }
-            for (int i = 0; i < _indent; i++)
-            {
-                _sb.Append("    ");
             }
         }
 
@@ -351,10 +346,10 @@ namespace Raven.Server.Documents.Queries.AST
             }
             return false;
         }
-        
+
         public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
-             EnsureLine();
+            EnsureLine();
             _sb.Append("FROM ");
 
             if (index)
@@ -365,9 +360,9 @@ namespace Raven.Server.Documents.Queries.AST
             if (filter != null)
             {
                 _sb.Append("(");
-                
+
                 VisitExpression(filter);
-                
+
                 _sb.Append(")");
             }
 
@@ -377,83 +372,6 @@ namespace Raven.Server.Documents.Queries.AST
 
                 _sb.Append("AS ").Append(alias);
             }
-        }
-
-        public override void VisitWithClauses(Dictionary<StringSegment, (bool isImplicitAlias, Query withQuery)> expression)
-        {
-            foreach (var withClause in expression)
-            {
-                EnsureLine();
-                _sb.Append("WITH {");
-                _indent++;
-                Visit(withClause.Value.withQuery);
-                _indent--;
-                EnsureLine();
-                _sb.Append("} AS ").Append(withClause.Key.Value);
-                _sb.AppendLine();
-            }
-        }
-
-        public override void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
-        {
-            foreach (var withEdgesClause in expression)
-            {
-                EnsureLine();
-                
-                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
-                
-            }
-        }
-
-        public override void VisitWithEdgesExpression(string alias, WithEdgesExpression withEdgesClause)
-        {
-            if ((withEdgesClause.Path == null || withEdgesClause.Path.Compound.Count == 0) &&
-                withEdgesClause.Where == null && withEdgesClause.OrderBy == null)
-                return;
-
-            EnsureSpace();
-
-            _sb.Append("WITH EDGES ");
-            if (withEdgesClause.Path != null)
-            {
-                _sb.Append("(");
-                VisitExpression(withEdgesClause.Path);
-                _sb.Append(")");
-            }
-
-            if (withEdgesClause.Where != null ||
-                (withEdgesClause.OrderBy != null && withEdgesClause.OrderBy.Count != 0))
-            {
-                _sb.Append(" {");
-                _indent++;
-                EnsureLine();
-
-                base.VisitWithEdgesExpression(alias, withEdgesClause);
-
-                _indent--;
-                _sb.Append("}");
-
-            }
-            if (string.IsNullOrEmpty(alias) == false)
-                _sb.Append(" AS ").Append(alias);
-
-            _sb.AppendLine();
-        }
-
-        public override void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
-        {
-            EnsureSpace();
-            _sb.Append(elementExpression.GetText());
-        }
-
-        public override void VisitMatchExpression(QueryExpression expr)
-        {
-            EnsureLine();
-            _sb.Append("MATCH ");
-
-            base.VisitMatchExpression(expr);
-
-            _sb.AppendLine();
         }
     }
 }

@@ -8,10 +8,10 @@ using System;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 using FastTests;
-using FastTests.Graph;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.ServerWide.Operations;
+using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 

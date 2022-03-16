@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using FastTests.Graph;
 using Raven.Client.Documents;
 using Raven.Server.Utils;
+using SlowTests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
@@ -62,7 +62,7 @@ namespace StressTests.Server.Encryption
 #pragma warning restore CA1416 // Validate platform compatibility
                 }
             }
-            
+
         }
 
         private static async Task TrySavingDocument(DocumentStore store, int? replicas = null)

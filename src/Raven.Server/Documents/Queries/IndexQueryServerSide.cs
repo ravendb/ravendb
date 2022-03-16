@@ -85,8 +85,6 @@ namespace Raven.Server.Documents.Queries
             Metadata = metadata;
         }
 
-        public bool IsPartOfGraphQuery;
-
         public string ServerSideQuery => Metadata.Query.ToString();
 
         public DocumentFields? DocumentFields;
@@ -165,7 +163,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType, database);
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, addSpatialProperties, queryType);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 

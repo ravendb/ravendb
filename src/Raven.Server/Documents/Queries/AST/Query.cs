@@ -1,13 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Raven.Client;
-using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.TimeSeries;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -15,7 +10,6 @@ namespace Raven.Server.Documents.Queries.AST
     public class Query
     {
         public bool IsDistinct;
-        public GraphQuery GraphQuery;
         public QueryExpression Where;
         public QueryExpression Filter;
         public FromClause From;
@@ -52,50 +46,6 @@ namespace Raven.Server.Documents.Queries.AST
             var sb = new StringBuilder();
             new StringQueryVisitor(sb).Visit(this);
             return sb.ToString();
-        }
-
-        public void TryAddWithClause(Query query, StringSegment alias, bool implicitAlias)
-        {
-            if (GraphQuery == null)
-            {
-                GraphQuery = new GraphQuery();
-            }
-
-            if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var existing))
-            {
-                if (query.From.From.Compound.Count == 0)
-                    return; // reusing an alias defined explicitly before
-
-                if (existing.withQuery.From.From.Compound.Count == 0)
-                {
-                    // using an alias that is defined _later_ in the query
-                    GraphQuery.WithDocumentQueries[alias] = (implicitAlias, query);
-                    return;
-                }
-
-                throw new InvalidQueryException($"Alias {alias} is already in use on a different 'With' clause", QueryText);
-            }
-
-            GraphQuery.WithDocumentQueries.Add(alias, (implicitAlias, query));
-        }
-
-        public void TryAddWithEdgePredicates(WithEdgesExpression expr, StringSegment alias)
-        {
-            if (GraphQuery == null)
-            {
-                GraphQuery = new GraphQuery();
-            }
-
-            if (GraphQuery.WithEdgePredicates.ContainsKey(alias))
-            {
-                if (expr.Path.Compound.Count == 0 && expr.OrderBy == null && expr.Where == null)
-                    return;
-
-                throw new InvalidQueryException($"Alias {alias} is already in use on a different 'With' clause",
-                    QueryText);
-            }
-
-            GraphQuery.WithEdgePredicates.Add(alias, expr);
         }
 
         public bool TryAddTimeSeriesFunction(DeclaredFunction func)
