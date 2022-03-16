@@ -34,7 +34,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Lock _locker;
         private readonly IDisposable _releaseWriteTransaction;
 
-        protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 
         private readonly IState _state;
         private readonly LuceneVoronDirectory _directory;

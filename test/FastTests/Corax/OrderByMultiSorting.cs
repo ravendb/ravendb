@@ -19,10 +19,9 @@ namespace FastTests.Corax
 
     public class OrderByMultiSortingTests : StorageTest
     {
-        private List<IndexSingleNumericalEntry<long, long>> longList = new();
-        private IndexSearcher _indexSearcher;
+        private readonly List<IndexSingleNumericalEntry<long, long>> longList = new();
         private const int IndexId = 0, Content1 = 1, Content2 = 2;
-        private long[] _buffer = new long[200_005];
+        private readonly long[] _buffer = new long[200_005];
         public OrderByMultiSortingTests(ITestOutputHelper output) : base(output)
         {
         }
