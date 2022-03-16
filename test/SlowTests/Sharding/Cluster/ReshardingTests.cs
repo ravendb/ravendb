@@ -1,13 +1,12 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests.Sharding;
-using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.Cluster
 {
     public class ReshardingTests : ShardedTestBase
     {
@@ -15,7 +14,7 @@ namespace SlowTests.Sharding
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public async Task CanMoveOneBucketManually()
         {
             // TODO: once wired, disable the observer

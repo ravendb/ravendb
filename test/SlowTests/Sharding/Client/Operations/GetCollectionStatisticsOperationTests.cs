@@ -1,31 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
-using FastTests.Sharding;
+using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.Sharding.Handlers.ContinuationTokens;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.Client.Operations
 {
-    public class CollectionStatsTests : ShardedTestBase
+    public class GetCollectionStatisticsOperationTests : RavenTestBase
     {
-        public CollectionStatsTests(ITestOutputHelper output) : base(output)
+        public GetCollectionStatisticsOperationTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
-        public void GetShardedCollectionStatsTests()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void GetShardedCollectionStatsTests(Options options)
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +57,11 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
-        public void GetShardedCollectionDocs()
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void GetShardedCollectionDocs(Options options)
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -88,12 +89,6 @@ namespace SlowTests.Sharding
             private readonly int? _start;
             private readonly int? _pageSize;
 
-            public GetCollectionOperation()
-            {
-                _start = 0;
-                _pageSize = int.MaxValue;
-            }
-
             public GetCollectionOperation(int start, int pageSize)
             {
                 _start = start;
@@ -110,7 +105,7 @@ namespace SlowTests.Sharding
                 return new GetCollectionCommand(_start, _pageSize, _continuation);
             }
 
-            internal class GetCollectionCommand : RavenCommand<ShardedCollectionHandler.CollectionResult>
+            private class GetCollectionCommand : RavenCommand<ShardedCollectionHandler.CollectionResult>
             {
                 private readonly string _continuation;
                 private readonly int? _start;

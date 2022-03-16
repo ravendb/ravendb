@@ -4,10 +4,11 @@ using FastTests.Sharding;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.Indexes
 {
     public class ShardedIndexHandlerTests : ShardedTestBase
     {
@@ -15,7 +16,7 @@ namespace SlowTests.Sharding
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         public async Task CanGetIndexStatistics()
         {
             using (var store = GetShardedDocumentStore())
@@ -33,7 +34,7 @@ namespace SlowTests.Sharding
                 }
 
                 await new UserIndex().ExecuteAsync(store);
-               
+
                 var indexStats = await store.Maintenance.ForNode("A").ForShardWithProxy(0).SendAsync(new GetIndexesStatisticsOperation());
                 Assert.NotNull(indexStats);
                 Assert.Equal(1, indexStats.Length);
@@ -43,7 +44,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         public async Task CanGetIndexesStatus()
         {
             using (var store = GetShardedDocumentStore())

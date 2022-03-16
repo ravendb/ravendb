@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Sharding;
-using Raven.Client.Documents;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.Cluster
 {
     public class ShardedClusterObserverTests : ShardedClusterTestBase
     {
@@ -18,7 +13,7 @@ namespace SlowTests.Sharding
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CanMoveToRehab()
         {
             var database = GetDatabaseName();
@@ -27,11 +22,11 @@ namespace SlowTests.Sharding
             await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
 
             using (var store = GetDocumentStore(new Options
-                   {
-                       Server = cluster.Leader,
-                       CreateDatabase = false,
-                       ModifyDatabaseName = _ => database
-                   }))
+            {
+                Server = cluster.Leader,
+                CreateDatabase = false,
+                ModifyDatabaseName = _ => database
+            }))
             {
                 await AssertWaitForValueAsync(async () =>
                 {
@@ -41,7 +36,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CanAddNodeToShard()
         {
             var database = GetDatabaseName();
@@ -49,11 +44,11 @@ namespace SlowTests.Sharding
             await CreateShardedDatabaseInCluster(database, replicationFactor: 1, cluster, shards: 3);
 
             using (var store = GetDocumentStore(new Options
-                   {
-                       Server = cluster.Leader,
-                       CreateDatabase = false,
-                       ModifyDatabaseName = _ => database
-                   }))
+            {
+                Server = cluster.Leader,
+                CreateDatabase = false,
+                ModifyDatabaseName = _ => database
+            }))
             {
                 for (int i = 0; i < 3; i++)
                 {

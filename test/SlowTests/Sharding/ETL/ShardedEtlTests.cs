@@ -47,7 +47,7 @@ using Xunit;
 using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.ETL
 {
     public class ShardedEtlTests : ShardedTestBase
     {
@@ -92,7 +92,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 loadToOrders(orderData);
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Unsharded_Destination()
         {
             using (var src = GetShardedDocumentStore())
@@ -146,7 +146,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Unsharded_Destination2()
         {
             using (var src = GetShardedDocumentStore())
@@ -159,7 +159,7 @@ loadToOrders(orderData);
                 var etlsDone = WaitForEtlOnAllShards(src, (n, s) => s.LoadSuccesses > 0);
                 var dbRecord = src.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(src.Database)).Result;
                 var shardedCtx = new ShardedContext(Server.ServerStore, dbRecord);
-                var ids = new[] {"users/0", "users/4", "users/1"};
+                var ids = new[] { "users/0", "users/4", "users/1" };
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
@@ -220,7 +220,7 @@ loadToOrders(orderData);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Sharded_Destination()
         {
             using (var src = GetShardedDocumentStore())
@@ -393,7 +393,7 @@ loadToAddresses(load(this.AddressId));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Loading_to_different_collections()
         {
             using (var src = GetShardedDocumentStore())
@@ -475,7 +475,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task RavenEtl_SetMentorToEtlAndFailover()
         {
             using (var src = GetShardedDocumentStore())
@@ -530,7 +530,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters | RavenTestCategory.Sharding)]
         public void RavenEtl_Should_handle_counters()
         {
             using (var src = GetShardedDocumentStore())
@@ -643,7 +643,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanDeleteEtl()
         {
             using (var store = GetShardedDocumentStore())
@@ -680,7 +680,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanUpdateEtl()
         {
             using (var store = GetShardedDocumentStore())
@@ -722,7 +722,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanDisableEtl()
         {
             using (var store = GetShardedDocumentStore())
@@ -759,7 +759,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanResetEtl()
         {
             using (var src = GetShardedDocumentStore())
@@ -806,7 +806,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanResetEtl2()
         {
             using (var src = GetShardedDocumentStore())
@@ -876,7 +876,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetTaskInfo()
         {
             using (var store = GetShardedDocumentStore())
@@ -918,7 +918,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetShardedDocumentStore())
@@ -953,7 +953,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetAllConnectionStrings()
         {
             using (var store = GetShardedDocumentStore())
@@ -999,7 +999,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanAddAndRemoveConnectionStrings()
         {
             using (var store = GetShardedDocumentStore())
@@ -1055,7 +1055,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanUpdateConnectionStrings()
         {
             using (var store = GetShardedDocumentStore())
@@ -1106,7 +1106,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task CanGetLastEtagPerDbFromProcessState()
         {
             using (var src = GetShardedDocumentStore())
@@ -1200,7 +1200,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task SqlEtl_SimpleTransformation()
         {
             using (var store = GetShardedDocumentStore())
@@ -1218,7 +1218,7 @@ person.addCounter(loadCounter('down'));
                                 new OrderLine
                                 {
                                     PricePerUnit = 3, Product = "Milk", Quantity = 3
-                                }, 
+                                },
                                 new OrderLine
                                 {
                                     PricePerUnit = 4, Product = "Beer", Quantity = 2
@@ -1252,7 +1252,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task SqlEtl_ReplicateMultipleBatches()
         {
             using (var store = GetDocumentStore())
@@ -1294,7 +1294,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task OlapEtl_Local_Destination()
         {
             using (var store = GetShardedDocumentStore())
@@ -1372,33 +1372,33 @@ loadToOrders(partitionBy(key), o);
                     {
                         Assert.True(field.Name.In(expectedFields));
 
-/*                        var data = rowGroupReader.ReadColumn((DataField)field).Data;
-                        Assert.True(data.Length == 10);
+                        /*                        var data = rowGroupReader.ReadColumn((DataField)field).Data;
+                                                Assert.True(data.Length == 10);
 
-                        if (field.Name == ParquetTransformedItems.LastModifiedColumn)
-                            continue;
+                                                if (field.Name == ParquetTransformedItems.LastModifiedColumn)
+                                                    continue;
 
-                        long count = 1;
-                        foreach (var val in data)
-                        {
-                            switch (field.Name)
-                            {
-                                case ParquetTransformedItems.DefaultIdColumn:
-                                    Assert.Equal($"orders/{count}", val);
-                                    break;
-                                case "RequireAt":
-                                    var expected = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count).AddDays(7), DateTimeKind.Utc));
-                                    Assert.Equal(expected, val);
-                                    break;
-                                case "Total":
-                                    var expectedTotal = count * 1.25M * 10;
-                                    Assert.Equal(expectedTotal, val);
-                                    break;
-                            }
+                                                long count = 1;
+                                                foreach (var val in data)
+                                                {
+                                                    switch (field.Name)
+                                                    {
+                                                        case ParquetTransformedItems.DefaultIdColumn:
+                                                            Assert.Equal($"orders/{count}", val);
+                                                            break;
+                                                        case "RequireAt":
+                                                            var expected = new DateTimeOffset(DateTime.SpecifyKind(baseline.AddDays(count).AddDays(7), DateTimeKind.Utc));
+                                                            Assert.Equal(expected, val);
+                                                            break;
+                                                        case "Total":
+                                                            var expectedTotal = count * 1.25M * 10;
+                                                            Assert.Equal(expectedTotal, val);
+                                                            break;
+                                                    }
 
-                            count++;
+                                                    count++;
 
-                        }*/
+                                                }*/
                     }
                 }
             }
@@ -1604,14 +1604,14 @@ loadToOrders(partitionBy(key), orderData);
                         {
                             new OrderLine
                             {
-                                PricePerUnit = 3, 
-                                Product = "Cheese", 
+                                PricePerUnit = 3,
+                                Product = "Cheese",
                                 Quantity = 3
                             },
                             new OrderLine
                             {
-                                PricePerUnit = 4, 
-                                Product = "Beer", 
+                                PricePerUnit = 4,
+                                Product = "Beer",
                                 Quantity = 2
                             }
                         }
@@ -1675,8 +1675,8 @@ loadToOrders(partitionBy(key), orderData);
                         {
                             order.Lines.Add(new OrderLine
                             {
-                                PricePerUnit = j + 1, 
-                                Product = "foos/" + j, 
+                                PricePerUnit = j + 1,
+                                Product = "foos/" + j,
                                 Quantity = (i * j) % 10
                             });
                         }
@@ -1729,10 +1729,10 @@ loadToOrders(partitionBy(key), orderData);
             var connectionStringName = $"{src.Database}@{src.Urls.First()} to {dst.Database}@{dst.Urls.First()}";
 
             return AddEtl(src, new RavenEtlConfiguration
-                {
-                    Name = connectionStringName,
-                    ConnectionStringName = connectionStringName,
-                    Transforms =
+            {
+                Name = connectionStringName,
+                ConnectionStringName = connectionStringName,
+                Transforms =
                     {
                         new Transformation
                         {
@@ -1743,8 +1743,8 @@ loadToOrders(partitionBy(key), orderData);
                             Disabled = disabled
                         }
                     },
-                    MentorNode = mentor,
-                },
+                MentorNode = mentor,
+            },
                 new RavenConnectionString
                 {
                     Name = connectionStringName,
@@ -1857,17 +1857,17 @@ loadToOrders(partitionBy(key), orderData);
                     {
                         new ElasticSearchIndex
                         {
-                            IndexName = "Orders", 
+                            IndexName = "Orders",
                             DocumentIdProperty = "Id"
                         },
                         new ElasticSearchIndex
                         {
-                            IndexName = "OrderLines", 
+                            IndexName = "OrderLines",
                             DocumentIdProperty = "OrderId"
                         },
                         new ElasticSearchIndex
                         {
-                            IndexName = "Users", 
+                            IndexName = "Users",
                             DocumentIdProperty = "UserId"
                         }
                     },
@@ -1884,7 +1884,7 @@ loadToOrders(partitionBy(key), orderData);
 
                 new ElasticSearchConnectionString
                 {
-                    Name = connectionStringName, 
+                    Name = connectionStringName,
                     Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value
                 });
         }

@@ -23,10 +23,11 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL.Olap;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Sharding
+namespace SlowTests.Sharding.ETL
 {
     public class FailoverEtlTests : ShardedClusterTestBase
     {
@@ -34,7 +35,7 @@ namespace SlowTests.Sharding
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         [InlineData(2)]
         [InlineData(3)]
         public async Task ReplicateFromSingleSource(int replicationFactor)
@@ -144,7 +145,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task ReplicateFromSingleSource_Sharded_Destination()
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
@@ -442,7 +443,7 @@ namespace SlowTests.Sharding
                 var ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation($"{name}${shardIndex}", OngoingTaskType.RavenEtl));
 
                 var responsibleNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
-                
+
                 Assert.NotNull(responsibleNodeNodeTag);
 
                 var originalTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == responsibleNodeNodeTag);
@@ -467,64 +468,64 @@ namespace SlowTests.Sharding
 
                 Assert.True(WaitForDocument<User>(dest, id, u => u.Name == "Joe Doe2", 30_000));
 
-/*                ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
+                /*                ongoingTask = src.Maintenance.Send(new GetOngoingTaskInfoOperation(name, OngoingTaskType.RavenEtl));
 
-                var currentNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
-                var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
+                                var currentNodeNodeTag = ongoingTask.ResponsibleNode.NodeTag;
+                                var currentTaskNodeServer = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == currentNodeNodeTag);
 
-                // start server which originally was handling ETL task
-                GetNewServer(new ServerCreationOptions
-                {
-                    CustomSettings = new Dictionary<string, string>
-                        {
-                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalResult.Url}
-                        },
-                    RunInMemory = false,
-                    DeletePrevious = false,
-                    DataDirectory = originalResult.DataDirectory
-                });
+                                // start server which originally was handling ETL task
+                                GetNewServer(new ServerCreationOptions
+                                {
+                                    CustomSettings = new Dictionary<string, string>
+                                        {
+                                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), originalResult.Url}
+                                        },
+                                    RunInMemory = false,
+                                    DeletePrevious = false,
+                                    DataDirectory = originalResult.DataDirectory
+                                });
 
-                using (var store = new DocumentStore
-                {
-                    Urls = new[] { originalResult.Url },
-                    Database = srcDb,
-                    Conventions =
-                    {
-                        DisableTopologyUpdates = true
-                    }
-                }.Initialize())
-                {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User()
-                        {
-                            Name = "Joe Doe3"
-                        }, "users/3");
+                                using (var store = new DocumentStore
+                                {
+                                    Urls = new[] { originalResult.Url },
+                                    Database = srcDb,
+                                    Conventions =
+                                    {
+                                        DisableTopologyUpdates = true
+                                    }
+                                }.Initialize())
+                                {
+                                    using (var session = store.OpenSession())
+                                    {
+                                        session.Store(new User()
+                                        {
+                                            Name = "Joe Doe3"
+                                        }, "users/3");
 
-                        session.SaveChanges();
-                    }
+                                        session.SaveChanges();
+                                    }
 
-                    Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 30_000));
+                                    Assert.True(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 30_000));
 
-                    // force disposing second node to ensure the original node is reponsible for ETL task again
-                    DisposeServerAndWaitForFinishOfDisposal(currentTaskNodeServer);
+                                    // force disposing second node to ensure the original node is reponsible for ETL task again
+                                    DisposeServerAndWaitForFinishOfDisposal(currentTaskNodeServer);
 
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User()
-                        {
-                            Name = "Joe Doe4"
-                        }, "users/4");
+                                    using (var session = store.OpenSession())
+                                    {
+                                        session.Store(new User()
+                                        {
+                                            Name = "Joe Doe4"
+                                        }, "users/4");
 
-                        session.SaveChanges();
-                    }
+                                        session.SaveChanges();
+                                    }
 
-                    Assert.True(WaitForDocument<User>(dest, "users/4", u => u.Name == "Joe Doe4", 30_000));
-                }*/
+                                    Assert.True(WaitForDocument<User>(dest, "users/4", u => u.Name == "Joe Doe4", 30_000));
+                                }*/
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters | RavenTestCategory.Sharding)]
         public async Task ShouldSendCounterChangeMadeInCluster()
         {
             var srcDb = "13288-src";
@@ -648,7 +649,7 @@ namespace SlowTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task OlapTaskShouldBeHighlyAvailable()
         {
             var nodes = await CreateRaftCluster(3, watcherCluster: true);
@@ -714,7 +715,7 @@ loadToOrders(partitionBy(key),
                 Name = configName,
                 ConnectionStringName = connectionStringName,
                 RunFrequency = LocalTests.DefaultFrequency,
-                Transforms = 
+                Transforms =
                 {
                     new Transformation
                     {
