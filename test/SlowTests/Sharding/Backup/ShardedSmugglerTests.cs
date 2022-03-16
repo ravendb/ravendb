@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Sharding;
 using FastTests.Utils;
 using Orders;
@@ -41,7 +42,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Backup
 {
-    public class ShardedSmugglerTests : ShardedTestBase
+    public class ShardedSmugglerTests : RavenTestBase
     {
         public ShardedSmugglerTests(ITestOutputHelper output) : base(output)
         {
@@ -279,7 +280,7 @@ namespace SlowTests.Sharding.Backup
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    using (var store2 = GetShardedDocumentStore())
+                    using (var store2 = Sharding.GetDocumentStore())
                     {
                         operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                         {
@@ -354,7 +355,7 @@ namespace SlowTests.Sharding.Backup
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
 
-                    using (var store2 = GetShardedDocumentStore())
+                    using (var store2 = Sharding.GetDocumentStore())
                     {
                         operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                         {
@@ -440,7 +441,7 @@ namespace SlowTests.Sharding.Backup
             var assembly = typeof(SmugglerApiTests).Assembly;
             var file = GetTempFileName();
             using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.legacy-counters.4.1.5.ravendbdump"))
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var options = new DatabaseSmugglerImportOptions();
 
@@ -607,7 +608,7 @@ namespace SlowTests.Sharding.Backup
                     }
                 }))
                 using (var store2 = GetDocumentStore())
-                using (var store3 = GetShardedDocumentStore())
+                using (var store3 = Sharding.GetDocumentStore())
                 {
                     // WaitForUserToContinueTheTest(store1);
                     var config = Backup.CreateBackupConfiguration(backupPath: "FolderPath", fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
@@ -829,7 +830,7 @@ namespace SlowTests.Sharding.Backup
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
 
-                using (var shardStore = GetShardedDocumentStore(new Options
+                using (var shardStore = Sharding.GetDocumentStore(new Options
                 {
                     ClientCertificate = hubCerts.ServerCertificate.Value,
                     Server = hubServer,
@@ -923,7 +924,7 @@ namespace SlowTests.Sharding.Backup
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)); //TODO - EFRAT
 
-                    using (var store2 = GetShardedDocumentStore())
+                    using (var store2 = Sharding.GetDocumentStore())
                     {
                         operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                         {
@@ -1034,7 +1035,7 @@ namespace SlowTests.Sharding.Backup
                     }, file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(20));
 
-                    using (var store2 = GetShardedDocumentStore())
+                    using (var store2 = Sharding.GetDocumentStore())
                     {
                         operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                         {

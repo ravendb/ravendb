@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
-using FastTests.Sharding;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -11,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
-    public class CreateSampleDataTests : ShardedTestBase
+    public class CreateSampleDataTests : RavenTestBase
     {
         public CreateSampleDataTests(ITestOutputHelper output) : base(output)
         {
@@ -25,7 +24,7 @@ namespace SlowTests.Client
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.TimeSeries | DatabaseItemType.RevisionDocuments | DatabaseItemType.Documents));
                 var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-                
+
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.NotNull(record.Revisions);
                 Assert.True(record.Revisions.Collections.ContainsKey("Orders"));
@@ -33,7 +32,7 @@ namespace SlowTests.Client
                 Assert.NotNull(record.TimeSeries?.NamedValues);
                 Assert.Contains("Companies", record.TimeSeries.NamedValues.Keys);
                 Assert.Contains("Employees", record.TimeSeries.NamedValues.Keys);
-                
+
                 Assert.NotNull(stats);
                 Assert.Equal(9, stats.Collections.Count);
                 Assert.Equal(1059, stats.CountOfDocuments);
@@ -42,7 +41,7 @@ namespace SlowTests.Client
                 {
                     Assert.True(stats.Collections.ContainsKey(collection), $"collection {collection} missing from created sample data");
                 }
-                
+
                 var res = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Maintenance.SendAsync(new CreateSampleDataOperation()));
                 Assert.Contains("You cannot create sample data in a database that already contains documents", res.Message);
             }

@@ -8,22 +8,23 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Sharding
+namespace FastTests.Sharding.Queries
 {
-    public class BasicShardedQueryTests : ShardedTestBase
+    public class BasicShardedQueryTests : RavenTestBase
     {
         public BasicShardedQueryTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Queries_With_LoadDocument_Should_Work()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -95,10 +96,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Query_With_Customize()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 new DogsIndex().Execute(store);
 
@@ -132,10 +133,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Projection_With_Order_By()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapIndex());
 
@@ -165,10 +166,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Projection_With_Order_By2()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapIndex());
 
@@ -182,12 +183,12 @@ namespace FastTests.Sharding
                     WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<User, UserMapIndex>()
-                        let age = user.Age
-                        orderby user.Name
-                        select new AgeResult
-                        {
-                            Age = age
-                        })
+                                       let age = user.Age
+                                       orderby user.Name
+                                       select new AgeResult
+                                       {
+                                           Age = age
+                                       })
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
@@ -198,10 +199,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Projection_With_Order_By_AlphaNumeric()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapIndex());
 
@@ -231,10 +232,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Projection_With_Order_By_And_Raw_Query()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapIndex());
 
@@ -262,10 +263,10 @@ select {{
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Map_Reduce()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
 
@@ -290,7 +291,7 @@ select {{
         [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-17888")]
         public void Auto_Map_With_Order_By_Multiple_Results()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -349,7 +350,7 @@ select project(o)")
         [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18192")]
         public void Auto_Map_Reduce_With_Order_By()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -402,10 +403,10 @@ select {{
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Map_Index_With_Order_By_Multiple_Results()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new OrderMapIndex());
 
@@ -465,10 +466,10 @@ order by o.Freight as double
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Map_Reduce_Index_With_Order_By_Multiple_Results()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new OrderMapReduceIndex());
 
@@ -528,10 +529,10 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Map_Reduce_With_Order_By_And_Projection()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
 
@@ -560,10 +561,10 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Map_Reduce_With_Order_By_And_Projection2()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
 
@@ -577,14 +578,14 @@ select project(o)")
                     WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
-                            let sum = user.Sum + 1
-                            let name = user.Name + "_" + user.Name
-                            orderby user.Sum
-                            select new
-                            {
-                                Sum = sum,
-                                Name = name
-                            })
+                                       let sum = user.Sum + 1
+                                       let name = user.Name + "_" + user.Name
+                                       orderby user.Sum
+                                       select new
+                                       {
+                                           Sum = sum,
+                                           Name = name
+                                       })
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
@@ -598,10 +599,10 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Simple_Map_Reduce_With_Order_By_Projecting_New_Fields()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
 
@@ -615,12 +616,12 @@ select project(o)")
                     WaitForIndexing(store, sharded: true);
 
                     var queryResult = (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
-                            let sum = user.Sum
-                            orderby user.Sum
-                            select new
-                            {
-                                Sum = sum
-                            })
+                                       let sum = user.Sum
+                                       orderby user.Sum
+                                       select new
+                                       {
+                                           Sum = sum
+                                       })
                         .ToList();
 
                     Assert.Equal(3, queryResult.Count);
@@ -631,10 +632,10 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Query_An_Index_That_Doesnt_Exist()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -643,10 +644,10 @@ select project(o)")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
         public void Map_Reduce_Projection_With_Load_Not_Supported()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.ExecuteIndex(new UserMapReduce());
 
@@ -658,11 +659,11 @@ select project(o)")
                     WaitForIndexing(store, sharded: true);
 
                     var exception = Assert.Throws<RavenException>(() => (from user in session.Query<UserMapReduce.Result, UserMapReduce>()
-                            let anotherUser = RavenQuery.Load<User>(user.Name)
-                            select new
-                            {
-                                Name = anotherUser.Name
-                            })
+                                                                         let anotherUser = RavenQuery.Load<User>(user.Name)
+                                                                         select new
+                                                                         {
+                                                                             Name = anotherUser.Name
+                                                                         })
                         .ToList());
 
                     Assert.Contains(nameof(NotSupportedException), exception.Message);
@@ -673,7 +674,7 @@ select project(o)")
         [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-18162")]
         public void BasicInclude()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -684,7 +685,7 @@ select project(o)")
                     session.Store(new User { Count = 7 }, "users/3");
                     session.Store(new User { Count = 19 }, "users/4");
                     session.Store(new User { Count = 13 }, "users/5");
-                    
+
                     session.SaveChanges();
 
                     var queryResult = session.Query<Dog>()

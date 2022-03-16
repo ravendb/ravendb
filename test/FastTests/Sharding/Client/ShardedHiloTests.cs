@@ -4,13 +4,14 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Sharding
+namespace FastTests.Sharding.Client
 {
-    public class ShardedHiloTests : ShardedTestBase
+    public class ShardedHiloTests : RavenTestBase
     {
         public ShardedHiloTests(ITestOutputHelper output) : base(output)
         {
@@ -21,10 +22,10 @@ namespace FastTests.Sharding
             public long Max { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanStoreWithoutId()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 string id;
                 using (var session = store.OpenSession())
@@ -46,12 +47,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public async Task Hilo_Cannot_Go_Down()
         {
             const string hiloDocId = "Raven/Hilo/users";
 
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var hiloDoc = new HiloDoc
                 {
@@ -99,10 +100,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public async Task HiLo_Async_MultiDb()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -129,12 +130,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public async Task Capacity_Should_Double()
         {
             const string hiloDocId = "Raven/Hilo/users";
 
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var hiLoKeyGenerator = new AsyncHiLoIdGenerator("users", (DocumentStore)store, store.Database,
                     store.Conventions.IdentityPartsSeparator);
@@ -171,12 +172,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void Return_Unused_Range_On_Dispose()
         {
             const string hiloDocId = "Raven/Hilo/users";
 
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var newStore = new DocumentStore
                 {

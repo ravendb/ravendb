@@ -2,44 +2,36 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Client;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
-using Raven.Client.Http;
-using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
-using Raven.Client.ServerWide.Operations.Configuration;
-using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using DocumentsChanges = Raven.Client.Documents.Session.DocumentsChanges;
 
-namespace FastTests.Sharding
+namespace FastTests.Sharding.Client.Session
 {
-    public class BasicShardedSessionTests : ShardedTestBase
+    public class BasicShardedSessionTests : RavenTestBase
     {
         public BasicShardedSessionTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void Should_Put_Documents_To_The_Same_Shard()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 const string companyId = "Companies/1";
                 const string orderId = $"orders/1${companyId}";
@@ -69,20 +61,20 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
                     newSession.Store(new User { Name = "user1" }, "users/1");
-                    var user2 = new User {Name = "user2", Age = 1};
+                    var user2 = new User { Name = "user2", Age = 1 };
                     newSession.Store(user2, "users/2");
                     var user3 = new User { Name = "user3", Age = 1 };
                     newSession.Store(user3, "users/3");
                     newSession.Store(new User { Name = "user4" }, "users/4");
-                    
+
                     newSession.Delete(user2);
                     user3.Age = 3;
                     newSession.SaveChanges();
@@ -93,7 +85,7 @@ namespace FastTests.Sharding
                     Assert.Equal(tempUser.Age, 3);
                     var user1 = newSession.Load<User>("users/1");
                     var user4 = newSession.Load<User>("users/4");
-                    
+
                     newSession.Delete(user4);
                     user1.Age = 10;
                     newSession.SaveChanges();
@@ -106,10 +98,10 @@ namespace FastTests.Sharding
             }
         }
 
-        private static IEnumerable<object[]>  GetMetadataStaticFields()
+        private static IEnumerable<object[]> GetMetadataStaticFields()
         {
             return typeof(Constants.Documents.Metadata)
-                .GetFields( System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
                 .Select(p => p.GetValue(null).ToString())
                 .Distinct()
                 .SelectMany(s =>
@@ -117,19 +109,19 @@ namespace FastTests.Sharding
                     var builder = new StringBuilder(s);
                     //Just replacing one char in the end
                     builder[^1] = builder[^1] == 'a' ? 'b' : 'a';
-                    return new[] {new object[] {builder.ToString()}};
+                    return new[] { new object[] { builder.ToString() } };
                 });
         }
-        
+
         [Theory(Skip = "ClusterWide not supported")]
         [MemberData(nameof(GetMetadataStaticFields))]
         public async Task StoreDocument_WheHasUserMetadataPropertyWithLengthEqualsToInternalRavenDbMetadataPropertyLength(string metadataPropNameToTest)
         {
             const string id = "id1";
             const string value = "Value";
-            
-            using var store = GetShardedDocumentStore();
-            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+
+            using var store = Sharding.GetDocumentStore();
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
                 var executor = store.GetRequestExecutor();
                 using var dis = executor.ContextPool.AllocateOperationContext(out var context);
@@ -153,10 +145,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_with_what_changed()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -169,7 +161,7 @@ namespace FastTests.Sharding
 
                     newSession.Delete(user2);
                     user3.Age = 3;
-                    
+
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 4);
                     newSession.SaveChanges();
 
@@ -193,10 +185,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanUseIdentities()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
@@ -234,10 +226,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching | RavenTestCategory.Sharding)]
         public void CanUseBatchPatchCommand()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -339,10 +331,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Sharding)]
         public async Task PutAttachments()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var names = new[]
                 {
@@ -353,13 +345,13 @@ namespace FastTests.Sharding
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/2");
-                    await session.StoreAsync(new User {Name = "Oren"}, "users/3");
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, "users/1");
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/2");
+                    await session.StoreAsync(new User { Name = "Oren" }, "users/3");
 
-                    await using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                    await using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                    await using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                    await using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    await using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
+                    await using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                     {
                         session.Advanced.Attachments.Store("users/1", names[0], backgroundStream, "ImGgE/jPeG");
                         session.Advanced.Attachments.Store("users/2", names[1], fileStream);
@@ -400,33 +392,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_In_Object()
         {
-            using (var store = GetShardedDocumentStore())
-            {
-                using (var newSession = store.OpenSession())
-                {
-                    var family = new CRUD.Family()
-                    {
-                        Names = new[] {"Hibernating Rhinos", "RavenDB"}
-                    };
-                    newSession.Store(family, "family/1");
-                    newSession.SaveChanges();
-
-                    var newFamily = newSession.Load<CRUD.Family>("family/1");
-
-                    newFamily.Names = new[] {"Toli", "Mitzi", "Boki"};
-                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
-                    newSession.SaveChanges();
-                }
-            }
-        }
-
-        [Fact]
-        public void CRUD_Operations_With_Array_In_Object_2()
-        {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -438,7 +407,30 @@ namespace FastTests.Sharding
                     newSession.SaveChanges();
 
                     var newFamily = newSession.Load<CRUD.Family>("family/1");
-                    newFamily.Names = new[] {"Hibernating Rhinos", "RavenDB"};
+
+                    newFamily.Names = new[] { "Toli", "Mitzi", "Boki" };
+                    Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
+                    newSession.SaveChanges();
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public void CRUD_Operations_With_Array_In_Object_2()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    var family = new CRUD.Family()
+                    {
+                        Names = new[] { "Hibernating Rhinos", "RavenDB" }
+                    };
+                    newSession.Store(family, "family/1");
+                    newSession.SaveChanges();
+
+                    var newFamily = newSession.Load<CRUD.Family>("family/1");
+                    newFamily.Names = new[] { "Hibernating Rhinos", "RavenDB" };
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 0);
                     newFamily.Names = new[] { "RavenDB", "Hibernating Rhinos" };
                     Assert.Equal(newSession.Advanced.WhatChanged().Count, 1);
@@ -447,10 +439,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_In_Object_3()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -470,10 +462,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_In_Object_4()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -493,10 +485,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_In_Object_6()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -516,10 +508,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Null()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -533,31 +525,16 @@ namespace FastTests.Sharding
             }
         }
 
-        public class Family
-        {
-            public string[] Names { get; set; }
-        }
-
-        public class FamilyMembers
-        {
-            public CRUD.member[] Members { get; set; }
-        }
-        public class member
-        {
-            public string Name { get; set; }
-            public int Age { get; set; }
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_of_objects()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
                     var family = new CRUD.FamilyMembers()
                     {
-                        Members = new [] {
+                        Members = new[] {
                             new CRUD.member()
                             {
                                 Name = "Hibernating Rhinos",
@@ -590,8 +567,8 @@ namespace FastTests.Sharding
 
                     var changes = newSession.Advanced.WhatChanged();
 
-                    Assert.Equal(1 , changes.Count);
-                    Assert.Equal(4 , changes["family/1"].Length);
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(4, changes["family/1"].Length);
 
                     Array.Sort(changes["family/1"], (x, y) => x.FieldFullName.CompareTo(y.FieldFullName));
 
@@ -658,20 +635,11 @@ namespace FastTests.Sharding
                 }
             }
         }
-        public class Arr1
-        {
-            public string[] str { get; set; }
-        }
 
-        public class Arr2
-        {
-            public CRUD.Arr1[] arr1 { get; set; }
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Operations_With_Array_of_Arrays()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -687,7 +655,7 @@ namespace FastTests.Sharding
                             {
                                 str = new [] {"c", "d"}
                             }
-                        } 
+                        }
                     };
                     newSession.Store(arr, "arr/1");
                     newSession.SaveChanges();
@@ -752,12 +720,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Can_Update_Property_To_Null()
         {
             //RavenDB-8345
 
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -780,10 +748,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CRUD_Can_Update_Property_From_Null_To_Object()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -816,10 +784,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact(Skip = "Sharded HiLo")]
+        [Theory(Skip = "Sharded HiLo")]
         public async Task Load_WhenDocumentNotFound_ShouldTrack()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             const string notExistId1 = "notExistId1";
             const string notExistId2 = "notExistId2";
             var user = new User();
@@ -832,37 +800,37 @@ namespace FastTests.Sharding
             using (var session = store.OpenAsyncSession())
             {
                 _ = await session.LoadAsync<User>(notExistId1);
-            
+
                 Assert.True(session.Advanced.IsLoaded(notExistId1));
-                
+
                 _ = await session.LoadAsync<User>(notExistId1);
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
-            
+
             using (var session = store.OpenAsyncSession())
             {
-                _ = await session.LoadAsync<User>(new []{notExistId1, notExistId2});
+                _ = await session.LoadAsync<User>(new[] { notExistId1, notExistId2 });
 
                 Assert.True(session.Advanced.IsLoaded(notExistId1));
                 Assert.True(session.Advanced.IsLoaded(notExistId2));
-                
-                _ = await session.LoadAsync<User>(new []{notExistId1, notExistId2});
+
+                _ = await session.LoadAsync<User>(new[] { notExistId1, notExistId2 });
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
-            
+
             using (var session = store.OpenAsyncSession())
             {
-                _ = await session.LoadAsync<User>(new []{user.Id, notExistId1});
+                _ = await session.LoadAsync<User>(new[] { user.Id, notExistId1 });
 
                 Assert.True(session.Advanced.IsLoaded(user.Id));
                 Assert.True(session.Advanced.IsLoaded(notExistId1));
-                
+
                 _ = await session.LoadAsync<User>(notExistId1);
                 Assert.Equal(1, session.Advanced.NumberOfRequests);
             }
         }
-        
-        class Poc
+
+        private class Poc
         {
             public string Name { get; set; }
             public object Obj { get; set; }

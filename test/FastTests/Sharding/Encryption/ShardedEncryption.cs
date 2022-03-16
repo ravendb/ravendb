@@ -8,20 +8,20 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Sharding
+namespace FastTests.Sharding.Encryption
 {
-    public class ShardedEncryption : ShardedTestBase
+    public class ShardedEncryption : RavenTestBase
     {
         public ShardedEncryption(ITestOutputHelper output) : base(output)
         {
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public void Can_Setup_Sharded_Encrypted_Database()
         {
             EncryptedServer(out var certificates, out var dbName);
 
-            using (var store = GetShardedDocumentStore(new Options
+            var options = new Options
             {
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
@@ -30,7 +30,9 @@ namespace FastTests.Sharding
                     record.Encrypted = true;
                 },
                 ModifyDatabaseName = s => dbName
-            }))
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -50,12 +52,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Sharding, LicenseRequired = true)]
         public async Task CRUD_Operations_Encrypted()
         {
             EncryptedServer(out var certificates, out var dbName);
 
-            using (var store = GetShardedDocumentStore(new Options
+            var options = new Options
             {
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
@@ -64,7 +66,9 @@ namespace FastTests.Sharding
                     record.Encrypted = true;
                 },
                 ModifyDatabaseName = s => dbName
-            }))
+            };
+
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {

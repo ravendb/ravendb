@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Sharding;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Indexes
 {
-    public class ShardedIndexHandlerTests : ShardedTestBase
+    public class ShardedIndexHandlerTests : RavenTestBase
     {
         public ShardedIndexHandlerTests(ITestOutputHelper output) : base(output)
         {
@@ -19,7 +19,7 @@ namespace SlowTests.Sharding.Indexes
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         public async Task CanGetIndexStatistics()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -47,7 +47,7 @@ namespace SlowTests.Sharding.Indexes
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Sharding)]
         public async Task CanGetIndexesStatus()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
                 {

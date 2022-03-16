@@ -21,11 +21,10 @@ namespace SlowTests.Sharding.Client.Operations
         {
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void GetShardedCollectionStatsTests(Options options)
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public void GetShardedCollectionStatsTests()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -57,11 +56,10 @@ namespace SlowTests.Sharding.Client.Operations
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public void GetShardedCollectionDocs(Options options)
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        public void GetShardedCollectionDocs()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
