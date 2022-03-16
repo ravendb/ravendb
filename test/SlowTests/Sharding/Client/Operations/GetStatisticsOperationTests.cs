@@ -57,13 +57,13 @@ public class GetStatisticsOperationTests : RavenTestBase
             Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
 
             e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.ForNode("A").SendAsync(new GetStatisticsOperation()));
-            Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
+            Assert.Contains("Query string shardNumber is mandatory, but wasn't specified", e.Message);
 
             e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new GetDetailedStatisticsOperation()));
             Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
 
             e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.ForNode("A").SendAsync(new GetDetailedStatisticsOperation()));
-            Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
+            Assert.Contains("Query string shardNumber is mandatory, but wasn't specified", e.Message);
         }
     }
 }
