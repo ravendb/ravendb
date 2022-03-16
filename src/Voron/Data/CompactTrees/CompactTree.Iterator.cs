@@ -50,7 +50,7 @@ namespace Voron.Data.CompactTrees
             {
                 var next = MoveNext(out Span<byte> keySpan, out value);
                 if (next)
-                {
+                {    
                     Slice.From(_tree._llt.Allocator, keySpan, out key);
                 }
                 else
