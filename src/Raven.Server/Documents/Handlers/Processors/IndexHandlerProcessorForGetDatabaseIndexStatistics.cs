@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -19,8 +20,9 @@ namespace Raven.Server.Documents.Handlers.Processors
         public IndexHandlerProcessorForGetDatabaseIndexStatistics([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
+        protected override bool SupportsCurrentNode => true;
 
-        protected override ValueTask<IndexStats[]> GetDatabaseIndexStatisticsAsync()
+        protected override ValueTask<IndexStats[]> GetResultForCurrentNodeAsync()
         {
             var name = RequestHandler.GetStringQueryString("name", required: false);
             var logger = LoggingSource.Instance.GetLogger(RequestHandler.Database.Name, GetType().FullName);
@@ -121,5 +123,7 @@ namespace Raven.Server.Documents.Handlers.Processors
                 return ValueTask.FromResult(indexesStats);
             }
         }
+
+        protected override Task<IndexStats[]> GetResultForRemoteNodeAsync(RavenCommand<IndexStats[]> command) => RequestHandler.ExecuteRemoteAsync(command);
     }
 }

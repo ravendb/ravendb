@@ -22,8 +22,9 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         internal class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
         {
-            public GetIndexesStatisticsCommand()
+            public GetIndexesStatisticsCommand(string nodeTag = null)
             {
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
