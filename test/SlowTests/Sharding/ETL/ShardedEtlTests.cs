@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client;
 using FastTests.Sharding;
 using Nest;
@@ -49,7 +50,7 @@ using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace SlowTests.Sharding.ETL
 {
-    public class ShardedEtlTests : ShardedTestBase
+    public class ShardedEtlTests : RavenTestBase
     {
         public ShardedEtlTests(ITestOutputHelper output) : base(output)
         {
@@ -95,7 +96,7 @@ loadToOrders(orderData);
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Unsharded_Destination()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 Server.ServerStore.Engine.Timeout.Disable = true;
@@ -149,7 +150,7 @@ loadToOrders(orderData);
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Unsharded_Destination2()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 Server.ServerStore.Engine.Timeout.Disable = true;
@@ -223,8 +224,8 @@ loadToOrders(orderData);
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Sharded_Destination()
         {
-            using (var src = GetShardedDocumentStore())
-            using (var dest = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
+            using (var dest = Sharding.GetDocumentStore())
             {
                 Server.ServerStore.Engine.Timeout.Disable = true;
 
@@ -297,7 +298,7 @@ loadToOrders(orderData);
         [Fact(Skip = "loading a related document that resides on a different shard than the parent document is not implemented")]
         public void RavenEtl_Loading_to_different_collections_with_load_document()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 var etlsDone = WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -396,7 +397,7 @@ loadToAddresses(load(this.AddressId));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void RavenEtl_Loading_to_different_collections()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 var etlsDone = WaitForEtlOnAllShards(src, (n, statistics) => statistics.LoadSuccesses != 0);
@@ -478,7 +479,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task RavenEtl_SetMentorToEtlAndFailover()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 SetupRavenEtl(src, dest, "Users", script: null, mentor: "C");
@@ -533,7 +534,7 @@ loadToPeople({Name: this.Name + ' ' + this.LastName });
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters | RavenTestCategory.Sharding)]
         public void RavenEtl_Should_handle_counters()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 SetupRavenEtl(src, dest, "Users", script:
@@ -646,7 +647,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanDeleteEtl()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var name = "aaa";
                 var configuration = new RavenEtlConfiguration
@@ -683,7 +684,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanUpdateEtl()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var name = "aaa";
                 var configuration = new RavenEtlConfiguration
@@ -725,7 +726,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanDisableEtl()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var name = "aaa";
                 var configuration = new RavenEtlConfiguration
@@ -762,7 +763,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanResetEtl()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -809,7 +810,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanResetEtl2()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 using (var session = src.OpenSession())
@@ -879,7 +880,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetTaskInfo()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var name = "aaa";
                 var configuration = new RavenEtlConfiguration
@@ -921,7 +922,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetConnectionStringByName()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var ravenConnectionStrings = new List<RavenConnectionString>();
                 var sqlConnectionStrings = new List<SqlConnectionString>();
@@ -956,7 +957,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanGetAllConnectionStrings()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var ravenConnectionStrings = new List<RavenConnectionString>();
                 var sqlConnectionStrings = new List<SqlConnectionString>();
@@ -1002,7 +1003,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanAddAndRemoveConnectionStrings()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var ravenConnectionString = new RavenConnectionString()
                 {
@@ -1058,7 +1059,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public void CanUpdateConnectionStrings()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var ravenConnectionString = new RavenConnectionString()
                 {
@@ -1109,7 +1110,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task CanGetLastEtagPerDbFromProcessState()
         {
-            using (var src = GetShardedDocumentStore())
+            using (var src = Sharding.GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
                 Server.ServerStore.Engine.Timeout.Disable = true;
@@ -1203,7 +1204,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task SqlEtl_SimpleTransformation()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
                 {
@@ -1297,7 +1298,7 @@ person.addCounter(loadCounter('down'));
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
         public async Task OlapEtl_Local_Destination()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var baseline = new DateTime(2020, 1, 1);
 
@@ -1590,7 +1591,7 @@ loadToOrders(partitionBy(key), orderData);
         [RequiresElasticSearchFact]
         public void ElasticEtl_SimpleScript()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             using (GetElasticClient(out var client))
             {
                 SetupElasticEtl(store, DefaultScript, new List<string>() { OrderIndexName, OrderLinesIndexName });
@@ -1653,7 +1654,7 @@ loadToOrders(partitionBy(key), orderData);
         [RequiresElasticSearchFact]
         public void ElasticEtl__SimpleScriptWithManyDocuments()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             using (GetElasticClient(out var client))
             {
                 var numberOfOrders = 100;

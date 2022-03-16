@@ -59,6 +59,7 @@ namespace FastTests
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
         {
+            Sharding = new ShardingTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)

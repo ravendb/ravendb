@@ -5,27 +5,33 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Sharding
 {
-    public class BasicSharding : ShardedTestBase
+    public class BasicSharding : RavenTestBase
     {
         public BasicSharding(ITestOutputHelper output) : base(output)
         {
         }
 
-        public class User
+        private class User
         {
+#pragma warning disable CS0649
             public string Name;
             public string Pet;
+#pragma warning restore CS0649
         }
 
-        public class Pet
+        private class Pet
         {
+#pragma warning disable CS0649
             public string Name;
             public PetType Type;
+#pragma warning restore CS0649
+
             public enum PetType
             {
                 Cat,
@@ -35,26 +41,26 @@ namespace FastTests.Sharding
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sharding)]
         public void CanCreateShardedDatabase()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 using (var s = store.OpenSession())
                 {
                     var u = s.Load<User>("users/1");
                     Assert.Null(u);
                 }
-                
+
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanPutAndGetItem()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
-                PutEntity(store, new DynamicJsonValue {["Name"] = "Oren",}, "users/1");
+                PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, "users/1");
 
                 using (var s = store.OpenSession())
                 {
@@ -65,12 +71,12 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanPutAndDeleteItem()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
-                PutEntity(store, new DynamicJsonValue {["Name"] = "Oren",}, "users/1");
+                PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, "users/1");
                 string changeVector;
 
                 using (var s = store.OpenSession())
@@ -89,7 +95,7 @@ namespace FastTests.Sharding
                 // test delete with concurrency exception
                 var cv = changeVector.ToChangeVector();
                 cv[0].Etag = 100;
-                var notExpected  = cv.SerializeVector();
+                var notExpected = cv.SerializeVector();
                 Assert.Throws<ConcurrencyException>(() => DeleteEntity(store, "users/1", notExpected));
 
                 // now really delete it
@@ -103,10 +109,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanPutAndCheckIfExists()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 PutEntity(store, new DynamicJsonValue { ["Name"] = "Oren", }, "users/1");
                 using (var s = store.OpenSession())
@@ -135,10 +141,10 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
         public void CanPatch()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
             {
                 string id = "users/1";
@@ -175,12 +181,13 @@ namespace FastTests.Sharding
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
         public void CanPutAndGetMultipleItemsWithIncludes()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
-                PutEntity(store, new DynamicJsonValue { 
+                PutEntity(store, new DynamicJsonValue
+                {
                     ["Name"] = "Arava",
                     ["Type"] = "Dog"
                 }, "pets/1");
@@ -217,7 +224,7 @@ namespace FastTests.Sharding
 
                 using (var s = store.OpenSession())
                 {
-                    var users = s.Load<User>(new []{ "users/1" , "users/2", "users/3" },b => b.IncludeDocuments(u=>u.Pet));
+                    var users = s.Load<User>(new[] { "users/1", "users/2", "users/3" }, b => b.IncludeDocuments(u => u.Pet));
                     Assert.NotNull(users);
                     Assert.Equal(3, users.Count);
                     Assert.Equal("Oren", users["users/1"].Name);
@@ -225,7 +232,7 @@ namespace FastTests.Sharding
                     Assert.Equal("Maxim", users["users/3"].Name);
 
                     var numberOfResults = s.Advanced.NumberOfRequests;
-                    var pets = s.Load<Pet>(new[] {"pets/1", "pets/2", "pets/3"});
+                    var pets = s.Load<Pet>(new[] { "pets/1", "pets/2", "pets/3" });
                     Assert.Equal("Arava", pets["pets/1"].Name);
                     Assert.Equal("Shimaon", pets["pets/2"].Name);
                     Assert.Equal("Potit", pets["pets/3"].Name);

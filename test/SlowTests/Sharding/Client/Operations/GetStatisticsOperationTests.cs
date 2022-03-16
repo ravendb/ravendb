@@ -15,11 +15,10 @@ public class GetStatisticsOperationTests : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-    public async Task CanGetStatistics(Options options)
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+    public async Task CanGetStatistics()
     {
-        using (var store = GetDocumentStore(options))
+        using (var store = Sharding.GetDocumentStore())
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -47,11 +46,10 @@ public class GetStatisticsOperationTests : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-    public async Task GetStatistics_ShouldThrow(Options options)
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+    public async Task GetStatistics_ShouldThrow()
     {
-        using (var store = GetDocumentStore(options))
+        using (var store = GetDocumentStore())
         {
             var e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new GetStatisticsOperation()));
             Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);
