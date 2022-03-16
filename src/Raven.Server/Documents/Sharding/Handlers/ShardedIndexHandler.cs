@@ -46,28 +46,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/indexes/errors", "GET")]
         public async Task GetErrors()
         {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Implement it for the Client API");
-
-            var shard = GetLongQueryString("shard", false);
-            if (shard == null)
-                throw new InvalidOperationException("In a sharded environment you must provide a shard id");
-
-            if (ShardedContext.RequestExecutors.Length <= shard)
-                throw new InvalidOperationException($"Non existing shard id, {shard}");
-
-            var names = GetStringValuesQueryString("name", required: false);
-
-            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var executor = ShardedContext.RequestExecutors[shard.Value];
-                var command = new GetIndexErrorsOperation.GetIndexErrorsCommand(names.ToArray(), null, (int)shard.Value);
-                await executor.ExecuteAsync(command, context);
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteIndexErrors(context, command.Result);
-                }
-            }
+            using (var processor = new ShardedIndexHandlerProcessorForGetErrors(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/indexes/status", "GET")]

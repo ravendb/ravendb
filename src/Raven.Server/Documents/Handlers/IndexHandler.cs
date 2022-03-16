@@ -79,12 +79,12 @@ namespace Raven.Server.Documents.Handlers
             if (index.IsRolling == false)
                 throw new InvalidOperationException($"'{name}' isn't a rolling index");
 
-            var command = node == null ? 
-                new PutRollingIndexCommand(Database.Name, index.NormalizedName, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) : 
+            var command = node == null ?
+                new PutRollingIndexCommand(Database.Name, index.NormalizedName, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) :
                 new PutRollingIndexCommand(Database.Name, index.NormalizedName, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
 
             var result = await ServerStore.SendToLeaderAsync(command);
-            
+
             await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, HttpContext.RequestAborted);
 
             NoContentStatus();
@@ -636,33 +636,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetErrors()
         {
-            var names = GetStringValuesQueryString("name", required: false);
-
-            List<Index> indexes;
-            if (names.Count == 0)
-                indexes = Database.IndexStore.GetIndexes().ToList();
-            else
-            {
-                indexes = new List<Index>();
-                foreach (var name in names)
-                {
-                    var index = Database.IndexStore.GetIndex(name);
-                    if (index == null)
-                        IndexDoesNotExistException.ThrowFor(name);
-
-                    indexes.Add(index);
-                }
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteIndexErrors(context, indexes.Select(x => new IndexErrors
-                {
-                    Name = x.Name,
-                    Errors = x.GetErrors().ToArray()
-                }));
-            }
+            using (var processor = new IndexHandlerProcessorForGetErrors(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
