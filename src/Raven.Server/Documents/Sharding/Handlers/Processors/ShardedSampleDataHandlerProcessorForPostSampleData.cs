@@ -1,21 +1,16 @@
 ﻿using System.IO;
-using System.IO.Compression;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors
 {
-    internal class ShardedSampleDataHandlerProcessorForPostSampleData<TRequestHandler, TOperationContext> : AbstractSampleDataHandlerProcessorForPostSampleData<ShardedRequestHandler, TransactionOperationContext>
-        where TRequestHandler : RequestHandler
-        where TOperationContext : JsonOperationContext
+    internal class ShardedSampleDataHandlerProcessorForPostSampleData : AbstractSampleDataHandlerProcessorForPostSampleData<ShardedRequestHandler, TransactionOperationContext>
     {
         public ShardedSampleDataHandlerProcessorForPostSampleData([NotNull] ShardedRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
