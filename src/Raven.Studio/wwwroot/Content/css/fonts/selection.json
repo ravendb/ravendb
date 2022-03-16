@@ -290,7 +290,7 @@
         {
           "order": 326,
           "id": 2,
-          "name": "disconect",
+          "name": "disconnect",
           "prevSize": 32,
           "code": 59972,
           "tempChar": ""
@@ -583,7 +583,7 @@
           "isMulticolor2": false,
           "grid": 0,
           "tags": [
-            "disconected"
+            "disconnected"
           ],
           "colorPermutations": {}
         },
