@@ -49,7 +49,7 @@ public class GetStatisticsOperationTests : RavenTestBase
     [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
     public async Task GetStatistics_ShouldThrow()
     {
-        using (var store = GetDocumentStore())
+        using (var store = Sharding.GetDocumentStore())
         {
             var e = await Assert.ThrowsAnyAsync<Exception>(() => store.Maintenance.SendAsync(new GetStatisticsOperation()));
             Assert.Contains("Query string nodeTag is mandatory, but wasn't specified", e.Message);

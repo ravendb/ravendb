@@ -29,7 +29,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.ETL
 {
-    public class FailoverEtlTests : ShardedClusterTestBase
+    public class FailoverEtlTests : ClusterTestBase
     {
         public FailoverEtlTests(ITestOutputHelper output) : base(output)
         {
@@ -45,7 +45,7 @@ namespace SlowTests.Sharding.ETL
             var srcCluster = await CreateRaftCluster(3);
             var dstCluster = await CreateRaftCluster(1);
 
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: replicationFactor, srcCluster, certificate: null);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(srcDb, replicationFactor: replicationFactor, srcCluster, certificate: null);
             var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
 
@@ -153,8 +153,8 @@ namespace SlowTests.Sharding.ETL
             var srcCluster = await CreateRaftCluster(3);
             var dstCluster = await CreateRaftCluster(3);
 
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
-            var destNode = await CreateShardedDatabaseInCluster(dstDb, replicationFactor: 2, dstCluster, certificate: null);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
+            var destNode = await ShardingCluster.CreateShardedDatabaseInCluster(dstDb, replicationFactor: 2, dstCluster, certificate: null);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
 
             using (var src = new DocumentStore()
@@ -261,7 +261,7 @@ namespace SlowTests.Sharding.ETL
             var srcCluster = await CreateRaftCluster(3, leaderIndex: 0);
             var dstCluster = await CreateRaftCluster(3);
 
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(srcDb, replicationFactor: 3, srcCluster, certificate: null);
             var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 3, dstCluster.Leader.WebUrl, certificate: null);
             var node = srcNodes.Servers.First(x => x.ServerStore.NodeTag != srcCluster.Leader.ServerStore.NodeTag).ServerStore.NodeTag;
 
@@ -375,7 +375,7 @@ namespace SlowTests.Sharding.ETL
 
             var srcCluster = await CreateRaftCluster(3, shouldRunInMemory: false);
             var dstCluster = await CreateRaftCluster(1);
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, replicationFactor: 2, srcCluster, certificate: null);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(srcDb, replicationFactor: 2, srcCluster, certificate: null);
             var destNode = await CreateDatabaseInCluster(dstDb, replicationFactor: 1, dstCluster.Leader.WebUrl, certificate: null);
             using (var src = new DocumentStore
             {
@@ -533,7 +533,7 @@ namespace SlowTests.Sharding.ETL
 
             var srcCluster = await CreateRaftCluster(2);
             var dstCluster = await CreateRaftCluster(1);
-            var srcNodes = await CreateShardedDatabaseInCluster(srcDb, 2, srcCluster, shards: 2);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(srcDb, 2, srcCluster, shards: 2);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstCluster.Leader.WebUrl);
 
             using (var src = new DocumentStore
@@ -655,7 +655,7 @@ namespace SlowTests.Sharding.ETL
             var nodes = await CreateRaftCluster(3, watcherCluster: true);
             var leader = nodes.Leader;
             var dbName = GetDatabaseName();
-            var srcNodes = await CreateShardedDatabaseInCluster(dbName, replicationFactor: 2, nodes, shards: 3);
+            var srcNodes = await ShardingCluster.CreateShardedDatabaseInCluster(dbName, replicationFactor: 2, nodes, shards: 3);
 
             var stores = srcNodes.Servers.Select(s => new DocumentStore
             {
