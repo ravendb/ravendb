@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.Sharding
             _shardedContext = shardedContext;
         }
 
-        public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> cmd, int shard)
+        public async Task<TResult> ExecuteSingleShardAsync<TResult>(RavenCommand<TResult> command, int shardNumber)
         {
-            var executor = _shardedContext.RequestExecutors[shard];
+            var executor = _shardedContext.RequestExecutors[shardNumber];
             using (executor.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                await executor.ExecuteAsync(cmd, ctx);
-                return cmd.Result;
+                await executor.ExecuteAsync(command, ctx);
+                return command.Result;
             }
         }
 

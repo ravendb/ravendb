@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
@@ -15,6 +16,12 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/studio/indexes/errors-count", "GET", AuthorizationStatus.ValidUser)]
+        public async Task GetIndexErrorsCount()
+        {
+            using (var processor = new StudioIndexHandlerProcessorForGetIndexErrorsCount(this))
+                await processor.ExecuteAsync();
+        }
 
         [RavenAction("/databases/*/studio/index-type", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostIndexType()
