@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors
 
         protected override bool SupportsCurrentNode => false;
 
-        protected override ValueTask<IndexStats[]> GetResultForCurrentNodeAsync() => throw new NotImplementedException();
+        protected override ValueTask<IndexStats[]> GetResultForCurrentNodeAsync() => throw new NotSupportedException();
 
         protected override Task<IndexStats[]> GetResultForRemoteNodeAsync(RavenCommand<IndexStats[]> command) => 
             RequestHandler.ShardExecutor.ExecuteSingleShardAsync(command, GetShardNumber());
