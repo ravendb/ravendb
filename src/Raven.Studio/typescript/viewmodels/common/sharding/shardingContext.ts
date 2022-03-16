@@ -97,14 +97,6 @@ class shardingContext extends viewModelBase {
         this.onChangeHandler = handler;
     }
 
-    private viewForAllShards() {
-        const allShards = this.activeDatabase().root;
-        this.effectiveDatabase(allShards);
-        this.shardSelector(null);
-        this.allShardsDialog(null);
-        //TODO: this.child(new this.childCtr(allShards));
-    }
-
     private routeToAllShards() {
         if (this.activeDatabase() instanceof shardedDatabase) {
             console.warn("Already using shardedDatabase. Ignoring route request");
@@ -138,7 +130,10 @@ class shardingContext extends viewModelBase {
     }
 
     useAllShards() {
-        this.useDatabase(this.activeDatabase().root);
+        const allShards = this.activeDatabase().root;
+        this.shardSelector(null);
+        this.allShardsDialog(null);
+        this.useDatabase(allShards);
     }
 
     supportsDatabase(db: database): db is shard {
@@ -165,7 +160,7 @@ class shardingContext extends viewModelBase {
             this.effectiveDatabase(activeDatabase);
             this.onChangeHandler(activeDatabase);
         } else if (this.mode === "allShardsOnly" && activeDatabase instanceof shard) {
-            this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.viewForAllShards()));
+            this.allShardsDialog(new allShardsDialog(() => this.routeToAllShards(), () => this.useAllShards()));
         } else {
             this.shardSelector(new shardSelector(this.shards(), (db, pin) => this.onDatabaseSelected(db, pin)));
         }
