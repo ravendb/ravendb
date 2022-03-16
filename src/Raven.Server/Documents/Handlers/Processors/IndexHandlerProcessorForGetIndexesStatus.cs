@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors
@@ -12,7 +13,9 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected override ValueTask<IndexingStatus> GetIndexesStatusAsync()
+        protected override bool SupportsCurrentNode => true;
+
+        protected override ValueTask<IndexingStatus> GetResultForCurrentNodeAsync()
         {
             var indexes = new List<IndexingStatus.IndexStatus>();
 
@@ -35,5 +38,8 @@ namespace Raven.Server.Documents.Handlers.Processors
 
             return ValueTask.FromResult(indexesStatus);
         }
+
+        protected override Task<IndexingStatus> GetResultForRemoteNodeAsync(RavenCommand<IndexingStatus> command) => 
+            RequestHandler.ExecuteRemoteAsync(command);
     }
 }

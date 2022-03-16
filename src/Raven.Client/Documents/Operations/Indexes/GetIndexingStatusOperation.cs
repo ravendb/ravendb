@@ -16,6 +16,11 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         internal class GetIndexingStatusCommand : RavenCommand<IndexingStatus>
         {
+            public GetIndexingStatusCommand(string nodeTag = null)
+            {
+                SelectedNodeTag = nodeTag;
+            }
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/status";
