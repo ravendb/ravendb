@@ -216,14 +216,15 @@ namespace Raven.Server.Documents.Patch.V8
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public InternalHandle CreateObjectBinder(bool keepAlive = false)
         {
-            return BlittableObjectInstanceV8.CreateObjectBinder(_engineEx, this, keepAlive: keepAlive);
+            return CreateObjectBinder(_engineEx, this, keepAlive: keepAlive);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static InternalHandle CreateObjectBinder(V8EngineEx engine, BlittableObjectInstanceV8 boi, bool keepAlive = false)
         {
             InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance(), keepAlive: keepAlive);
-
+            var binder = (ObjectBinder)jsBinder.Object;
+            binder.ShouldDisposeBoundObject = false;
             return jsBinder;
         }
 
@@ -291,7 +292,6 @@ namespace Raven.Server.Documents.Patch.V8
                 _ownValues?.Clear();
             }
 
-
             _originalPropertiesTypes?.Clear();
 
             _luceneDocument = null;
@@ -316,6 +316,8 @@ namespace Raven.Server.Documents.Patch.V8
 
                 _deletes = null;
                 _ownValues = null;
+                
+                GC.SuppressFinalize(this); // TODO [shlomo] should be moved to Init when ShouldDisposeBoundObject set to true
             }
         }
 
@@ -721,7 +723,7 @@ namespace Raven.Server.Documents.Patch.V8
                 _engineEx = _parent._engineEx;
                 _engine = _parent._engine;
 
-                GC.SuppressFinalize(this);
+                //GC.SuppressFinalize(this); // TODO [shlomo] should be restored when ShouldDisposeBoundObject set to true 
             }
 
             public BlittableObjectProperty(BlittableObjectInstanceV8 parent, string propertyName, InternalHandle jsValue)
