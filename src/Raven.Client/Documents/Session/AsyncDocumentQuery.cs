@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
@@ -24,7 +23,7 @@ namespace Raven.Client.Documents.Session
     /// A query against a Raven index
     /// </summary>
     public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAbstractDocumentQueryImpl<T>,
-        IAsyncRawDocumentQuery<T>, IAsyncGraphQuery<T>, IDocumentQueryGenerator, IAsyncDocumentQuery<T>
+        IAsyncRawDocumentQuery<T>, IDocumentQueryGenerator, IAsyncDocumentQuery<T>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
@@ -58,36 +57,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Statistics(out QueryStatistics stats)
-        {
-            Statistics(out stats);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Take(int count)
-        {
-            Take(count);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
-        {
-            UsingDefaultOperator(queryOperator);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
-        {
-            WaitForNonStaleResults(waitTimeout);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AddParameter(string name, object value)
-        {
-            AddParameter(name, value);
-            return this;
-        }
-
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.Take(int count)
         {
@@ -99,18 +68,6 @@ namespace Raven.Client.Documents.Session
         IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.Take(int count)
         {
             Take(count);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Timings(out QueryTimings timings)
-        {
-            Timings(out timings);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.Skip(int count)
-        {
-            Skip(count);
             return this;
         }
 
@@ -561,18 +518,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
-        {
-            AfterStreamExecuted(action);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
-        {
-            BeforeQueryExecuted(beforeQueryExecuted);
-            return this;
-        }
-
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
@@ -726,13 +671,6 @@ namespace Raven.Client.Documents.Session
             AfterQueryExecuted(action);
             return this;
         }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
-        {
-            AfterQueryExecuted(action);
-            return this;
-        }
-
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
         {
             AfterStreamExecuted(action);
@@ -854,18 +792,6 @@ namespace Raven.Client.Documents.Session
         IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.NoCaching()
-        {
-            NoCaching();
-            return this;
-        }
-
-        IAsyncGraphQuery<T> IQueryBase<T, IAsyncGraphQuery<T>>.NoTracking()
-        {
-            NoTracking();
             return this;
         }
 
@@ -1195,82 +1121,6 @@ namespace Raven.Client.Documents.Session
                     $"AsyncDocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using AsyncDocumentQuery as the source");
 
             return CreateDocumentQueryInternal<TResult>();
-        }
-
-        public IAsyncGraphQuery<T> With<TOther>(string alias, string rawQuery)
-        {
-            return WithInternal(alias, (AsyncDocumentQuery<TOther>)AsyncSession.Advanced.AsyncRawQuery<TOther>(rawQuery));
-        }
-
-        public IAsyncGraphQuery<T> WithEdges(string alias, string edgeSelector, string query)
-        {
-            WithTokens.AddLast(new WithEdgesToken(alias, edgeSelector, query));
-            return this;
-        }
-
-        public IAsyncGraphQuery<T> With<TOther>(string alias, IRavenQueryable<TOther> query)
-        {
-            var queryInspector = (RavenQueryInspector<TOther>)query;
-            var docQuery = (AsyncDocumentQuery<TOther>)queryInspector.GetAsyncDocumentQuery(x => x.ParameterPrefix = $"w{WithTokens.Count}p");
-            return WithInternal(alias, docQuery);
-        }
-
-        public IAsyncGraphQuery<T> With<TOther>(string alias, Func<IAsyncDocumentQueryBuilder, IAsyncDocumentQuery<TOther>> queryFactory)
-        {
-            var docQuery = (AsyncDocumentQuery<TOther>)queryFactory(new AsyncDocumentQueryBuilder(AsyncSession, $"w{WithTokens.Count}p"));
-            return WithInternal(alias, docQuery);
-        }
-
-        private class AsyncDocumentQueryBuilder : IAsyncDocumentQueryBuilder
-        {
-            private readonly IAsyncDocumentSession _session;
-            private readonly string _parameterPrefix;
-
-            public AsyncDocumentQueryBuilder(IAsyncDocumentSession session, string parameterPrefix)
-            {
-                _session = session;
-                _parameterPrefix = parameterPrefix;
-            }
-
-            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
-            {
-                var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1, TIndexCreator>();
-                query.ParameterPrefix = _parameterPrefix;
-                return query;
-            }
-
-            public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1>(string indexName = null, string collectionName = null, bool isMapReduce = false)
-            {
-                var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1>(indexName, collectionName, isMapReduce);
-                query.ParameterPrefix = _parameterPrefix;
-                return query;
-            }
-        }
-
-        private IAsyncGraphQuery<T> WithInternal<TOther>(string alias, AsyncDocumentQuery<TOther> docQuery)
-        {
-            if (docQuery.SelectTokens?.Count > 0)
-            {
-                throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
-            }
-
-            foreach (var keyValue in docQuery.QueryParameters)
-            {
-                QueryParameters.Add(keyValue.Key, keyValue.Value);
-            }
-
-            WithTokens.AddLast(new WithToken(alias, docQuery.ToString()));
-
-            if (docQuery.TheWaitForNonStaleResults)
-            {
-                TheWaitForNonStaleResults = true;
-                if (Timeout == null || Timeout < docQuery.Timeout)
-                {
-                    Timeout = docQuery.Timeout;
-                }
-            }
-
-            return this;
         }
     }
 }

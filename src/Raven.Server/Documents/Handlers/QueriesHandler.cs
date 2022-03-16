@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            
+
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, -1);
         }
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
             var addSpatialProperties = GetBoolValueQueryString("addSpatialProperties", required: false) ?? false;
             var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database, addSpatialProperties);
             var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
-            
+
             indexQuery.Diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false ? new List<string>() : null;
             indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
             indexQuery.DisableAutoIndexCreation = GetBoolValueQueryString("disableAutoIndexCreation", false) ?? false;
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            
+
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", $"{indexQuery.Metadata.QueryText}\n{indexQuery.QueryParameters}", numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
         }
@@ -220,92 +220,6 @@ namespace Raven.Server.Documents.Handlers
 
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs, totalDocumentsSizeInBytes);
-        }
-
-        private async Task DetailedGraphResult(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
-        {
-            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
-            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
-
-            var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
-            if (!(queryRunner is GraphQueryRunner gqr))
-                throw new InvalidOperationException("The specified query is not a graph query.");
-            using (var token = CreateTimeLimitedQueryToken())
-            await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
-            {
-                await gqr.WriteDetailedQueryResult(indexQuery, queryContext, writer, token);
-            }
-        }
-
-        private async Task Graph(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
-        {
-            var indexQueryReader = new IndexQueryReader(GetStart(), GetPageSize(), HttpContext, RequestBodyStream(), Database.QueryMetadataCache, Database);
-            var indexQuery = await indexQueryReader.GetIndexQueryAsync(queryContext.Documents, method, tracker);
-
-            var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
-            if (!(queryRunner is GraphQueryRunner gqr))
-                throw new InvalidOperationException("The specified query is not a graph query.");
-
-            using (var token = CreateTimeLimitedQueryToken())
-            {
-                var results = await gqr.GetAnalyzedQueryResults(indexQuery, queryContext, null, token);
-
-                var nodes = new DynamicJsonArray();
-                var edges = new DynamicJsonArray();
-                var output = new DynamicJsonValue
-                {
-                    ["Nodes"] = nodes,
-                    ["Edges"] = edges
-                };
-
-                foreach (var item in results.Nodes)
-                {
-                    var val = item.Value;
-                    if (val is Document d)
-                    {
-                        d.EnsureMetadata();
-                        val = d.Data;
-                    }
-                    nodes.Add(new DynamicJsonValue
-                    {
-                        ["Id"] = item.Key,
-                        ["Value"] = val
-                    });
-                }
-                var added = new HashSet<(string, string, object)>();
-                foreach (var edge in results.Edges)
-                {
-                    added.Clear();
-                    var array = new DynamicJsonArray();
-                    var djv = new DynamicJsonValue
-                    {
-                        ["Name"] = edge.Key,
-                        ["Results"] = array
-                    };
-                    foreach (var item in edge.Value)
-                    {
-                        var edgeVal = item.Edge;
-                        if (edgeVal is Document d)
-                        {
-                            edgeVal = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
-                        }
-                        if (added.Add((item.Source, item.Destination, edgeVal)) == false)
-                            continue;
-                        array.Add(new DynamicJsonValue
-                        {
-                            ["From"] = item.Source,
-                            ["To"] = item.Destination,
-                            ["Edge"] = edgeVal
-                        });
-                    }
-                    edges.Add(djv);
-                }
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
-                {
-                    queryContext.Documents.Write(writer, output);
-                }
-            }
         }
 
         private async Task Explain(QueryOperationContext queryContext, RequestTimeTracker tracker, HttpMethod method)
@@ -570,17 +484,6 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            if (string.Equals(debug, "graph", StringComparison.OrdinalIgnoreCase))
-            {
-                await Graph(queryContext, tracker, method);
-                return;
-            }
-
-            if (string.Equals(debug, "detailedGraphResult", StringComparison.OrdinalIgnoreCase))
-            {
-                await DetailedGraphResult(queryContext, tracker, method);
-                return;
-            }
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 

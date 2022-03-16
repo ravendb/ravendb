@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
-using FastTests.Client;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -28,7 +26,7 @@ namespace FastTests.Server.Documents
         {
         }
 
-        public class User
+        private class User
         {
             public string Desc;
             public List<string> Items;

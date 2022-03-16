@@ -160,7 +160,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             try
             {
-                QueryMetadata.ParseQuery(queryText, QueryType.Select, documentDatabase);
+                QueryMetadata.ParseQuery(queryText, QueryType.Select);
             }
             catch
             {

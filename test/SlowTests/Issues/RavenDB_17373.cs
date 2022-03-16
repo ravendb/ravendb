@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_17373 : RavenTestBase 
+    public class RavenDB_17373 : RavenTestBase
     {
         public RavenDB_17373(ITestOutputHelper output) : base(output)
         {
@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                 {
                     s.Store(new User
                     {
-                        Name = "users/" + (i%3),
+                        Name = "users/" + (i % 3),
                         Registered = start.AddDays(i)
                     });
                 }
@@ -43,13 +43,13 @@ namespace SlowTests.Issues
                     .Where(x => x.Name == "users/1" && x.Registered >= new DateTime(2021, 1, 1) && x.Registered <= new DateTime(2021, 1, 8))
                     .ToList();
                 Assert.Equal(3, results.Count);
-             
+
                 // now we'll cache the query
                 results = s.Query<User>()
                     .Where(x => x.Name == "users/2" && x.Registered >= new DateTime(2021, 1, 1) && x.Registered <= new DateTime(2021, 1, 8))
                     .ToList();
                 Assert.Equal(2, results.Count); // the last users/2 isn't on the range 
-                
+
                 results = s.Query<User>()
                     .Where(x => x.Name == "users/0" && x.Registered >= new DateTime(2021, 1, 1) && x.Registered <= new DateTime(2021, 1, 8))
                     .ToList();

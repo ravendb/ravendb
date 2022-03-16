@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using FastTests;
-using FastTests.Graph;
+﻿using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 

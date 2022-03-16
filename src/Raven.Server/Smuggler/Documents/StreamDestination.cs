@@ -188,7 +188,9 @@ namespace Raven.Server.Smuggler.Documents
         }
         public ICounterActions LegacyCounters(SmugglerResult result)
         {
+#pragma warning disable CS0618
             return new StreamCounterActions(_writer, _context, this, nameof(DatabaseItemType.Counters));
+#pragma warning restore CS0618
         }
 
         public ISubscriptionActions Subscriptions()
@@ -392,7 +394,7 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WritePropertyName(nameof(databaseRecord.OlapEtls));
                             WriteOlapEtls(databaseRecord.OlapEtls);
                         }
-                        
+
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.ElasticSearchConnectionStrings))
                         {
                             _writer.WriteComma();
@@ -423,7 +425,7 @@ namespace Raven.Server.Smuggler.Documents
                             _writer.WriteEndObject();
                         }
 
-                        
+
 
                         break;
                 }
@@ -618,7 +620,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndArray();
             }
-            
+
             private void WriteElasticSearchEtls(List<ElasticSearchEtlConfiguration> elasticSearchEtlConfiguration)
             {
                 if (elasticSearchEtlConfiguration == null)
@@ -800,7 +802,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndObject();
             }
-            
+
             private void WriteElasticSearchConnectionStrings(Dictionary<string, ElasticSearchConnectionString> connections)
             {
                 _writer.WriteStartObject();
@@ -950,7 +952,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void RegisterForDisposal(IDisposable data)
             {
-                
+
             }
 
             public StreamCounterActions(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, StreamDestination destination, string propertyName) : base(writer, propertyName)
@@ -1181,7 +1183,7 @@ namespace Raven.Server.Smuggler.Documents
                 // no-op
                 return default;
             }
-            
+
             public IEnumerable<DocumentItem> GetDocumentsWithDuplicateCollection()
             {
                 yield break;
@@ -1374,7 +1376,7 @@ namespace Raven.Server.Smuggler.Documents
             public StreamLegacyActions(AsyncBlittableJsonTextWriter writer, string propertyName)
                 : base(writer, propertyName)
             {
-                
+
             }
 
             public ValueTask WriteLegacyDeletions(string id)

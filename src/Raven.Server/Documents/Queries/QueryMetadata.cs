@@ -7,9 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Esprima.Ast;
-using Nest;
 using Raven.Client;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -31,7 +29,6 @@ using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Sparrow;
-using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Utils;
 using Spatial4n.Core.Shapes;
@@ -48,15 +45,15 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
 
-        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, bool addSpatialProperties = false, QueryType queryType = QueryType.Select, DocumentDatabase database = null)
-            : this(ParseQuery(query, queryType, database), parameters, cacheKey, addSpatialProperties)
+        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, bool addSpatialProperties = false, QueryType queryType = QueryType.Select)
+            : this(ParseQuery(query, queryType), parameters, cacheKey, addSpatialProperties)
         {
         }
 
-        internal static Query ParseQuery(string q, QueryType queryType, DocumentDatabase database = null)
+        internal static Query ParseQuery(string q, QueryType queryType)
         {
             var qp = new QueryParser();
-            qp.Init(q, database?.DocumentsStorage);
+            qp.Init(q);
             return qp.Parse(queryType);
         }
 
@@ -69,32 +66,24 @@ namespace Raven.Server.Documents.Queries
 
             QueryText = Query.QueryText;
 
-            IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
             IsGroupBy = Query.GroupBy != null;
-            
+
             if (query.Filter != null)
             {
                 BuildFilterScript(query);
             }
 
-            if (IsGraph == false)
-            {
-                IsDynamic = Query.From.Index == false;
-                var fromToken = Query.From.From;
+            IsDynamic = Query.From.Index == false;
+            var fromToken = Query.From.From;
 
-                if (IsDynamic)
-                    CollectionName = fromToken.FieldValue;
-                else
-                    IndexName = fromToken.FieldValue;
-
-                if (IsDynamic == false || IsGroupBy)
-                    IsCollectionQuery = false;
-            }
+            if (IsDynamic)
+                CollectionName = fromToken.FieldValue;
             else
-            {
+                IndexName = fromToken.FieldValue;
+
+            if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
-            }
 
             if (IsGroupBy && IsDynamic == false)
                 throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");
@@ -155,8 +144,6 @@ function execute(doc, args){
         public readonly bool IsDynamic;
 
         public readonly bool IsGroupBy;
-
-        public readonly bool IsGraph;
 
         public bool HasFacet { get; private set; }
 
@@ -303,8 +290,6 @@ function execute(doc, args){
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
         }
 
-        private static readonly Dictionary<StringSegment, WithEdgesExpression> EmptyEdges = new Dictionary<StringSegment, WithEdgesExpression>();
-
         private void Build(BlittableJsonReaderObject parameters)
         {
             string fromAlias = null;
@@ -326,50 +311,6 @@ function execute(doc, args){
 
             if (Query.Load != null)
                 HandleLoadClause(parameters);
-
-            if (IsGraph)
-            {
-                var recursivePatterns = Query.GraphQuery.RecursiveMatches;
-                var edgePredicateKeys = Query.GraphQuery.WithEdgePredicates ?? EmptyEdges;
-                var documentQueryKeys = Query.GraphQuery.WithDocumentQueries;
-
-                if (recursivePatterns != null)
-                {
-                    foreach (var alias in recursivePatterns)
-                    {
-                        RootAliasPaths.TryAdd(alias, (null, false, false, false, null));
-                    }
-                }
-                foreach (var edge in edgePredicateKeys)
-                {
-                    RootAliasPaths.TryAdd(edge.Key, (null, false, false, false, null));
-                }
-                foreach (var doc in documentQueryKeys)
-                {
-                    RootAliasPaths.TryAdd(doc.Key, (null, false, false, false, null));
-                }
-
-                if (documentQueryKeys == null)
-                {
-                    ThrowMissingVertexMatchClauses();
-                }
-
-                if (Query.Select != null)
-                {
-                    foreach (var projection in Query.Select)
-                    {
-                        if (!(projection.Expression is FieldExpression field))
-                            continue;
-
-                        var alias = field.Compound[0];
-                        if (!edgePredicateKeys.ContainsKey(alias) && !documentQueryKeys.ContainsKey(alias) &&
-                            recursivePatterns?.Contains(alias) != true)
-                        {
-                            ThrowOnUndefinedAlias(alias);
-                        }
-                    }
-                }
-            }
 
             if (Query.SelectFunctionBody.FunctionText != null)
                 HandleSelectFunctionBody(parameters);
@@ -412,16 +353,6 @@ function execute(doc, args){
 
             if (Query.DeclaredFunctions != null)
                 HandleDeclaredFunctions();
-        }
-
-        private static void ThrowOnUndefinedAlias(StringSegment alias)
-        {
-            throw new InvalidQueryException($"Could not find alias '{alias}' defined the query. SELECT clause must include an alias that refers to either a vertex or an edge");
-        }
-
-        private static void ThrowMissingVertexMatchClauses()
-        {
-            throw new InvalidOperationException("Graph queries should have at least one vertex match clause");
         }
 
         private void HandleDeclaredFunctions()
@@ -711,7 +642,7 @@ function execute(doc, args){
             if (Query.Select != null && Query.Select.Count > 0)
                 ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
-            if (RootAliasPaths.Count == 0 && IsGraph == false)
+            if (RootAliasPaths.Count == 0)
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             // validate that this is valid JS code
@@ -734,9 +665,7 @@ function execute(doc, args){
 
             sb.Append("function ").Append(SelectOutput).Append("(");
             int index = 0;
-            var args = new SelectField[IsGraph ?
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count :
-                RootAliasPaths.Count];
+            var args = new SelectField[RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
             {
@@ -1810,11 +1739,6 @@ function execute(doc, args){
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
-            if (IsGraph)
-            {
-                return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
-            }
-
             if (_aliasToName.TryGetValue(fe.Compound[0].Value, out var indexFieldName) &&
                 fe.Compound[0] != Query.From.Alias)
             {
