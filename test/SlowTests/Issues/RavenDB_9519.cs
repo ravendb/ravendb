@@ -88,7 +88,6 @@ namespace SlowTests.Issues
 
         [Theory]
         [InlineData("From%20companies")]
-        [InlineData("match%20(Companies)")]
         public async Task ExportingAndImportingCsvUsingQueryFromDocumentShouldWork(string query)
         {
             using (var store = GetDocumentStore())
