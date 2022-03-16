@@ -42,6 +42,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -1409,6 +1410,9 @@ namespace FastTests
                                     new DatabaseTopology(),
                             };
                         };
+
+                        options.ModifyDocumentStore = s => s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
+                        DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "remove above after changes api is working");
 
                         options.DatabaseMode = RavenDatabaseMode.Sharded;
                         options.AddToDescription($"{nameof(RavenDataAttribute.DatabaseMode)} = {nameof(RavenDatabaseMode.Sharded)}");

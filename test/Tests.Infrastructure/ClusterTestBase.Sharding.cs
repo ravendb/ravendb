@@ -7,17 +7,21 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
-using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
-namespace FastTests.Sharding
+namespace Tests.Infrastructure;
+
+public partial class ClusterTestBase
 {
-    [Trait("Category", "Sharding")]
-    public abstract class ShardedClusterTestBase : ClusterTestBase
+    public readonly ShardingClusterTestBase ShardingCluster;
+
+    public class ShardingClusterTestBase
     {
-        protected ShardedClusterTestBase(ITestOutputHelper output) : base(output)
+        private readonly ClusterTestBase _parent;
+
+        public ShardingClusterTestBase(ClusterTestBase parent)
         {
+            _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
         public Task<(long Index, List<RavenServer> Servers)> CreateShardedDatabaseInCluster(string databaseName, int replicationFactor, (List<RavenServer> Nodes, RavenServer Leader) tuple, int shards = 3, X509Certificate2 certificate = null)
@@ -26,10 +30,10 @@ namespace FastTests.Sharding
             {
                 Shards = GetDatabaseTopologyForShards(replicationFactor, tuple.Nodes.Select(x => x.ServerStore.NodeTag).ToList(), shards)
             };
-            return CreateDatabaseInCluster(record, replicationFactor, tuple.Leader.WebUrl, certificate);
+            return _parent.CreateDatabaseInCluster(record, replicationFactor, tuple.Leader.WebUrl, certificate);
         }
 
-        internal static DatabaseTopology[] GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
+        public static DatabaseTopology[] GetDatabaseTopologyForShards(int replicationFactor, List<string> tags, int shards)
         {
             Assert.True(replicationFactor <= tags.Count);
             var topology = new DatabaseTopology[shards];
@@ -52,7 +56,7 @@ namespace FastTests.Sharding
             return topology;
         }
 
-        public static async Task<DatabaseTopology[]> GetShards(DocumentStore store)
+        public async Task<DatabaseTopology[]> GetShards(DocumentStore store)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             return record.Shards;

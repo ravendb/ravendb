@@ -22,13 +22,11 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -39,7 +37,7 @@ using Xunit.Abstractions;
 namespace Tests.Infrastructure
 {
     [Trait("Category", "Cluster")]
-    public abstract class ClusterTestBase : RavenTestBase
+    public abstract partial class ClusterTestBase : RavenTestBase
     {
         static ClusterTestBase()
         {
@@ -49,6 +47,7 @@ namespace Tests.Infrastructure
 
         protected ClusterTestBase(ITestOutputHelper output) : base(output)
         {
+            ShardingCluster = new ShardingClusterTestBase(this);
         }
 
         private int _electionTimeoutInMs = 300;
@@ -518,7 +517,7 @@ namespace Tests.Infrastructure
             return WaitForDocument<dynamic>(store, docId, predicate: null, timeout: timeout, database);
         }
 
-        
+
 
         public async Task<T[]> AssertClusterWaitForNotNull<T>(
             List<RavenServer> nodes,
