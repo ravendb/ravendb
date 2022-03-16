@@ -11,7 +11,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/sample-data", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task PostCreateSampleData()
         {
-            using (var processor = new SampleDataHandlerProcessorForPostSampleData<DatabaseRequestHandler, DocumentsOperationContext>(this))
+            using (var processor = new SampleDataHandlerProcessorForPostSampleData(this))
             {
                 await processor.ExecuteAsync();
             }
@@ -20,11 +20,9 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task GetSampleDataClasses()
         {
-            await using (var sampleData = typeof(SampleDataHandler).Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
-            await using (var responseStream = ResponseBodyStream())
+            using (var processor = new SampleDataHandlerProcessorForGetSampleDataClasses(this))
             {
-                HttpContext.Response.ContentType = "text/plain";
-                await sampleData.CopyToAsync(responseStream);
+                await processor.ExecuteAsync();
             }
         }
     }
