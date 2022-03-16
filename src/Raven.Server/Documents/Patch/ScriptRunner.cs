@@ -542,6 +542,11 @@ namespace Raven.Server.Documents.Patch
                             
                     try
                     {
+                        if (ScriptEngineHandle.IsMemoryChecksOn)
+                        {
+                            ScriptEngineHandle.MakeSnapshot("single_run");
+                        }
+
                         SetArgs(jsonCtx, method, args);
 
                         using (var jsMethod = ScriptEngineHandle.GetGlobalProperty(method))
@@ -551,11 +556,6 @@ namespace Raven.Server.Documents.Patch
                             
                             if (!jsMethod.IsFunction)
                                 throw new InvalidOperationException($"Obtained {method} global property is not a function: {ScriptEngineHandle.JsonStringify().StaticCall(method)}");
-
-                            if (ScriptEngineHandle.IsMemoryChecksOn)
-                            {
-                                ScriptEngineHandle.MakeSnapshot("single_run");
-                            }
 
 #if false //DEBUG
                             var argsStr = "";
