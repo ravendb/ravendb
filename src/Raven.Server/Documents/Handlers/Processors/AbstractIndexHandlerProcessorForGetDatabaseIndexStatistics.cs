@@ -1,13 +1,15 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Http;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractIndexHandlerProcessorForGetDatabaseIndexStatistics<TRequestHandler, TOperationContext> : AbstractHandlerReadProcessor<IndexStats[], TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
@@ -15,16 +17,13 @@ namespace Raven.Server.Documents.Handlers.Processors
         {
         }
 
-        protected abstract ValueTask<IndexStats[]> GetDatabaseIndexStatisticsAsync();
+        protected override RavenCommand<IndexStats[]> CreateCommandForNode(string nodeTag) => new GetIndexesStatisticsOperation.GetIndexesStatisticsCommand(nodeTag);
 
-        public override async ValueTask ExecuteAsync()
+        protected override async ValueTask WriteResultAsync(IndexStats[] result)
         {
-            var indexesStats = await GetDatabaseIndexStatisticsAsync();
-
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
-                writer.WriteIndexesStats(context, indexesStats);
-
+                writer.WriteIndexesStats(context, result);
         }
     }
 }
