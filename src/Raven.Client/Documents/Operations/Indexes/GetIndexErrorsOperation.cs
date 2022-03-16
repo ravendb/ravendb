@@ -5,36 +5,21 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
     public class GetIndexErrorsOperation : IMaintenanceOperation<IndexErrors[]>
     {
         private readonly string[] _indexNames;
-        private readonly int? _shard;
         private readonly string _nodeTag;
 
         public GetIndexErrorsOperation()
         {
         }
 
-        internal GetIndexErrorsOperation(int? shard)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
-            _shard = shard;
-        }
-
         public GetIndexErrorsOperation(string[] indexNames)
         {
             _indexNames = indexNames;
-        }
-
-        internal GetIndexErrorsOperation(string[] indexNames, int shard)
-        {
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Client API");
-            _indexNames = indexNames;
-            _shard = shard;
         }
 
         internal GetIndexErrorsOperation(string[] indexNames, string nodeTag)
@@ -45,38 +30,27 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public RavenCommand<IndexErrors[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetIndexErrorsCommand(_indexNames, _nodeTag, _shard);
+            return new GetIndexErrorsCommand(_indexNames, _nodeTag);
         }
 
         internal class GetIndexErrorsCommand : RavenCommand<IndexErrors[]>
         {
             private readonly string[] _indexNames;
-            private readonly int? _shard;
 
-            internal GetIndexErrorsCommand(string[] indexNames, string nodeTag, int? shard)
+            internal GetIndexErrorsCommand(string[] indexNames, string nodeTag)
             {
                 _indexNames = indexNames;
-                _shard = shard;
                 SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/errors";
-                var first = true;
                 if (_indexNames != null && _indexNames.Length > 0)
                 {
                     url += "?";
                     foreach (var indexName in _indexNames)
                         url += $"&name={Uri.EscapeDataString(indexName)}";
-                    first = false;
-                }
-
-                if (_shard != null)
-                {
-                    if (first)
-                        url += "?";
-                    url += $"&shard={_shard}";
                 }
 
                 return new HttpRequestMessage
