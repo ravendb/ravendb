@@ -180,7 +180,9 @@ namespace Corax
         private const string SuggestionsTreePrefix = "__Suggestion_";
         private Dictionary<int, Dictionary<Slice, int>> _suggestionsAccumulator;
 
+#pragma warning disable CS0169
         private Queue<long> _lastEntries; // keep last 256 items
+#pragma warning restore CS0169
 
         // The reason why we want to have the transaction open for us is so that we avoid having
         // to explicitly provide the index writer with opening semantics and also every new

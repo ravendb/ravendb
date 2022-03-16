@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Corax;
@@ -441,6 +442,7 @@ namespace FastTests.Corax
                         0 => new string[] { "road", "lake", "mountain" },
                         1 => new string[] { "road", "mountain" },
                         2 => new string[] { "sky", "space", "lake" },
+                        _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
 
@@ -538,6 +540,7 @@ namespace FastTests.Corax
                         0 => new string[] { "road", "lake", "mountain" },
                         1 => new string[] { "road", "mountain" },
                         2 => new string[] { "sky", "space", "lake" },
+                        _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
 
@@ -1218,6 +1221,7 @@ namespace FastTests.Corax
                         0 => new string[] { "road", "Lake", "mounTain" },
                         1 => new string[] { "roAd", "mountain" },
                         2 => new string[] { "sky", "space", "laKe" },
+                        _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
                 entries.Add(entry);
@@ -1295,6 +1299,7 @@ namespace FastTests.Corax
                         0 => new string[] { "road Lake mounTain  " },
                         1 => new string[] { "roAd mountain" },
                         2 => new string[] { "sky space laKe" },
+                        _ => throw new InvalidDataException("This should not happen.")
                     }
                 };
 
@@ -1405,7 +1410,7 @@ namespace FastTests.Corax
                     Assert.Equal(list.Count(x => x.Content.Contains("ing")), whole);
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
             }

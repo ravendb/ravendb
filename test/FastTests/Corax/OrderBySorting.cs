@@ -14,8 +14,7 @@ namespace FastTests.Corax
 {
     public class OrderBySortingTests : StorageTest
     {
-        private List<IndexSingleNumericalEntry<long>> longList = new();
-        private IndexSearcher _indexSearcher;
+        private readonly List<IndexSingleNumericalEntry<long>> longList = new();
         private const int IndexId = 0, ContentId = 1;
 
         public OrderBySortingTests(ITestOutputHelper output) : base(output)

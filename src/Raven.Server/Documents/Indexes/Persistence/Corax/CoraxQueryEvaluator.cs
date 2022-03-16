@@ -472,7 +472,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         (ComparerType.Boosting, ComparerType.Boosting) => SortingMultiMatch.Create(_searcher, match,
                             default(BoostingComparer),
                             default(BoostingComparer)),
-                        _ => throw new ArgumentOutOfRangeException()
+                        var (type1, type2) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2})")
+
                     };
                 }
                 case 3:
@@ -639,6 +640,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 default(BoostingComparer),
                                 default(BoostingComparer),
                                 default(BoostingComparer)),
+
+                            var (type1, type2, type3) => throw new NotSupportedException($"Currently, we do not support sorting by tuple ({type1}, {type2}, {type3})")
                         };
                 }
             }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -102,6 +103,7 @@ namespace Corax.Queries
                     MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                     MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,
                     MatchCompareFieldType.Floating => &CompareWithLoadNumerical<double>,
+                    var type => throw new NotSupportedException($"Currently, we do not support sorting by {type}.")
                 };
             }
 
@@ -184,6 +186,7 @@ namespace Corax.Queries
                     MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                     MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,
                     MatchCompareFieldType.Floating => &CompareWithLoadNumerical<double>,
+                    var type => throw new NotSupportedException($"Currently, we do not support sorting by {type}.")
                 };
             }
 
@@ -261,6 +264,7 @@ namespace Corax.Queries
                     MatchCompareFieldType.Sequence => &CompareWithLoadSequence,
                     MatchCompareFieldType.Integer => &CompareWithLoadNumerical<long>,
                     MatchCompareFieldType.Floating => &CompareWithLoadNumerical<double>,
+                    var type => throw new NotSupportedException($"Currently, we do not support sorting by {type}.")
                 };
             }
 
