@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -17,6 +18,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedSmugglerHandler : ShardedRequestHandler
     {
+        [RavenShardedAction("/databases/*/smuggler/validate-options", "POST")]
+        public async Task PostValidateOptions()
+        {
+            using (var processor = new SmugglerValidationOptionsProcessor<TransactionOperationContext>(this, ContextPool))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
+
         [RavenShardedAction("/databases/*/smuggler/export", "POST")]
         public async Task PostExport()
         {
