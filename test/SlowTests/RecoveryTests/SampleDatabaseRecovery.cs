@@ -33,7 +33,7 @@ namespace SlowTests.RecoveryTests
                     ModifyDatabaseName = _ => badName
                 }))
             {
-                CreateNorthwindDatabase(corruptedStore);
+                Samples.CreateNorthwindDatabase(corruptedStore);
             }
 
             Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(badName));

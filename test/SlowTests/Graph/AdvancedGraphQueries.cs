@@ -45,7 +45,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -63,7 +63,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 //create properties with whitespace in their name
                 var operation = store
@@ -163,7 +163,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -179,7 +179,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -195,7 +195,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -211,7 +211,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -579,7 +579,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var one = store.OpenSession())
                 using (var two = store.OpenSession())
                 {
@@ -600,7 +600,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
@@ -626,7 +626,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
@@ -660,7 +660,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
@@ -694,7 +694,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
@@ -720,7 +720,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var matchQueryResultsAsJson = session.Advanced
@@ -1218,7 +1218,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines as l select Product]->(Products as p)")
@@ -1235,7 +1235,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
@@ -1263,7 +1263,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
@@ -1305,7 +1305,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -1336,7 +1336,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 
                 using (var session = store.OpenSession())
                 {
@@ -1368,7 +1368,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 
                 using (var session = store.OpenSession())
                 {
@@ -1388,7 +1388,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var pathIdsFromShortestStrategy = GetPathIdsForQuery(session, @"

@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 Path = dbPath
             }))
             {
-                await CreateLegacyNorthwindDatabase(store);
+                await Samples.CreateLegacyNorthwindDatabaseAsync(store);
 
                 databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
             }
