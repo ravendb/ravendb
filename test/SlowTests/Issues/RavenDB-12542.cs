@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new Index_Orders_ByEmployee().Execute(store);
                 WaitForIndexing(store);
 
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new IndexOrdersProductsWithPricePerUnit().Execute(store);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())

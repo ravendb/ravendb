@@ -21,7 +21,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -38,13 +37,11 @@ using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
 using Sparrow.Platform;
-using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -62,27 +59,12 @@ namespace FastTests
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
         {
+            Samples = new SamplesTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
         {
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
-        }
-
-        protected static void CreateNorthwindDatabase(DocumentStore store, DatabaseItemType operateOnTypes = DatabaseItemType.Documents)
-        {
-            store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes));
-        }
-
-        protected static async Task CreateLegacyNorthwindDatabase(DocumentStore store)
-        {
-            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Tests.Infrastructure.Data.Northwind.4.2.ravendbdump"))
-            {
-                Assert.NotNull(stream);
-
-                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
-                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-            }
         }
 
         protected async Task SetDatabaseId(DocumentStore store, Guid dbId)

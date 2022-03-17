@@ -1195,7 +1195,7 @@ namespace RachisTests.DatabaseCluster
         {
             using (var store = GetDocumentStore())
             {
-                await CreateLegacyNorthwindDatabase(store);
+                await Samples.CreateLegacyNorthwindDatabaseAsync(store);
 
                 await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, new HashSet<string>
                 {
