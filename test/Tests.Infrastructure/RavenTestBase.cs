@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -13,7 +12,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -22,7 +20,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -34,7 +31,6 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -59,6 +55,7 @@ namespace FastTests
         {
             Samples = new SamplesTestBase(this);
             TimeSeries = new TimeSeriesTestBase(this);
+            Cluster = new ClusterTestBase2(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -133,151 +130,6 @@ namespace FastTests
 
                 node.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
             }
-        }
-
-        protected async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
-        {
-            var updateIndex = LastRaftIndexForCommand(leader, commandType);
-            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
-        }
-
-        protected async Task WaitForRaftCommandToBeAppliedInLocalServer(string commandType)
-        {
-            var updateIndex = LastRaftIndexForCommand(Server, commandType);
-            await Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
-        }
-
-        protected static long LastRaftIndexForCommand(RavenServer server, string commandType)
-        {
-            var updateIndex = 0L;
-            var commandFound = false;
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                    if (type == commandType)
-                    {
-                        commandFound = true;
-                        Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
-                    }
-                }
-            }
-
-            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
-            return updateIndex;
-        }
-
-        protected static IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
-        {
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                    if (commandType == null || commandType == type)
-                        yield return entry;
-                }
-            }
-        }
-
-        protected string GetRaftHistory(RavenServer server)
-        {
-            var sb = new StringBuilder();
-
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
-                }
-            }
-
-            return sb.ToString();
-        }
-
-        protected async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(long index, TimeSpan? timeout = null)
-        {
-            var notDisposed = Servers.Count(s => s.ServerStore.Disposed == false);
-            var notPassive = Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
-
-            Assert.True(Servers.Count == notDisposed, $"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
-            Assert.True(Servers.Count == notPassive, $"Unequal not passive nodes {Servers.Count} != {notPassive}");
-
-            await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
-        }
-
-        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
-        {
-            await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
-        }
-
-        protected static async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
-        {
-            if (nodes.Count == 0)
-                throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");
-
-            if (timeout.HasValue == false)
-                timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
-
-            var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
-                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
-                .ToList();
-
-            if (await Task.WhenAll(tasks).WaitWithoutExceptionAsync(timeout.Value))
-                return;
-
-            ThrowTimeoutException(nodes, tasks, index, timeout.Value);
-        }
-
-        private static void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
-        {
-            var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +
-                          " we got confirmations that it was applied only on the following servers: ";
-
-            for (var i = 0; i < tasks.Count; i++)
-            {
-                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
-                if (tasks[i].IsCompleted == false)
-                {
-                    using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    {
-                        context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
-                    }
-                }
-            }
-
-            throw new TimeoutException(message);
-        }
-
-        public static string CollectLogsFromNodes(List<RavenServer> nodes)
-        {
-            var message = "";
-            for (var i = 0; i < nodes.Count; i++)
-            {
-                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
-                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    message += CollectLogs(context, nodes[i]);
-                }
-            }
-
-            return message;
-        }
-
-        protected static string CollectLogs(ClusterOperationContext context, RavenServer server)
-        {
-            return
-                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
-                $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
-                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
-                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
         }
 
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
@@ -362,7 +214,7 @@ namespace FastTests
                     //This gives too much error details in most cases, we don't need this now
                     store.RequestExecutorCreated += (sender, executor) =>
                     {
-                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
+                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(Cluster.GetLastStatesFromAllServersOrderedByTime());
                     };
 
                     store.Initialize();
@@ -410,7 +262,7 @@ namespace FastTests
                         if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(raftCommand, timeout));
+                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
@@ -438,7 +290,7 @@ namespace FastTests
                             if (Servers.Contains(serverToUse) && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
-                                AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
                             }
                         }
                         catch (Exception e)
@@ -456,7 +308,7 @@ namespace FastTests
             }
             catch (TimeoutException te)
             {
-                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
+                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
             }
         }
 
@@ -475,7 +327,7 @@ namespace FastTests
             try
             {
                 var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
-                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{CollectLogsFromNodes(Servers)}");
+                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{Cluster.CollectLogsFromNodes(Servers)}");
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
             catch (DatabaseNotRelevantException)
@@ -533,19 +385,6 @@ namespace FastTests
                 throw;
             }
             return null;
-        }
-
-        protected string GetLastStatesFromAllServersOrderedByTime()
-        {
-            List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
-            foreach (var s in Servers)
-            {
-                foreach (var state in s.ServerStore.Engine.PrevStates)
-                {
-                    states.Add((s.ServerStore.NodeTag, state));
-                }
-            }
-            return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
