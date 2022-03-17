@@ -561,7 +561,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await WaitForPolicyRunner(database);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
                 {
@@ -595,7 +595,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(1));
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                await WaitForPolicyRunner(database);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
                 using (var session = store.OpenSession())
                 {
                     Assert.Null(session.TimeSeriesFor<SmallMeasure>("users/karmel").Get()?.ToList());
@@ -715,7 +715,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await WaitForPolicyRunner(database);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1857,7 +1857,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await WaitForPolicyRunner(database);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 List<string> tsNames = default;
                 await WaitForValueAsync(() =>

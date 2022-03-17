@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await WaitForPolicyRunner(database);
+                await TimeSeries.WaitForPolicyRunnerAsync(database);
                 await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 4, policies: new List<TimeSeriesPolicy> { p1 });
                 await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 5, policies: new List<TimeSeriesPolicy> { p2 });
                 await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 2, policies: new List<TimeSeriesPolicy> { p3 });

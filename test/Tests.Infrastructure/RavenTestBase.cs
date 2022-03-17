@@ -53,13 +53,12 @@ namespace FastTests
     {
         public static BackupTestBase Backup => BackupTestBase.Instance.Value;
 
-        public static TimeSeriesTestBase TimeSeries => TimeSeriesTestBase.Instance.Value;
-
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
         {
             Samples = new SamplesTestBase(this);
+            TimeSeries = new TimeSeriesTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -1379,21 +1378,6 @@ namespace FastTests
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
             }
-        }
-
-        public static async Task WaitForPolicyRunner(DocumentDatabase database)
-        {
-            var loops = 10;
-            await database.TimeSeriesPolicyRunner.HandleChanges();
-            for (int i = 0; i < loops; i++)
-            {
-                var rolled = await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-                if (rolled == 0)
-                    return;
-            }
-
-            Assert.True(false, $"We still have pending rollups left.");
         }
 
         protected static void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
