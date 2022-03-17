@@ -527,7 +527,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode encryptionMode)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {

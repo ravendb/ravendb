@@ -124,7 +124,7 @@ namespace StressTests.Issues
         [Fact]
         public void IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
-            string dbName = SetupEncryptedDatabase(out var certificates, out var _);
+            string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
 
             using (var store = GetDocumentStore(new Options()
             {

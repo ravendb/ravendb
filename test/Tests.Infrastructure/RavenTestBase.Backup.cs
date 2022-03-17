@@ -26,8 +26,7 @@ namespace FastTests
 
             public BackupTestBase(RavenTestBase parent)
             {
-                if (parent != null)
-                    _parent = parent;
+                _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
             /// <summary>

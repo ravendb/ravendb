@@ -75,7 +75,7 @@ namespace SlowTests.Issues
             var (servers, leader) = await CreateRaftCluster(3);
             var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
 
-            await Cluster.WaitForRaftIndexToBeAppliedInCluster(9, TimeSpan.FromSeconds(15));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(9, TimeSpan.FromSeconds(15));
             var expected = new HashSet<long>();
             foreach (var server in servers)
             {
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
 
             // demote node to watcher
             await leader.ServerStore.Engine.ModifyTopologyAsync(follower.ServerStore.NodeTag, follower.WebUrl, Leader.TopologyModification.NonVoter);
-            await Cluster.WaitForRaftIndexToBeAppliedInCluster(10, TimeSpan.FromSeconds(15));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(10, TimeSpan.FromSeconds(15));
         }
 
         public RavenDB_15409(ITestOutputHelper output) : base(output)

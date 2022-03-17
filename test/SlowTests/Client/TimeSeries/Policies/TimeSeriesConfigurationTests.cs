@@ -1320,7 +1320,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12);
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 12);
             }
         }
 
@@ -1448,7 +1448,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                         ModifyDatabaseName = _ => store.Database
                     }))
                     {
-                        await TimeSeries.VerifyPolicyExecution(nodeStore, config.Collections["Users"], 12);
+                        await TimeSeries.VerifyPolicyExecutionAsync(nodeStore, config.Collections["Users"], 12);
                     }
                 }
             }

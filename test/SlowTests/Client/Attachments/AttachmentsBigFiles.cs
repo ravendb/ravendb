@@ -25,7 +25,7 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out var certificates, out dbName);
+                var key = Encryption.EncryptedServer(out var certificates, out dbName);
                 adminCert = certificates.ServerCertificate.Value;
             }
             else
@@ -86,7 +86,7 @@ namespace SlowTests.Client.Attachments
             if (encrypted)
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                var key = EncryptedServer(out var certificates, out dbName);
+                var key = Encryption.EncryptedServer(out var certificates, out dbName);
                 adminCert = certificates.ServerCertificate.Value;
             }
             else

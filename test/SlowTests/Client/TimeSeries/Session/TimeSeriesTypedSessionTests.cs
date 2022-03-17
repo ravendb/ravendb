@@ -655,7 +655,7 @@ select out(doc)
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
@@ -783,7 +783,7 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await TimeSeries.VerifyPolicyExecution(store, config.Collections["Users"], 12, rawName: "StockPrices");
+                await TimeSeries.VerifyPolicyExecutionAsync(store, config.Collections["Users"], 12, rawName: "StockPrices");
 
                 using (var session = store.OpenSession())
                 {
