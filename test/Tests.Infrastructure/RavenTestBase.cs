@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,15 +11,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -30,9 +24,6 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -53,6 +44,7 @@ namespace FastTests
             Encryption = new EncryptionTestBase(this);
             Certificates = new CertificatesTestBase(this);
             Indexes = new IndexesTestBase(this);
+            Replication = new ReplicationTestBase2(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -605,54 +597,6 @@ namespace FastTests
                     }
                 }
             }
-        }
-
-        protected static async Task WaitForConflict(IDocumentStore slave, string id, int timeout = 15_000)
-        {
-            var timeoutAsTimeSpan = TimeSpan.FromMilliseconds(timeout);
-            var sw = Stopwatch.StartNew();
-
-            while (sw.Elapsed < timeoutAsTimeSpan)
-            {
-                using (var session = slave.OpenAsyncSession())
-                {
-                    try
-                    {
-                        await session.LoadAsync<dynamic>(id);
-                        await Task.Delay(100);
-                    }
-                    catch (ConflictException)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict on '{id}' but it did not happen.");
-        }
-
-        protected static bool WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long expected, TimeSpan timeout)
-        {
-            long? val = null;
-            var sw = Stopwatch.StartNew();
-
-            foreach (var store in stores)
-            {
-                val = null;
-                while (sw.Elapsed < timeout)
-                {
-                    val = store.Operations
-                        .Send(new GetCountersOperation(docId, new[] { counterName }))
-                        .Counters[0]?.TotalValue;
-
-                    if (val == expected)
-                        break;
-
-                    Thread.Sleep(100);
-                }
-            }
-
-            return val == expected;
         }
 
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
