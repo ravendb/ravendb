@@ -102,6 +102,12 @@ namespace Raven.Server.Web.System
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                        if (Server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+                        {
+                            Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} missing raw db record, {Environment.NewLine}{Environment.StackTrace}");
+                        }
+
                         HttpContext.Response.Headers["Database-Missing"] = name;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
@@ -120,6 +126,12 @@ namespace Raven.Server.Web.System
                     {
                         // we were kicked-out from the cluster
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                        if (Server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+                        {
+                            Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} because we were kicked-out from the cluster, {Environment.NewLine}{Environment.StackTrace}");
+                        }
+
                         return Task.CompletedTask;
                     }
 
@@ -127,6 +139,12 @@ namespace Raven.Server.Web.System
                     {
                         // The database at deletion progress from all nodes
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                        if (Server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+                        {
+                            Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} because the database at deletion progress from all nodes, {Environment.NewLine}{Environment.StackTrace}");
+                        }
+
                         HttpContext.Response.Headers["Database-Missing"] = name;
                         using var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body);
                         context.Write(writer, new DynamicJsonValue

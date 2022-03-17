@@ -100,6 +100,11 @@ namespace Raven.Server
 
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
 
+            if (_server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+            {
+                Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} because server is running in unsafe mode, {Environment.NewLine}{Environment.StackTrace}");
+            }
+
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
@@ -346,6 +351,12 @@ namespace Raven.Server
                 exception is DiskFullException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                if (serverStore.Server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+                {
+                    Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} because of exception 1: {exception}, {Environment.NewLine}{Environment.StackTrace}");
+                }
+
                 return;
             }
 
@@ -368,6 +379,11 @@ namespace Raven.Server
                 exception is DatabaseIdleException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+                if (serverStore.Server._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+                {
+                    Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} because of exception 2: {exception}, {Environment.NewLine}{Environment.StackTrace}");
+                }
                 return;
             }
 

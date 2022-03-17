@@ -372,9 +372,15 @@ namespace Raven.Server.Routing
             }
         }
 
-        private static void RejectRequestBecauseOfCpuThreshold(HttpContext context)
+        private void RejectRequestBecauseOfCpuThreshold(HttpContext context)
         {
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+
+            if (_ravenServer._forTestingPurposes is { PrintServiceUnavailableDuringBulkInsertProcessingToConsole: true })
+            {
+                Console.WriteLine($"DEBUG: Response gets {nameof(HttpStatusCode.ServiceUnavailable)} due to CPU threshold, {Environment.NewLine}{Environment.StackTrace}");
+            }
+
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
             {
