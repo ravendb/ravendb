@@ -105,8 +105,8 @@ namespace SlowTests.Issues
                 //        Assert.Equal(prof.Id, profile.Id);
                 //    }
 
-                //    WaitForIndexing(shard1);
-                //    WaitForIndexing(shard2);
+                //    Indexes.WaitForIndexing(shard1);
+                //    Indexes.WaitForIndexing(shard2);
 
                 //    using (var documentSession = shardedDocumentStore.OpenAsyncSession())
                 //    {

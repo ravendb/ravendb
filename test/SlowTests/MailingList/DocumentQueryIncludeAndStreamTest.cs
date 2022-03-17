@@ -72,7 +72,7 @@ namespace SlowTests.MailingList
         {
             var store = GetDocumentStore();
             Setup(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
                 var query = session.Advanced.DocumentQuery<ProcessStep, ProcessStepIndex>();
@@ -129,7 +129,7 @@ namespace SlowTests.MailingList
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
     }
 }

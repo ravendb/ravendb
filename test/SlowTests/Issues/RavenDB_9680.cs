@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await (await GetDatabase(store.Database)).TombstoneCleaner.ExecuteCleanup(); // will delete users/1 tombstone
 
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 
                 using (var commands = store.Commands())
                 {

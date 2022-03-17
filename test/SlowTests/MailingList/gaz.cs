@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
 
                     new Foos().Execute(store);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query2 = session.Advanced.DocumentQuery<Foo, Foos>()
                         .UsingDefaultOperator(QueryOperator.And)

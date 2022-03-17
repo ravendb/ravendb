@@ -44,7 +44,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private class User

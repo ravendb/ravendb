@@ -405,7 +405,7 @@ namespace SlowTests.Server.Replication
                 await s.SaveChangesAsync();
             }
 
-            WaitForIndexing(sinkStore);
+            Indexes.WaitForIndexing(sinkStore);
 
             using (var s = sinkStore.OpenAsyncSession())
             {

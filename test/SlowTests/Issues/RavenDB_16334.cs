@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {

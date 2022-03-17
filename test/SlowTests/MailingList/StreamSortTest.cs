@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
 
                 Foo last = null;

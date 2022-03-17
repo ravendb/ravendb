@@ -116,7 +116,7 @@ select new {
                         }
                     }
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     IndexStats stats = null;
 
@@ -136,7 +136,7 @@ select new {
 
         private QueryResult GetUnstableQueryResult(IDocumentStore store, DocumentStoreExtensions.DatabaseCommands commands, string query)
         {
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             var q = commands.Query(new IndexQuery()
             {

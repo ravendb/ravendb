@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "City", fromValue: null));
                 Assert.Empty(terms);
@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "City", fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "City", fromValue: null));
                 Assert.Equal(2, terms.Length);
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "City", fromValue: null));
                 Assert.Equal(2, terms.Length);

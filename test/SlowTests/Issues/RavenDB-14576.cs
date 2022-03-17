@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 session.SaveChanges();
 
                 new JavascriptIndex().Execute(store);
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(5), allowErrors: true);
 
                 Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }

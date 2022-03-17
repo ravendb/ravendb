@@ -80,7 +80,7 @@ namespace SlowTests
             }
 
             if (waitForIndexing)
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
         }
 
         public static List<FacetBase> GetFacets()

@@ -31,12 +31,12 @@ namespace SlowTests.Issues
                 }
 
                 //wait for indexing of Raven/DocumentsByEntityName
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var index = new Orders_Index();
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(40000, Indexes.WaitForEntriesCount(store, index.IndexName, 40000));
             }
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 var index = new Orders_Index();
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(30000, Indexes.WaitForEntriesCount(store, index.IndexName, 30000));
             }

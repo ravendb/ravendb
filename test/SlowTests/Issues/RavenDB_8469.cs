@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {
@@ -75,7 +75,7 @@ limit 1"
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

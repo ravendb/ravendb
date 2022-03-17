@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 
                 var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);

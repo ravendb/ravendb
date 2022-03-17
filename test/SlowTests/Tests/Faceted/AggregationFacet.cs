@@ -246,7 +246,7 @@ namespace SlowTests.Tests.Faceted
                 Name = "Cars" }
             }));
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
     }
 }

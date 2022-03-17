@@ -856,7 +856,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

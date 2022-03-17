@@ -92,7 +92,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());

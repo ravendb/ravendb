@@ -154,7 +154,7 @@ namespace SlowTests.Tests.Linq
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 

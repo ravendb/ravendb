@@ -101,7 +101,7 @@ namespace SlowTests.Tests.Spatial
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private static void AssertResultsOrder(string[] resultIDs, string[] expectedOrder)

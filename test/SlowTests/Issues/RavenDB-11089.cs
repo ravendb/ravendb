@@ -153,7 +153,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
@@ -192,7 +192,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -488,7 +488,7 @@ from 'Users' as user select output(user)", queryAsString);
                         }
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var tshirts = session.Query<TShirt, TShirtIndex>()
                         .ProjectInto<TShirtIndex.Result>()
@@ -1048,7 +1048,7 @@ from 'Users' as user select output(user)", queryAsString);
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

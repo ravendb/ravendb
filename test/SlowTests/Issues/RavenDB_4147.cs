@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Operations.Send(new PatchOperation("dates/1-A", null, new PatchRequest
                 {

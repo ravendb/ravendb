@@ -32,7 +32,7 @@ namespace SlowTests.MailingList.Rusty
                     session.SaveChanges();
                 }
 
-                WaitForIndexing( store );
+                Indexes.WaitForIndexing( store );
 
                 using (var session = store.OpenSession())
                 {
@@ -47,7 +47,7 @@ namespace SlowTests.MailingList.Rusty
                     session.SaveChanges();
                 }
 
-                WaitForIndexing( store );
+                Indexes.WaitForIndexing( store );
 
                 using (var session = store.OpenSession())
                 {
@@ -75,7 +75,7 @@ namespace SlowTests.MailingList.Rusty
                     session.SaveChanges();
                 }
 
-                WaitForIndexing( store );
+                Indexes.WaitForIndexing( store );
 
                 using (var session = store.OpenSession())
                 {
@@ -90,7 +90,7 @@ namespace SlowTests.MailingList.Rusty
                     session.SaveChanges();
                 }
 
-                WaitForIndexing( store );
+                Indexes.WaitForIndexing( store );
 
                 using (var session = store.OpenSession())
                 {

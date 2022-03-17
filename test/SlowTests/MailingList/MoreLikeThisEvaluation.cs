@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
                     list.ForEach(session.Store);
                     session.SaveChanges();
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())

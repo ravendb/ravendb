@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     Assert.Null(Indexes.WaitForIndexingErrors(store, new[] { IndexName }, errorsShouldExists: false));
 
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     Assert.Equal(1, Indexes.WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
@@ -64,7 +64,7 @@ namespace SlowTests.Issues
                     Assert.Null(Indexes.WaitForIndexingErrors(store, new []{ IndexName }, errorsShouldExists: false));
 
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     Assert.Equal(1, Indexes.WaitForIndexingErrors(store, new[] { IndexName })[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
@@ -95,7 +95,7 @@ namespace SlowTests.Issues
                     Assert.Null(Indexes.WaitForIndexingErrors(store, new []{IndexName}, errorsShouldExists: false));
                     store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName,
                         Maps = { "from doc in docs select new { Total = 3/1 };" }} }));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]

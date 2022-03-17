@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
@@ -118,7 +118,7 @@ namespace SlowTests.Issues
                     });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 

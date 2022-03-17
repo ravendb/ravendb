@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(index.IndexName));
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store.Smuggler.ForDatabase(databaseName));
                     await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
-                    WaitForIndexing(store, databaseName);
+                    Indexes.WaitForIndexing(store, databaseName);
                     RavenTestHelper.AssertNoIndexErrors(store, databaseName);
 
                     staleness = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexStalenessOperation(index.IndexName));

@@ -1039,12 +1039,12 @@ namespace Tests.Infrastructure
             return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
         }
 
-        public static void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
+        public void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
         {
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(dbName ?? store.Database));
             foreach (var nodeTag in record.Topology.AllNodes)
             {
-                WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
+                Indexes.WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
             }
         }
 

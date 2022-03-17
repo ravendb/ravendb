@@ -1236,7 +1236,7 @@ namespace SlowTests.Graph
             using (var store = GetDocumentStore())
             {
                 Samples.CreateNorthwindDatabase(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1264,7 +1264,7 @@ namespace SlowTests.Graph
             using (var store = GetDocumentStore())
             {
                 Samples.CreateNorthwindDatabase(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {

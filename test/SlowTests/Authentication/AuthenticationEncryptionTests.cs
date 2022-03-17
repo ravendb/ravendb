@@ -42,7 +42,7 @@ namespace SlowTests.Authentication
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var file = GetTempFileName();
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
@@ -55,7 +55,7 @@ namespace SlowTests.Authentication
                         Query = "FROM @all_docs",
                         WaitForNonStaleResults = true
                     });
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.True(result.Results.Length > 1000);
 
@@ -143,7 +143,7 @@ namespace SlowTests.Authentication
 
                     Assert.Equal(9, indexDefinitions.Length); // 6 sample data indexes + 2 new dynamic indexes
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     // perform a query per index
                     foreach (var indexDef in indexDefinitions)
@@ -223,7 +223,7 @@ namespace SlowTests.Authentication
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));

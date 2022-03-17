@@ -202,7 +202,7 @@ namespace SlowTests.Tests.Linq
                     indexDefinition.Name = indexName;
                     store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var testQuery = session.Query<User>(indexName)
                                         .Where(x => x.Name == ("Matt") && x.Active);
@@ -249,7 +249,7 @@ namespace SlowTests.Tests.Linq
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(3, session.Query<User>(indexName).ToArray().Length);
 
@@ -588,7 +588,7 @@ namespace SlowTests.Tests.Linq
 
         private static void WaitForQueryToComplete(IDocumentSession session)
         {
-            WaitForIndexing(session.Advanced.DocumentStore);
+            Indexes.WaitForIndexing(session.Advanced.DocumentStore);
         }
 
         private readonly User firstUser = new User { Name = "Alan", Age = 30 };

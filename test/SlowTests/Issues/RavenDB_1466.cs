@@ -113,7 +113,7 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
 
-                WaitForIndexing((DocumentStore)store);
+                Indexes.WaitForIndexing((DocumentStore)store);
 
                 var facets = new List<RangeFacet>
                 {

@@ -44,7 +44,7 @@ namespace SlowTests.Issues
 
                 Fill(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 AssertCount<MyIndex>(store);
             }
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
 
                 Fill(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 AssertCount<MyIndex>(store);
 
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 AssertCount<MyIndex>(store);
             }
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
 
                 Fill(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 AssertCount<MyIndex>(store);
 
@@ -155,7 +155,7 @@ namespace SlowTests.Issues
 
                 Fill(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 AssertCount<MyIndex_WithoutAnalyzer>(store);
             }
@@ -211,7 +211,7 @@ namespace SlowTests.Issues
         private static void AssertCount<TIndex>(IDocumentStore store)
             where TIndex : AbstractIndexCreationTask, new()
         {
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())
             {

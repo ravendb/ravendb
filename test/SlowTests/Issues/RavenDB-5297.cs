@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var requestExecuter = store.GetRequestExecutor();
 
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var requestExecuter = store.GetRequestExecutor();
 

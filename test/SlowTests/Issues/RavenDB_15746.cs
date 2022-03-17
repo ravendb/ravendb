@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 // should index all documents regardless throttling set to 1 hour
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(30));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(30));
             }
         }
 
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
 
                 var indexingDuration = Stopwatch.StartNew();
                 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 indexingDuration.Stop();
 
@@ -121,7 +121,7 @@ namespace SlowTests.Issues
 
                 indexingDuration.Restart();
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 indexingDuration.Stop();
 

@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Querying
                     });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var result = session.Query<BlogPost>("BlogPosts/PostsCountByTag").ToList();
                     Assert.Equal(1, result.Count);
@@ -68,7 +68,7 @@ namespace SlowTests.Tests.Querying
                     });
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     using (var commands = store.Commands())
                     {

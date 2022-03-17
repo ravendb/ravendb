@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
 
                 Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));

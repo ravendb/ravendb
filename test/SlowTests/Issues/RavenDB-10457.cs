@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -247,7 +247,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             return testDoc;
         }
 

@@ -72,7 +72,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -116,7 +116,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -160,7 +160,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -198,7 +198,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -315,7 +315,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = (DocumentSession)store.OpenSession())
                 {
@@ -366,7 +366,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -428,7 +428,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -474,7 +474,7 @@ namespace FastTests.Client.Queries.TimeSeries
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

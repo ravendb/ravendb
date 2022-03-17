@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession(databaseName))
                 {

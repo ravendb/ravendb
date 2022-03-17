@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
                 var client = store.GetRequestExecutor().HttpClient;

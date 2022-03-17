@@ -54,8 +54,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore1);
-                WaitForIndexing(documentStore2);
+                Indexes.WaitForIndexing(documentStore1);
+                Indexes.WaitForIndexing(documentStore2);
 
                 Parallel.For(1, 15, index =>
                 {

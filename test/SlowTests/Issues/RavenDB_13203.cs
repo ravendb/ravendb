@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     session.Delete(companies[0]);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(stats.IndexName, "Name", null));
                     Assert.Equal(2, terms.Length);
@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                     session.Delete(companies[1]);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     terms = store.Maintenance.Send(new GetTermsOperation(stats.IndexName, "Name", null));
                     Assert.Equal(1, terms.Length);

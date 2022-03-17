@@ -1322,7 +1322,7 @@ loadToOrders(partitionBy(
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 long expectedCount;
                 using (var session = store.OpenAsyncSession())

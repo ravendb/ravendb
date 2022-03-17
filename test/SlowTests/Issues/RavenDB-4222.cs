@@ -44,7 +44,7 @@ doc.Name
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Order>(indexName).ToList();
@@ -61,7 +61,7 @@ doc.Name
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
 

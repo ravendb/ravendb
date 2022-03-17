@@ -33,7 +33,7 @@ if(collection == 'ShoppingCarts')
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
