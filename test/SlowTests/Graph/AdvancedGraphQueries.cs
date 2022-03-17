@@ -27,7 +27,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
@@ -106,7 +106,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
@@ -131,7 +131,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -147,7 +147,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -459,7 +459,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -486,7 +486,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -516,7 +516,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -532,7 +532,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -548,7 +548,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
@@ -1415,7 +1415,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 using (var session = store.OpenSession())
                 {
                     var friends = session.Advanced.RawQuery<JObject>(@"
