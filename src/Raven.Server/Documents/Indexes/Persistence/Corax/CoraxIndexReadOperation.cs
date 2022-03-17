@@ -64,9 +64,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             if (take > _indexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
+            QueryTimingsScope coraxScope = null;
+            QueryTimingsScope highlightingScope = null;
+            if (queryTimings != null)
+            {
+                coraxScope = queryTimings.For(nameof(QueryTimingsScope.Names.Corax), start: false);
+                highlightingScope = query.Metadata.HasHighlightings
+                    ? queryTimings.For(nameof(QueryTimingsScope.Names.Highlightings), start: false)
+                    : null;
+            }
+            
             IQueryMatch queryMatch;
-            if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take)) is null)
-                yield break;
+            using(coraxScope?.Start())
+                {
+                    if ((queryMatch = _coraxQueryEvaluator.Search(query, fieldsToFetch, take)) is null)
+                    yield break;
+                }
 
             if (query.Metadata.FilterScript != null)
             {
@@ -80,6 +93,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             using var queryScope = new CoraxIndexQueryingScope(_index.Type, query, fieldsToFetch, retriever, _indexSearcher, _fieldMappings);
             int queryStart = query.Start;
             bool hasHighlights = query.Metadata.HasHighlightings;
+            if (hasHighlights)
+            {
+                // If we have highlightings then we need to setup the Corax objects that will attach to the evaluator in order
+                // to retrieve the fields and perform the transformations required by Highlightings. 
+                using (highlightingScope?.For(nameof(QueryTimingsScope.Names.Setup)))
+                    SetupHighlighter(query, documentsContext);
+            }
 
             while (true)
             {
@@ -95,10 +115,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
                     }
 
+                    if (hasHighlights)
+                    {
+                        foreach (var highlightings in query.Metadata.Highlightings)
+                        {
+                            var fieldName = highlightings.Field.Value;
+                            var fieldId = _fieldMappings.GetByFieldName(fieldName);
+                        }
+                    }
+
                     var retrieverInput = new RetrieverInput(_fieldMappings, _indexSearcher.GetReaderAndIdentifyFor(longIds[i], out var key), key);
                     bool markedAsSkipped = false;
                     var fetchedDocument = retriever.Get(ref retrieverInput, token);
                     
+
+
                     if (fetchedDocument.Document != null)
                     {
                         var qr = GetQueryResult(fetchedDocument.Document, ref markedAsSkipped);
@@ -176,6 +207,37 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             ArrayPool<long>.Shared.Return(longIds);
+        }
+
+        private Dictionary<string, (string[] PreTags, string[] PostTags)> _tagsPerField;
+
+        private void SetupHighlighter(IndexQueryServerSide query, JsonOperationContext context)
+        {
+            _tagsPerField = null;
+            foreach (var highlighting in query.Metadata.Highlightings)
+            {
+                var options = highlighting.GetOptions(context, query.QueryParameters);
+                if (options == null)
+                    continue;
+
+                var numberOfPreTags = options.PreTags?.Length ?? 0;
+                var numberOfPostTags = options.PostTags?.Length ?? 0;
+
+                if (numberOfPreTags != numberOfPostTags)
+                    throw new InvalidOperationException("Number of pre-tags and post-tags must match.");
+
+                if (numberOfPreTags == 0)
+                    continue;
+
+                if (_tagsPerField == null)
+                    _tagsPerField = new Dictionary<string, (string[] PreTags, string[] PostTags)>();
+
+                var fieldName = query.Metadata.IsDynamic
+                    ? throw new NotSupportedException("AutoIndex dynamic field is not supported yet.")
+                    : highlighting.Field.Value;
+
+                _tagsPerField[fieldName] = (options.PreTags, options.PostTags);
+            }
         }
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults,
