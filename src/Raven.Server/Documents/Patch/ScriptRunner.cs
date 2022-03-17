@@ -136,7 +136,7 @@ namespace Raven.Server.Documents.Patch
             return new ReturnRun(run, holder);
         }
 
-        public void TryCompileScript(string script)
+        public static void TryCompileScript(string script)
         {
             try
             {

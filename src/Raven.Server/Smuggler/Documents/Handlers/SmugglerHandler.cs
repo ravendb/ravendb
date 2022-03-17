@@ -24,8 +24,8 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Operations;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -33,7 +33,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
-
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
@@ -48,35 +47,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task PostValidateOptions()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (var processor = new SmugglerValidationOptionsProcessor<DocumentsOperationContext>(this, ContextPool))
             {
-                var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "");
-                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
-
-                if (!string.IsNullOrEmpty(options.FileName) && options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-                    throw new InvalidOperationException($"{options.FileName} is invalid file name");
-
-                if (string.IsNullOrEmpty(options.TransformScript))
-                {
-                    NoContentStatus();
-                    return;
-                }
-
-                try
-                {
-                    var scriptRunner = new ScriptRunner(Database, Database.Configuration, false);
-                    scriptRunner.TryCompileScript(string.Format(@"
-                    function execute(){{
-                        {0}
-                    }};", options.TransformScript));
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Incorrect transform script", e);
-                }
-
-                NoContentStatus();
+                await processor.ExecuteAsync();
             }
         }
 
