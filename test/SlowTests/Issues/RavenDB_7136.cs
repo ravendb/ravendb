@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
-                var indexes = WaitForIndexingErrors(store);
+                var indexes = Indexes.WaitForIndexingErrors(store);
                 var error = indexes.Single();
                 Assert.Equal(1, error.Errors.Length);
                 Assert.Contains(nameof(DivideByZeroException), error.Errors[0].Error);

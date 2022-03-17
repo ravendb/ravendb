@@ -239,7 +239,7 @@ namespace SlowTests.Tests.Indexes
 
                 WaitForIndexing(store);
                 
-                var errors = WaitForIndexingErrors(store, new[] { index.IndexName }, errorsShouldExists: false)?
+                var errors = Indexes.WaitForIndexingErrors(store, new[] { index.IndexName }, errorsShouldExists: false)?
                     .SelectMany(e => e.Errors)
                     .Select(e => e.Error)
                     .ToArray();

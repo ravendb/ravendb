@@ -222,9 +222,9 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void AssertIndexHasNoErrors(IDocumentStore store, string indexName)
+        private void AssertIndexHasNoErrors(IDocumentStore store, string indexName)
         {
-            Assert.Null(WaitForIndexingErrors(store, new []{ indexName }, errorsShouldExists: false));
+            Assert.Null(Indexes.WaitForIndexingErrors(store, new []{ indexName }, errorsShouldExists: false));
         }
 
         private class User

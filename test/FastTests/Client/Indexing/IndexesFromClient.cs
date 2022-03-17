@@ -207,7 +207,7 @@ namespace FastTests.Client.Indexing
                 batchStats.Errors[1].Timestamp = nowNext;
 
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, batchStats);
-                var errors = WaitForIndexingErrors(store, new[] { index.Name });
+                var errors = Indexes.WaitForIndexingErrors(store, new[] { index.Name });
                 var error = errors[0];
                 Assert.Equal(index.Name, error.Name);
                 Assert.Equal(2, error.Errors.Length);
@@ -221,10 +221,10 @@ namespace FastTests.Client.Indexing
                 Assert.True(error.Errors[1].Error.Contains("Could not create analyzer:"));
                 Assert.Equal(nowNext, error.Errors[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                errors = WaitForIndexingErrors(store);
+                errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
 
-                errors = WaitForIndexingErrors(store, new[] { index.Name });
+                errors = Indexes.WaitForIndexingErrors(store, new[] { index.Name });
                 Assert.Equal(1, errors.Length);
 
                 var stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));

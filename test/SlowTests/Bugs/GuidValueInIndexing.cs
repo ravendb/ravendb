@@ -31,7 +31,7 @@ namespace SlowTests.Bugs
 
                 WaitForIndexing(store);
 
-                var stats = WaitForIndexingErrors(store, errorsShouldExists: false);
+                var stats = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                 Assert.Null(stats);
 
             }

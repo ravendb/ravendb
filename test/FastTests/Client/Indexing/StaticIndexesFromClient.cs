@@ -206,7 +206,7 @@ namespace FastTests.Client.Indexing
 
                 WaitForIndexing(store);
 
-                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
     }

@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
 
-                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
     }

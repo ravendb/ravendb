@@ -594,7 +594,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                     Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex11>()
@@ -633,7 +633,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                     Assert.Null(indexErrors);
 
                     var combined = session.Query<PeopleIndex12.Result, PeopleIndex12>()
@@ -677,7 +677,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                     Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex13>().Single();
@@ -722,7 +722,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                     Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex14>().Single();
@@ -768,7 +768,7 @@ namespace My.Crazy.Namespace
 
                 using (var session = store.OpenSession())
                 {
-                    var indexErrors = WaitForIndexingErrors(store, errorsShouldExists: false);
+                    var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
                     Assert.Null(indexErrors);
 
                     var person = session.Query<Person, PeopleIndex15>().Single();
