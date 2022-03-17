@@ -56,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void DoTest(IDocumentStore store)
+        private void DoTest(IDocumentStore store)
         {
             new EmployeeByRegionAndSalary().Execute(store);
 

@@ -95,7 +95,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void AssertDeleteByIndex(IDocumentStore store, int start, int take, int count)
+        private void AssertDeleteByIndex(IDocumentStore store, int start, int take, int count)
         {
             using (var session = store.OpenSession(new SessionOptions
             {

@@ -44,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void Setup(IDocumentStore store)
+        private void Setup(IDocumentStore store)
         {
             new Users_ByName().Execute(store);
             using (var session = store.OpenSession())

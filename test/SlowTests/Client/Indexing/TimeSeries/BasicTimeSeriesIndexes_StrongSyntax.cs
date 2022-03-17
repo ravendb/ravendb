@@ -1419,7 +1419,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 AssertIndex(store, indexDefinition, "Heart Rate");
             }
 
-            static void AssertIndex(IDocumentStore store, IndexDefinition definition, string timeSeriesName)
+            void AssertIndex(IDocumentStore store, IndexDefinition definition, string timeSeriesName)
             {
                 var now1 = DateTime.Now;
                 var now2 = now1.AddSeconds(1);

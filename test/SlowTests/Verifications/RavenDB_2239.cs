@@ -57,7 +57,7 @@ namespace SlowTests.Verifications
                               };
             }
         }
-        private static void TestSetupData(IDocumentStore store)
+        private void TestSetupData(IDocumentStore store)
         {
             new Document_Index().Execute(store);
 

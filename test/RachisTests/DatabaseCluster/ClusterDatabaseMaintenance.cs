@@ -113,7 +113,7 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
                 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 await database.TombstoneCleaner.ExecuteCleanup();

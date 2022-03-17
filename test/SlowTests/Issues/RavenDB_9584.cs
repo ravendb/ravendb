@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             public string Title { get; set; }
         }
 
-        private static void Setup(IDocumentStore store)
+        private void Setup(IDocumentStore store)
         {
             store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {

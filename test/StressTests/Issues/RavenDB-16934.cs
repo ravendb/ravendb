@@ -43,7 +43,7 @@ namespace StressTests.Issues
                     }
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = await store.Operations.SendAsync(
                     new DeleteByQueryOperation<SearchIndex.Result, SearchIndex>(x =>
