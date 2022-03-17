@@ -57,7 +57,7 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
-                    var type = reader.GetFieldType(match._fieldId);
+                    var type = reader.GetFieldType(match._fieldId, out var intOffset);
                     var isMatch = false;
 
                     if (type is IndexEntryFieldType.Tuple or IndexEntryFieldType.None)
@@ -121,7 +121,7 @@ namespace Corax.Queries
                 for (int i = 0; i < results; i++)
                 {
                     var reader = searcher.GetReaderFor(freeMemory[i]);
-                    var type = reader.GetFieldType(match._fieldId);
+                    var type = reader.GetFieldType(match._fieldId, out _);
 
                     bool isMatch = false;
                     if (typeof(TValueType) == typeof(long))

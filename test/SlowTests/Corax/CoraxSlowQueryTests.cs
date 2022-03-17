@@ -37,7 +37,7 @@ namespace SlowTests.Corax
                 {
                     d.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = config.SearchEngine.ToString();
                     d.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = config.SearchEngine.ToString();
-                    d.Client = new ClientConfiguration() { MaxNumberOfRequestsPerSession = int.MaxValue };
+                    d.Client = new ClientConfiguration() {MaxNumberOfRequestsPerSession = int.MaxValue};
                 }
             };
 
@@ -47,8 +47,8 @@ namespace SlowTests.Corax
                 {
                     for (int i = 0; i < size; ++i)
                     {
-                        bulkInsert.Store(new Person() { Name = $"ItemNo{i}", Age = i % 100, Height = i % 200 });
-                        expected.Add(new Result() { Age = i % 100, Height = i % 200 });
+                        bulkInsert.Store(new Person() {Name = $"ItemNo{i}", Age = i % 100, Height = i % 200});
+                        expected.Add(new Result() {Age = i % 100, Height = i % 200});
                     }
                 }
 
@@ -59,7 +59,7 @@ namespace SlowTests.Corax
                     List<Result> actual = new();
                     for (int i = 0; i < size; i += 70)
                         actual.AddRange(session.Query<Person>().OrderBy(y => y.Age).ThenByDescending(y => y.Height)
-                            .Select(z => new Result() { Age = z.Age, Height = z.Height }).Skip(i).Take(70).ToList());
+                            .Select(z => new Result() {Age = z.Age, Height = z.Height}).Skip(i).Take(70).ToList());
 
                     for (var i = 0; i < expected.Count; ++i)
                     {
@@ -74,7 +74,7 @@ namespace SlowTests.Corax
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void AnalyzerAreApplied(Options options)
         {
-            var item = new Person() { Name = "MaCiEJ" };
+            var item = new Person() {Name = "MaCiEJ"};
             using var store = GetDocumentStore(options);
             {
                 using var session = store.OpenSession();
@@ -100,7 +100,7 @@ namespace SlowTests.Corax
             {
                 using var coraxSession = coraxStore.BulkInsert();
                 using var luceneSession = luceneStore.BulkInsert();
-                results = Enumerable.Range(0, 10_000).Select(i => new Result() { Age = i % terms, Height = i }).ToList();
+                results = Enumerable.Range(0, 10_000).Select(i => new Result() {Age = i % terms, Height = i}).ToList();
                 results.ForEach((x) =>
                 {
                     coraxSession.Store(x);
@@ -113,30 +113,29 @@ namespace SlowTests.Corax
                 //TermMatches and BinaryMatches
                 var rawQuery = new StringBuilder();
                 rawQuery.Append("from Results where boost(Age == 0, 0)");
-                for(int i = 1; i < terms; ++i)
+                for (int i = 1; i < terms; ++i)
                     rawQuery.Append($" or boost(Age == {i},{i})");
                 rawQuery.Append(" order by score()");
-                
+
                 Assertion(rawQuery.ToString());
             }
             {
                 //MultiTermMatches
                 var rawQuery = new StringBuilder();
                 rawQuery.Append("from Results where boost(startsWith(Age, \"0\"),0)");
-                for(int i = 1; i < terms; ++i)
+                for (int i = 1; i < terms; ++i)
                     rawQuery.Append($" or boost(startsWith(Age, \"{i}\"),{i})");
                 rawQuery.Append(" order by score()");
 
                 Assertion(rawQuery.ToString());
-               
             }
 
             {
                 //UnaryTest
                 WaitForUserToContinueTheTest(luceneStore);
-                Assertion($"from Results where boost(Age > {terms-2}, 100) order by score(), Age as alphanumeric desc ");
+                Assertion($"from Results where boost(Age > {terms - 2}, 100) order by score(), Age as alphanumeric desc ");
             }
-            
+
             void Assertion(string rawQuery)
             {
                 using var coraxSession = coraxStore.OpenSession();
@@ -147,11 +146,11 @@ namespace SlowTests.Corax
                 Assert.NotEmpty(luceneResult);
                 Assert.NotEmpty(coraxResult);
                 Assert.Equal(luceneResult.Count, coraxResult.Count);
-                for(int i = 0; i < luceneResult.Count; ++i)
+                for (int i = 0; i < luceneResult.Count; ++i)
                     Assert.Equal(luceneResult[i].Age, coraxResult[i].Age);
             }
         }
-        
+
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
@@ -159,11 +158,10 @@ namespace SlowTests.Corax
         {
             using (var documentStore = GetDocumentStore(options))
             {
-
                 using (var s = documentStore.OpenSession())
                 {
-                    s.Store(new User { Name = "Maciej" });
-                    s.Store(new User { Name = "Matt" });
+                    s.Store(new User {Name = "Maciej"});
+                    s.Store(new User {Name = "Matt"});
                     s.SaveChanges();
                 }
 
@@ -172,9 +170,7 @@ namespace SlowTests.Corax
                     var suggestionQueryResult = session.Query<User>()
                         .SuggestUsing(x => x.ByField(y => y.Name, "Mett").WithOptions(new SuggestionOptions
                         {
-                            PageSize = 10,
-                            Accuracy = 0.25f,
-                            Distance = StringDistanceTypes.NGram
+                            PageSize = 10, Accuracy = 0.25f, Distance = StringDistanceTypes.NGram
                         }))
                         .Execute();
 
@@ -183,6 +179,48 @@ namespace SlowTests.Corax
                 }
             }
         }
+
+        public class TestA
+        {
+            public string Name { get; set; }
+            public TestB Inner { get; set; }
+        }
+
+        public class TestB
+        {
+            public string InnerName { get; set; }
+            public TestC Inner { get; set; }
+        }
+
+        public class TestC
+        {
+            public string InnerName { get; set; }
+        }
+
+        [Theory]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void TestOnDeep(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            {
+                var s = store.OpenSession();
+                s.Store(
+                    new TestA() {Name = "Matt", Inner = new() {InnerName = "Jan", Inner = new() {InnerName = "Tester"}}});
+                s.SaveChanges();
+            }
+
+            {
+                var s = store.OpenSession();
+
+                var result = s.Query<TestA>().Where(a => a.Inner == new TestB() {InnerName = "Jan", Inner = new() {InnerName = "Tester"}}).ToList()
+                    ;
+                Assert.Equal(1, result.Count);
+            }
+
+
+            WaitForUserToContinueTheTest(store);
+        }
+
 
         [Theory]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
@@ -196,20 +234,17 @@ namespace SlowTests.Corax
                 {
                     var result = session
                         .Query<Product>()
-                        .SuggestUsing(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
+                        .SuggestUsing(f => f.ByField("Name", new[] {"chaig", "tof"}).WithOptions(new SuggestionOptions
                         {
-                            PageSize = 5,
-                            Distance = StringDistanceTypes.NGram,
-                            SortMode = SuggestionSortMode.Popularity,
-                            Accuracy = 0.5f
+                            PageSize = 5, Distance = StringDistanceTypes.NGram, SortMode = SuggestionSortMode.Popularity, Accuracy = 0.5f
                         }))
                         .Execute();
 
-                    Assert.True(result["Name"].Suggestions.Count  is > 0 and <= 5);
+                    Assert.True(result["Name"].Suggestions.Count is > 0 and <= 5);
                 }
             }
         }
-        
+
         private class Result
         {
             public int Age { get; set; }

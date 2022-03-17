@@ -65,12 +65,12 @@ namespace FastTests.Corax
             reader.Read(0, out int intValue);
             Assert.Equal(1, intValue);
             
-            Assert.True(reader.GetFieldType(0).HasFlag(IndexEntryFieldType.Tuple));
-            Assert.False(reader.GetFieldType(0).HasFlag(IndexEntryFieldType.List));
-            Assert.True(reader.GetFieldType(1).HasFlag(IndexEntryFieldType.List));
-            Assert.False(reader.GetFieldType(1).HasFlag(IndexEntryFieldType.Tuple));
-            Assert.True(reader.GetFieldType(2).HasFlag(IndexEntryFieldType.None));
-            Assert.True(reader.GetFieldType(3).HasFlag(IndexEntryFieldType.None));
+            Assert.True(reader.GetFieldType(0, out var _).HasFlag(IndexEntryFieldType.Tuple));
+            Assert.False(reader.GetFieldType(0, out var _).HasFlag(IndexEntryFieldType.List));
+            Assert.True(reader.GetFieldType(1, out var _).HasFlag(IndexEntryFieldType.List));
+            Assert.False(reader.GetFieldType(1, out var _).HasFlag(IndexEntryFieldType.Tuple));
+            Assert.True(reader.GetFieldType(2, out var _).HasFlag(IndexEntryFieldType.None));
+            Assert.True(reader.GetFieldType(3, out var _).HasFlag(IndexEntryFieldType.None));
 
             reader.Read(0, out double doubleValue);
             Assert.True(doubleValue.AlmostEquals(1.001));

@@ -48,7 +48,7 @@ namespace Sparrow.Json
 
             return _context.WriteAsync(stream, this, token);
         }
-
+        
         public BlittableJsonReaderObject(byte* mem, int size, JsonOperationContext context, UnmanagedWriteBuffer buffer = default(UnmanagedWriteBuffer))
             : this(mem, size, context)
         {
@@ -1319,7 +1319,7 @@ namespace Sparrow.Json
                 }
             }
         }
-
+        
         private static void ThrowInvalidTokenType()
         {
             throw new InvalidDataException("Token type not valid");
