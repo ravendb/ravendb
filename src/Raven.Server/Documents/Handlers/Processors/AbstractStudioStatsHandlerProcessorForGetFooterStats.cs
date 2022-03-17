@@ -6,11 +6,12 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal abstract class AbstractStatsHandlerProcessorForGetStudioFooterStats<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractStudioStatsHandlerProcessorForGetFooterStats<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        public AbstractStatsHandlerProcessorForGetStudioFooterStats([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractStudioStatsHandlerProcessorForGetFooterStats([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+            : base(requestHandler, contextPool)
         {
         }
 
@@ -18,33 +19,27 @@ namespace Raven.Server.Documents.Handlers.Processors
 
         public override async ValueTask ExecuteAsync()
         {
+            var stats = await GetFooterStatisticsAsync();
+
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
-                var stats = await GetFooterStatisticsAsync();
-
                 writer.WriteStartObject();
 
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfDocuments));
                 writer.WriteInteger(stats.CountOfDocuments);
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexes));
                 writer.WriteInteger(stats.CountOfIndexes);
 
-                if (stats.CountOfStaleIndexes != null)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(FooterStatistics.CountOfStaleIndexes));
-                    writer.WriteInteger(stats.CountOfStaleIndexes ?? -1);
-                }
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(FooterStatistics.CountOfStaleIndexes));
+                writer.WriteInteger(stats.CountOfStaleIndexes);
 
-                if (stats.CountOfIndexingErrors != null)
-                {
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexingErrors));
-                    writer.WriteInteger(stats.CountOfIndexingErrors ?? -1);
-                }
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(FooterStatistics.CountOfIndexingErrors));
+                writer.WriteInteger(stats.CountOfIndexingErrors);
 
                 writer.WriteEndObject();
             }

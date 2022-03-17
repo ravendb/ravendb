@@ -7,15 +7,15 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.SlowTests
+namespace SlowTests.Client.Operations
 {
-    public class StudioTests : RavenTestBase
+    public class GetStudioFooterStatisticsOperationTests : RavenTestBase
     {
-        public StudioTests(ITestOutputHelper output) : base(output)
+        public GetStudioFooterStatisticsOperationTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Studio)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetStudioFooterStatistics(Options options)
         {
@@ -27,6 +27,7 @@ namespace SlowTests.SlowTests
                     session.SaveChanges();
                 }
                 await store.ExecuteIndexAsync(new AllowedUsers());
+
                 WaitForIndexing(store);
 
                 var stats = store.Maintenance.Send(new GetStudioFooterStatisticsOperation());
@@ -34,20 +35,11 @@ namespace SlowTests.SlowTests
                 Assert.NotNull(stats);
                 Assert.Equal(1, stats.CountOfIndexes);
                 Assert.Equal(2, stats.CountOfDocuments);
-
-                if (options.DatabaseMode == RavenDatabaseMode.Single)
-                {
-                    Assert.Equal(0, stats.CountOfIndexingErrors);
-                    Assert.Equal(0, stats.CountOfStaleIndexes);
-                }
-                else
-                {
-                    Assert.Equal(null, stats.CountOfIndexingErrors);
-                    Assert.Equal(null, stats.CountOfStaleIndexes);
-                }
+                Assert.Equal(0, stats.CountOfIndexingErrors);
+                Assert.Equal(0, stats.CountOfStaleIndexes);
             }
         }
-        
+
         private class User
         {
             public string Name;
@@ -60,7 +52,7 @@ namespace SlowTests.SlowTests
             public AllowedUsers()
             {
                 Map = users => from user in users
-                    select new
+                               select new
                                {
                                    user.Name
                                };
