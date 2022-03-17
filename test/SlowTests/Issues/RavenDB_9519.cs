@@ -27,7 +27,6 @@ namespace SlowTests.Issues
 
         [Theory]
         [InlineData("From%20companies")]
-        [InlineData("match%20(Companies)")]
         public async Task NestedObjectShouldBeExportedAndImportedProperly(string query)
         {
             const string id = "companies/1";
