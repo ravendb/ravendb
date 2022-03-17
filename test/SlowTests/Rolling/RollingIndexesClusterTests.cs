@@ -79,13 +79,13 @@ namespace SlowTests.Rolling
             using (var store = GetDocumentStoreForRollingIndexes(
                        new Options
                        {
-                           Server = cluster.Leader, 
+                           Server = cluster.Leader,
                            ReplicationFactor = 3,
                        }))
             {
                 await CreateData(store);
 
-                
+
                 var count = 0L;
                 var violation = new StringBuilder();
 
@@ -144,7 +144,7 @@ namespace SlowTests.Rolling
             using (var store = GetDocumentStoreForRollingIndexes(
                        new Options
                        {
-                           Server = cluster.Leader, 
+                           Server = cluster.Leader,
                            ReplicationFactor = 3,
                        }))
             {
@@ -218,7 +218,7 @@ namespace SlowTests.Rolling
             using (var store = GetDocumentStoreForRollingIndexes(
                        new Options
                        {
-                           Server = cluster.Leader, 
+                           Server = cluster.Leader,
                            ReplicationFactor = 3,
                        }))
             {
@@ -291,7 +291,7 @@ namespace SlowTests.Rolling
                         {
                             mre.Set();
                         }
-                        
+
                         WaitForIndexingInTheCluster(store, store.Database);
 
                         var v = violation.ToString();
@@ -333,7 +333,7 @@ namespace SlowTests.Rolling
                        }))
             {
                 await CreateData(store);
-                await store.ExecuteIndexAsync(new MyRollingIndex(){DeploymentMode = IndexDeploymentMode.Parallel });
+                await store.ExecuteIndexAsync(new MyRollingIndex() { DeploymentMode = IndexDeploymentMode.Parallel });
                 WaitForIndexingInTheCluster(store, store.Database);
 
                 foreach (var server in Servers)
@@ -469,7 +469,7 @@ namespace SlowTests.Rolling
                     },
                     3);
 
-                await WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
 
                 var reqEx = store.GetRequestExecutor();
                 var anyNode = await reqEx.GetPreferredNode();
@@ -827,7 +827,7 @@ namespace SlowTests.Rolling
 
                 var res = WaitForValue(() => count, 3);
 
-                Assert.True(res == 3 , info);
+                Assert.True(res == 3, info);
 
                 await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
 
@@ -1060,12 +1060,12 @@ namespace SlowTests.Rolling
             public MyEditedRollingIndex2()
             {
                 Map = orders => from order in orders
-                    select new
-                    {
-                        order.Company,
-                        order.Employee,
-                        order.ShipTo
-                    };
+                                select new
+                                {
+                                    order.Company,
+                                    order.Employee,
+                                    order.ShipTo
+                                };
 
                 DeploymentMode = IndexDeploymentMode.Rolling;
             }

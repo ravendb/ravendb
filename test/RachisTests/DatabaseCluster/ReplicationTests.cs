@@ -202,7 +202,7 @@ namespace RachisTests.DatabaseCluster
                 });
 
                 var update = await source.Maintenance.SendAsync(op);
-                await WaitForRaftIndexToBeAppliedInCluster(update.RaftCommandIndex);
+                await Cluster.WaitForRaftIndexToBeAppliedInCluster(update.RaftCommandIndex);
 
                 await WaitAndAssertForValueAsync(() =>
                 {
@@ -481,7 +481,7 @@ namespace RachisTests.DatabaseCluster
                     MentorNode = leader.ServerStore.NodeTag
                 };
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
-                await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 
@@ -529,7 +529,7 @@ namespace RachisTests.DatabaseCluster
                 watcher.Name = "MyExternalReplication2";
                 watcher.Database = external2;
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
-                await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 Assert.True(WaitForDocument(new[] { leader.WebUrl }, watcher.Database));
             }
 

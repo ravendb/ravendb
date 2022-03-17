@@ -175,7 +175,7 @@ public partial class RavenTestBase
         public string GetLastStatesFromAllServersOrderedByTime()
         {
             List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
-            foreach (var s in Servers)
+            foreach (var s in _parent.Servers)
             {
                 foreach (var state in s.ServerStore.Engine.PrevStates)
                 {
