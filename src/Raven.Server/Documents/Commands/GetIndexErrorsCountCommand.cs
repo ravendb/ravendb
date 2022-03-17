@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Http;
+using Raven.Server.Json;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands;
@@ -31,6 +32,24 @@ internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountComm
         {
             Method = HttpMethod.Get
         };
+    }
+
+    public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+    {
+        if (response == null ||
+            response.TryGet("Results", out BlittableJsonReaderArray results) == false)
+        {
+            ThrowInvalidResponse();
+            return; // never hit
+        }
+
+        var indexErrors = new IndexErrorsCount[results.Length];
+        for (int i = 0; i < results.Length; i++)
+        {
+            indexErrors[i] = JsonDeserializationServer.IndexErrorsCount((BlittableJsonReaderObject)results[i]);
+        }
+
+        Result = indexErrors;
     }
 
     public class IndexErrorsCount

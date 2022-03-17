@@ -217,6 +217,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, WaitForCommandsRequest> WaitForRaftCommands = GenerateJsonDeserializationRoutine<WaitForCommandsRequest>();
 
+        public static readonly Func<BlittableJsonReaderObject, GetIndexErrorsCountCommand.IndexErrorsCount> IndexErrorsCount = GenerateJsonDeserializationRoutine<GetIndexErrorsCountCommand.IndexErrorsCount>();
+
         public class Parameters
         {
             private Parameters()
