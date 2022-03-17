@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -79,7 +79,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -132,7 +132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -185,7 +185,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -290,7 +290,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -343,7 +343,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -391,7 +391,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -441,7 +441,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -489,7 +489,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -542,7 +542,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             const string key1 = "users/1";
             const string key2 = "users/2";
@@ -1044,7 +1044,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -1193,7 +1193,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var key = EncryptedServer(out var certificates, out string dbName);
+            var key = Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {

@@ -469,7 +469,7 @@ namespace SlowTests.Rolling
                     },
                     3);
 
-                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodes(last, Servers);
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(last, Servers);
 
                 var reqEx = store.GetRequestExecutor();
                 var anyNode = await reqEx.GetPreferredNode();

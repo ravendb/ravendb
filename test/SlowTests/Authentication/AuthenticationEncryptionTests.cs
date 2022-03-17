@@ -29,7 +29,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanUseEncryption()
         {
-            string dbName = SetupEncryptedDatabase(out var certificates, out var _);
+            string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -82,9 +82,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanRestartEncryptedDbWithIndexes()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -177,9 +177,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanCompactEncryptedDb()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())

@@ -816,7 +816,7 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    certificates = SetupServerAuthentication(customSettings, serverUrl);
+                    certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
@@ -913,7 +913,7 @@ namespace Tests.Infrastructure
             if (useSsl)
             {
                 serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                certificates = SetupServerAuthentication(customSettings, serverUrl);
+                certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {

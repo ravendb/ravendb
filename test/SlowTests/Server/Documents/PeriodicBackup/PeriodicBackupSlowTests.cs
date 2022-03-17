@@ -1331,10 +1331,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(periodicBackupTaskId, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(periodicBackupTaskId, TimeSpan.FromSeconds(15));
 
                 await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
-                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 var backupInfo = new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.Backup);
                 var backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
@@ -1357,7 +1357,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(4, nodesCount);
 
                 await Backup.RunBackupInClusterAsync(store, backupInfoResult.TaskId, isFullBackup: true);
-                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInClusterAsync(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 backupInfoResult = await store.Maintenance.SendAsync(backupInfo);
                 Assert.Equal(originalNode, backupInfoResult.ResponsibleNode.NodeTag);

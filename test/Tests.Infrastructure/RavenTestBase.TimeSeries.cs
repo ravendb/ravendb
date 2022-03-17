@@ -23,7 +23,7 @@ namespace FastTests
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
-            internal async Task VerifyPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration, int retentionNumberOfDays, string rawName = "Heartrate", List<TimeSeriesPolicy> policies = null)
+            internal async Task VerifyPolicyExecutionAsync(DocumentStore store, TimeSeriesCollectionConfiguration configuration, int retentionNumberOfDays, string rawName = "Heartrate", List<TimeSeriesPolicy> policies = null)
             {
                 var raw = configuration.RawPolicy;
                 configuration.ValidateAndInitialize();

@@ -332,7 +332,7 @@ namespace RachisTests.DatabaseCluster
                     var doc = new DatabaseRecord(name);
                     var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                     Assert.Equal(clusterSize, databaseResult.Topology.Count);
-                    await Cluster.WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                    await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 }
 
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[2]);
@@ -488,7 +488,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 await WaitForDocumentInClusterAsync<User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
@@ -512,7 +512,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = new DatabaseRecord(databaseName);
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 Assert.Equal(3, res.Topology.Members.Count);
             }
 
@@ -549,7 +549,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User());
@@ -598,7 +598,7 @@ namespace RachisTests.DatabaseCluster
                 var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User());
@@ -679,7 +679,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology.Members.Add("B");
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -726,7 +726,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology.Members.Add("C");
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.True(dbGroupSize == databaseResult.Topology.Members.Count, databaseResult.Topology.ToString());
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
@@ -762,7 +762,7 @@ namespace RachisTests.DatabaseCluster
                 leaderStore.Initialize();
 
                 var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
                 var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
                 Assert.Equal(3, dbToplogy.Count);
@@ -826,7 +826,7 @@ namespace RachisTests.DatabaseCluster
                     DatabaseName = databaseName,
                     Topology = topology
                 }, 2, leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
 
                 using (var session = leaderStore.OpenSession())
                 {
@@ -945,7 +945,7 @@ namespace RachisTests.DatabaseCluster
                 leaderStore.Initialize();
 
                 var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(30));
                 var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
                 Assert.Equal(2, dbToplogy.AllNodes.Count());
@@ -985,7 +985,7 @@ namespace RachisTests.DatabaseCluster
             }
             var result = DisposeServerAndWaitForFinishOfDisposal(Servers[0]);
             var customSettings = new Dictionary<string, string>();
-            var certificates = SetupServerAuthentication(customSettings);
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":8999";
             leader = Servers[0] = GetNewServer(new ServerCreationOptions
             {
@@ -995,7 +995,7 @@ namespace RachisTests.DatabaseCluster
                 DataDirectory = result.DataDirectory
             });
 
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             using (var leaderStore = new DocumentStore
             {
@@ -1165,7 +1165,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, "A"));
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 var db = store.Database;
 
                 Func<ServerStore, bool> waitFunc = (s) =>
@@ -1203,7 +1203,7 @@ namespace RachisTests.DatabaseCluster
                     "0N64iiIdYUKcO+yq1V0cPA"
                 }));
 
-                await Cluster.WaitForRaftCommandToBeAppliedInLocalServer(nameof(UpdateUnusedDatabaseIdsCommand));
+                await Cluster.WaitForRaftCommandToBeAppliedInLocalServerAsync(nameof(UpdateUnusedDatabaseIdsCommand));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1214,7 +1214,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, null));
-                await Cluster.WaitForRaftCommandToBeAppliedInLocalServer(nameof(UpdateUnusedDatabaseIdsCommand));
+                await Cluster.WaitForRaftCommandToBeAppliedInLocalServerAsync(nameof(UpdateUnusedDatabaseIdsCommand));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1619,12 +1619,12 @@ namespace RachisTests.DatabaseCluster
             }))
             {
                 var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, "A", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
 
                 result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: false, "B", timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
-                await Cluster.WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex + 1, TimeSpan.FromSeconds(15));
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
             }

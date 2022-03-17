@@ -31,8 +31,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task PreventDeletionOnHubSinkCompromised()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -149,8 +149,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -253,8 +253,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task PreventDeletionsOnHub()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -368,8 +368,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task EnsureArtificialDocsAreSkippedOnReplication_17795()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -477,8 +477,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task MakeSureDeletionsRevisionsDontReplicate()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");

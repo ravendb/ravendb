@@ -27,13 +27,13 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
-        public async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
+        public async Task WaitForRaftCommandToBeAppliedInClusterAsync(RavenServer leader, string commandType)
         {
             var updateIndex = LastRaftIndexForCommand(leader, commandType);
-            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
+            await WaitForRaftIndexToBeAppliedInClusterAsync(updateIndex, TimeSpan.FromSeconds(10));
         }
 
-        public async Task WaitForRaftCommandToBeAppliedInLocalServer(string commandType)
+        public async Task WaitForRaftCommandToBeAppliedInLocalServerAsync(string commandType)
         {
             var updateIndex = LastRaftIndexForCommand(_parent.Server, commandType);
             await _parent.Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
@@ -91,7 +91,7 @@ public partial class RavenTestBase
             return sb.ToString();
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(long index, TimeSpan? timeout = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(long index, TimeSpan? timeout = null)
         {
             var notDisposed = _parent.Servers.Count(s => s.ServerStore.Disposed == false);
             var notPassive = _parent.Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
@@ -99,15 +99,15 @@ public partial class RavenTestBase
             Assert.True(_parent.Servers.Count == notDisposed, $"Unequal not disposed nodes {_parent.Servers.Count} != {notDisposed}");
             Assert.True(_parent.Servers.Count == notPassive, $"Unequal not passive nodes {_parent.Servers.Count} != {notPassive}");
 
-            await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
+            await WaitForRaftIndexToBeAppliedInClusterAsync(index, timeout);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
+        public async Task WaitForRaftIndexToBeAppliedInClusterAsync(long index, TimeSpan? timeout = null)
         {
-            await WaitForRaftIndexToBeAppliedOnClusterNodes(index, _parent.Servers, timeout);
+            await WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, _parent.Servers, timeout);
         }
 
-        public async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
+        public async Task WaitForRaftIndexToBeAppliedOnClusterNodesAsync(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
         {
             if (nodes.Count == 0)
                 throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");

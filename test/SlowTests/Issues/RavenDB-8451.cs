@@ -46,7 +46,7 @@ namespace SlowTests.Issues
 
         private async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false, bool compressDocuments = false)
         {
-            string dbName = SetupEncryptedDatabase(out var certificates, out var masterKey);
+            string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var masterKey);
 
             if (nullifyMasterKey)
             {
