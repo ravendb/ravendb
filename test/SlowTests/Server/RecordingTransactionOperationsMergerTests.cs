@@ -1019,7 +1019,7 @@ namespace SlowTests.Server
                 expected.Age = 67;
                 master.Commands().Put(id, null, expected);
 
-                await WaitForConflict(slave, id);
+                await Replication.WaitForConflict(slave, id);
 
                 slave.Maintenance.Server.Send(new ModifyConflictSolverOperation(slave.Database, null, true));
 

@@ -272,9 +272,9 @@ namespace StressTests.Issues
             EnsureReplicating(sinkStore1, sinkStore2);
             EnsureReplicating(sinkStore2, sinkStore1);
 
-            await WaitForConflict(hubStore, "common");
-            await WaitForConflict(sinkStore1, "common");
-            await WaitForConflict(sinkStore2, "common");
+            await Replication.WaitForConflict(hubStore, "common");
+            await Replication.WaitForConflict(sinkStore1, "common");
+            await Replication.WaitForConflict(sinkStore2, "common");
 
             await UpdateConflictResolver(hubStore, resolveToLatest: true);
 
