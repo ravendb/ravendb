@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Equal(40000, WaitForEntriesCount(store, index.IndexName, 40000));
+                Assert.Equal(40000, Indexes.WaitForEntriesCount(store, index.IndexName, 40000));
             }
         }
 
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Equal(30000, WaitForEntriesCount(store, index.IndexName, 30000));
+                Assert.Equal(30000, Indexes.WaitForEntriesCount(store, index.IndexName, 30000));
             }
         }
 

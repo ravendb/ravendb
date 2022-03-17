@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                         .ProjectInto<TestIndex.Result>()
                         .ToList();
 
-                    var errors = WaitForIndexingErrors(documentStore, errorsShouldExists: false);
+                    var errors = Indexes.WaitForIndexingErrors(documentStore, errorsShouldExists: false);
                     Assert.Null(errors);
                     Assert.Equal(1, results.Count);
                 }

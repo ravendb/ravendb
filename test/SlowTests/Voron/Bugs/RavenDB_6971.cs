@@ -39,7 +39,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 

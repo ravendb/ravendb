@@ -245,7 +245,7 @@ namespace SlowTests.Tests.Indexes
                 }
                 else
                 {
-                    errors = WaitForIndexingErrors(store, new[] { index.IndexName })
+                    errors = Indexes.WaitForIndexingErrors(store, new[] { index.IndexName })
                         .SelectMany(e => e.Errors)
                         .Select(e => e.Error)
                         .ToArray();

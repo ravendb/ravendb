@@ -31,7 +31,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, allowErrors: true);
 
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
 
                 var simpleMapErrors = errors.Single(x => x.Name == new SimpleMapIndexWithDefaultFields().IndexName);

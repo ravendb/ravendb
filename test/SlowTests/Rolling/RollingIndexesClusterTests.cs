@@ -820,7 +820,7 @@ namespace SlowTests.Rolling
 
                 var runningNode = GetRunningNode(cluster, store);
 
-                WaitForIndexingErrors(store, indexNames: new[] { nameof(MyRollingIndex) }, nodeTag: runningNode);
+                Indexes.WaitForIndexingErrors(store, indexNames: new[] { nameof(MyRollingIndex) }, nodeTag: runningNode);
 
                 // let's try to fix it
                 await store.ExecuteIndexAsync(new MyRollingIndex());

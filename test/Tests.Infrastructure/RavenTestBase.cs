@@ -52,6 +52,7 @@ namespace FastTests
             Backup = new BackupTestBase(this);
             Encryption = new EncryptionTestBase(this);
             Certificates = new CertificatesTestBase(this);
+            Indexes = new IndexesTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -396,83 +397,6 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)
-        {
-            if (errorsShouldExists is null)
-            {
-                timeout ??= Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
-            }
-            else
-            {
-                timeout ??= errorsShouldExists is true
-                    ? TimeSpan.FromSeconds(5)
-                    : TimeSpan.FromSeconds(1);
-            }
-
-            var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
-
-            var sp = Stopwatch.StartNew();
-            while (sp.Elapsed < timeout.Value)
-            {
-                try
-                {
-                    var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames, nodeTag));
-                    foreach (var index in indexes)
-                    {
-                        if (index.Errors.Length > 0)
-                        {
-                            toWait.Remove(index.Name);
-
-                            if (toWait.Count == 0)
-                                return indexes;
-                        }
-                    }
-                }
-                catch (IndexDoesNotExistException)
-                {
-
-                }
-
-                Thread.Sleep(32);
-            }
-
-            var msg = $"Got no index error for more than {timeout.Value}.";
-            if (toWait.Count != 0)
-                msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
-
-            if (errorsShouldExists is null)
-                throw new TimeoutException(msg);
-
-            return null;
-        }
-
-        public static int WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)
-        {
-            timeout ??= (Debugger.IsAttached
-                ? TimeSpan.FromMinutes(15)
-                : TimeSpan.FromMinutes(1));
-
-            var sp = Stopwatch.StartNew();
-            var entriesCount = -1;
-
-            while (sp.Elapsed < timeout.Value)
-            {
-                MaintenanceOperationExecutor operations = string.IsNullOrEmpty(databaseName) == false ? store.Maintenance.ForDatabase(databaseName) : store.Maintenance;
-
-                entriesCount = operations.Send(new GetIndexStatisticsOperation(indexName)).EntriesCount;
-
-                if (entriesCount >= minEntriesCount)
-                    return entriesCount;
-
-                Thread.Sleep(32);
-            }
-
-            if (throwOnTimeout)
-                throw new TimeoutException($"It didn't get min entries count {minEntriesCount} for index {indexName}. The index has {entriesCount} entries.");
-
-            return entriesCount;
-        }
-
         protected static async Task<TC> AssertWaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection
         {
             var ret = await WaitForSingleAsync(act, timeout, interval);
@@ -754,21 +678,6 @@ namespace FastTests
                     }
                 }
             }
-        }
-
-        protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
-        {
-            var database = GetDatabase(store.Database).Result;
-
-            var mre = new ManualResetEventSlim();
-
-            database.IndexStore.IndexBatchCompleted += x =>
-            {
-                if (predicate(x))
-                    mre.Set();
-            };
-
-            return mre;
         }
 
         protected static async Task WaitForConflict(IDocumentStore slave, string id, int timeout = 15_000)

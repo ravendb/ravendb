@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
+                Indexes.WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
 
                 store.Maintenance.Send(new StopIndexingOperation());
 

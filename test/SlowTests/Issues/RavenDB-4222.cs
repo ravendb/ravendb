@@ -65,7 +65,7 @@ doc.Name
                 stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
 
-                Assert.Equal(1, WaitForEntriesCount(store, indexName, 1));
+                Assert.Equal(1, Indexes.WaitForEntriesCount(store, indexName, 1));
             }
         }
 

@@ -36,7 +36,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 index1.Execute(store);
 
                 WaitForIndexing(store, allowErrors: true);
-                var errors = WaitForIndexingErrors(store, indexNames: new[] { index1.IndexName });
+                var errors = Indexes.WaitForIndexingErrors(store, indexNames: new[] { index1.IndexName });
 
                 Assert.Contains("Invalid pattern reference document ID. Field 'OrderedAt' was null", errors[0].Errors[0].Error);
 
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 index2.Execute(store);
 
                 WaitForIndexing(store, allowErrors: true);
-                errors = WaitForIndexingErrors(store, indexNames: new[] { index2.IndexName });
+                errors = Indexes.WaitForIndexingErrors(store, indexNames: new[] { index2.IndexName });
 
                 Assert.Contains($"Invalid pattern reference document ID: 'reports/daily/{now:yyyy-MM-dd}|'. Error: reference ID must not end with '|' character", errors[0].Errors[0].Error);
 

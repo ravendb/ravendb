@@ -59,7 +59,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
 
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", errors[0].Errors[0].Error);
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new ResetIndexOperation(new MyIndex(analyzerName).IndexName));
 
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: Name", errors[0].Errors[0].Error);
@@ -318,9 +318,9 @@ namespace SlowTests.Issues
                 AssertCount<MyIndex>(store);
             }
 
-            static void AssertErrors(IDocumentStore store)
+            void AssertErrors(IDocumentStore store)
             {
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
 
                 Assert.Equal(1, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
@@ -377,7 +377,7 @@ namespace SlowTests.Issues
 
                 Fill(store);
 
-                var errors = WaitForIndexingErrors(store);
+                var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains($"Cannot find analyzer type '{analyzerName}' for field: @default", errors[0].Errors[0].Error);
