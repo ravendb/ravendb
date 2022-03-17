@@ -70,7 +70,7 @@ namespace StressTests.Server.Replication
                 Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
 
                 await store1.Maintenance.SendAsync(new CreateSampleDataOperation());
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
 
                 var count = 0;
                 var docs = store1.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;
@@ -204,7 +204,7 @@ namespace StressTests.Server.Replication
                 Assert.Equal(2, server.ServerStore.IdleDatabases.Count);
 
                 await store1.Maintenance.SendAsync(new CreateSampleDataOperation());
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
 
                 var count = 0;
                 var docs = store1.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments;

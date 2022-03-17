@@ -208,7 +208,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void AssertCount<TIndex>(IDocumentStore store)
+        private void AssertCount<TIndex>(IDocumentStore store)
             where TIndex : AbstractIndexCreationTask, new()
         {
             Indexes.WaitForIndexing(store);

@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
         }
 
 
-        private static void Populate(IDocumentStore store)
+        private void Populate(IDocumentStore store)
         {
             new Simple_Index().Execute(store);
             using (var session = store.OpenSession())

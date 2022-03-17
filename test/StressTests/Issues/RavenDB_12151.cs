@@ -199,7 +199,7 @@ namespace StressTests.Issues
 
                 try
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
                 catch
                 {

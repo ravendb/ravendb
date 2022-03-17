@@ -194,7 +194,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        private static TestDocument Setup(DocumentStore store)
+        private TestDocument Setup(DocumentStore store)
         {
             new TestDocumentByName().Execute(store);
             var testDoc = new TestDocument

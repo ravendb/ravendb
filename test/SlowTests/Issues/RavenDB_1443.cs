@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void ActualTestCase(IDocumentStore store)
+        private void ActualTestCase(IDocumentStore store)
         {
             var lorem = new[]
             {

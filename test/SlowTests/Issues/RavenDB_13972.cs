@@ -238,7 +238,7 @@ namespace SlowTests.Issues
             }
         }
 
-        protected static void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        protected void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
         {
             using (var bulk = store.BulkInsert())
             {

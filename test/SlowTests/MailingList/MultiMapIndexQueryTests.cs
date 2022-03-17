@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        private static async Task Setup(DocumentStore store)
+        private async Task Setup(DocumentStore store)
         {
             await new StockInfoIndex().ExecuteAsync(store);
 
