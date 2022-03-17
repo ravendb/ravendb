@@ -78,7 +78,7 @@ namespace SlowTests.Verifications
             }
 
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
 
@@ -113,7 +113,7 @@ namespace SlowTests.Verifications
                 }
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         [Fact]

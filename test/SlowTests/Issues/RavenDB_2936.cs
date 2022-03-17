@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var result = store.Operations.Send(new PatchByQueryOperation(
                         "FROM INDEX 'Users/ByName' UPDATE { this.LastName = 'Smith' }"))
@@ -61,7 +61,7 @@ namespace SlowTests.Issues
 
                 Assert.Empty(result.Details);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 result = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName'" }))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var result = store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'Users/ByName' UPDATE { this.LastName = 'Smith'}" },
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
 
                 Assert.NotEmpty(result.Details);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 result = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName'" }, new QueryOperationOptions { RetrieveDetails = true }))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(30));

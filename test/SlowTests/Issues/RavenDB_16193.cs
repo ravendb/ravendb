@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // let's force to clean the reader
                 indexInstance.IndexPersistence.Clean(IndexCleanup.All);

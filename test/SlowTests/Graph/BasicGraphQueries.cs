@@ -49,7 +49,7 @@ namespace SlowTests.Graph
                 mutate?.Invoke(store);
                 if (parameters.WaitForIndexing)
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var s = store.OpenSession())
@@ -71,7 +71,7 @@ namespace SlowTests.Graph
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 foreach (var item in expected)
                 {
@@ -222,7 +222,7 @@ include Lines.Product
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Doc { Id = "doc-3", StrVal = "bcd" });
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var results = await session.Advanced.AsyncDocumentQuery<Doc, DocsIndex>()
                         .IncludeExplanations(out Explanations explanations)

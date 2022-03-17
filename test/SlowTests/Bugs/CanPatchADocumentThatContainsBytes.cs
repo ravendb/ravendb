@@ -43,7 +43,7 @@ namespace SlowTests.Bugs
                 }
 
                 new PrimarySkills().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

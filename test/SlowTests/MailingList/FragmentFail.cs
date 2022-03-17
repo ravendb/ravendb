@@ -78,7 +78,7 @@ namespace SlowTests.MailingList
                 }
 
                 new The_Search().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

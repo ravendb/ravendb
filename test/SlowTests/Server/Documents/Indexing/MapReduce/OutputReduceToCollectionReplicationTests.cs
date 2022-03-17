@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.StoreAsync(new OutputReduceToCollectionTests.Marker { Name = "Marker 2" }, "marker2");
                     await session.SaveChangesAsync();
                 }
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
                 Assert.True(WaitForDocument(store2, "marker2"));
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))

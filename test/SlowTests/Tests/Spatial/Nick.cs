@@ -53,7 +53,7 @@ namespace SlowTests.Tests.Spatial
 
                 new MySpatialIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // Distance between the 2 tested points is 35.75km
                 // (can be checked here: http://www.movable-type.co.uk/scripts/latlong.html

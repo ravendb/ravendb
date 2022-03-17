@@ -250,7 +250,7 @@ namespace SlowTests.Issues
 
             new Users_ByName().Execute(store);
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())
             {

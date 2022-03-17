@@ -99,7 +99,7 @@ namespace SlowTests.SlowTests.Bugs
                 CreateEntities(store, 0);
 
                 const string content = "This is doable";
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     QueryStatistics stats;

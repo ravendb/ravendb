@@ -65,7 +65,7 @@ namespace SlowTests.Issues
             }
 
             new Index().Execute(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             IndexStats stats = store.Maintenance.Send(new GetIndexStatisticsOperation("index"));
             Assert.Equal(3, stats.EntriesCount);

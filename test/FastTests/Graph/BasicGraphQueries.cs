@@ -43,7 +43,7 @@ namespace FastTests.Graph
                 mutate?.Invoke(store);
                 if (parameters.WaitForIndexing)
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var s = store.OpenSession())

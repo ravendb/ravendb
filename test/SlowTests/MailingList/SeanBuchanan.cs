@@ -133,7 +133,7 @@ namespace SlowTests.MailingList
                     Assert.Equal("Subha", proficiencies.Single().Consultant.Name);
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 //I use this patch to update the consultant name to "Subha" in the Proficiencies collection.
                 store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {

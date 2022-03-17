@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                     Name = "test4"
                 }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 var stats = Indexes.WaitForIndexingErrors(store, new[] { "test1", "test2", "test3", "test4" }, errorsShouldExists: false);
                 Assert.Null(stats);
 

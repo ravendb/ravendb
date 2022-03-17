@@ -47,7 +47,7 @@ namespace SlowTests.Bugs
 
                 new MyIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var firstQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 

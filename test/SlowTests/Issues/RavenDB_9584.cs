@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 s.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         [Fact]

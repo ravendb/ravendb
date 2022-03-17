@@ -134,7 +134,7 @@ namespace FastTests.Client
             }
         }
 
-        private static void InsertData(IDocumentStore store)
+        private void InsertData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -148,7 +148,7 @@ namespace FastTests.Client
                 session.SaveChanges();
             }
             new EmployeeIndex().Execute(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
     }
 }

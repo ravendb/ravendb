@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.Indexing
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var dequeueCount = 0;
 

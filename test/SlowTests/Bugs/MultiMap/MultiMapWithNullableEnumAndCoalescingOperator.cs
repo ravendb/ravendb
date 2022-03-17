@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.MultiMap
 
                 new MySearchIndexTask().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());

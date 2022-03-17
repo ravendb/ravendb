@@ -85,7 +85,7 @@ namespace SlowTests.MailingList.PhilJones
                     session.Store(newReminder);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var reminders = session.Query<Foo, Foos_BarProjection>()
                         .Where(x => x.Reminders.Any(y => y.ReminderDue == new DateTime(2011, 12, 12)))

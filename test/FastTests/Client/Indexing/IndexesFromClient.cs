@@ -507,7 +507,7 @@ namespace FastTests.Client.Indexing
                         "Posts"
                     }, new[] { "Title", "Desc" }, false, false, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion), Guid.NewGuid().ToString());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var list = session.Query<Post>("Posts/ByTitleAndDesc")
                         .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/1").WithOptions(new MoreLikeThisOptions

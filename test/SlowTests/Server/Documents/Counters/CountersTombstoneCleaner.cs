@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await cleaner.ExecuteCleanup();
 
@@ -142,7 +142,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await cleaner.ExecuteCleanup();
 

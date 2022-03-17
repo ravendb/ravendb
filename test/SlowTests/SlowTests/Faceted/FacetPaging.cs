@@ -723,7 +723,7 @@ namespace SlowTests.SlowTests.Faceted
                 }
                 s.SaveChanges();
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
             }
         }
     }

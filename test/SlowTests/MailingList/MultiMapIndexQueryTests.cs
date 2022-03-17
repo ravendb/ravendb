@@ -97,7 +97,7 @@ namespace SlowTests.MailingList
                 await session.SaveChangesAsync();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private class Article

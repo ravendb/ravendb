@@ -360,7 +360,7 @@ namespace SlowTests.Server
 
                 await store.ExecuteIndexAsync(new DailyInvoicesIndex());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }

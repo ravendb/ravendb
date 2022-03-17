@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -116,7 +116,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-24"));
                     Assert.Null(session.Load<OutputReduceToCollectionReference>("reports/daily/2019-10-25"));
@@ -169,7 +169,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -194,7 +194,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -219,7 +219,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -251,13 +251,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await store.ExecuteIndexAsync(new Replacement.Orders_ProfitByProductAndOrderedAt());
 
                 WaitForUserToContinueTheTest(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -347,7 +347,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 var index = new Index_WithInvalidPropertyName();
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var errors = Indexes.WaitForIndexingErrors(store, new[] {index.IndexName});
 
@@ -371,11 +371,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await store.ExecuteIndexAsync(new Replacement_DifferentPattern.Orders_ProfitByProductAndOrderedAt());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -411,13 +411,13 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
                 new Orders_ProfitByProductAndOrderedAt().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 WaitForUserToContinueTheTest(store);
 
                 await store.ExecuteIndexAsync(new Replacement_PatternFieldUpdate.Orders_ProfitByProductAndOrderedAt());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 WaitForUserToContinueTheTest(store);
 

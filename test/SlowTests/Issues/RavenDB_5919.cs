@@ -68,7 +68,7 @@ namespace SlowTests.Issues
 
                 documentStore.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 var stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
 
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
 
                 documentStore.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 var stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
 

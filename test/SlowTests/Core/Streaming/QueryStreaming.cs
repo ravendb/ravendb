@@ -43,7 +43,7 @@ namespace SlowTests.Core.Streaming
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 int count = 0;
 
@@ -94,7 +94,7 @@ namespace SlowTests.Core.Streaming
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -147,7 +147,7 @@ namespace SlowTests.Core.Streaming
                     await session.SaveChangesAsync().ConfigureAwait(false);
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -215,7 +215,7 @@ namespace SlowTests.Core.Streaming
                     indexDefinition.Name = "MyClass/ByIndex";
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<MyClass>("MyClass/ByIndex")
                         .Select(x => new MyClass
@@ -333,7 +333,7 @@ namespace SlowTests.Core.Streaming
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
 
                 Foo last = null;

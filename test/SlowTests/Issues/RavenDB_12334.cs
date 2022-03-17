@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                     await session.StoreAsync(new Doc { Id = "doc-1", StrVal = "a", });
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     WaitForUserToContinueTheTest(store);
 
                     var result = await session.Query<BlittableJsonReaderObject, DocsIndex>().FirstAsync();

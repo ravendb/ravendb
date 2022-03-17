@@ -44,7 +44,7 @@ namespace SlowTests.SlowTests.Issues
 
                 new EmailIndex().Execute(documentStore);
 
-                WaitForIndexing(documentStore, timeout: TimeSpan.FromMinutes(5));
+                Indexes.WaitForIndexing(documentStore, timeout: TimeSpan.FromMinutes(5));
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -75,7 +75,7 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromSeconds(10));
             }
         }
 

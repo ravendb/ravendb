@@ -78,7 +78,7 @@ namespace SlowTests.Issues
 
                 new TheIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
 
                 Assert.True(WaitForValue(() =>

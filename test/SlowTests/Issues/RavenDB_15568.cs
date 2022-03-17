@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store, allowErrors: true);
+                Indexes.WaitForIndexing(store, allowErrors: true);
 
                 var errors = Indexes.WaitForIndexingErrors(store);
                 Assert.Equal(1, errors.Length);

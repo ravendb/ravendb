@@ -1,12 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace FastTests;
 
@@ -21,6 +28,79 @@ public partial class RavenTestBase
         public IndexesTestBase(RavenTestBase parent)
         {
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        }
+
+        public void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
+        {
+            var admin = store.Maintenance.ForDatabase(dbName);
+
+            timeout ??= (Debugger.IsAttached
+                ? TimeSpan.FromMinutes(15)
+                : TimeSpan.FromMinutes(1));
+
+            var sp = Stopwatch.StartNew();
+            while (sp.Elapsed < timeout.Value)
+            {
+                var databaseStatistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+                var indexes = databaseStatistics.Indexes
+                    .Where(x => x.State != IndexState.Disabled);
+
+                var staleIndexesCount = indexes.Count(x => x.IsStale || x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix));
+                if (staleIndexesCount == 0)
+                    return;
+
+                var erroredIndexesCount = databaseStatistics.Indexes.Count(x => x.State == IndexState.Error);
+                if (allowErrors)
+                {
+                    // wait for all indexes to become non stale
+                }
+                else if (erroredIndexesCount > 0)
+                {
+                    // have at least some errors
+                    break;
+                }
+
+                Thread.Sleep(32);
+            }
+
+            if (allowErrors)
+            {
+                return;
+            }
+
+            var perf = admin.Send(new GetIndexPerformanceStatisticsOperation());
+            var errors = admin.Send(new GetIndexErrorsOperation());
+            var stats = admin.Send(new GetIndexesStatisticsOperation());
+
+            var total = new
+            {
+                Errors = errors,
+                Stats = stats,
+                Performance = perf,
+                NodeTag = nodeTag
+            };
+
+            var file = Path.GetTempFileName() + ".json";
+            using (var stream = File.Open(file, FileMode.OpenOrCreate))
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(total);
+                var json = context.ReadObject(djv, "errors");
+                writer.WriteObject(json);
+                writer.Flush();
+            }
+
+            var statistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
+
+            var corrupted = statistics.Indexes.Where(x => x.State == IndexState.Error).ToList();
+            if (corrupted.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"The following indexes are with error state: {string.Join(",", corrupted.Select(x => x.Name))} - details at " + file);
+            }
+
+            throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
         public IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null, string nodeTag = null, bool? errorsShouldExists = null)

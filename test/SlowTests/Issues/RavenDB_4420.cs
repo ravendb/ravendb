@@ -40,7 +40,7 @@ namespace SlowTests.Issues
 
                 var values = new[] { MyEnum.Value1, MyEnum.Value2 };
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // act
                 using (var session = store.OpenSession())

@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.Store(new SampleData { IntegerAge = 3, StringAge = "3" });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var resultInteger =
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                     session.Store(new SampleData { IntegerAge = 3, StringAge = "3" });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var resultInteger =
@@ -95,7 +95,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store); //If we want to query documents sometime we need to wait for the indexes to catch up
+                Indexes.WaitForIndexing(store); //If we want to query documents sometime we need to wait for the indexes to catch up
 
                 // WaitForUserToContinueTheTest(store);//Sometimes we want to debug the test itself, this redirect us to the studio
 

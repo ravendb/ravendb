@@ -95,7 +95,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
+                    Indexes.WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Replication
                 using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
                 using (var secondSession = store.OpenAsyncSession(new SessionOptions { RequestExecutor = re }))
                 {
-                    WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
+                    Indexes.WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
                     var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
                     Assert.Equal(0, secondNodeDocs.Length);
                 }
@@ -175,7 +175,7 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
+                    Indexes.WaitForIndexing(store, store.Database, nodeTag: src.ServerStore.NodeTag);
                     var firstNodeDocs = await session.Query<User>().ToArrayAsync();
                     Assert.Equal(0, firstNodeDocs.Length);
                 }
@@ -188,7 +188,7 @@ namespace SlowTests.Server.Replication
                 using var re = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(dest.WebUrl, store.Database, null, store.Conventions);
                 using (var secondSession = store.OpenAsyncSession(new SessionOptions { RequestExecutor = re }))
                 {
-                    WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
+                    Indexes.WaitForIndexing(store, store.Database, nodeTag: dest.ServerStore.NodeTag);
                     var secondNodeDocs = await secondSession.Query<User>().ToArrayAsync();
                     Assert.Equal(0, secondNodeDocs.Length);
                 }

@@ -62,7 +62,7 @@ namespace SlowTests.Issues
                         }
                     }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 var client = new HttpClient();
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
                         }
                     }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
                 var client = new HttpClient();
                 var stream = await client.GetStreamAsync(

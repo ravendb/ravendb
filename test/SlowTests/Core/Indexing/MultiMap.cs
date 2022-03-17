@@ -33,7 +33,7 @@ namespace SlowTests.Core.Indexing
                     session.Store(new Headquater { Name = "token1" });
                     session.Store(new Headquater { Name = "name", Address1 = "some addr token1" });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var results = session.Advanced
                         .DocumentQuery<ISearchable>(index.IndexName)

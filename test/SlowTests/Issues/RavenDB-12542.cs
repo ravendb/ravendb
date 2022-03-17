@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var queryResultsFromIndex =
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new Index_Orders_ByEmployee().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     //this use-case is a bit silly, but why not throw explicit & informative exception even in such case :)
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>("match (index 'Orders/Totals' as o select Employee)").ToArray());
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
             {
                 Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new IndexOrdersProductsWithPricePerUnit().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var queryResults =

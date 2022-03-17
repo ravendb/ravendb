@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         Amount = 3
                     }).Wait();
                     session.SaveChangesAsync().Wait();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var query = session.Query<ReduceMe>(index.IndexName);
                     await using (var stream = await session.Advanced.StreamAsync(query))
                     {
