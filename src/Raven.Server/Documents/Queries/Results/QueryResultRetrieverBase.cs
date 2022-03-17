@@ -522,7 +522,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return false;
 
             var id = FieldsToFetch.IndexFields[fieldToFetch.Name.Value].Id;
-            var type = retrieverInput.CoraxEntry.GetFieldType(id);
+            var type = retrieverInput.CoraxEntry.GetFieldType(id, out _);
 
             //todo maciej: optimize this
             switch (type)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Corax;
 using FastTests.Voron;
@@ -62,19 +63,68 @@ namespace FastTests.Corax
             }
         }
 
-        private void PrepareData()
+
+        [Fact]
+        public void CanDeleteOneElement()
         {
-            for (int i = 0; i < 1000; ++i)
+            PrepareData(DataType.Modulo);
+            IndexEntries();
+            var count = _longList.Count(p => p.Content == 9);
+            
+            Span<long> ids = stackalloc long[1024];
             {
-                _longList.Add(new IndexSingleNumericalEntry<long> { Id = $"list/{i}", Content = 0 });
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "9");
+                Assert.Equal(count, match.Fill(ids));
+            }
+
+            using (var indexWriter = new IndexWriter(Env, _analyzers))
+            {
+                indexWriter.TryDeleteEntry("Id", "list/9");
+                indexWriter.Commit();
+            }
+
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Content", "9");
+                Assert.Equal(count - 1, match.Fill(ids));
+            }
+
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match = indexSearcher.TermQuery("Id", "list/9");
+                Assert.Equal(0, match.Fill(ids));
+            }
+
+            {
+                using var indexSearcher = new IndexSearcher(Env, _analyzers);
+                var match1 = indexSearcher.AllEntries();
+                Assert.Equal(_longList.Count - 1, match1.Fill(ids));
             }
         }
 
+        private void PrepareData(DataType type = DataType.Default)
+        {
+            for (int i = 0; i < 1000; ++i)
+                switch (type)
+                {
+                    case DataType.Modulo:
+                        _longList.Add(new IndexSingleNumericalEntry<long>{Id = $"list/{i}", Content = i % 33});
+                        break;
+                    default:
+                        _longList.Add(new IndexSingleNumericalEntry<long> {Id = $"list/{i}", Content = 0});
+                        break;
+                }
+        }
+
+        private enum DataType
+        {
+            Default,
+            Modulo
+        }
 
         private void IndexEntries()
         {
-
-
             const int bufferSize = 4096;
             using var _ = _bsc.Allocate(bufferSize, out ByteString buffer);
 
@@ -105,8 +155,8 @@ namespace FastTests.Corax
             Slice.From(ctx, "Content", ByteStringType.Immutable, out Slice contentSlice);
 
             return new IndexFieldsMapping(ctx)
-                            .AddBinding(IndexId, idSlice)
-                            .AddBinding(ContentId, contentSlice);
+                .AddBinding(IndexId, idSlice)
+                .AddBinding(ContentId, contentSlice);
         }
 
         private class IndexSingleNumericalEntry<T>

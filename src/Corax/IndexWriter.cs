@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,8 +8,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Pipeline;
-using Corax.Queries;
 using Corax.Utils;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Compression;
 using Voron;
@@ -41,10 +40,10 @@ namespace Corax
         private readonly Dictionary<Slice, IndexFieldBinding> _fields;
         private readonly Dictionary<int, IndexFieldBinding> _fieldsById;
         private readonly List<IndexFieldBinding> _fieldsList;
-
         public int Count => _fieldsById.Count;
         public Analyzer DefaultAnalyzer;
-        public IndexFieldsMapping(ByteStringContext context)        
+
+        public IndexFieldsMapping(ByteStringContext context)
         {
             _context = context;
             _fields = new Dictionary<Slice, IndexFieldBinding>(SliceComparer.Instance);
@@ -78,16 +77,16 @@ namespace Corax
                     binding.Analyzer = mapping.Analyzer;
                 }
             }
-            
+
             foreach (var ifb in CollectionsMarshal.AsSpan(_fieldsList))
             {
                 if (ifb.NotApplyAnalyzer)
                     continue;
-                
+
                 ifb.Analyzer ??= analyzers.DefaultAnalyzer;
             }
         }
-        
+
         public IndexFieldBinding GetByFieldId(int fieldId)
         {
             return _fieldsById[fieldId];
@@ -111,7 +110,7 @@ namespace Corax
             using var _ = Slice.From(_context, fieldName, out var str);
             return _fields.TryGetValue(str, out binding);
         }
-        
+
         public IndexFieldBinding GetByFieldName(Slice fieldName)
         {
             return _fields[fieldName];
@@ -153,16 +152,16 @@ namespace Corax
 
     public class IndexWriter : IDisposable // single threaded, controlled by caller
     {
-        public const int MaxTermLength = 1024;        
+        public const int MaxTermLength = 1024;
 
-        private readonly IndexFieldsMapping _fieldsMapping;        
+        private readonly IndexFieldsMapping _fieldsMapping;
 
         private readonly StorageEnvironment _environment;
 
         private readonly bool _ownsTransaction;
+        private JsonOperationContext _jsonOperationContext;
         public readonly Transaction Transaction;
         private readonly TransactionPersistentContext _transactionPersistentContext;
-
 
 
         // CPU bound - embarassingly parallel
@@ -196,7 +195,7 @@ namespace Corax
             _ownsTransaction = true;
             _postingListContainerId = Transaction.OpenContainer(Constants.IndexWriter.PostingListsSlice);
             _entriesContainerId = Transaction.OpenContainer(Constants.IndexWriter.EntriesContainerSlice);
-
+            _jsonOperationContext = JsonOperationContext.ShortTermSingleUse();
             _fieldsMapping = fieldsMapping ?? IndexFieldsMapping.Instance;
         }
 
@@ -216,7 +215,7 @@ namespace Corax
         {
             using var _ = Slice.From(Transaction.Allocator, id, out var idSlice);
             return Index(idSlice, data, knownFields);
-        }                
+        }
 
         public long Index(Slice id, Span<byte> data, IndexFieldsMapping knownFields)
         {
@@ -234,7 +233,7 @@ namespace Corax
 
             var context = Transaction.Allocator;
             var entryReader = new IndexEntryReader(data);
-            
+
             foreach (var binding in knownFields)
             {
                 var key = binding.FieldName;
@@ -244,13 +243,12 @@ namespace Corax
                     _buffer[key] = field = new Dictionary<Slice, List<long>>(SliceComparer.Instance);
                 }
 
-                if (binding.Analyzer is not null)                
+                if (binding.Analyzer is not null)
                     InsertAnalyzedToken(context, ref entryReader, field, entryId, binding);
                 else
                     InsertToken(context, ref entryReader, field, entryId, binding);
-
             }
-            
+
             return entryId;
         }
 
@@ -260,7 +258,8 @@ namespace Corax
         }
 
         [SkipLocalsInit]
-        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId, IndexFieldBinding binding)
+        private unsafe void InsertAnalyzedToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId,
+            IndexFieldBinding binding)
         {
             Analyzer analyzer = binding.Analyzer;
             analyzer.GetOutputBuffersSize(Analyzer.MaximumSingleTokenLength, out int bufferSize, out int tokenSize);
@@ -269,14 +268,14 @@ namespace Corax
             Token* tempTokenSpace = stackalloc Token[tokenSize];
 
             int tokenField = binding.FieldId;
-            var fieldType = entryReader.GetFieldType(tokenField);
+            var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
             if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
                 // TODO: For performance we can retrieve the whole thing and execute the analyzer many times in a loop for each token
                 //       that will ensure faster turnaround and more efficient execution. 
                 var iterator = entryReader.ReadMany(tokenField);
                 while (iterator.ReadNext())
-                {                    
+                {
                     // Because of how we store the data, either this is a sequence or a tuple, which also contains a sequence. 
                     var value = iterator.Sequence;
 
@@ -293,7 +292,7 @@ namespace Corax
                         {
                             var fieldName = slice.Clone(context);
                             field[fieldName] = term = new List<long>();
-                        }                        
+                        }
 
                         AddMaybeAvoidDuplicate(term, entryId);
 
@@ -301,11 +300,19 @@ namespace Corax
                             AddSuggestions(binding, slice);
                     }
                 }
-            }           
-            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
+            }
+            else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) ||
+                     fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
-                entryReader.Read(tokenField, out var value);
-
+                Span<byte> value;
+                if (fieldType.HasFlag(IndexEntryFieldType.Blittable))
+                {
+                    entryReader.Read(tokenField, out Span<byte> _, out value);
+                }
+                else
+                {
+                    entryReader.Read(tokenField, out value);
+                }
                 var words = new Span<byte>(tempWordsSpace, bufferSize);
                 var tokens = new Span<Token>(tempTokenSpace, tokenSize);
                 analyzer.Execute(value, ref words, ref tokens);
@@ -320,6 +327,8 @@ namespace Corax
                         var fieldName = slice.Clone(context);
                         field[fieldName] = term = new List<long>();
                     }
+
+                    var str = slice.ToString();
                     AddMaybeAvoidDuplicate(term, entryId);
 
                     if (binding.HasSuggestions)
@@ -334,16 +343,16 @@ namespace Corax
                 _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
 
             if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
-            {             
+            {
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
 
             var keys = SuggestionsKeys.Generate(Transaction.Allocator, Constants.Suggestions.DefaultNGramSize, slice.AsSpan(), out int keysCount);
-            int keySizes = keys.Length / keysCount;            
+            int keySizes = keys.Length / keysCount;
 
             var bsc = Transaction.Allocator;
-            
+
             int idx = 0;
             while (idx < keysCount)
             {
@@ -363,7 +372,7 @@ namespace Corax
                 _suggestionsAccumulator = new Dictionary<int, Dictionary<Slice, int>>();
 
             if (!_suggestionsAccumulator.TryGetValue(binding.FieldId, out var suggestionsToAdd))
-            {                
+            {
                 suggestionsToAdd = new Dictionary<Slice, int>();
                 _suggestionsAccumulator[binding.FieldId] = suggestionsToAdd;
             }
@@ -396,10 +405,12 @@ namespace Corax
             term.Add(entryId);
         }
 
-        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId, IndexFieldBinding binding)
+        [SkipLocalsInit]
+        private void InsertToken(ByteStringContext context, ref IndexEntryReader entryReader, Dictionary<Slice, List<long>> field, long entryId,
+            IndexFieldBinding binding)
         {
             int tokenField = binding.FieldId;
-            var fieldType = entryReader.GetFieldType(tokenField);
+            var fieldType = entryReader.GetFieldType(tokenField, out var intOffset);
             if (fieldType.HasFlag(IndexEntryFieldType.List))
             {
                 var iterator = entryReader.ReadMany(tokenField);
@@ -422,7 +433,12 @@ namespace Corax
             }
             else if (fieldType.HasFlag(IndexEntryFieldType.Tuple) || fieldType.HasFlag(IndexEntryFieldType.Invalid) == false)
             {
-                entryReader.Read(tokenField, out var value);
+                Span<byte> value;
+                if (fieldType.HasFlag(IndexEntryFieldType.Blittable))
+                    entryReader.Read(tokenField, out Span<byte> _, out value, intOffset);
+                else
+                    entryReader.Read(tokenField, out value);
+
 
                 using var _ = Slice.From(context, value, ByteStringType.Mutable, out var slice);
                 if (field.TryGetValue(slice, out var term) == false)
@@ -442,14 +458,14 @@ namespace Corax
         {
             if (_entriesToDelete.Count == 0)
                 return;
-            
+
             Page page = default;
             var llt = Transaction.LowLevelTransaction;
-            
+
             List<long> ids = null;
             int maxWordsSpaceLength = 0;
             int maxTokensSpaceLength = 0;
-            Span<int> buffersLength = stackalloc int [_fieldsMapping.Count * 2]; 
+            Span<int> buffersLength = stackalloc int[_fieldsMapping.Count * 2];
             foreach (var binding in _fieldsMapping)
             {
                 var analyzer = binding.Analyzer;
@@ -464,7 +480,7 @@ namespace Corax
             }
 
             Span<byte> tempWordsSpace = stackalloc byte[maxWordsSpaceLength];
-            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];            
+            Span<Token> tempTokenSpace = stackalloc Token[maxTokensSpaceLength];
 
             foreach (var id in _entriesToDelete)
             {
@@ -476,11 +492,11 @@ namespace Corax
                     Slice fieldName = binding.FieldName;
                     Analyzer analyzer = binding.Analyzer;
 
-                    var fieldType = entryReader.GetFieldType(fieldId);
+                    var fieldType = entryReader.GetFieldType(fieldId, out var intOffset);
                     if (fieldType.HasFlag(IndexEntryFieldType.List))
                     {
                         var it = entryReader.ReadMany(fieldId);
-                        
+
                         while (it.ReadNext())
                         {
                             if (analyzer is null)
@@ -495,7 +511,7 @@ namespace Corax
                                 var value = it.Sequence;
                                 var words = tempWordsSpace.Slice(0, buffersLength[fieldId * 2]);
                                 var tokens = tempTokenSpace.Slice(0, buffersLength[fieldId * 2 + 1]);
-                                                                
+
                                 analyzer.Execute(value, ref words, ref tokens);
 
                                 for (int i = 0; i < tokens.Length; i++)
@@ -513,7 +529,12 @@ namespace Corax
                     }
                     else
                     {
-                        entryReader.Read(fieldId, out Span<byte> termValue);
+                        Span<byte> termValue;
+                        if (fieldType.HasFlag(IndexEntryFieldType.Blittable))
+                            entryReader.Read(fieldId, out Span<byte> _, out termValue);
+                        else
+                            entryReader.Read(fieldId, out termValue);
+
                         if (analyzer is null)
                         {
                             DeleteField(id, fieldName, tmpBuf, termValue);
@@ -536,7 +557,7 @@ namespace Corax
                                 if (binding.HasSuggestions)
                                     RemoveSuggestions(binding, termValue);
                             }
-                        }                        
+                        }
                     }
                 }
 
@@ -587,6 +608,7 @@ namespace Corax
                     }
 
                     Container.Delete(llt, _postingListContainerId, smallSetId);
+                    fieldTree.TryRemove(termValue, out _);
                     AddNewTerm(ids, fieldTree, termValue, tmpBuffer);
                 }
                 else
@@ -605,16 +627,13 @@ namespace Corax
             var fieldTree = fieldsTree.CompactTreeFor(key);
             var entriesCount = Transaction.LowLevelTransaction.RootObjects.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
             Debug.Assert(entriesCount - _entriesToDelete.Count >= 1);
-            
+
             if (fieldTree.TryGetValue(term, out long id) == false)
                 return false;
 
             if ((id & (long)TermIdMask.Set) != 0 || (id & (long)TermIdMask.Small) != 0)
                 throw new InvalidDataException($"Cannot delete {term} in {key} because it's not {nameof(TermIdMask.Single)}.");
-                    
-            if (fieldTree.TryRemove(term, out id) == false)
-                return false;
-
+            
             _entriesToDelete.Add(id);
             return true;
         }
@@ -623,10 +642,10 @@ namespace Corax
         {
             using var _ = Transaction.Allocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> tmpBuf);
             Tree fieldsTree = Transaction.CreateTree(Constants.IndexWriter.FieldsSlice);
-            
-            if(_fieldsMapping.Count != 0)
+
+            if (_fieldsMapping.Count != 0)
                 DeleteCommit(tmpBuf, fieldsTree);
-            
+
             foreach (var (field, terms) in _buffer)
             {
                 var fieldTree = fieldsTree.CompactTreeFor(field);
@@ -691,8 +710,8 @@ namespace Corax
             }
 
             // Check if we have suggestions to deal with. 
-            if ( _suggestionsAccumulator != null )
-            {              
+            if (_suggestionsAccumulator != null)
+            {
                 foreach (var (fieldId, values) in _suggestionsAccumulator)
                 {
                     Slice.From(Transaction.Allocator, $"{SuggestionsTreePrefix}{fieldId}", out var treeName);
@@ -710,7 +729,7 @@ namespace Corax
                     }
                 }
             }
-            
+
 
             if (_ownsTransaction)
                 Transaction.Commit();
@@ -766,6 +785,7 @@ namespace Corax
 
         public void Dispose()
         {
+            _jsonOperationContext?.Dispose();
             if (_ownsTransaction)
                 Transaction?.Dispose();
         }

@@ -6,7 +6,9 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Server.Compression;
+using Sparrow.Server.Platform;
 using Voron;
 
 namespace Corax
@@ -30,6 +32,7 @@ namespace Corax
         
         Tuple = 1 << 2,
         List = 1 << 3,
+        Blittable = 1 << 4,
         Invalid = 1 << 6,
     }
 
@@ -123,6 +126,33 @@ namespace Corax
             Unsafe.CopyBlock(ref dest, ref src, (uint)value.Length);
 
             _dataIndex += length + value.Length;
+        }
+        
+        public void Write(int field, Span<byte> blittableBinary, Span<byte> blittableAsText)
+        {
+            //STRUCT
+            //<type><size_of_binary><size_of_text><binary><text>
+            Debug.Assert(field < _knownFields.Count);
+            Debug.Assert(_knownFieldsLocations[field] == Invalid);
+            
+            if (blittableBinary.Length == 0)
+                return;
+
+            int dataLocation = _dataIndex;
+            // Write known field.
+            _knownFieldsLocations[field] = dataLocation | unchecked((int)0x80000000);
+            dataLocation += VariableSizeEncoding.Write(_buffer, (byte)IndexEntryFieldType.Blittable, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, blittableBinary.Length, dataLocation);
+            dataLocation += VariableSizeEncoding.Write(_buffer, blittableAsText.Length, dataLocation);
+            
+            
+            blittableBinary.CopyTo(_buffer.Slice(dataLocation));
+            dataLocation += blittableBinary.Length;
+            
+            blittableAsText.CopyTo(_buffer.Slice(dataLocation));
+            dataLocation += blittableAsText.Length;
+
+            _dataIndex = dataLocation;
         }
 
         public void Write(int field, ReadOnlySpan<byte> value, long longValue, double doubleValue)
@@ -706,9 +736,9 @@ namespace Corax
             return Read(field, out var _, out value);
         }
 
-        public IndexEntryFieldType GetFieldType(int field)
+        public IndexEntryFieldType GetFieldType(int field, out int intOffset)
         {
-            var (intOffset, isTyped) = GetMetadataFieldLocation(_buffer, field);
+            (intOffset, var isTyped) = GetMetadataFieldLocation(_buffer, field);
             if (intOffset == Invalid)
                 return IndexEntryFieldType.Invalid;
 
@@ -755,7 +785,7 @@ namespace Corax
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out Span<byte> value, int elementIdx = 0)
         {
-            return Read(field, out var _, out value, elementIdx);
+            return Read(field, out IndexEntryFieldType _, out value, elementIdx);
         }
 
         public bool Read(int field, out IndexEntryFieldType type, out Span<byte> value, int elementIdx = 0)
@@ -829,6 +859,31 @@ namespace Corax
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Read(int field, out Span<byte> blittableBinary, out Span<byte> blittableText, int intOffset = Invalid)
+        {
+            if (intOffset == Invalid)
+            {
+                (intOffset, var isTyped) =  GetMetadataFieldLocation(_buffer, field);
+                if (intOffset is Invalid)
+                {
+                    blittableBinary = Span<byte>.Empty;
+                    blittableText = Span<byte>.Empty;
+                    return false;
+                }
+            }
+
+            intOffset += sizeof(IndexEntryFieldType);
+            var blittableBinaryLength = VariableSizeEncoding.Read<int>(_buffer, out int lengthSize, intOffset);
+            intOffset += lengthSize;
+            var blittableTextLength = VariableSizeEncoding.Read<int>(_buffer, out lengthSize, intOffset);
+            intOffset += lengthSize;
+
+            blittableBinary = _buffer.Slice(intOffset, blittableBinaryLength);
+            blittableText = _buffer.Slice(intOffset + blittableBinaryLength, blittableTextLength);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read(int field, out long longValue, out double doubleValue, out Span<byte> sequenceValue)
         {
             return Read(field, out var _, out longValue, out doubleValue, out sequenceValue);
@@ -898,7 +953,7 @@ namespace Corax
             string result = string.Empty;
             foreach (var (name, field) in knownFields)
             {
-                var type = GetFieldType(field);
+                var type = GetFieldType(field, out _);
                 if (type.HasFlag(IndexEntryFieldType.None))
                 {
                     Read(field, out var value);
