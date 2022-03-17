@@ -74,7 +74,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithCycle(store);
+                Samples.CreateDogDataWithCycle(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateDogDataWithCycle(store);
+                Samples.CreateDogDataWithCycle(store);
 
                 using (var session = store.OpenSession())
                 {

@@ -871,7 +871,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -900,9 +900,9 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
-                {                  
+                {
                     var results = session.Advanced.RawQuery<JObject>(@"
                        match(Users as u1)-[HasRated where Score > 1 select Movie]->(Movies as m where id() = 'movies/2')<-[HasRated select Movie]-(Users as u2)                              
                        select u1.Name as U1,u2.Name as U2
@@ -928,7 +928,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
@@ -945,7 +945,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<InvalidQueryException>(() =>
