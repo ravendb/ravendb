@@ -17,11 +17,18 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase
     {
+        public readonly BackupTestBase Backup;
+
         public class BackupTestBase
         {
+            private readonly RavenTestBase _parent;
             private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 15000;
 
-            internal static readonly Lazy<BackupTestBase> Instance = new Lazy<BackupTestBase>(() => new BackupTestBase());
+            public BackupTestBase(RavenTestBase parent)
+            {
+                if (parent != null)
+                    _parent = parent;
+            }
 
             /// <summary>
             /// Run backup with provided task id and wait for completion. Full backup by default.

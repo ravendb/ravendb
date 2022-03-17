@@ -47,8 +47,6 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase : TestBase
     {
-        public static BackupTestBase Backup => BackupTestBase.Instance.Value;
-
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
@@ -56,6 +54,7 @@ namespace FastTests
             Samples = new SamplesTestBase(this);
             TimeSeries = new TimeSeriesTestBase(this);
             Cluster = new ClusterTestBase2(this);
+            Backup = new BackupTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
