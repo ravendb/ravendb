@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -28,14 +27,15 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {
-    public abstract class ClusterTransactionTestsBase : ReplicationTestBase
+    public class ClusterTransactionTests : ReplicationTestBase
     {
-        public ClusterTransactionTestsBase(ITestOutputHelper output) : base(output)
+        public ClusterTransactionTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -56,6 +56,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanCreateClusterTransactionRequest()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -91,6 +92,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanCreateClusterTransactionRequest2()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -143,6 +145,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ServeSeveralClusterTransactionRequests()
         {
             using (var store = GetDocumentStore())
@@ -183,6 +186,10 @@ namespace SlowTests.Cluster
             return new string(str);
         }
 
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(3)]
+        [InlineData(5)]
         public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
         {
             var numOfSessions = 10;
@@ -253,6 +260,10 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
         public async Task ClusterTransactionWaitForIndexes(int docs)
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -288,7 +299,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        public async Task CanImportExportAndBackupWithClusterTransactions()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task CanImportExportAndBackupWithClusterTransactions()
         {
             var file = GetTempFileName();
 
@@ -377,6 +389,7 @@ namespace SlowTests.Cluster
             public string Name { get; set; }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestSessionSequance()
         {
             var user1 = new User()
@@ -408,7 +421,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        public async Task ResolveInFavorOfClusterTransaction()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ResolveInFavorOfClusterTransaction()
         {
             var user1 = new User()
             {
@@ -441,6 +455,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCleanUpClusterState()
         {
             DoNotReuseServer();
@@ -511,6 +526,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestConcurrentClusterSessions()
         {
             var user1 = new User()
@@ -570,6 +586,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestSessionMixture()
         {
             var user1 = new User()
@@ -603,6 +620,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CreateUniqueUser()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -673,6 +691,7 @@ namespace SlowTests.Cluster
             return 0;
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task SessionCompareExchangeCommands()
         {
             using (var store = GetDocumentStore())
@@ -704,6 +723,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterTxWithCounters()
         {
             using (var storeA = GetDocumentStore())
@@ -734,6 +754,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void ThrowOnClusterTransactionWithCounters()
         {
             using (var store = GetDocumentStore())
@@ -758,6 +779,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void ThrowOnClusterTransactionWithAttachments()
         {
             using (var store = GetDocumentStore())
@@ -789,6 +811,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void ThrowOnClusterTransactionWithTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -813,7 +836,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        public async Task ModifyDocumentWithRevision()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ModifyDocumentWithRevision()
         {
             using (var store = GetDocumentStore())
             {
@@ -867,6 +891,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task PutDocumentInDifferentCollectionWithRevision()
         {
             using (var store = GetDocumentStore())
@@ -893,7 +918,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        public async Task PutDocumentInDifferentCollection()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task PutDocumentInDifferentCollection()
         {
             using (var store = GetDocumentStore())
             {
@@ -936,7 +962,8 @@ namespace SlowTests.Cluster
         /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
         /// </summary>
         /// <returns></returns>
-        public async Task ClusterTransactionRequestWithRevisions()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterTransactionRequestWithRevisions()
         {
             var (_, leader) = await CreateRaftCluster(5, shouldRunInMemory: false, leaderIndex: 0);
             using (var leaderStore = GetDocumentStore(new Options
@@ -1089,6 +1116,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ThrowOnUnsupportedOperations()
         {
             using (var store = GetDocumentStore())
@@ -1102,6 +1130,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ThrowOnOptimisticConcurrency()
         {
             using (var store = GetDocumentStore())
@@ -1117,6 +1146,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ThrowOnOptimisticConcurrencyForSingleDocument()
         {
             using (var store = GetDocumentStore())
@@ -1132,6 +1162,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ThrowOnInvalidTransactionMode()
         {
             var user1 = new User()
@@ -1164,6 +1195,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanAddNullValueToCompareExchange()
         {
             using (var store = GetDocumentStore())
@@ -1183,6 +1215,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanGetListCompareExchange()
         {
             using (var store = GetDocumentStore())
@@ -1203,7 +1236,8 @@ namespace SlowTests.Cluster
             }
         }
 
-        public async Task ClusterTransactionConflict()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterTransactionConflict()
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -1264,6 +1298,11 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(@"
+")]
         public async Task ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(string id)
         {
             var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
@@ -1297,6 +1336,7 @@ namespace SlowTests.Cluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -1354,237 +1394,6 @@ namespace SlowTests.Cluster
                                    user.Name
                                };
             }
-        }
-    }
-
-    public class ClusterTransactionTests : ClusterTransactionTestsBase
-    {
-        public ClusterTransactionTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        protected override RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
-        {
-            if (options == null)
-            {
-                options = new ServerCreationOptions();
-            }
-
-            if (options.CustomSettings == null)
-                options.CustomSettings = new Dictionary<string, string>();
-
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "60";
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "10";
-            options.CustomSettings[RavenConfiguration.GetKey(x => x.Cluster.TcpConnectionTimeout)] = "30000";
-
-            return base.GetNewServer(options, caller);
-        }
-
-        [Fact]
-        public async Task CanCreateClusterTransactionRequest()
-        {
-            await base.CanCreateClusterTransactionRequest();
-        }
-
-        [Fact]
-        public async Task CanCreateClusterTransactionRequest2()
-        {
-            await base.CanCreateClusterTransactionRequest2();
-        }
-
-        [Fact]
-        public async Task ServeSeveralClusterTransactionRequests()
-        {
-            await base.ServeSeveralClusterTransactionRequests();
-        }
-
-        [Theory]
-        [InlineData(1)]
-        [InlineData(3)]
-        [InlineData(5)]
-        public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
-        {
-            await base.CanPreformSeveralClusterTransactions(numberOfNodes);
-        }
-
-        [Theory]
-        [InlineData(1)]
-        [InlineData(5)]
-        [InlineData(10)]
-        public async Task ClusterTransactionWaitForIndexes(int docs)
-        {
-            await base.ClusterTransactionWaitForIndexes(docs);
-        }
-
-        [Fact]
-        public async Task CanImportExportAndBackupWithClusterTransactions()
-        {
-            await base.CanImportExportAndBackupWithClusterTransactions();
-        }
-
-        [Fact]
-        public async Task TestSessionSequance()
-        {
-            await base.TestSessionSequance();
-        }
-
-        [Fact]
-        public async Task ResolveInFavorOfClusterTransaction()
-        {
-            await base.ResolveInFavorOfClusterTransaction();
-        }
-
-        [Fact]
-        public async Task TestCleanUpClusterState()
-        {
-            await base.TestCleanUpClusterState();
-        }
-
-        [Fact]
-        public async Task TestConcurrentClusterSessions()
-        {
-            await base.TestConcurrentClusterSessions();
-        }
-
-        [Fact]
-        public async Task TestSessionMixture()
-        {
-            await base.TestSessionMixture();
-        }
-
-        [Fact]
-        public async Task CreateUniqueUser()
-        {
-            await base.CreateUniqueUser();
-        }
-
-        [Fact]
-        public async Task TestCase()
-        {
-            using var store = GetDocumentStore();
-        }
-        
-        [Fact]
-        public async Task SessionCompareExchangeCommands()
-        {
-            await base.SessionCompareExchangeCommands();
-        }
-
-        [Fact]
-        public async Task ClusterTxWithCounters()
-        {
-            await base.ClusterTxWithCounters();
-        }
-
-        [Fact]
-        public void ThrowOnClusterTransactionWithCounters()
-        {
-            base.ThrowOnClusterTransactionWithCounters();
-        }
-
-        [Fact]
-        public void ThrowOnClusterTransactionWithAttachments()
-        {
-            base.ThrowOnClusterTransactionWithAttachments();
-        }
-
-        [Fact]
-        public void ThrowOnClusterTransactionWithTimeSeries()
-        {
-            base.ThrowOnClusterTransactionWithTimeSeries();
-        }
-
-        [Fact]
-        public async Task ModifyDocumentWithRevision()
-        {
-            await base.ModifyDocumentWithRevision();
-        }
-
-        [Fact]
-        public async Task PutDocumentInDifferentCollectionWithRevision()
-        {
-            await base.PutDocumentInDifferentCollectionWithRevision();
-        }
-
-        [Fact]
-        public async Task PutDocumentInDifferentCollection()
-        {
-            await base.PutDocumentInDifferentCollection();
-        }
-
-        /// <summary>
-        /// This is a comprehensive test. The general flow of the test is as following:
-        /// - Create cluster with 5 nodes with a database on _all_ of them and enable revisions.
-        /// - Bring one node down, he will later be used to verify the correct behavior (our SUT).
-        /// - Perform a cluster transaction which involves a document.
-        /// - Bring all nodes down except of the original leader.
-        /// - Bring the SUT node back up and wait for the document to replicate.
-        /// - Bring another node up in order to have a majority.
-        /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision.
-        /// </summary>
-        /// <returns></returns>
-        [Fact]
-        public async Task ClusterTransactionRequestWithRevisions()
-        {
-            await base.ClusterTransactionRequestWithRevisions();
-        }
-
-        [Fact]
-        public async Task ThrowOnUnsupportedOperations()
-        {
-            await base.ThrowOnUnsupportedOperations();
-        }
-
-        [Fact]
-        public async Task ThrowOnOptimisticConcurrency()
-        {
-            await base.ThrowOnOptimisticConcurrency();
-        }
-
-        [Fact]
-        public async Task ThrowOnOptimisticConcurrencyForSingleDocument()
-        {
-            await base.ThrowOnOptimisticConcurrencyForSingleDocument();
-        }
-
-        [Fact]
-        public async Task ThrowOnInvalidTransactionMode()
-        {
-            await base.ThrowOnInvalidTransactionMode();
-        }
-
-        [Fact]
-        public async Task CanAddNullValueToCompareExchange()
-        {
-            await base.CanAddNullValueToCompareExchange();
-        }
-
-        [Fact]
-        public async Task CanGetListCompareExchange()
-        {
-            await base.CanGetListCompareExchange();
-        }
-
-        [Fact]
-        public async Task ClusterTransactionConflict()
-        {
-            await base.ClusterTransactionConflict();
-        }
-
-        [Theory]
-        [InlineData("")]
-        [InlineData(" ")]
-        [InlineData(@"
-")]
-        public async Task ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(string id)
-        {
-            await base.ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(id);
-        }
-
-        [Fact]
-        public async Task ClusterTransactionShouldBeRedirectedFromPromotableNode()
-        {
-            await base.ClusterTransactionShouldBeRedirectedFromPromotableNode();
         }
     }
 }
