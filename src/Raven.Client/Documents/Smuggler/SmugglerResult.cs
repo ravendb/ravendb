@@ -5,21 +5,22 @@ using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
-using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Smuggler
 {
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {
-        private ConcurrentSet<string> _messages;
+        private readonly object _locker = new();
+
+        private List<string> _messages;
         protected SmugglerProgress _progress;
         private readonly Stopwatch _sw;
 
         public SmugglerResult()
         {
             _sw = Stopwatch.StartNew();
-            _messages = new ConcurrentSet<string>();
+            _messages = new List<string>();
 
             /*
             *  NOTE:
@@ -55,13 +56,17 @@ namespace Raven.Client.Documents.Smuggler
         {
             get
             {
-                return _messages.ToArray();
+                lock (_locker)
+                {
+                    return _messages.ToArray();
+                }
             }
+
             set
             {
-                foreach (var x in value)
+                lock (_locker)
                 {
-                    _messages.Add(x);
+                    _messages = value.ToList();
                 }
             }
         }
@@ -84,13 +89,21 @@ namespace Raven.Client.Documents.Smuggler
         internal void AddMessage(string message)
         {
             Message = message;
-            _messages.Add(Message);
+
+            lock (_locker)
+            {
+                _messages.Add(Message);
+            }
         }
 
         private void AddMessage(string type, string message)
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            _messages.Add(Message);
+
+            lock (_locker)
+            {
+                _messages.Add(Message);
+            }
         }
 
         public override DynamicJsonValue ToJson()
