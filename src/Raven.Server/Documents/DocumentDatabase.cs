@@ -35,6 +35,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -92,8 +93,6 @@ namespace Raven.Server.Documents
         public string DatabaseGroupId;
         public string ClusterTransactionId;
         public string ShardedDatabaseId;
-
-        public readonly ClusterTransactionWaiter ClusterTransactionWaiter;
 
         private readonly Lazy<RequestExecutor> _requestExecutor;
 
@@ -164,7 +163,6 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications
                 {

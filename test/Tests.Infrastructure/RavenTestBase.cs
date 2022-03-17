@@ -1389,9 +1389,9 @@ namespace FastTests
                 _frozen = frozen;
             }
 
-            public static Options ForMode(RavenDatabaseMode mode)
+            public static Options ForMode(RavenDatabaseMode mode, Options options = null)
             {
-                var options = new Options();
+                options ??= new Options();
                 switch (mode)
                 {
                     case RavenDatabaseMode.Single:
@@ -1401,8 +1401,10 @@ namespace FastTests
                         return options;
                     case RavenDatabaseMode.Sharded:
 
+                        var modifyRecord = options.ModifyDatabaseRecord;
                         options.ModifyDatabaseRecord = record =>
                         {
+                            modifyRecord?.Invoke(record);
                             record.Shards = new[]
                             {
                                     new DatabaseTopology(),
@@ -1411,7 +1413,13 @@ namespace FastTests
                             };
                         };
 
-                        options.ModifyDocumentStore = s => s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
+                        var modifyStore = options.ModifyDocumentStore;
+                        options.ModifyDocumentStore = s =>
+                        {
+                            modifyStore?.Invoke(s);
+                            s.Conventions.OperationStatusFetchMode = OperationStatusFetchMode.Polling;
+                        };
+
                         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "remove above after changes api is working");
 
                         options.DatabaseMode = RavenDatabaseMode.Sharded;

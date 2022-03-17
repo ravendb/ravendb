@@ -50,5 +50,6 @@ public enum RavenTestCategory : long
     Windows = 1L << 35,
     Corax = 1L << 36,
     CompareExchange = 1L << 37,
-    Embedded = 1L << 38
+    Embedded = 1L << 38,
+    ClusterTransactions = 1L << 39,
 }

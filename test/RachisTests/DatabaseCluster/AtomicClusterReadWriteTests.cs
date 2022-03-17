@@ -20,14 +20,15 @@ using Raven.Server;
 using Raven.Server.Config;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace RachisTests.DatabaseCluster
 {
-    public abstract class AtomicClusterReadWriteTestsBase : ReplicationTestBase
+    public class AtomicClusterReadWriteTests : ReplicationTestBase
     {
-        public AtomicClusterReadWriteTestsBase(ITestOutputHelper output) : base(output)
+        public AtomicClusterReadWriteTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -37,6 +38,7 @@ namespace RachisTests.DatabaseCluster
             public string Prop { get; set; }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenStore_ShouldCreateCompareExchange()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -54,6 +56,7 @@ namespace RachisTests.DatabaseCluster
             Assert.EndsWith(entity.Id, result.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenDisableAndStore_ShouldNotCreateCompareExchange()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -70,6 +73,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Empty(result);
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -114,6 +118,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
         {
             var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
@@ -130,7 +135,8 @@ namespace RachisTests.DatabaseCluster
             await LoadAndDeleteWhileUpdated(nodes, documentStore.Database, entity.Id);
         }
 
-        public async Task ClusterWideTransaction_WhenImportThenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterWideTransaction_WhenImportThenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
@@ -184,7 +190,8 @@ namespace RachisTests.DatabaseCluster
             await task;
         }
 
-        public async Task CanRestoreAfterRecreation()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task CanRestoreAfterRecreation()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var count = 1;
@@ -268,7 +275,11 @@ namespace RachisTests.DatabaseCluster
             await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
         }
 
-        public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(int count, bool withLoad = true)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(1, false)]
+        [InlineData(2 * 1024)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
+        public virtual async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(int count, bool withLoad = true)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -323,7 +334,11 @@ namespace RachisTests.DatabaseCluster
             Assert.EndsWith(notDelete, r.Single().Key, StringComparison.OrdinalIgnoreCase);
         }
 
-        public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(int count)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(1)]
+        [InlineData(2 * 1024)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
+
+        public virtual async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(int count)
         {
             const string modified = "Modified";
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -386,6 +401,7 @@ namespace RachisTests.DatabaseCluster
             await AssertWaitForCountAsync(async () => await documentStore.Operations.SendAsync(new GetCompareExchangeValuesOperation<TestObj>("")), count + 1);
         }
 
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail()
         {
             const string docId = "TestObjs/1";
@@ -402,7 +418,8 @@ namespace RachisTests.DatabaseCluster
                 await Assert.ThrowsAnyAsync<ConcurrencyException>(async () => await session.SaveChangesAsync());
             }
         }
-
+        
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {
             var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
@@ -419,7 +436,8 @@ namespace RachisTests.DatabaseCluster
             await LoadAndUpdateWhileDeleted(nodes, documentStore.Database, entity.Id);
         }
         
-        public async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
             using var documentStore = GetDocumentStore(new Options { Server = leader, ReplicationFactor = nodes.Count });
@@ -461,7 +479,8 @@ namespace RachisTests.DatabaseCluster
             await Assert.ThrowsAnyAsync<ConcurrencyException>(() => session.SaveChangesAsync());
         }
 
-        public async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
         {
             var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
             using var server = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings,});
@@ -501,7 +520,8 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        public async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
         {
             var customSettings = new Dictionary<string, string> {[RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeExpiredCleanupInterval)] = "1"};
             using var server = GetNewServer(new ServerCreationOptions {CustomSettings = customSettings,});
@@ -536,7 +556,8 @@ namespace RachisTests.DatabaseCluster
             });
         }
 
-        public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public virtual async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
         {
             using var store = GetDocumentStore();
             await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration {Disabled = false, DeleteFrequencyInSec = 1}));
@@ -597,104 +618,6 @@ namespace RachisTests.DatabaseCluster
             }
 
             return disposable;
-        }
-    }
-
-    public  class AtomicClusterReadWriteTests : AtomicClusterReadWriteTestsBase
-    {
-        public AtomicClusterReadWriteTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenStore_ShouldCreateCompareExchange()
-        {
-            await base.ClusterWideTransaction_WhenStore_ShouldCreateCompareExchange();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenDisableAndStore_ShouldNotCreateCompareExchange()
-        {
-            await base.ClusterWideTransaction_WhenDisableAndStore_ShouldNotCreateCompareExchange();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst()
-        {
-            await base.ClusterWideTransaction_WhenLoadAndUpdateInParallel_ShouldSucceedOnlyInTheFirst();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
-        {
-            await base.ClusterWideTransaction_WhenLoadAndDeleteWhileUpdated_ShouldFailDeletion();
-        }
-
-        [Fact(Skip = "Should complete shard implementation")]
-
-        public async Task ClusterWideTransaction_WhenImportThenLoadAndDeleteWhileUpdated_ShouldFailDeletion()
-        {
-            await base.ClusterWideTransaction_WhenImportThenLoadAndDeleteWhileUpdated_ShouldFailDeletion();
-        }
-
-        [Fact]
-        public async Task CanRestoreAfterRecreation()
-        {
-            await base.CanRestoreAfterRecreation();
-        }
-
-        [Theory]
-        [InlineData(1)]
-        [InlineData(1, false)]
-        [InlineData(2 * 1024)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
-        public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(int count, bool withLoad = true)
-        {
-            await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndDelete_ShouldDeleteInTheDestination(count, withLoad);
-        }
-
-        [Theory]
-        [InlineData(1)]
-        [InlineData(2 * 1024)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
-        public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(int count)
-        {
-            await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(count);
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail()
-        {
-            await base.ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdateWithoutLoad_ShouldFail();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
-        {
-            await base.ClusterWideTransaction_WhenLoadAndUpdateWhileDeleted_ShouldFailUpdate();
-        }
-        
-        [Fact]
-        public async Task ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate()
-        {
-            await base.ClusterWideTransaction_WhenImportThenLoadAndUpdateWhileDeleted_ShouldFailUpdate();
-        }
-        
-        [Fact]
-        public async Task ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell()
-        {
-            await ClusterWideTransaction_WhenSetExpirationAndExport_ShouldDeleteTheCompareExchangeAsWell();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell()
-        {
-            await ClusterWideTransaction_WhenSetExpiration_ShouldDeleteTheCompareExchangeAsWell();
-        }
-
-        [Fact]
-        public async Task ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved()
-        {
-            await ClusterWideTransaction_WhenDocumentRemovedByExpiration_ShouldAllowToCreateNewDocumentEvenIfItsCompareExchangeWasntRemoved();
         }
     }
 }
