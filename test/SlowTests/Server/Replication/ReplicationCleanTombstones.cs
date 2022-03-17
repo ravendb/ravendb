@@ -132,7 +132,7 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(3, total);
 
                 await Backup.RunBackupInClusterAsync(store, result.TaskId, isFullBackup: true);
-                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdatePeriodicBackupStatusCommand)), cluster.Nodes);
 
                 var res = await WaitForValueAsync(async () =>
                 {
@@ -286,7 +286,7 @@ namespace SlowTests.Server.Replication
                     Assert.True(await WaitForDocumentInClusterAsync<User>(cluster.Nodes, external, "marker2", (m) => m.Id == "marker2", TimeSpan.FromSeconds(15)));
                 }
 
-                await ActionWithLeader(async x => await WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdateExternalReplicationStateCommand)), cluster.Nodes);
+                await ActionWithLeader(async x => await Cluster.WaitForRaftCommandToBeAppliedInCluster(x, nameof(UpdateExternalReplicationStateCommand)), cluster.Nodes);
                 var res = await WaitForValueAsync(async () =>
                 {
                     var c = 0L;
@@ -429,7 +429,7 @@ namespace SlowTests.Server.Replication
                     changeVectorMarker2 = session.Advanced.GetChangeVectorFor(marker);
                 }
 
-                await ActionWithLeader((l) => WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
+                await ActionWithLeader((l) => Cluster.WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
                 Assert.True(await WaitForEtlState(cluster, store, changeVectorMarker2));
 
                 foreach (var server in cluster.Nodes)

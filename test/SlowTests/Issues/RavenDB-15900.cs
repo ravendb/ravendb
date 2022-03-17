@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                     Assert.False(server.ServerStore.DatabasesLandlord.IsDatabaseLoaded("Toli"));
                 }
 
-                var index = LastRaftIndexForCommand(leader, nameof(TestCommandWithRaftId));
+                var index = Cluster.LastRaftIndexForCommand(leader, nameof(TestCommandWithRaftId));
 
                 List<string> nodelist = new List<string>();
                 var res = await WaitForValueAsync(async () =>

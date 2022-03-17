@@ -691,7 +691,7 @@ namespace RachisTests
                 FromNodes = new[] { firstFollowerTag },
             });
 
-            await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+            await Cluster.WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
 
             Assert.Throws<InvalidOperationException>(() =>
             {

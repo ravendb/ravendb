@@ -219,7 +219,7 @@ namespace StressTests.Rachis
             var subscription = await GetSubscription(subsId, store.Database, nodes, token);
             Assert.NotNull(subscription);
 
-            await WaitForRaftIndexToBeAppliedOnClusterNodes(subscription.SubscriptionId, nodes);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodes(subscription.SubscriptionId, nodes);
 
             foreach (var cde in cdes)
             {
