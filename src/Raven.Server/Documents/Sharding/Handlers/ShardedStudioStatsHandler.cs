@@ -8,9 +8,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
     internal class ShardedStudioStatsHandler : ShardedRequestHandler
     {
         [RavenShardedAction("/databases/*/studio/footer/stats", "GET")]
-        public async Task FooterStats()
+        public async Task GetFooterStats()
         {
-            using (var processor = new ShardedStatsHandlerProcessorForGetStudioFooterStats(this))
+            using (var processor = new ShardedStudioStatsHandlerProcessorForGetFooterStats(this))
             {
                 await processor.ExecuteAsync();
             }

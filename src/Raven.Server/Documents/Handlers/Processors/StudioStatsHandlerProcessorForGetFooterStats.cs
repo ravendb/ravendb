@@ -8,9 +8,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors
 {
-    internal class StatsHandlerProcessorForGetStudioFooterStats : AbstractStatsHandlerProcessorForGetStudioFooterStats<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class StudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public StatsHandlerProcessorForGetStudioFooterStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
+        public StudioStatsHandlerProcessorForGetFooterStats([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool)
         {
         }
 

@@ -6,8 +6,8 @@
 
         public long CountOfIndexes { get; set; }
 
-        public long? CountOfStaleIndexes { get; set; }
+        public long CountOfStaleIndexes { get; set; }
 
-        public long? CountOfIndexingErrors { get; set; }
+        public long CountOfIndexingErrors { get; set; }
     }
 }
