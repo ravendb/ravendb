@@ -3,16 +3,17 @@ using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Http;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors.Indexes.Admin;
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal abstract class AbstractAdminIndexHandlerProcessorForStart<TRequestHandler, TOperationContext> : AbstractHandlerProxyActionProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractAdminIndexHandlerProcessorForStop<TRequestHandler, TOperationContext> : AbstractHandlerProxyActionProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractAdminIndexHandlerProcessorForStart([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+    protected AbstractAdminIndexHandlerProcessorForStop([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         : base(requestHandler, contextPool)
     {
     }
@@ -22,12 +23,12 @@ internal abstract class AbstractAdminIndexHandlerProcessorForStart<TRequestHandl
         (string type, string name) = GetParameters();
 
         if (type == null && name == null)
-            return new StartIndexingOperation.StartIndexingCommand();
+            return new StopIndexingOperation.StopIndexingCommand();
 
         if (type != null)
-            return new StartIndexingOperation.StartIndexingCommand(type);
+            return new StopIndexingOperation.StopIndexingCommand(type);
 
-        return new StartIndexOperation.StartIndexCommand(name);
+        return new StopIndexOperation.StopIndexCommand(name);
     }
 
     protected (string Type, string Name) GetParameters()

@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors.Indexes.Admin;
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
 internal class AdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerProcessorForStart<DatabaseRequestHandler, DocumentsOperationContext>
 {

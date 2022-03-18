@@ -6,13 +6,13 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal abstract class AbstractConfigurationHandlerProcessorForPutAdminConfiguration<TRequestHandler, TOperationContext> : AbstractConfigurationHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<TRequestHandler, TOperationContext> : AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractConfigurationHandlerProcessorForPutAdminConfiguration(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         { }
 
         protected abstract string GetDatabaseName();

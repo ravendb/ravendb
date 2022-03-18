@@ -2,6 +2,7 @@
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Configuration;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;

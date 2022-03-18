@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers.Admin.Processors.Configuration;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/configuration/studio", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutStudioConfiguration()
         {
-            using (var processor = new ConfigurationHandlerProcessorForPutAdminConfiguration(this))
+            using (var processor = new AdminConfigurationHandlerProcessorForPutStudioConfiguration(this))
             {
                 await processor.ExecuteAsync();
             }

@@ -2,14 +2,14 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
-using Raven.Server.Documents.Handlers.Processors.Indexes.Admin;
+using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Sharding.Handlers.Processors.Indexes.Admin;
+namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 
-internal class ShardedAdminIndexHandlerProcessorForStart : AbstractAdminIndexHandlerProcessorForStart<ShardedRequestHandler, TransactionOperationContext>
+internal class ShardedAdminIndexHandlerProcessorForStop : AbstractAdminIndexHandlerProcessorForStop<ShardedRequestHandler, TransactionOperationContext>
 {
-    public ShardedAdminIndexHandlerProcessorForStart([NotNull] ShardedRequestHandler requestHandler)
+    public ShardedAdminIndexHandlerProcessorForStop([NotNull] ShardedRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)
     {
     }

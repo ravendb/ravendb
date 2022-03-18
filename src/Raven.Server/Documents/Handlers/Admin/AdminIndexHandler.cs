@@ -11,7 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Security;
-using Raven.Server.Documents.Handlers.Processors.Indexes.Admin;
+using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -189,50 +189,10 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Stop()
+        public async Task Stop()
         {
-            var types = HttpContext.Request.Query["type"];
-            var names = HttpContext.Request.Query["name"];
-            if (types.Count == 0 && names.Count == 0)
-            {
-                Database.IndexStore.StopIndexing();
-                return NoContent();
-            }
-
-            if (types.Count != 0 && names.Count != 0)
-                throw new ArgumentException("Query string value 'type' and 'names' are mutually exclusive.");
-
-            if (types.Count != 0)
-            {
-                if (types.Count != 1)
-                    throw new ArgumentException("Query string value 'type' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(types[0]))
-                    throw new ArgumentException("Query string value 'type' must have a non empty value");
-
-                if (string.Equals(types[0], "map", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StopMapIndexes();
-                }
-                else if (string.Equals(types[0], "map-reduce", StringComparison.OrdinalIgnoreCase))
-                {
-                    Database.IndexStore.StopMapReduceIndexes();
-                }
-                else
-                {
-                    throw new ArgumentException("Query string value 'type' can only be 'map' or 'map-reduce' but was " + types[0]);
-                }
-            }
-            else if (names.Count != 0)
-            {
-                if (names.Count != 1)
-                    throw new ArgumentException("Query string value 'name' must appear exactly once");
-                if (string.IsNullOrWhiteSpace(names[0]))
-                    throw new ArgumentException("Query string value 'name' must have a non empty value");
-
-                Database.IndexStore.StopIndex(names[0]);
-            }
-
-            return NoContent();
+            using (var processor = new AdminIndexHandlerProcessorForStop(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/indexes/start", "POST", AuthorizationStatus.DatabaseAdmin)]

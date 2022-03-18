@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes.Admin;
+using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.Sharding.Handlers
+namespace Raven.Server.Documents.Sharding.Handlers.Admin
 {
     public class ShardedAdminIndexHandler : ShardedRequestHandler
     {
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 throw new NotSupportedException("Legacy replication of indexes isn't supported in a sharded environment");
             }
 
-            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true, 
+            await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true,
                 ContextPool, ShardedContext.DatabaseName, PutIndexTask, async args =>
                 {
                     await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
@@ -42,6 +42,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }));
         }
 
+        [RavenShardedAction("/databases/*/admin/indexes/stop", "POST")]
+        public async Task Stop()
+        {
+            using (var processor = new ShardedAdminIndexHandlerProcessorForStop(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/admin/indexes/start", "POST")]
         public async Task Start()
         {
@@ -54,9 +61,9 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (args.IndexDefinition == null)
                 throw new ArgumentNullException(nameof(args.IndexDefinition));
 
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                 "implement ValidateStaticIndex(definition)");
-            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, 
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                 "take the _documentDatabase.Configuration.Indexing.HistoryRevisionsNumber configuration from the database record");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                 "take the _documentDatabase.Configuration.Indexing.StaticIndexDeploymentMode configuration from the database record");
@@ -68,7 +75,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 ServerStore.Server.Time.GetUtcNow(),
                 args.RaftRequestId,
                 10,
-                IndexDeploymentMode.Parallel 
+                IndexDeploymentMode.Parallel
             );
 
             long index = 0;

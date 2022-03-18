@@ -1,17 +1,18 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal abstract class AbstractConfigurationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractAdminConfigurationHandlerProcessor<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext
     {
-        protected AbstractConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
+        protected AbstractAdminConfigurationHandlerProcessor(TRequestHandler requestHandler, JsonContextPoolBase<TOperationContext> contextPool) : base(requestHandler, contextPool)
         { }
 
         protected abstract ValueTask WaitForIndexNotificationAsync(long index);
