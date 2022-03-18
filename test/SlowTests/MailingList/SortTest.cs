@@ -23,7 +23,7 @@ namespace SlowTests.MailingList
                 CreateArticles(docStore, 1000);
 
                 CreateIndexes(docStore);
-                WaitForIndexing(docStore);
+                Indexes.WaitForIndexing(docStore);
 
                 // verfiy that Article 2 is the second thing
                 using (var session = docStore.OpenSession())
@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
 
                     // modifiy Article 2 and wait for the index to update.
                     UpdateArticle(session, 2, "Changed #");
-                    WaitForIndexing(docStore);
+                    Indexes.WaitForIndexing(docStore);
 
                     // Article 2 should still be the second item in the first page.
                     results = session.Query<Article, Articles_byArticleId>()

@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {

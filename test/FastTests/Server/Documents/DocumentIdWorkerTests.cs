@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     for (var i = 32; i <= 127; i++)
@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     const string str = "Person@1";
@@ -69,7 +69,7 @@ namespace FastTests.Server.Documents
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     const string str = "Person@יפתח";
@@ -87,7 +87,7 @@ namespace FastTests.Server.Documents
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     var before = ctx.AllocatedMemory;

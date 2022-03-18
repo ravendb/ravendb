@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                         Group = nameof(Model.Group),
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var infos = session.Query<ModelInfo, Model_Info>()
                         .ProjectInto<ModelInfo>()
                         .ToList();

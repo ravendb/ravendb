@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 }
 
                 new Students_ByEmailDomain().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -105,7 +105,7 @@ namespace SlowTests.Issues
                 }
 
                 new Students_ByEmailDomain().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

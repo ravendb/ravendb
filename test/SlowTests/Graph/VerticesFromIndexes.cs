@@ -20,8 +20,8 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -50,8 +50,8 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Order>(@"
@@ -74,8 +74,8 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"
@@ -94,8 +94,8 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
-                WaitForIndexing(store);
+                Samples.CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"

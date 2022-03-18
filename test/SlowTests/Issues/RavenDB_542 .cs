@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                             Script = "this.DateApproved = DateApproved; this['NewProp'] = NewProp;"
                         }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
 
                     RavenTestHelper.AssertNoIndexErrors(store);

@@ -338,7 +338,7 @@ namespace RachisTests
                 Urls = new[] { leader.WebUrl },
                 Database = db
             }.Initialize())
-            using (EnsureDatabaseDeletion(db, store))
+            using (Databases.EnsureDatabaseDeletion(db, store))
             {
                 var hasDisconnected = await WaitForValueAsync(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected == false), 1) == 1;
                 Assert.True(hasDisconnected);
@@ -692,7 +692,7 @@ namespace RachisTests
                 FromNodes = new[] { firstFollowerTag },
             });
 
-            await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.Index, TimeSpan.FromSeconds(10));
 
             Assert.Throws<InvalidOperationException>(() =>
             {

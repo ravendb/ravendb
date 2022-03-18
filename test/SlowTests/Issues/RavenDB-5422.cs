@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.Store(new User() { Name = "NULL" });
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     session.Query<User, Users_ByName>().Search(user => user.Name, "OR").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "AND").Single();
                     session.Query<User, Users_ByName>().Search(user => user.Name, "NOT").Single();

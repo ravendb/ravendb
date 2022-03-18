@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Errors
         private readonly IndexDefinition _definition;
 
         public FaultyIndexDefinition(string name, IEnumerable<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexState state, IndexField[] mapFields, IndexDefinition definition)
-            : base(name, collections, lockMode, priority, state, mapFields, IndexVersion.CurrentVersion, definition.DeploymentMode, definition.ClusterState?.LastStateIndex)
+            : base(name, collections, lockMode, priority, state, mapFields, IndexVersion.CurrentVersion, definition.DeploymentMode, definition.ClusterState)
         {
             _definition = definition;
         }

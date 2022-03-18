@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -33,7 +34,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void changing_index_priority_needs_to_set_it_on_index_instance_as_well()
+        public async Task changing_index_priority_needs_to_set_it_on_index_instance_as_well()
         {
             using (var store = GetDocumentStore())
             {
@@ -43,7 +44,7 @@ namespace SlowTests.Bugs.Indexing
                 {
                     store.Maintenance.Send(new SetIndexesPriorityOperation("FakeIndex", expected));
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
                     Assert.Equal(expected, indexInstance.Definition.Priority);

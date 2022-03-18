@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                     Assert.True(result.IndexName.StartsWith("Auto"));
 
                     new Index1().Execute(store);
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     result = commands.Query(new IndexQuery { Query = "FROM INDEX 'Index1' WHERE Name = 'Ayende' SELECT Name" });
 

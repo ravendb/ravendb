@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 string artificialDocumentId = null;
 
@@ -168,7 +168,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 string artificialDocumentId = null;
 

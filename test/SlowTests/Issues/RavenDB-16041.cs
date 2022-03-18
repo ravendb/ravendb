@@ -112,7 +112,7 @@ if (typeof Object.assign !== 'function') {
                 s.SaveChanges();
             }
             new MyIndex().Execute(store);
-            WaitForIndexing(store, allowErrors: false);
+            Indexes.WaitForIndexing(store, allowErrors: false);
 
             using (var s = store.OpenSession())
             {

@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        private static async Task Setup(DocumentStore store)
+        private async Task Setup(DocumentStore store)
         {
             await new StockInfoIndex().ExecuteAsync(store);
 
@@ -97,7 +97,7 @@ namespace SlowTests.MailingList
                 await session.SaveChangesAsync();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private class Article

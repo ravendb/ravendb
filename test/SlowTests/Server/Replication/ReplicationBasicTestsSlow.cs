@@ -36,9 +36,9 @@ namespace SlowTests.Server.Replication
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                var certificates = SetupServerAuthentication();
-                adminCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-                clientCertificate = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+                var certificates = Certificates.SetupServerAuthentication();
+                adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             }
 
             using (var store1 = GetDocumentStore(new Options
@@ -122,8 +122,8 @@ namespace SlowTests.Server.Replication
                 Assert.Equal("John Dow", replicated1.Name);
                 Assert.Equal(30, replicated1.Age);
 
-                var db1 = await GetDocumentDatabaseInstanceFor(store1);
-                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 var replicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
 
                 var external = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
@@ -162,8 +162,8 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var db1 = await GetDocumentDatabaseInstanceFor(store1);
-                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
                 await SetupReplicationAsync(store1, store2);
 
@@ -221,7 +221,7 @@ namespace SlowTests.Server.Replication
                         }
                     };
 
-                    var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                    var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                     db1.Time.UtcDateTime = () => DateTime.UtcNow.Add(TimeSpan.FromDays(-60));
                     const string id = "users/1";
                     const string attachmentName = "Typical attachment name";
@@ -252,7 +252,7 @@ namespace SlowTests.Server.Replication
                     }
                     await SetupReplicationAsync(store1, store2);
 
-                    var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                    var db2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                     Assert.Equal(1, WaitForValue(() => db1.ReplicationLoader.OutgoingHandlers.Count(), 1));
                     Assert.Equal(1, WaitForValue(() => db2.ReplicationLoader.IncomingHandlers.Count(), 1));
                     var outgoingReplicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();

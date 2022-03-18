@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.Store(obj);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var namedLuceneQuery = session.Advanced
                         .DocumentQuery<ClassWithLocation, NamedSpatialFieldIndex>()

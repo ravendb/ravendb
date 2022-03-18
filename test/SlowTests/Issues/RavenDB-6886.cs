@@ -449,7 +449,7 @@ namespace SlowTests.Issues
             }
             catch (TimeoutException te)
             {
-                throw new TimeoutException($"{te.Message} {GetLastStatesFromAllServersOrderedByTime() }");
+                throw new TimeoutException($"{te.Message} {Cluster.GetLastStatesFromAllServersOrderedByTime() }");
             }
         }
     }

@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             var databaseName = GetDatabaseName();
             var (_, leader, certificates) = await CreateRaftClusterWithSsl(clusterSize, false);
 
-            X509Certificate2 adminCertificate = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             var members = leader.ServerStore.GetClusterTopology().Members.Values.ToList();
             var nonLeaderUrl = members.First(x => x != leader.WebUrl);

@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                         bulk.Store(new Company {Name = "name" + i});
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var toExclude = new [] { "companies/1-A", "companies/2-A", "companies/3-A" };
 

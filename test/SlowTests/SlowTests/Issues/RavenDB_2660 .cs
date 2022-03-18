@@ -56,7 +56,7 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new UsersByName().Execute(store);
 
@@ -73,7 +73,7 @@ namespace SlowTests.SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

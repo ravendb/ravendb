@@ -1,5 +1,7 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.IO;
+using System.Runtime.CompilerServices;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
@@ -54,8 +56,21 @@ namespace Sparrow.Server.Json.Sync
             }
         }
 
+#if DEBUG
+        private static readonly ConditionalWeakTable<Stream, Stream> SeenWithDifferentBuffer = new();
+#endif
+
         private static BlittableJsonReaderObject ParseToMemory(JsonOperationContext.SyncJsonOperationContext syncContext, Stream stream, string debugTag, BlittableJsonDocumentBuilder.UsageMode mode, IBlittableDocumentModifier modifier = null)
         {
+#if DEBUG
+            if (SeenWithDifferentBuffer.TryGetValue(stream, out _))
+            {
+                throw new InvalidOperationException("BUG: Stream was already called to ParseToMemory - see RavenDB-18307 - you will corrupt data in this manner.");
+            }
+
+            SeenWithDifferentBuffer.Add(stream, stream);
+#endif
+
             using (syncContext.Context.GetMemoryBuffer(out var bytes))
                 return ParseToMemory(syncContext, stream, debugTag, mode, bytes, modifier);
         }

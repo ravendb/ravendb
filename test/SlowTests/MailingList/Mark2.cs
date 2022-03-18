@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
                         });
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

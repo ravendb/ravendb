@@ -57,7 +57,7 @@ namespace SlowTests.Verifications
                               };
             }
         }
-        private static void TestSetupData(IDocumentStore store)
+        private void TestSetupData(IDocumentStore store)
         {
             new Document_Index().Execute(store);
 
@@ -78,7 +78,7 @@ namespace SlowTests.Verifications
             }
 
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
 
@@ -113,7 +113,7 @@ namespace SlowTests.Verifications
                 }
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         [Fact]

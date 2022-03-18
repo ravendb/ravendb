@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 session.Store(document1);
                 session.SaveChanges();
                 CreateIndex(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using var session2 = store.OpenSession();
                 var q1 = session2.Query<TestDocument>().Where(x => x.List.Any(y => y.Date == _dateNow));

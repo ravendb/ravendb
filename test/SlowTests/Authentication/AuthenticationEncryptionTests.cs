@@ -29,7 +29,7 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanUseEncryption()
         {
-            string dbName = SetupEncryptedDatabase(out var certificates, out var _);
+            string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -42,7 +42,7 @@ namespace SlowTests.Authentication
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var file = GetTempFileName();
                 var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
@@ -55,7 +55,7 @@ namespace SlowTests.Authentication
                         Query = "FROM @all_docs",
                         WaitForNonStaleResults = true
                     });
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.True(result.Results.Length > 1000);
 
@@ -82,9 +82,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanRestartEncryptedDbWithIndexes()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -143,7 +143,7 @@ namespace SlowTests.Authentication
 
                     Assert.Equal(9, indexDefinitions.Length); // 6 sample data indexes + 2 new dynamic indexes
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     // perform a query per index
                     foreach (var indexDef in indexDefinitions)
@@ -177,9 +177,9 @@ namespace SlowTests.Authentication
         [Fact]
         public async Task CanCompactEncryptedDb()
         {
-            var certificates = SetupServerAuthentication();
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var buffer = new byte[32];
             using (var rand = RandomNumberGenerator.Create())
@@ -223,7 +223,7 @@ namespace SlowTests.Authentication
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(300));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));

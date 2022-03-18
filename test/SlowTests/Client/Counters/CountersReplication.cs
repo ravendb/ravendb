@@ -678,7 +678,7 @@ namespace SlowTests.Client.Counters
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var database1 = await GetDocumentDatabaseInstanceFor(storeA);
+                var database1 = await Databases.GetDocumentDatabaseInstanceFor(storeA);
                 using (var controller = new ReplicationController(database1))
                 {
                     using (var session = storeA.OpenAsyncSession())

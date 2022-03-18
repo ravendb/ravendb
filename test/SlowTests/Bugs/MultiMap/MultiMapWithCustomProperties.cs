@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -13,7 +14,7 @@ namespace SlowTests.Bugs.MultiMap
         }
 
         [Fact]
-        public void Can_create_index()
+        public async Task Can_create_index()
         {
             using (var store = GetDocumentStore())
             {
@@ -27,9 +28,9 @@ namespace SlowTests.Bugs.MultiMap
 
                 new CatsAndDogs().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);

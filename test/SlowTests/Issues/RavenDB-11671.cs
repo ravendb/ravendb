@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>().ToList();

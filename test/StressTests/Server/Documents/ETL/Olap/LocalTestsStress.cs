@@ -283,7 +283,7 @@ loadToOrders(partitionBy(key), o);
             {
                 try
                 {
-                    database = GetDocumentDatabaseInstanceFor(store).Result;
+                    database = Databases.GetDocumentDatabaseInstanceFor(store).Result;
                     return true;
                 }
                 catch (AggregateException e)

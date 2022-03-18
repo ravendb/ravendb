@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {
@@ -403,7 +403,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {
@@ -455,7 +455,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var commands = store.Commands())
                 {

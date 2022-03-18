@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await cleaner.ExecuteCleanup();
 
@@ -142,7 +142,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await cleaner.ExecuteCleanup();
 
@@ -438,7 +438,7 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = GetDocumentDatabaseInstanceFor(store1).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -550,7 +550,7 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = GetDocumentDatabaseInstanceFor(store1).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -561,7 +561,7 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result;
+                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -644,7 +644,7 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = GetDocumentDatabaseInstanceFor(store1).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -655,7 +655,7 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result;
+                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -753,7 +753,7 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result;
+                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -851,7 +851,7 @@ namespace SlowTests.Server.Documents.Counters
                 cleaner = storage2.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result;
+                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -945,7 +945,7 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup();
 
-                var db = GetDocumentDatabaseInstanceFor(store1).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store1).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -958,7 +958,7 @@ namespace SlowTests.Server.Documents.Counters
 
                 // ensures that we don't delete the counter but we do clean the counter tombstones table
 
-                var db2 = GetDocumentDatabaseInstanceFor(store2).Result;
+                var db2 = Databases.GetDocumentDatabaseInstanceFor(store2).Result;
                 using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -1028,7 +1028,7 @@ namespace SlowTests.Server.Documents.Counters
                 var cleaner = storage.TombstoneCleaner;
                 await cleaner.ExecuteCleanup(1024);
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {

@@ -266,7 +266,7 @@ exit 129";
                 cryptoRandom.GetBytes(buffer);
             }
             File.WriteAllBytes(keyPath, buffer);
-            var certificates = GenerateAndSaveSelfSignedCertificate();
+            var certificates = Certificates.GenerateAndSaveSelfSignedCertificate();
             if (PlatformDetails.RunningOnPosix)
             {
                 var scriptPath = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".sh"));

@@ -19,7 +19,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

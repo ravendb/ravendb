@@ -33,7 +33,7 @@ select new {
                 }
             }));
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             var statistics = store.Maintenance.Send(new GetStatisticsOperation());
             Assert.Equal(IndexState.Normal, statistics.Indexes.Single(x => x.Name == "index").State);
 

@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(13, stats.CountOfDocuments); // 10 colors + 1 company + 2x hilo

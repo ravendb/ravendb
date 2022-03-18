@@ -41,7 +41,7 @@ namespace SlowTests.MailingList
                     });
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(db);
+                    Indexes.WaitForIndexing(db);
 
                     var result = await session.Query<Promo, Promos_Index>()
                         .Spatial("Coordinates", x => x.WithinRadius(3.0, 41.145556, -73.995))

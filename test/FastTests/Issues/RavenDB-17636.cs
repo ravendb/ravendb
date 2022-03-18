@@ -659,7 +659,7 @@ filter Name = 'Frank'")
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())
             {

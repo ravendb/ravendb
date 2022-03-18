@@ -29,7 +29,7 @@ namespace SlowTests.MailingList
 
                     new Products().Execute(store);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Advanced.DocumentQuery<Product>(new Products().IndexName);
                     var results = query.Take(1).AggregateUsing("facets/Products").Execute();

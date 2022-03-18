@@ -23,7 +23,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new Foo{Bar = "@fixed"});
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                     var result = session.Query<KeywordsIndex.IndexEntry, KeywordsIndex>().Where(x => x.@this == "@fixed").OfType<Foo>().ToList();
                     Assert.NotEmpty(result);
                 }

@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     await session.StoreAsync(new Doc { Id = "doc-3", StrVal = "doc1" });
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<Doc, DocsIndex>()
                         .Search(x => x.StrVal, "doc*", boost: 2); // when boost is removed, works ok

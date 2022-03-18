@@ -218,7 +218,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private static void CreateAggregationSampleData(IDocumentStore store)
+        private void CreateAggregationSampleData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
             {
@@ -246,7 +246,7 @@ namespace SlowTests.Tests.Faceted
                 Name = "Cars" }
             }));
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
     }
 }

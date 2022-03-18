@@ -277,7 +277,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         var stream = connection.Stream;
                         using (tcpClient)
                         using (_cts.Token.Register(tcpClient.Dispose))
-                        using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
+                        using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForParsing))
+                        using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForBuffer))
+                        using (contextForBuffer.GetMemoryBuffer(out var readBuffer))
                         using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", singleShot: false))
                         {
                             timeoutEvent.Start(OnTimeout);
@@ -285,13 +287,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             while (_token.IsCancellationRequested == false)
                             {
-                                context.Reset();
-                                context.Renew();
+                                contextForParsing.Reset();
+                                contextForParsing.Renew();
                                 BlittableJsonReaderObject rawReport;
                                 try
                                 {
                                     // even if there is a timeout event, we will keep waiting on the same connection until the TCP timeout occurs.
-                                    rawReport = context.Sync.ReadForMemory(stream, _readStatusUpdateDebugString);
+
+                                    rawReport = contextForParsing.Sync.ParseToMemory(stream, _readStatusUpdateDebugString, BlittableJsonDocumentBuilder.UsageMode.None, readBuffer);
                                     timeoutEvent.Defer(_parent._leaderClusterTag);
                                 }
                                 catch (Exception e)

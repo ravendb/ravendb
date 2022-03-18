@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateDataWithMultipleEdgesOfTheSameType(store);
+                Samples.CreateDataWithMultipleEdgesOfTheSameType(store);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
@@ -36,9 +36,9 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, query.Count);
                     Assert.Equal("dogs/2-A", query[0]["d1"].Value<string>());
-                    
+
                 }
             }
-        }    
+        }
     }
 }

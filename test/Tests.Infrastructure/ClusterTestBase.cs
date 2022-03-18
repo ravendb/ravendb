@@ -765,7 +765,7 @@ namespace Tests.Infrastructure
             var states = string.Empty;
             if (condition == false)
             {
-                states = GetLastStatesFromAllServersOrderedByTime();
+                states = Cluster.GetLastStatesFromAllServersOrderedByTime();
             }
             Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
             return (leader, serversToProxies, certificates);
@@ -816,7 +816,7 @@ namespace Tests.Infrastructure
                 if (useSsl)
                 {
                     serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                    certificates = SetupServerAuthentication(customSettings, serverUrl);
+                    certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
                 }
                 else
                 {
@@ -889,7 +889,7 @@ namespace Tests.Infrastructure
                         e = ex;
                     }
                 }
-                states += GetLastStatesFromAllServersOrderedByTime();
+                states += Cluster.GetLastStatesFromAllServersOrderedByTime();
                 if (e != null)
                     states += $"{Environment.NewLine}{e}";
             }
@@ -913,7 +913,7 @@ namespace Tests.Infrastructure
             if (useSsl)
             {
                 serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                certificates = SetupServerAuthentication(customSettings, serverUrl);
+                certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
@@ -935,15 +935,7 @@ namespace Tests.Infrastructure
             await Task.WhenAny(tasks);
 
             if (Task.Delay(timeout).IsCompleted)
-                throw new TimeoutException(GetLastStatesFromAllServersOrderedByTime());
-        }
-
-        protected override Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
-        {
-            //var index = FindStoreIndex(store);
-            //Assert.False(index == -1, "Didn't find store index, most likely it doesn't belong to the cluster. Did you setup Raft cluster properly?");
-            //return Servers[index].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
+                throw new TimeoutException(Cluster.GetLastStatesFromAllServersOrderedByTime());
         }
 
         public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
@@ -1039,12 +1031,12 @@ namespace Tests.Infrastructure
             return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
         }
 
-        public static void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
+        public void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
         {
             var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(dbName ?? store.Database));
             foreach (var nodeTag in record.Topology.AllNodes)
             {
-                WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
+                Indexes.WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
             }
         }
 

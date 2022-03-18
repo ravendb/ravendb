@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Faceted
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -99,7 +99,7 @@ namespace SlowTests.Tests.Faceted
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -136,7 +136,7 @@ namespace SlowTests.Tests.Faceted
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -173,7 +173,7 @@ namespace SlowTests.Tests.Faceted
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -204,7 +204,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order, Orders_All>()
@@ -235,7 +235,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -274,7 +274,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333, Region = 2 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -337,7 +337,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333, Region = 2, At = DateTime.Today });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -366,7 +366,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -400,7 +400,7 @@ namespace SlowTests.Tests.Faceted
                     session.Store(new Order { Currency = Currency.EUR, Product = "iPhone", Total = 3333 });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
@@ -450,7 +450,7 @@ namespace SlowTests.Tests.Faceted
                 var end1 = DateTime.Today.AddDays(-1);
                 var end2 = DateTime.Today;
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
@@ -492,7 +492,7 @@ namespace SlowTests.Tests.Faceted
                 var end1 = DateTime.Today.AddDays(-1);
                 var end2 = DateTime.Today;
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
@@ -535,7 +535,7 @@ namespace SlowTests.Tests.Faceted
                 var end1 = DateTime.Today.AddDays(-1);
                 var end2 = DateTime.Today;
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")

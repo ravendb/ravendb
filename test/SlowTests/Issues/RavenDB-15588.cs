@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 foreach (var server in Servers)
                 {
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
 
                 await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[0]);
                 documentDatabase = await Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
 
                 await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
@@ -168,7 +168,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);

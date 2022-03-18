@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Queries
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

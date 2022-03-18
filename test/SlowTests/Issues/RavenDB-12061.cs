@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>("match (((Employees as e1)) or ((Employees as e2))) or (Employees as e3)").ToArray();
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     
@@ -52,7 +52,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     //missing where expression in edge
@@ -142,7 +142,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     
@@ -172,7 +172,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(

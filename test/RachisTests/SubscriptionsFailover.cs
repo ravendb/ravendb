@@ -763,7 +763,7 @@ namespace RachisTests
 
                     var subs = await SubscriptionFailoverWithWaitingChains.GetSubscription(name, store.Database, cluster.Nodes);
                     Assert.NotNull(subs);
-                    await WaitForRaftIndexToBeAppliedOnClusterNodes(subs.SubscriptionId, cluster.Nodes);
+                    await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(subs.SubscriptionId, cluster.Nodes);
 
                     await ActionWithLeader(async l => await WaitForResponsibleNode(l.ServerStore, store.Database, name, toBecomeNull: false));
 

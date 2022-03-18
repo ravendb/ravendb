@@ -66,7 +66,7 @@ namespace SlowTests.Core.Querying
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var aboutRavenDBDatabase =
                         session.Query<Post>("Posts/ByTitle")
@@ -122,7 +122,7 @@ namespace SlowTests.Core.Querying
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var nosqlOrQuerying =
                         session.Query<Post>("Posts/ByTitleAndDescription")
@@ -221,7 +221,7 @@ namespace SlowTests.Core.Querying
                         Longitude = 79.789
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
 
                     var events = session.Query<Events_SpatialIndex.Result, Events_SpatialIndex>()
@@ -265,7 +265,7 @@ namespace SlowTests.Core.Querying
                         LastName = "Bob"
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var users = session.Query<User, Users_ByName>()
                         .Where(x => x.Name == "Bob" || x.LastName == "Bob")
@@ -304,7 +304,7 @@ namespace SlowTests.Core.Querying
                         Name = "David Jones"
                     });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var suggestionResult = session.Query<User, Users_ByName>()
                         .SuggestUsing(f => f.ByField(x => x.Name, "johne"))
@@ -385,7 +385,7 @@ namespace SlowTests.Core.Querying
                     };
                     session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var facetResults = session.Query<Camera, CameraCost>()
                         .AggregateUsing("facets/CameraFacets")

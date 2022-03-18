@@ -175,7 +175,7 @@ namespace SlowTests.MailingList
 
                 PopulateData(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

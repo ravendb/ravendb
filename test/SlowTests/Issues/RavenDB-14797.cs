@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var q1 = session.Query<ThirdOutput>(collectionName: "ThirdOutput");
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     var entity = session.Load<Data>(entityId);
                     entity.Name = "2";
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
                 using (var session = store.OpenSession())
                 {
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                     }, id);
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var entities = session.Query<Row, Index_Rows>().ProjectInto<Row>().ToList();

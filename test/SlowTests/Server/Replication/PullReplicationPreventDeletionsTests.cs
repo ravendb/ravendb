@@ -31,8 +31,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task PreventDeletionOnHubSinkCompromised()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -92,7 +92,7 @@ namespace SlowTests.Server.Replication
                 await s.SaveChangesAsync();
             }
 
-            var sinkDatabaseInstance = await GetDocumentDatabaseInstanceFor(sinkStore);
+            var sinkDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(sinkStore);
             sinkDatabaseInstance.ForTestingPurposes.ForceSendTombstones = true;
 
             await EnsureReplicatingAsync(hubStore, sinkStore);
@@ -110,7 +110,7 @@ namespace SlowTests.Server.Replication
 
             Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
 
-            var hubDatabaseInstance = await GetDocumentDatabaseInstanceFor(hubStore);
+            var hubDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
             bool expectedError = false;
             string lastError = null;
             hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0].Failed += (handler, exception) =>
@@ -149,8 +149,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -253,8 +253,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task PreventDeletionsOnHub()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -368,8 +368,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task EnsureArtificialDocsAreSkippedOnReplication_17795()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -405,7 +405,7 @@ namespace SlowTests.Server.Replication
                 await s.SaveChangesAsync();
             }
 
-            WaitForIndexing(sinkStore);
+            Indexes.WaitForIndexing(sinkStore);
 
             using (var s = sinkStore.OpenAsyncSession())
             {
@@ -477,8 +477,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task MakeSureDeletionsRevisionsDontReplicate()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");

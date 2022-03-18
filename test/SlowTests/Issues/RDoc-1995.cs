@@ -193,7 +193,7 @@ namespace SlowTests.Issues
                         DatabaseName = store1.Database,
                         OperateOnTypes = operateOnTypes,
                     },
-                    GetDocumentDatabaseInstanceFor(store2).Result);
+                    Databases.GetDocumentDatabaseInstanceFor(store2).Result);
 
             WaitForValue(() =>
             {

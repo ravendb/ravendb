@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
@@ -34,12 +35,12 @@ namespace FastTests.Server.Basic
         }
 
         [Fact]
-        public void Should_Update_LastWork()
+        public async Task Should_Update_LastWork()
         {
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 foreach (var env in db.GetAllStoragesEnvironment())
                 {

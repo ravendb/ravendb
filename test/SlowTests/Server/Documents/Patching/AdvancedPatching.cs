@@ -987,7 +987,7 @@ this.Else = a;
                         Name = "TestIndex"
                     }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(
                     $"FROM INDEX \'TestIndex\' WHERE Owner = \'Bob\' UPDATE {{ {SampleScript}}}"));
