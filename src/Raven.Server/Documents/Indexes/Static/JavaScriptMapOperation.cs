@@ -186,10 +186,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
 
                         _engineHandle.ForceGarbageCollection();
-                        /*if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
+                        if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                         {
                             _engineHandle.CheckForMemoryLeaks("map");
-                        }*/
+                        }
                     }
                     else
                     {

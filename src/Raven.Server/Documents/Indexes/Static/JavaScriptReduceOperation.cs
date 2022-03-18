@@ -259,10 +259,10 @@ namespace Raven.Server.Documents.Indexes.Static
                         yield return jsRes;
                         
                         EngineHandle.ForceGarbageCollection();
-                        /*if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
+                        if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
                         {
                             EngineHandle.CheckForMemoryLeaks("reduce");
-                        }*/
+                        }
                     }
                 }
             }
