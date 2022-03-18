@@ -8,14 +8,14 @@ class getCompareExchangeItemsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<pagedResult<Raven.Server.Web.System.Processors.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>> {
+    execute(): JQueryPromise<pagedResult<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>> {
         const args = {
             start: this.start,
             pageSize: this.take,
             startsWith: this.prefix || undefined
         };
 
-        const resultsSelector = (dto: resultsDto<Raven.Server.Web.System.Processors.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>): pagedResult<Raven.Server.Web.System.Processors.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem> => {
+        const resultsSelector = (dto: resultsDto<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem>): pagedResult<Raven.Server.Web.System.Processors.CompareExchange.CompareExchangeHandlerProcessorForGetCompareExchangeValues.CompareExchangeListItem> => {
             return {
                 items: dto.Results,
                 totalResultCount: -1
