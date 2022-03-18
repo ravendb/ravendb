@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForGetAllNames : AbstractIndexHandlerProcessorForGetAllNames<DatabaseRequestHandler, DocumentsOperationContext>
 {

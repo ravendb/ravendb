@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 
@@ -8,10 +10,10 @@ public class DatabaseIndexLockModeProcessor : AbstractIndexLockModeProcessor
 {
     private readonly DocumentDatabase _database;
 
-    public DatabaseIndexLockModeProcessor(DocumentDatabase database)
+    public DatabaseIndexLockModeProcessor([NotNull] DocumentDatabase database)
         : base(database.ServerStore)
     {
-        _database = database;
+        _database = database ?? throw new ArgumentNullException(nameof(database));
     }
 
     protected override void ValidateIndex(string name, IndexLockMode mode)

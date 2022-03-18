@@ -2,7 +2,7 @@
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal class IndexHandlerProcessorForSetLockMode : AbstractIndexHandlerProcessorForSetLockMode<DatabaseRequestHandler, DocumentsOperationContext>
 {

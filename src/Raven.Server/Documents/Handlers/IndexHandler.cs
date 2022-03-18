@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
@@ -545,7 +546,7 @@ namespace Raven.Server.Documents.Handlers
                 for (var index = 0; index < parameters.IndexNames.Length; index++)
                 {
                     var name = parameters.IndexNames[index];
-                    await Database.IndexStore.SetPriority(name, parameters.Priority, $"{raftRequestId}/{index}");
+                    await Database.IndexStore.Priority.SetPriorityAsync(name, parameters.Priority, $"{raftRequestId}/{index}");
                 }
 
                 NoContentStatus();
