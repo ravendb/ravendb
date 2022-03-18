@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Patch.V8
         {
             InternalHandle jsBinder = engine.CreateObjectBinder<BlittableObjectInstanceV8.CustomBinder>(boi, engine.Context.TypeBinderBlittableObjectInstance(), keepAlive: keepAlive);
             var binder = (ObjectBinder)jsBinder.Object;
-            binder.ShouldDisposeBoundObject = false;
+            binder.ShouldDisposeBoundObject = true;
             return jsBinder;
         }
 
@@ -297,8 +297,6 @@ namespace Raven.Server.Documents.Patch.V8
             _luceneDocument = null;
             _luceneState = null;
 
-            _luceneIndexFields?.Clear();
-
             if (disposing)
             {
                 _javaScriptUtils = null;
@@ -316,8 +314,6 @@ namespace Raven.Server.Documents.Patch.V8
 
                 _deletes = null;
                 _ownValues = null;
-                
-                GC.SuppressFinalize(this); // TODO [shlomo] should be moved to Init when ShouldDisposeBoundObject set to true
             }
         }
 
@@ -723,7 +719,7 @@ namespace Raven.Server.Documents.Patch.V8
                 _engineEx = _parent._engineEx;
                 _engine = _parent._engine;
 
-                //GC.SuppressFinalize(this); // TODO [shlomo] should be restored when ShouldDisposeBoundObject set to true 
+                GC.SuppressFinalize(this); 
             }
 
             public BlittableObjectProperty(BlittableObjectInstanceV8 parent, string propertyName, InternalHandle jsValue)
