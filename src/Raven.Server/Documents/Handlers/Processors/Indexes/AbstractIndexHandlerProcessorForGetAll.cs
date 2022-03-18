@@ -8,7 +8,7 @@ using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal abstract class AbstractIndexHandlerProcessorForGetAll<TRequestHandler, TOperationContext> : AbstractHandlerReadProcessor<IndexDefinition[], TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler

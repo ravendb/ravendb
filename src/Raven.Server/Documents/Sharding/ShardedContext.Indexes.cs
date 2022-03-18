@@ -32,10 +32,14 @@ public partial class ShardedContext
 
         public readonly ShardedIndexLockModeProcessor LockMode;
 
+        public readonly ShardedIndexPriorityProcessor Priority;
+
         public ShardedIndexesCache(ShardedContext context, ServerStore serverStore, DatabaseRecord record)
         {
             _serverStore = serverStore;
+
             LockMode = new ShardedIndexLockModeProcessor(context, serverStore);
+            Priority = new ShardedIndexPriorityProcessor(context, serverStore);
 
             _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, record.DatabaseName, record.Settings);
             _scriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);

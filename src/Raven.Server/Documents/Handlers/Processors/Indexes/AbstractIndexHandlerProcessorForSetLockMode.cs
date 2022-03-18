@@ -7,7 +7,7 @@ using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
 
 internal abstract class AbstractIndexHandlerProcessorForSetLockMode<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
