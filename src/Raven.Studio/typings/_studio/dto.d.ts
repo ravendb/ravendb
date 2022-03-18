@@ -775,7 +775,7 @@ interface threadStackTraceResponseDto {
     Results: Array<threadStackTraceResponseItem>;
     Threads: Array<Raven.Server.Dashboard.ThreadInfo>;
 }
-type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
+
 
 interface threadStackTraceResponseItem {
     OSThreadId: number;
@@ -784,8 +784,6 @@ interface threadStackTraceResponseItem {
     ThreadType: string;
     StackTrace: string[];
 }
-
-type indexStatus = "Normal" | "ErrorOrFaulty" | "Stale" | "Paused" | "Disabled" | "Idle" | "RollingDeployment";
 
 interface MigratorPathConfiguration {
     HasMigratorPath: boolean;
@@ -879,3 +877,9 @@ interface columnPreviewFeature {
     install($tooltip: JQuery, valueProvider: () => any, elementProvider: () => any, containerSelector: string): void;
     syntax(column: virtualColumn, escapedValue: any, element: any): void;
 }
+
+type databaseLocationSpecifier = {
+    shardNumber?: number;
+    nodeTag: string;
+}
+
