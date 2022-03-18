@@ -158,6 +158,7 @@ namespace Raven.Server.Documents.Indexes.Static
             
         public void DisposeV8()
         {
+            ContextExV8.Dispose();
             _scriptEngineV8Pooled.Dispose();
         }
 
