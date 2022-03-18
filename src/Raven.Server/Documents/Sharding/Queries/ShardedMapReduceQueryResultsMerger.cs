@@ -36,7 +36,7 @@ public class ShardedMapReduceQueryResultsMerger
     {
         DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "Make sure that we have the auto map index in the orchestrator");
 
-        if (_indexesCache.TryGetAutoIndexDefinition(_indexName, out var autoIndexDefinition))
+        if (_indexesCache.TryGetAutoMapReduceIndexDefinition(_indexName, out var autoIndexDefinition))
         {
             var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)IndexStore.CreateAutoDefinition(autoIndexDefinition, IndexDeploymentMode.Parallel);
             var aggegation = ReduceMapResultsOfAutoIndex.AggregateOn(_currentResults, autoMapReduceIndexDefinition, _context, null, CancellationToken.None);

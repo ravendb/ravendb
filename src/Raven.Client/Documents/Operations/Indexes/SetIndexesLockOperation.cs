@@ -52,17 +52,15 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new SetIndexLockCommand(conventions, context, _parameters);
+            return new SetIndexLockCommand(context, _parameters);
         }
 
-        private class SetIndexLockCommand : RavenCommand, IRaftCommand
+        internal class SetIndexLockCommand : RavenCommand, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _parameters;
 
-            public SetIndexLockCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters)
+            public SetIndexLockCommand(JsonOperationContext context, Parameters parameters)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)

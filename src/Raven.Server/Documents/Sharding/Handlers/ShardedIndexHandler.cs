@@ -11,6 +11,23 @@ namespace Raven.Server.Documents.Sharding.Handlers
 {
     public class ShardedIndexHandler : ShardedRequestHandler
     {
+        [RavenShardedAction("/databases/*/indexes", "GET")]
+        public async Task GetAll()
+        {
+            var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
+
+            if (namesOnly)
+            {
+                using (var processor = new ShardedIndexHandlerProcessorForGetAllNames(this))
+                    await processor.ExecuteAsync();
+
+                return;
+            }
+
+            using (var processor = new ShardedIndexHandlerProcessorForGetAll(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/stats", "GET")]
         public async Task Stats()
         {
@@ -41,6 +58,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     writer.WritePerformanceStats(context, command.Result);
                 }
             }
+        }
+
+        [RavenShardedAction("/databases/*/indexes/set-lock", "POST")]
+        public async Task SetLockMode()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForSetLockMode(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenShardedAction("/databases/*/indexes/errors", "GET")]

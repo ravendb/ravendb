@@ -78,10 +78,14 @@ namespace Raven.Server.Documents.Indexes
                                                  IndexCompiler.IndexExtension.Length -
                                                  4; // ".dll"
 
+        public readonly DatabaseIndexLockModeProcessor LockMode;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
+            LockMode = new DatabaseIndexLockModeProcessor(documentDatabase);
+
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
             var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
@@ -1388,7 +1392,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 // when running in-memory all storage environment files are temporary so deleted on close but
                 // we want to delete the empty directories as well
-                
+
                 // but when running a replacement index we cannot stop environment and move its directory so we leave it as is
                 // we can have temp files of different environments in the same temp dir (when index is updated multiple times)
                 // so let's delete the directory only if there are no other files inside - last dispose will delete the dir
@@ -2333,25 +2337,6 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
-        }
-
-        public async Task SetLock(string name, IndexLockMode mode, string raftRequestId)
-        {
-            var index = GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            if (index.Type == IndexType.Faulty || index.Type.IsAuto())
-            {
-                index.SetLock(mode);  // this will throw proper exception
-                return;
-            }
-
-            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name, raftRequestId);
-
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public async Task SetPriority(string name, IndexPriority priority, string raftRequestId)

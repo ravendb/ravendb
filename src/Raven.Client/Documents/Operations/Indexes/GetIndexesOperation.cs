@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexesCommand(_start, _pageSize);
         }
 
-        private class GetIndexesCommand : RavenCommand<IndexDefinition[]>
+        internal class GetIndexesCommand : RavenCommand<IndexDefinition[]>
         {
             private readonly int _start;
             private readonly int _pageSize;

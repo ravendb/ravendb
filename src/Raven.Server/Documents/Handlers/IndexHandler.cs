@@ -333,51 +333,18 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
         public async Task GetAll()
         {
-            var name = GetStringQueryString("name", required: false);
-
-            var start = GetStart();
-            var pageSize = GetPageSize();
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            if (namesOnly)
             {
-                IndexDefinition[] indexDefinitions;
-                if (string.IsNullOrEmpty(name))
-                    indexDefinitions = Database.IndexStore
-                        .GetIndexes()
-                        .OrderBy(x => x.Name)
-                        .Skip(start)
-                        .Take(pageSize)
-                        .Select(x => x.GetIndexDefinition())
-                        .ToArray();
-                else
-                {
-                    var index = Database.IndexStore.GetIndex(name);
-                    if (index == null)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    }
+                using (var processor = new IndexHandlerProcessorForGetAllNames(this))
+                    await processor.ExecuteAsync();
 
-                    indexDefinitions = new[] { index.GetIndexDefinition() };
-                }
-
-                writer.WriteStartObject();
-
-                writer.WriteArray(context, "Results", indexDefinitions, (w, c, indexDefinition) =>
-                {
-                    if (namesOnly)
-                    {
-                        w.WriteString(indexDefinition.Name);
-                        return;
-                    }
-
-                    w.WriteIndexDefinition(c, indexDefinition);
-                });
-
-                writer.WriteEndObject();
+                return;
             }
+
+            using (var processor = new IndexHandlerProcessorForGetAll(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
@@ -562,29 +529,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task SetLockMode()
         {
-            var raftRequestId = GetRaftRequestIdFromQuery();
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-lock");
-                var parameters = JsonDeserializationServer.Parameters.SetIndexLockParameters(json);
-
-                if (parameters.IndexNames == null || parameters.IndexNames.Length == 0)
-                    throw new ArgumentNullException(nameof(parameters.IndexNames));
-
-                // Check for auto-indexes - we do not set lock for auto-indexes
-                if (parameters.IndexNames.Any(indexName => indexName.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase)))
-                {
-                    throw new InvalidOperationException("'Indexes list contains Auto-Indexes. Lock Mode' is not set for Auto-Indexes.");
-                }
-
-                for (var index = 0; index < parameters.IndexNames.Length; index++)
-                {
-                    var name = parameters.IndexNames[index];
-                    await Database.IndexStore.SetLock(name, parameters.Mode, $"{raftRequestId}/{index}");
-                }
-            }
-
-            NoContentStatus();
+            using (var processor = new IndexHandlerProcessorForSetLockMode(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

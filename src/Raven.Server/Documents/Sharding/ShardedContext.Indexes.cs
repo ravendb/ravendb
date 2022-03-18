@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Sharding;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
@@ -22,36 +23,37 @@ public partial class ShardedContext
     public class ShardedIndexesCache
     {
         private readonly ServerStore _serverStore;
-        private Dictionary<string, IndexDefinition> _cachedMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
-        private Dictionary<string, AutoIndexDefinition> _cachedAutoMapReduceIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, IndexDefinition> _cachedStaticIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, AutoIndexDefinition> _cachedAutoIndexDefinitions = new(StringComparer.OrdinalIgnoreCase);
         private readonly ScriptRunnerCache _scriptRunnerCache;
         private RavenConfiguration _configuration;
 
         public ScriptRunnerCache ScriptRunnerCache => _scriptRunnerCache;
 
-        public ShardedIndexesCache(ServerStore serverStore, DatabaseRecord record)
+        public readonly ShardedIndexLockModeProcessor LockMode;
+
+        public ShardedIndexesCache(ShardedContext context, ServerStore serverStore, DatabaseRecord record)
         {
             _serverStore = serverStore;
+            LockMode = new ShardedIndexLockModeProcessor(context, serverStore);
 
             _configuration = DatabasesLandlord.CreateDatabaseConfiguration(_serverStore, record.DatabaseName, record.Settings);
             _scriptRunnerCache = new ScriptRunnerCache(database: null, _configuration);
 
             UpdateConfiguration(record.DatabaseName, record.Settings);
 
-            UpdateMapReduceIndexes(record.Indexes
-                .Where(x => x.Value.Type.IsStaticMapReduce())
+            UpdateStaticIndexes(record.Indexes
                 .ToDictionary(x => x.Key, x => x.Value));
 
-            UpdateAutoMapReduceIndexes(record.AutoIndexes
-                .Where(x => x.Value.Type.IsAutoMapReduce())
+            UpdateAutoIndexes(record.AutoIndexes
                 .ToDictionary(x => x.Key, x => x.Value));
         }
 
         public void Update(RawDatabaseRecord record)
         {
             UpdateConfiguration(record.DatabaseName, record.Settings);
-            UpdateMapReduceIndexes(record.MapReduceIndexes());
-            UpdateAutoMapReduceIndexes(record.AutoMapReduceIndexes());
+            UpdateStaticIndexes(record.Indexes);
+            UpdateAutoIndexes(record.AutoIndexes);
         }
 
         private void UpdateConfiguration(string databaseName, Dictionary<string, string> settings)
@@ -62,7 +64,7 @@ public partial class ShardedContext
             _scriptRunnerCache.UpdateConfiguration(_configuration);
         }
 
-        private void UpdateMapReduceIndexes(Dictionary<string, IndexDefinition> indexDefinitions)
+        private void UpdateStaticIndexes(Dictionary<string, IndexDefinition> indexDefinitions)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Major, "handle side-by-side");
 
@@ -70,26 +72,22 @@ public partial class ShardedContext
 
             foreach ((string indexName, IndexDefinition definition) in indexDefinitions)
             {
-                Debug.Assert(definition.Type.IsStaticMapReduce());
-
                 newDefinitions[indexName] = definition;
             }
 
-            _cachedMapReduceIndexDefinitions = newDefinitions;
+            _cachedStaticIndexDefinitions = newDefinitions;
         }
 
-        private void UpdateAutoMapReduceIndexes(Dictionary<string, AutoIndexDefinition> autoIndexDefinitions)
+        private void UpdateAutoIndexes(Dictionary<string, AutoIndexDefinition> indexDefinitions)
         {
             var newDefinitions = new Dictionary<string, AutoIndexDefinition>();
 
-            foreach ((string indexName, AutoIndexDefinition definition) in autoIndexDefinitions)
+            foreach ((string indexName, AutoIndexDefinition definition) in indexDefinitions)
             {
-                Debug.Assert(definition.Type.IsAutoMapReduce());
-
                 newDefinitions[indexName] = definition;
             }
 
-            _cachedAutoMapReduceIndexDefinitions = newDefinitions;
+            _cachedAutoIndexDefinitions = newDefinitions;
         }
 
         public AbstractStaticIndexBase GetCompiledMapReduceIndex(string indexName, TransactionOperationContext context)
@@ -97,20 +95,53 @@ public partial class ShardedContext
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal,
                 "cache the compiled JavaScript indexes - in a concurrent queue since they are single threaded and are not cached in IndexCompilationCache");
 
-            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false
-                ? null
-                : IndexCompilationCache.GetIndexInstance(indexDefinition, _configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
+            if (_cachedStaticIndexDefinitions.TryGetValue(indexName, out var indexDefinition) == false)
+                return null;
+
+            if (indexDefinition.Type.IsMapReduce() == false)
+                throw new InvalidOperationException($"Index '{indexName}' is not a map-reduce index");
+
+            return IndexCompilationCache.GetIndexInstance(indexDefinition, _configuration, IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion);
         }
 
-        public bool TryGetAutoIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)
+        public bool TryGetAutoMapReduceIndexDefinition(string indexName, out AutoIndexDefinition autoIndexDefinition)
         {
-            return _cachedAutoMapReduceIndexDefinitions.TryGetValue(indexName, out autoIndexDefinition);
+            if (_cachedAutoIndexDefinitions.TryGetValue(indexName, out autoIndexDefinition) == false)
+                return false;
+
+            if (autoIndexDefinition.Type.IsMapReduce() == false)
+                throw new InvalidOperationException($"Index '{indexName}' is not a map-reduce index");
+
+            return true;
         }
 
         public bool IsMapReduceIndex(string indexName)
         {
-            return _cachedMapReduceIndexDefinitions.TryGetValue(indexName, out _)
-                   || _cachedAutoMapReduceIndexDefinitions.TryGetValue(indexName, out _);
+            if (_cachedStaticIndexDefinitions.TryGetValue(indexName, out var staticIndexDefinition))
+                return staticIndexDefinition.Type.IsMapReduce();
+
+            if (_cachedAutoIndexDefinitions.TryGetValue(indexName, out var autoIndexDefinition))
+                return autoIndexDefinition.Type.IsMapReduce();
+
+            return false;
+        }
+
+        public bool TryGetIndexDefinition(string indexName, out IndexDefinitionBase indexDefinition)
+        {
+            if (_cachedStaticIndexDefinitions.TryGetValue(indexName, out var staticIndexDefinition))
+            {
+                indexDefinition = staticIndexDefinition;
+                return true;
+            }
+
+            if (_cachedAutoIndexDefinitions.TryGetValue(indexName, out var autoIndexDefinition))
+            {
+                indexDefinition = autoIndexDefinition;
+                return true;
+            }
+
+            indexDefinition = null;
+            return false;
         }
     }
 
