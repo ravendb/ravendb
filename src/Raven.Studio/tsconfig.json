@@ -57,7 +57,8 @@
           "endpoints": ["typings/server/endpoints"],
           "configuration": ["typings/server/configuration"],
           "node-forge": ["typings/custom_node-forge.d.ts"]
-      }
+      },
+    "jsx": "react"
   },
   "exclude": [
     "node_modules",

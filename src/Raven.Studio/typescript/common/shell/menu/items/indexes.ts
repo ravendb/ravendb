@@ -17,6 +17,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             title: "List of Indexes",
             nav: true,
+            shardingMode: "allShardsOnly",
             route: "databases/indexes",
             moduleId: require("viewmodels/database/indexes/indexes"),
             css: 'icon-indexing',

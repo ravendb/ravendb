@@ -87,8 +87,8 @@ module.exports = (env, args) => {
     
     return {
         mode: isProductionMode ? "production" : "development",
-        devtool: isProductionMode ? "source-map" : "eval",
-        entry: {
+        devtool: isProductionMode ? "source-map" : "inline-source-map",
+        entry: { 
             main: "./typescript/main.ts",
             "styles": "./wwwroot/Content/css/styles.less",
             "styles-blue": "./wwwroot/Content/css/styles-blue.less",
@@ -155,7 +155,7 @@ module.exports = (env, args) => {
                     ]
                 },
                 {
-                    test: /\.ts$/,
+                    test: /\.tsx?$/,
                     use: 'ts-loader'
                 },
                 {
