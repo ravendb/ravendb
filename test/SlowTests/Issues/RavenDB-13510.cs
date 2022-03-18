@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var databaseA = await GetDocumentDatabaseInstanceFor(storeA);
+                var databaseA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
 
                 Assert.True(databaseA.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseA.Metrics.Counters.BytesPutsPerSec.Count > 1);
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 EnsureReplicating(storeA, storeB);
 
-                var databaseB = await GetDocumentDatabaseInstanceFor(storeB);
+                var databaseB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
 
                 Assert.True(databaseB.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count > 1);
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var databaseB = await GetDocumentDatabaseInstanceFor(storeB);
+                var databaseB = await Databases.GetDocumentDatabaseInstanceFor(storeB);
 
                 Assert.True(databaseB.Metrics.Counters.PutsPerSec.Count > 1);
                 Assert.True(databaseB.Metrics.Counters.BytesPutsPerSec.Count > 1);

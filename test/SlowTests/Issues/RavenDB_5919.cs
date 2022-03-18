@@ -122,11 +122,11 @@ namespace SlowTests.Issues
                 var index = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById";
                 var index1 = documentStore.Maintenance.Send(new GetIndexOperation(index));
 
-                var indexInstance1 = GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
+                var indexInstance1 = Databases.GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var indexInstance2 = GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
+                var indexInstance2 = Databases.GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
 
                 Assert.Same(indexInstance1, indexInstance2);
             }

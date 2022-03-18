@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -57,7 +58,7 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void ShouldNotConvertUriToStringWhenIndexing()
+        public async Task ShouldNotConvertUriToStringWhenIndexing()
         {
             using (var store = GetDocumentStore())
             {
@@ -94,7 +95,7 @@ namespace SlowTests.Bugs
 
                 Indexes.WaitForIndexing(store);
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);

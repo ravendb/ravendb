@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                 await productsBySupplierNoTracking.ExecuteAsync(store);
                 await productsBySupplier.ExecuteAsync(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var i = database.IndexStore.GetIndex(productsBySupplierNoTracking.IndexName);
                 Assert.Empty(i.GetReferencedCollections());
 

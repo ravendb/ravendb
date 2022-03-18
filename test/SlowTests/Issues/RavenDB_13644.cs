@@ -920,7 +920,7 @@ namespace SlowTests.Issues
                 Assert.Contains("torun", terms);
                 Assert.Contains("tel aviv", terms);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1449,7 +1449,7 @@ namespace SlowTests.Issues
                 Assert.Contains("torun", terms);
                 Assert.Contains("tel aviv", terms);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))

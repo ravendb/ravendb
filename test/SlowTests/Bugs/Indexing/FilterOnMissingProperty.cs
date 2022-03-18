@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void CanFilter()
+        public async Task CanFilter()
         {
             using (var store = GetDocumentStore())
             {
@@ -39,7 +40,7 @@ namespace SlowTests.Bugs.Indexing
                     session.Advanced.DocumentQuery<dynamic>("test").WaitForNonStaleResults().ToArray();
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);

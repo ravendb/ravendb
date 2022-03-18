@@ -71,7 +71,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
 
@@ -150,7 +150,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -229,7 +229,7 @@ select timeseries(
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -308,7 +308,7 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = new DateTime(2020, 6, 6);
 
@@ -386,7 +386,7 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -467,7 +467,7 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -557,7 +557,7 @@ select out(u)
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = RavenTestHelper.UtcToday.AddHours(-4);
                 database.Time.UtcDateTime = () => now;
@@ -614,7 +614,7 @@ select out('Heartrate')
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var baseline = now.AddDays(-90);
@@ -683,7 +683,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
 
@@ -750,7 +750,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var baseline = now.AddDays(-12);
@@ -813,7 +813,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowSeconds = now.Second;
@@ -880,7 +880,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var baseline = now.AddDays(-45);
@@ -991,7 +991,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1079,7 +1079,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1157,7 +1157,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1234,7 +1234,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1348,7 +1348,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1435,7 +1435,7 @@ select out()
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -1503,7 +1503,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = new DateTime(2020, 7, day);
                 database.Time.UtcDateTime = () => now.AddMilliseconds(1);
@@ -1567,7 +1567,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = new DateTime(2020, 7, 31);
                 database.Time.UtcDateTime = () => now.AddMilliseconds(1);
@@ -1623,7 +1623,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = new DateTime(2020, 3, 29);
                 database.Time.UtcDateTime = () => now.AddMilliseconds(1);

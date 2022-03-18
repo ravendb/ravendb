@@ -308,7 +308,7 @@ namespace SlowTests.Server.Replication
                 await SetupPullReplicationAsync(definitionName, sink, hub);
                 Assert.True(WaitForDocument(sink, "users/1", timeout), sink.Identifier);
 
-                var db = await GetDocumentDatabaseInstanceFor(sink);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(sink);
                 var removedOnSink = new ManualResetEventSlim();
                 db.ReplicationLoader.IncomingReplicationRemoved += _ => removedOnSink.Set();
 

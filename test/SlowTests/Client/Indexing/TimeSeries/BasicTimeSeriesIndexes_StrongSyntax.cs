@@ -1582,7 +1582,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                 Indexes.WaitForIndexing(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = database.IndexStore.GetIndex(indexName);
 
                 using (indexInstance._contextPool.AllocateOperationContext(out TransactionOperationContext context))

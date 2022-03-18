@@ -52,7 +52,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 Assert.Equal(2, database.Configuration.Indexing.MinGram);
                 Assert.Equal(6, database.Configuration.Indexing.MaxGram);

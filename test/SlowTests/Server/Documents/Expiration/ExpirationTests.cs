@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.Expiration
                         Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
                     }
 
-                    var database = await GetDocumentDatabaseInstanceFor(store);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                     await expiredDocumentsCleaner.CleanupExpiredDocs();
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Documents.Expiration
                     Assert.NotNull(company2);
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.Expiration
                 // Activate the expiration
                 await SetupExpiration(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.CleanupExpiredDocs();

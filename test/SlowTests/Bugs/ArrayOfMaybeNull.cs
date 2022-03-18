@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -51,7 +52,7 @@ namespace SlowTests.Bugs
         }
 
         [Fact]
-        public void CanPerformSearch()
+        public async Task CanPerformSearch()
         {
             using (var store = GetDocumentStore())
             {
@@ -79,7 +80,7 @@ namespace SlowTests.Bugs
                         .As<Order>()
                         .ToList();
 
-                    var db = GetDocumentDatabaseInstanceFor(store).Result;
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                     Assert.Equal(errorsCount, 0);

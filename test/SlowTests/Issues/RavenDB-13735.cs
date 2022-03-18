@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                     expectedChangeVector = session.Advanced.GetChangeVectorFor(user);
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.RefreshDocs();

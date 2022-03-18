@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                 Assert.Equal(1, stats.CountOfIndexes);
 
                 var databaseName = $"{store}_smuggler";
-                using (EnsureDatabaseDeletion(databaseName, store))
+                using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 {
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName)));
 

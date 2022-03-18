@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
             {
                 await store.ExecuteIndexAsync(new AllowedUsers());
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("AllowedUsers");
                 Assert.NotNull(index);
 

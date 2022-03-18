@@ -40,8 +40,8 @@ namespace SlowTests
                 }
             }))
             {
-                await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
-                await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
+                await Databases.SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
+                await Databases.SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
 
                 using (var session = store1.OpenAsyncSession())
                 {

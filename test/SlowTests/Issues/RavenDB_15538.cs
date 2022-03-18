@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                     var m = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     Assert.Equal(4, m.Count);
                     var cv = (string)m.First()[Constants.Documents.Metadata.ChangeVector];
-                    var db = await GetDocumentDatabaseInstanceFor(store);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                     using (documentsContext.OpenReadTransaction())
                     {

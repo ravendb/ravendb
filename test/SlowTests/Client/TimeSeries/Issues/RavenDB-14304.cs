@@ -42,7 +42,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -85,7 +85,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -129,7 +129,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -178,7 +178,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {

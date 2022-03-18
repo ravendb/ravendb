@@ -49,7 +49,7 @@ namespace InterversionTests
 
                 await SetupReplication(store, oldStore);
 
-                var replicationLoader = (await GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
                 Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));
@@ -85,7 +85,7 @@ namespace InterversionTests
 
                 await SetupReplication(store, oldStore);
 
-                var replicationLoader = (await GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
+                var replicationLoader = (await Databases.GetDocumentDatabaseInstanceFor(store)).ReplicationLoader;
                 Assert.NotEmpty(replicationLoader.OutgoingFailureInfo);
                 Assert.True(WaitForValue(() => replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.RetriesCount > 2), true));
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))));

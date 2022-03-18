@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, new RevisionsConfiguration());
 
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
 
                 await EnsureReplicatingAsync(store1, store2);
 
-                var db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 var val2 = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                 Assert.Equal(1, val2);
                 await RevisionsHelper.SetupRevisions(store1, Server.ServerStore, new RevisionsConfiguration());
 
-                db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     enforceResult = await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
@@ -143,7 +143,7 @@ namespace SlowTests.Issues
                 var res = WaitForDocument(store2, "marker");
                 Assert.True(res);
 
-                db = await GetDocumentDatabaseInstanceFor(store2, store2.Database);
+                db = await Databases.GetDocumentDatabaseInstanceFor(store2, store2.Database);
                 val2 = await WaitForValueAsync(() =>
                     {
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
                 var conflicts = WaitUntilHasConflict(store1, "users/1");
                 await RevisionsHelper.SetupRevisions(store1, Server.ServerStore, new RevisionsConfiguration());
 
-                var db = await GetDocumentDatabaseInstanceFor(store1, store1.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1, store1.Database);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
 

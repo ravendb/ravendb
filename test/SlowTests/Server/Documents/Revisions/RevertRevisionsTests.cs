@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Documents.Revisions
 
                 await Task.Delay(2000);
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -190,7 +190,7 @@ namespace SlowTests.Server.Documents.Revisions
                     }
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -238,7 +238,7 @@ namespace SlowTests.Server.Documents.Revisions
                 }
                 DateTime last = DateTime.UtcNow;
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -276,7 +276,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -316,7 +316,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -363,7 +363,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -453,7 +453,7 @@ namespace SlowTests.Server.Documents.Revisions
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -518,7 +518,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocument(store1, "marker");
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -604,7 +604,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocument(store1, "marker");
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -686,7 +686,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocument(store1, "marker");
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
@@ -782,7 +782,7 @@ namespace SlowTests.Server.Documents.Revisions
                     Assert.Equal(4, companiesRevisions.Count);
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))

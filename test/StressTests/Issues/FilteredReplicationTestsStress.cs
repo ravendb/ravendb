@@ -125,9 +125,9 @@ namespace StressTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
-            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
-            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
-            var sink2Db = await GetDocumentDatabaseInstanceFor(sinkStore2);
+            var hubDb = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore1);
+            var sink2Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore2);
 
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -282,9 +282,9 @@ namespace StressTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
-            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
-            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
-            var sink2Db = await GetDocumentDatabaseInstanceFor(sinkStore2);
+            var hubDb = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore1);
+            var sink2Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore2);
 
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
