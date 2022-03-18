@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes.Admin;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Sparrow.Utils;
@@ -39,6 +40,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                     DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }));
+        }
+
+        [RavenShardedAction("/databases/*/admin/indexes/start", "POST")]
+        public async Task Start()
+        {
+            using (var processor = new ShardedAdminIndexHandlerProcessorForStart(this))
+                await processor.ExecuteAsync();
         }
 
         private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
