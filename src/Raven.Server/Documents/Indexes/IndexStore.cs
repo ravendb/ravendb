@@ -832,7 +832,7 @@ namespace Raven.Server.Documents.Indexes
             return _indexes.TryGetByName(replacementName, out _);
         }
 
-        public bool MaybeFinishRollingDeployment(string index)
+        public bool MaybeFinishRollingDeployment(string index, long? lastRollingDeploymentIndex)
         {
             var nodeTag = _serverStore.NodeTag;
 
@@ -846,6 +846,9 @@ namespace Raven.Server.Documents.Indexes
                     return false;
 
                 if (rollingIndexes.TryGetValue(index, out var rollingIndex) == false)
+                    return false;
+
+                if (rollingIndex.RaftCommandIndex != lastRollingDeploymentIndex)
                     return false;
 
                 if (rollingIndex.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
@@ -1077,6 +1080,8 @@ namespace Raven.Server.Documents.Indexes
             Debug.Assert(index != null);
             Debug.Assert(string.IsNullOrEmpty(index.Name) == false);
             Debug.Assert(_indexLocks.ContainsKey(index.Name));
+
+            ForTestingPurposes?.BeforeIndexStart?.Invoke(index);
 
             _indexes.Add(index);
 
@@ -2549,6 +2554,7 @@ namespace Raven.Server.Documents.Indexes
             internal Action<Index> BeforeRollingIndexStart;
 
             internal Action<Index> BeforeIndexThreadExit;
+            internal Action<Index> BeforeIndexStart;
             public TestingStuff(IndexStore parent)
             {
                 _parent = parent;

@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -83,7 +83,7 @@ namespace SlowTests.Issues
                     }
                     await session.SaveChangesAsync();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<Doc, DocsIndex>()
                         .AggregateBy(builder => builder.ByRanges(

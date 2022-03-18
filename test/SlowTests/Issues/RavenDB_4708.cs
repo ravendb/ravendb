@@ -426,7 +426,7 @@ namespace SlowTests.Issues
 
         //    foreach (var documentStore in shards.Values)
         //    {
-        //        WaitForIndexing(documentStore);
+        //        Indexes.WaitForIndexing(documentStore);
         //    }
 
         //    return shardedDocumentStore;
@@ -436,7 +436,7 @@ namespace SlowTests.Issues
         {
             var store = GetDocumentStore();
             FillDatabase(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             return store;
         }
 

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                 await productsBySupplierNoTracking.ExecuteAsync(store);
                 await productsBySupplier.ExecuteAsync(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var i = database.IndexStore.GetIndex(productsBySupplierNoTracking.IndexName);
                 Assert.Empty(i.GetReferencedCollections());
 
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplierNoTracking.IndexName, "Name", fromValue: null));
                 Assert.Equal(1, terms.Length);
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 terms = await store.Maintenance.SendAsync(new GetTermsOperation(productsBySupplierNoTracking.IndexName, "Name", fromValue: null));
                 Assert.Equal(1, terms.Length);

@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
                     session.Store(order);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     //  This call generates a "System.FormatException: Input string was not in a correct format."
                     session.Query<Sales_ByDateProduct.ReduceResult, Sales_ByDateProduct>().ToList();

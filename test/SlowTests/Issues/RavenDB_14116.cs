@@ -61,7 +61,7 @@ namespace SlowTests.Issues
                         });
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

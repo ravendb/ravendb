@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                 new Items_ByItems().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

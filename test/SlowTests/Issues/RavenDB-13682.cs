@@ -69,7 +69,7 @@ order by spatial.distance(spatial.point(a.Lat, a.Lng), spatial.point(35.1, -106.
                 }
 
                 new SpatialIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {
@@ -211,7 +211,7 @@ select {
             {
                 store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

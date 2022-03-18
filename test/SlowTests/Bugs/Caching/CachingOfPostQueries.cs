@@ -53,7 +53,7 @@ namespace SlowTests.Bugs.Caching
 
             new PersonsIndex().Execute(store);
             InitData(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             return store;
         }
 

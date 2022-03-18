@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                 }
 
                 ExecuteQuery(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var re = store.GetRequestExecutor(store.Database);
                 var configurationChanges = new List<long>();
@@ -128,7 +128,7 @@ namespace SlowTests.Issues
 
                 // shouldn't trigger a topology update
                 ExecuteQuery(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(1, toplogyUpdatesCount);
 

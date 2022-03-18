@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
                 WaitForUserToContinueTheTest(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
 
                 using (var session = store.OpenSession())
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                 }
 
                 WaitForUserToContinueTheTest(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -182,7 +182,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -223,7 +223,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
@@ -273,7 +273,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

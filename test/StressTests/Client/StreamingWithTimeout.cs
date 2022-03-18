@@ -23,7 +23,7 @@ namespace StressTests.Client
                         await bulkInsert.StoreAsync(new Order());
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 using (var session = store.OpenAsyncSession(new SessionOptions { NoCaching = true, NoTracking = true }))
                 {

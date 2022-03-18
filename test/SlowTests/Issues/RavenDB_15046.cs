@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(new MyCountersIndex().IndexName));

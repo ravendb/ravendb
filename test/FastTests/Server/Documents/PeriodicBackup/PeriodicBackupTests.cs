@@ -32,7 +32,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
+                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var backups = periodicBackupRunner.PeriodicBackups;
                 Assert.Equal("* */1 * * *", backups.First().Configuration.FullBackupFrequency);
                 Assert.Equal("* */2 * * *", backups.First().Configuration.IncrementalBackupFrequency);

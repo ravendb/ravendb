@@ -40,7 +40,7 @@ namespace RachisTests
                 var databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
-                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
                 //before dispose there is such a document
                 using (var session = store.OpenSession(databaseName))

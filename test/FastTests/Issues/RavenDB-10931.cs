@@ -34,7 +34,7 @@ namespace FastTests.Issues
                         IdentityPartsSeparator = '-'
                     }
             })
-            using (EnsureDatabaseDeletion(databaseName, store))
+            using (Databases.EnsureDatabaseDeletion(databaseName, store))
             {
                 store.OnBeforeStore += (s, a) => { };
                 store.Initialize();

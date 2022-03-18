@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var database1 = await GetDocumentDatabaseInstanceFor(store1);
+                var database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 using (var controller = new ReplicationController(database1))
                 {
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>

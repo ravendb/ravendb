@@ -30,12 +30,12 @@ public class RavenDB_17260 : RavenTestBase
             var indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "Foo");
             await indexToCreate.ExecuteAsync(store);
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             indexToCreate = new Orders_ProfitByProductAndOrderedAt(referencesCollectionName: "Bar");
             await indexToCreate.ExecuteAsync(store);
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             store.Maintenance.Send(new StopIndexingOperation());
 

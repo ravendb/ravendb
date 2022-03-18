@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var e = Assert.Throws<IndexCreationException>(() => index.Execute(store));
                 Assert.Contains("IndexAlreadyExistException", e.Message);
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                 };
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var c = await Assert.ThrowsAsync<IndexCreationException>(() => index.ExecuteAsync(store));
                 Assert.Contains("IndexAlreadyExistException", c.Message);

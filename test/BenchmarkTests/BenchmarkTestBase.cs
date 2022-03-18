@@ -37,7 +37,7 @@ namespace BenchmarkTests
             if (Encrypted)
             {
                 var serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                SetupServerAuthentication(customSettings, serverUrl);
+                Certificates.SetupServerAuthentication(customSettings, serverUrl);
             }
             else
             {
@@ -76,8 +76,8 @@ namespace BenchmarkTests
 
             if (Encrypted)
             {
-                var certificates = GenerateAndSaveSelfSignedCertificate();
-                adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value,
+                var certificates = Certificates.GenerateAndSaveSelfSignedCertificate();
+                adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value,
                     certificates.ClientCertificate1.Value,
                     new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin,
                     Server);
@@ -135,7 +135,7 @@ namespace BenchmarkTests
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
             if (Encrypted)
-                options.ClientCertificate = _selfSignedCertificates.ServerCertificate.Value;
+                options.ClientCertificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
 
             return base.GetDocumentStore(options, caller);
         }
@@ -175,7 +175,7 @@ namespace BenchmarkTests
 
             if (Encrypted)
             {
-                PutSecretKeyForDatabaseInServerStore(databaseName, Server);
+                Encryption.PutSecretKeyForDatabaseInServerStore(databaseName, Server);
                 databaseRecord.Encrypted = true;
             }
 

@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
                 autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
 
                 var indexCount = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length;
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
                 Assert.Equal(indexCount, store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length);
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(2, autoIndexes.Count);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
                 autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();

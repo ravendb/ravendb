@@ -51,7 +51,7 @@ namespace SlowTests.Issues
                     session.Store(happyUser);
 
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var result = session.Query<User, Users_ByNameAndPets>()
                         .Where(user => user.Pets.ContainsAny(petsToSearchFor) || user.Name == "Michael")

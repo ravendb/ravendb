@@ -43,7 +43,7 @@ namespace SlowTests.Issues
 
                 new Users_ByAge().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(
                     "from index 'Users/ByAge' as u where u.Age > 11 update { u.Name = 'Patched'; } "

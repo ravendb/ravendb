@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                 }
 
                 new UsersIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

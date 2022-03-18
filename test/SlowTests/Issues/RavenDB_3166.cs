@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new EventsWithDates() { CreationTime = dt, Events = new Dictionary<DateTime, string>() { { dt, "Tal was born" }, { new DateTime(1576, 8, 13), "Something happened" } } });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var res = session.Query<EventsWithDates>()
                         .Customize(x => x.WaitForNonStaleResults())
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                 {
                     session.Store(new EventsWithDates2() { CreationTime = dt, Events = new Dictionary<string, DateTime> { { "Tal was born", dt }, { "Something happened", new DateTime(1576, 8, 13) } } });
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var res = session.Query<EventsWithDates2>()
                         .Customize(x => x.WaitForNonStaleResults())

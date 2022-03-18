@@ -52,7 +52,7 @@ namespace SlowTests.Tests.Suggestions
                 s.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         [Fact]
@@ -212,7 +212,7 @@ namespace SlowTests.Tests.Suggestions
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -249,7 +249,7 @@ namespace SlowTests.Tests.Suggestions
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -273,7 +273,7 @@ namespace SlowTests.Tests.Suggestions
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

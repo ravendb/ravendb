@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -57,8 +57,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 
                 // Check that we do not replicate tombstones of artificial documents
-                var database = await GetDocumentDatabaseInstanceFor(store1);
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     await session.StoreAsync(new OutputReduceToCollectionTests.Marker { Name = "Marker 2" }, "marker2");
                     await session.SaveChangesAsync();
                 }
-                WaitForIndexing(store1);
+                Indexes.WaitForIndexing(store1);
                 Assert.True(WaitForDocument(store2, "marker2"));
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))

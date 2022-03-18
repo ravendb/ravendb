@@ -81,7 +81,7 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
                 Assert.True(c >= 0);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 await cleaner.ExecuteCleanup();
 
                 c = 0;

@@ -19,14 +19,14 @@ public class RavenDB_17577 : RavenTestBase
     [Fact]
     public void WillRejectJsIndexDeploymentAsValidUserIfItIsRestrictedToAdminsOnly()
     {
-        var certificates = SetupServerAuthentication(customSettings: new Dictionary<string, string>
+        var certificates = Certificates.SetupServerAuthentication(customSettings: new Dictionary<string, string>
         {
             { RavenConfiguration.GetKey(x => x.Indexing.RequireAdminToDeployJavaScriptIndexes), "true"}
         });
 
         var dbName = GetDatabaseName();
-        var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-        var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+        var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+        var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
         {
             [dbName] = DatabaseAccess.ReadWrite
         }, SecurityClearance.ValidUser);

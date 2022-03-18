@@ -38,8 +38,8 @@ namespace StressTests.Issues
         [Fact]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -125,9 +125,9 @@ namespace StressTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
-            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
-            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
-            var sink2Db = await GetDocumentDatabaseInstanceFor(sinkStore2);
+            var hubDb = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore1);
+            var sink2Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore2);
 
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -177,8 +177,8 @@ namespace StressTests.Issues
         [Fact]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts2()
         {
-            var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -272,9 +272,9 @@ namespace StressTests.Issues
             EnsureReplicating(sinkStore1, sinkStore2);
             EnsureReplicating(sinkStore2, sinkStore1);
 
-            await WaitForConflict(hubStore, "common");
-            await WaitForConflict(sinkStore1, "common");
-            await WaitForConflict(sinkStore2, "common");
+            await Replication.WaitForConflict(hubStore, "common");
+            await Replication.WaitForConflict(sinkStore1, "common");
+            await Replication.WaitForConflict(sinkStore2, "common");
 
             await UpdateConflictResolver(hubStore, resolveToLatest: true);
 
@@ -282,9 +282,9 @@ namespace StressTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Source == "Hub"));
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "common", x => x.Source == "Hub"));
 
-            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
-            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
-            var sink2Db = await GetDocumentDatabaseInstanceFor(sinkStore2);
+            var hubDb = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore1);
+            var sink2Db = await Databases.GetDocumentDatabaseInstanceFor(sinkStore2);
 
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())

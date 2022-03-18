@@ -840,7 +840,7 @@ loadToOrders(partitionBy(['year', year], ['month', month], ['source', $customPar
                 {
                     await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 

@@ -45,7 +45,7 @@ namespace SlowTests.SlowTests.Issues
                     }
                 }
 
-                WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
+                Indexes.WaitForIndexing(store,timeout: TimeSpan.FromMinutes(2));
                 var queryToDelete = new IndexQuery()
                 {
                     Query = $"FROM INDEX '{stats.IndexName}'"
@@ -54,7 +54,7 @@ namespace SlowTests.SlowTests.Issues
                 var operation = store.Operations.Send(new DeleteByQueryOperation(queryToDelete));
                 operation.WaitForCompletion(TimeSpan.FromMinutes(2));
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));
+                Indexes.WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));
 
                 using (var session = store.OpenSession())
                 {

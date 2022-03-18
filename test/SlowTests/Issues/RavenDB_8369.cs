@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
 
                 using (var session = store.OpenSession())
                 {
@@ -132,7 +132,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
 
                 using (var session = store.OpenSession())
                 {
@@ -181,7 +181,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
 
                 using (var session = store.OpenSession())
                 {

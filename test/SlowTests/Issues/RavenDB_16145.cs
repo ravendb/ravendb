@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(new Companies_ByName().IndexName, "Name", null));
 

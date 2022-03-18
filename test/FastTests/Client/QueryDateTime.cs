@@ -55,7 +55,7 @@ namespace FastTests.Client
             {
                 var index = new PersonByDate();
                 store.ExecuteIndex(index);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

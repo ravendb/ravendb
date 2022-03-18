@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                     indexDefinition.Name = "MyClass/ByIndex";
                     store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var query = session.Query<MyClass>("MyClass/ByIndex")
                     .Select(x => new MyClass

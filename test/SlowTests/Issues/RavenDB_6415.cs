@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    var db = GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var db = Databases.GetDocumentDatabaseInstanceFor(storeA).Result;
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
                 //should throw concurrency exception because we use lower etag then max etag of existing conflicts
                 using (var session = storeA.OpenSession())
                 {
-                    var db = GetDocumentDatabaseInstanceFor(storeA).Result;
+                    var db = Databases.GetDocumentDatabaseInstanceFor(storeA).Result;
                     var cv = new ChangeVectorEntry[1];
                     cv[0] = new ChangeVectorEntry
                     {

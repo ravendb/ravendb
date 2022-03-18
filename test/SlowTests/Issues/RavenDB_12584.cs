@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                         },
                         Type = IndexType.Map
                     }));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysContainsAndIndexOf").Where(x => x.ContainsOfMyIntArray).OfType<ArraysUser>().ToArray().Length);
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysContainsAndIndexOf").Where(x => x.ContainsOfMyShortArray).OfType<ArraysUser>().ToArray().Length);
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
                         },
                         Type = IndexType.Map
                     }));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysContainsAndIndexOf").Where(x => x.IndexOfOfMyIntArray == 3).OfType<ArraysUser>().ToArray().Length);
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysContainsAndIndexOf").Where(x => x.IndexOfOfMyShortArray == 1).OfType<ArraysUser>().ToArray().Length);
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
                         },
                         Type = IndexType.Map
                     }));
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysLastIndexOf").Where(x => x.LastIndexOfOfMyIntArray == 3).OfType<ArraysUser>().ToArray().Length);
                     Assert.Equal(1, session.Query<Result>("TestIndexArraysLastIndexOf").Where(x => x.LastIndexOfOfMyShortArray == 1).OfType<ArraysUser>().ToArray().Length);

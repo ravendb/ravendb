@@ -102,7 +102,7 @@ namespace StressTests.Rachis.DatabaseCluster
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(src);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(src);
 
                 using (var session = src.OpenSession())
                 {

@@ -25,7 +25,7 @@ namespace SlowTests.Issues
 
             RavenServer leader = result.Leader;
 
-            X509Certificate2 clientCertificate = RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             var localNode = result.Nodes[0];
             var remoteNode = result.Nodes[1];

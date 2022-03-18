@@ -139,7 +139,7 @@ namespace SlowTests.Client.Counters
                 // wait for replication and verify that all 
                 // stores have the correct accumulated counter-value
 
-                Assert.True(WaitForCounterReplication(stores, "users/1", "likes", expected: 10 * clusterSize, timeout: TimeSpan.FromSeconds(15)));
+                Assert.True(Replication.WaitForCounterReplication(stores, "users/1", "likes", expected: 10 * clusterSize, timeout: TimeSpan.FromSeconds(15)));
 
                 await stores[0].Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, true));
 

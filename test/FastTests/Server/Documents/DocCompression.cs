@@ -75,7 +75,7 @@ namespace FastTests.Server.Documents
 
             op.WaitForCompletion();
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             var operation = store.Maintenance.Send(new GetStatisticsOperation());
 
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents
 
             op.WaitForCompletion();
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             var operation = store.Maintenance.Send(new GetStatisticsOperation());
 

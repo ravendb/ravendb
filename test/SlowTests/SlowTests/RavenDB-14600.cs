@@ -23,7 +23,7 @@ namespace SlowTests.SlowTests
         {
             using var store = GetDocumentStore();
             store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             using (var s = store.OpenSession())
             {
                 var facets = s.Query<Order>("Orders/Totals")
@@ -64,7 +64,7 @@ namespace SlowTests.SlowTests
             using var store = GetDocumentStore();
             store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents));
             new MyIndex().Execute(store);
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var s = store.OpenSession())
             {

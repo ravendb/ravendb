@@ -40,7 +40,7 @@ namespace SlowTests.Issues
 
                 new TimeSeries_Index().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

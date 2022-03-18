@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.Patching
                     }
                     await session.SaveChangesAsync();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var context = QueryOperationContext.ShortTermSingleUse(database))
                 {

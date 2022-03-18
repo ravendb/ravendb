@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
                     Assert.True(session.Advanced.RawQuery<JObject>("match (Orders as o where id() = 'orders/825-A') select o.Company").ToArray().Length > 0);

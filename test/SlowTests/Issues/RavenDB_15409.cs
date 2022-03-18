@@ -75,11 +75,11 @@ namespace SlowTests.Issues
             var (servers, leader) = await CreateRaftCluster(3);
             var _ = LoggingSource.Instance.Register(socket, new LoggingSource.WebSocketContext(), CancellationToken.None);
 
-            await WaitForRaftIndexToBeAppliedInCluster(9, TimeSpan.FromSeconds(15));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(9, TimeSpan.FromSeconds(15));
             var expected = new HashSet<long>();
             foreach (var server in servers)
             {
-                expected.Add(GetRaftCommands(server, nameof(UpdateLicenseLimitsCommand)).Count());
+                expected.Add(Cluster.GetRaftCommands(server, nameof(UpdateLicenseLimitsCommand)).Count());
             }
 
             if (expected.Count != 1)
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                     var massageBuilder = new StringBuilder();
                     foreach (var server in servers)
                     {
-                        var serverRaftCommands = GetRaftCommands(server).Select(c => ctx.ReadObject(c, "raftCommand").ToString());
+                        var serverRaftCommands = Cluster.GetRaftCommands(server).Select(c => ctx.ReadObject(c, "raftCommand").ToString());
 
                         massageBuilder
                             .AppendFormat("**** Node {0} ****", server.ServerStore.NodeTag).AppendLine()
@@ -115,10 +115,10 @@ namespace SlowTests.Issues
             {
                 await RavenTestHelper.AssertAllAsync(async () => await socket.CloseAndGetLogsAsync(), servers.Select(s => (Action)(() =>
                 {
-                    var actual = GetRaftCommands(s, nameof(UpdateLicenseLimitsCommand)).Count();
+                    var actual = Cluster.GetRaftCommands(s, nameof(UpdateLicenseLimitsCommand)).Count();
                     Assert.True(expected.Single() == actual, 
                         $"{s.ServerStore.NodeTag} expect {expected.Single()} actual {actual} " +
-                                $" {string.Join($"{Environment.NewLine}\t", GetRaftCommands(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
+                                $" {string.Join($"{Environment.NewLine}\t", Cluster.GetRaftCommands(s).Select(c => ctx.ReadObject(c, "raftCommand").ToString()))}");
                 })).ToArray());
             }
         }
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
 
             // demote node to watcher
             await leader.ServerStore.Engine.ModifyTopologyAsync(follower.ServerStore.NodeTag, follower.WebUrl, Leader.TopologyModification.NonVoter);
-            await WaitForRaftIndexToBeAppliedInCluster(10, TimeSpan.FromSeconds(15));
+            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(10, TimeSpan.FromSeconds(15));
         }
 
         public RavenDB_15409(ITestOutputHelper output) : base(output)

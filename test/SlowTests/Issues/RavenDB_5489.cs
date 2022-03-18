@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.Equal(IndexState.Normal, store.Maintenance.Send(new GetStatisticsOperation()).Indexes[0].State);
 
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
 
                 result = SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexErrorsOperation())[0].Errors.Length != 0 , TimeSpan.FromSeconds(5));
                 Assert.True(result);
-                var errors = WaitForIndexingErrors(store, new[] { new Users_ByName().IndexName });
+                var errors = Indexes.WaitForIndexingErrors(store, new[] { new Users_ByName().IndexName });
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains("Simulated corruption", errors[0].Errors[0].Error);
             }

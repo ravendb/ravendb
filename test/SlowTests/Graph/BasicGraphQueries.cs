@@ -49,7 +49,7 @@ namespace SlowTests.Graph
                 mutate?.Invoke(store);
                 if (parameters.WaitForIndexing)
                 {
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var s = store.OpenSession())
@@ -71,7 +71,7 @@ namespace SlowTests.Graph
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 foreach (var item in expected)
                 {
@@ -113,7 +113,7 @@ namespace SlowTests.Graph
 
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     IssueQuery(session);
@@ -222,7 +222,7 @@ include Lines.Product
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -243,7 +243,7 @@ include Lines.Product
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var movieIds = session.Advanced.RawQuery<JObject>(@"
@@ -251,7 +251,7 @@ include Lines.Product
                         select id(m) as MovieId
                     ").ToArray().Select(x => x["MovieId"].Value<string>()).Distinct().ToArray();
 
-                    Assert.Contains("movies/3",movieIds);
+                    Assert.Contains("movies/3", movieIds);
                     Assert.Equal(1, movieIds.Length);
                 }
             }
@@ -262,7 +262,7 @@ include Lines.Product
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var userIds = session.Advanced.RawQuery<JObject>(@"
@@ -270,7 +270,7 @@ include Lines.Product
                         select id(u) as UserId
                     ").ToArray().Select(x => x["UserId"].Value<string>()).Distinct().ToArray();
 
-                    Assert.DoesNotContain("users/3",userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
+                    Assert.DoesNotContain("users/3", userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
                     Assert.Equal(2, userIds.Length);
                 }
             }
@@ -281,7 +281,7 @@ include Lines.Product
         {
             using (var store = GetDocumentStore())
             {
-                CreateMoviesData(store);
+                Samples.CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
                     var userIds = session.Advanced.RawQuery<JObject>(@"
@@ -289,7 +289,7 @@ include Lines.Product
                         select id(u) as UserId
                     ").ToArray().Select(x => x["UserId"].Value<string>()).Distinct().ToArray();
 
-                    Assert.DoesNotContain("users/3",userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
+                    Assert.DoesNotContain("users/3", userIds); //only user with Id == 'users/3' didn't rate 'movies/2'
                     Assert.Equal(2, userIds.Length);
                 }
             }
@@ -355,12 +355,12 @@ select p", parameters: new StalenessParameters { WaitForIndexing = false, WaitFo
 with {from index 'Orders/Totals'} as o
 with {from index 'Product/Search'} as p
 match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
-select p", mutate: (store)=>
+select p", mutate: (store) =>
             {
                 // we need to reset those indexes, since our sample data is larger now and they will be non-stale until the import is completed
                 store.Maintenance.Send(new ResetIndexOperation("Orders/Totals"));
                 store.Maintenance.Send(new ResetIndexOperation("Product/Search"));
-            },parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0)}));
+            }, parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0) }));
         }
 
         [Fact]
@@ -431,7 +431,7 @@ match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
-                using (var s = store.OpenSession())                
+                using (var s = store.OpenSession())
                 {
                     //add self-cycle at "employees/2-A"
                     var e = s.Load<Employee>("employees/2-A");
@@ -446,7 +446,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                
+
                 Assert.Equal(new[] { "employees/5-A", "employees/2-A" }, item.MiddleManagement);
             }
         }

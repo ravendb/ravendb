@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Index.Result, Index>().Where(x => x.Age > 5);

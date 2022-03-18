@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     foreach (var index in indexes)
                     {

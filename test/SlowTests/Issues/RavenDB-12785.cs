@@ -33,11 +33,11 @@ if(collection == 'ShoppingCarts')
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var errors = WaitForIndexingErrors(store, new[] { "Events/ShoppingCart" }, errorsShouldExists: false);
+                    var errors = Indexes.WaitForIndexingErrors(store, new[] { "Events/ShoppingCart" }, errorsShouldExists: false);
                     Assert.Null(errors);
                     var count = await session.Advanced.AsyncRawQuery<object>("from ShoppingCarts").CountAsync();
                     Assert.Equal(1, count);

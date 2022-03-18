@@ -47,7 +47,7 @@ public class RavenDB_17566 : RavenTestBase
             await s.SaveChangesAsync();
         }
 
-        WaitForIndexing(store);
+        Indexes.WaitForIndexing(store);
 
         using (var s = store.OpenAsyncSession())
         {

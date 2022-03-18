@@ -64,7 +64,7 @@ namespace SlowTests.Tests.Suggestions
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(documentStore);
+                Indexes.WaitForIndexing(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {

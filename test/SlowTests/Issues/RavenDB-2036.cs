@@ -89,7 +89,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 new DynamicByNameIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

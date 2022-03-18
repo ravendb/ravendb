@@ -157,7 +157,7 @@ update {
                     }
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Maintenance.Send(new StopIndexingOperation());
 

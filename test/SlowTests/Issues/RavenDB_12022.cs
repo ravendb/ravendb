@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                         Assert.Equal(3, details.Counters[0].TotalValue);
 
                         // verify that we removed the counter-tombstones from tombstones table
-                        var db = GetDocumentDatabaseInstanceFor(store, databaseName).Result;
+                        var db = Databases.GetDocumentDatabaseInstanceFor(store, databaseName).Result;
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {

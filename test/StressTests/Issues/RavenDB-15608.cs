@@ -81,7 +81,7 @@ namespace StressTests.Issues
 
         private async Task AssertCounts(DocumentStore store)
         {
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenAsyncSession())
             {
