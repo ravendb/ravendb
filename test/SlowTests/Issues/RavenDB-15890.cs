@@ -34,7 +34,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void DisableAndEnableLocallyEndPoint()
+        public async Task DisableAndEnableLocallyEndPoint()
         {
             using (var store = GetDocumentStore())
             {
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new DisableIndexOperation("FakeIndex", false));
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance = db.IndexStore.GetIndex("FakeIndex");
 
                 Assert.Equal(IndexState.Disabled, indexInstance.State);

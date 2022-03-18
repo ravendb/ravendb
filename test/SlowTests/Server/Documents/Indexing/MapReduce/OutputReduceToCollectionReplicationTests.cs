@@ -57,8 +57,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);
 
                 // Check that we do not replicate tombstones of artificial documents
-                var database = await GetDocumentDatabaseInstanceFor(store1);
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 

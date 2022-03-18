@@ -6,12 +6,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -20,12 +18,10 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Tests.Infrastructure;
-using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -45,18 +41,7 @@ namespace FastTests
             Certificates = new CertificatesTestBase(this);
             Indexes = new IndexesTestBase(this);
             Replication = new ReplicationTestBase2(this);
-        }
-
-        protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
-        {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
-        }
-
-        protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
-        {
-            var database = await GetDocumentDatabaseInstanceFor(store);
-            var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
-            type.Environment.FillBase64Id(dbId);
+            Databases = new DatabasesTestBase(this);
         }
 
         private readonly object _getDocumentStoreSync = new object();
@@ -611,23 +596,6 @@ namespace FastTests
             CreatedStores.Clear();
         }
 
-        protected static IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
-        {
-            return new DisposableAction(() =>
-            {
-                try
-                {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseToDelete, hardDelete: true));
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to delete '{databaseToDelete}' database. Exception: " + e);
-
-                    // do not throw to not hide an exception that could be thrown in a test
-                }
-            });
-        }
-
         public class Options
         {
             private readonly bool _frozen;
@@ -810,76 +778,6 @@ namespace FastTests
             {
                 if (_frozen)
                     throw new InvalidOperationException("Options are frozen and cannot be changed.");
-            }
-        }
-
-        protected static void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
-        {
-            //This try catch is only to investigate RavenDB-15366 issue
-            try
-            {
-                session.SaveChanges();
-            }
-            catch (Exception e)
-            {
-                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
-                    throw;
-
-                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
-                {
-                    if (!(entity.Key is T t) || t != loaded)
-                        continue;
-
-                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
-                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
-                }
-            }
-        }
-
-        protected static async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
-        {
-            //This try catch is only to investigate RavenDB-15366 issue
-            try
-            {
-                await session.SaveChangesAsync();
-            }
-            catch (Exception e)
-            {
-                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
-                    throw;
-
-                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
-                {
-                    if (!(entity.Key is T u) || u != loaded)
-                        continue;
-
-                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
-                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
-                }
-            }
-        }
-
-        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId, [CallerMemberName] string caller = null)
-        {
-            AsyncHelpers.RunSync(() => WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId));
-        }
-
-        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId, [CallerMemberName] string caller = null)
-        {
-            //This function is only to investigate RavenDB-15366 issue
-
-            var db = await GetDatabase(storeDatabase);
-            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var doc = db.DocumentsStorage.Get(context, docId);
-
-                var sb = new StringBuilder();
-                sb.AppendLine($"Test: '{caller}'. Document: '{docId}'. Data:");
-                sb.AppendLine(doc.Data.ToString());
-
-                Output?.WriteLine(sb.ToString());
-                Console.WriteLine(sb.ToString());
             }
         }
     }

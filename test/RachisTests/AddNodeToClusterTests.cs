@@ -337,7 +337,7 @@ namespace RachisTests
                 Urls = new[] { leader.WebUrl },
                 Database = db
             }.Initialize())
-            using (EnsureDatabaseDeletion(db, store))
+            using (Databases.EnsureDatabaseDeletion(db, store))
             {
                 var hasDisconnected = await WaitForValueAsync(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected == false), 1) == 1;
                 Assert.True(hasDisconnected);

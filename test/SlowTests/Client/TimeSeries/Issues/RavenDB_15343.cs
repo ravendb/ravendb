@@ -51,7 +51,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                var masterDb = await GetDocumentDatabaseInstanceFor(master);
+                var masterDb = await Databases.GetDocumentDatabaseInstanceFor(master);
                 using (var controller = new ReplicationController(masterDb))
                 {
                     await SetupReplicationAsync(master, slave);
@@ -69,7 +69,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var master = GetDocumentStore())
             using (var slave = GetDocumentStore())
             {
-                var masterDb = await GetDocumentDatabaseInstanceFor(master);
+                var masterDb = await Databases.GetDocumentDatabaseInstanceFor(master);
                 using (var controller = new ReplicationController(masterDb))
                 {
                     

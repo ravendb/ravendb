@@ -824,7 +824,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(1, stats.CountOfDocuments); // the marker
                     Assert.Equal(2, stats.CountOfTombstones);
 
-                    var storage = await GetDocumentDatabaseInstanceFor(store);
+                    var storage = await Databases.GetDocumentDatabaseInstanceFor(store);
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {

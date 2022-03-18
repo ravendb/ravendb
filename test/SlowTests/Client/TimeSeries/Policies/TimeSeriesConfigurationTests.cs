@@ -102,7 +102,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     },
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var runner = db.TimeSeriesPolicyRunner;
 
 
@@ -493,7 +493,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -560,7 +560,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
@@ -661,7 +661,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -714,7 +714,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 using (var session = store.OpenSession())
@@ -764,7 +764,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
                 using (var session = store.OpenSession())
@@ -836,7 +836,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
@@ -931,7 +931,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
 
@@ -996,7 +996,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
@@ -1056,7 +1056,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1115,7 +1115,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1176,7 +1176,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1232,7 +1232,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1316,7 +1316,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 WaitForUserToContinueTheTest(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1367,7 +1367,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 EnsureReplicating(storeA, storeB);
-                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
                 await b.TombstoneCleaner.ExecuteCleanup();
                 await b.TimeSeriesPolicyRunner.RunRollups();
             }
@@ -1596,7 +1596,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
@@ -1658,7 +1658,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1704,7 +1704,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1778,7 +1778,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
@@ -1856,7 +1856,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await TimeSeries.WaitForPolicyRunnerAsync(database);
 
                 List<string> tsNames = default;

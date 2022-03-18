@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                 var index = new Orders_ByOrderBy();
                 index.Execute(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexInstance1 = database.IndexStore.GetIndex(index.IndexName);
 
                 Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion, indexInstance1.Definition.Version);
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
                 Assert.Contains("ShippedAt", indexTimeFields);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
-                database = await GetDocumentDatabaseInstanceFor(store);
+                database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var indexInstance2 = database.IndexStore.GetIndex(index.IndexName);
                 Assert.NotEqual(indexInstance1, indexInstance2);

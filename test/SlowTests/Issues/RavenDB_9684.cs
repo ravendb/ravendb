@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                 Assert.Null(store.Database);
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
 
-                using (EnsureDatabaseDeletion(database, store))
+                using (Databases.EnsureDatabaseDeletion(database, store))
                 using (var session = store.OpenSession(database))
                 {
                     session.Query<Document>()

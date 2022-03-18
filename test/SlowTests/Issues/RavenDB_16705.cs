@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                var documentDatabase = (await GetDocumentDatabaseInstanceFor(source));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(source));
                 var documentsStorage = documentDatabase.DocumentsStorage;
 
                 using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

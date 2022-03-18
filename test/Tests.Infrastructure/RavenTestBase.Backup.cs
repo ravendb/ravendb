@@ -232,7 +232,7 @@ namespace FastTests
                 var operation = store.Maintenance.Server.Send(restoreOperation);
                 operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
-                return EnsureDatabaseDeletion(config.DatabaseName, store);
+                return _parent.Databases.EnsureDatabaseDeletion(config.DatabaseName, store);
             }
 
             public IDisposable RestoreDatabaseFromCloud(IDocumentStore store, RestoreBackupConfigurationBase config, TimeSpan? timeout = null)
@@ -242,7 +242,7 @@ namespace FastTests
                 var operation = store.Maintenance.Server.Send(restoreOperation);
                 operation.WaitForCompletion(timeout ?? TimeSpan.FromMilliseconds(_reasonableTimeout * 2));
 
-                return EnsureDatabaseDeletion(config.DatabaseName, store);
+                return _parent.Databases.EnsureDatabaseDeletion(config.DatabaseName, store);
             }
 
             public long GetBackupOperationId(IDocumentStore store, long taskId) => AsyncHelpers.RunSync(() => GetBackupOperationIdAsync(store, taskId));

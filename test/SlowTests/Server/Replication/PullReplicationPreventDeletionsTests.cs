@@ -92,7 +92,7 @@ namespace SlowTests.Server.Replication
                 await s.SaveChangesAsync();
             }
 
-            var sinkDatabaseInstance = await GetDocumentDatabaseInstanceFor(sinkStore);
+            var sinkDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(sinkStore);
             sinkDatabaseInstance.ForTestingPurposes.ForceSendTombstones = true;
 
             await EnsureReplicatingAsync(hubStore, sinkStore);
@@ -110,7 +110,7 @@ namespace SlowTests.Server.Replication
 
             Assert.True(WaitForDocument(sinkStore, "users/inhub/1"));
 
-            var hubDatabaseInstance = await GetDocumentDatabaseInstanceFor(hubStore);
+            var hubDatabaseInstance = await Databases.GetDocumentDatabaseInstanceFor(hubStore);
             bool expectedError = false;
             string lastError = null;
             hubDatabaseInstance.ReplicationLoader.IncomingHandlers.ToArray()[0].Failed += (handler, exception) =>

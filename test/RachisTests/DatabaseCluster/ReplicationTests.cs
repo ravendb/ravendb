@@ -1086,7 +1086,7 @@ namespace RachisTests.DatabaseCluster
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store1);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 var handlers = new HashSet<OutgoingReplicationHandler>();
 
                 database.ReplicationLoader.OutgoingReplicationAdded += handler =>
@@ -1131,7 +1131,7 @@ namespace RachisTests.DatabaseCluster
             using (var src = GetDocumentStore())
             using (var dst = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(src);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(src);
 
                 using (var session = src.OpenSession())
                 {

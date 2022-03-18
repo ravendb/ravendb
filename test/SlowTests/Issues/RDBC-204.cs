@@ -237,14 +237,12 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     // explicitly specify id & type
                     session.Advanced.Patch<User, ulong>(_docId, u => u.Ulong, 123);
                     session.SaveChanges();
                 }
-                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
@@ -252,7 +250,8 @@ namespace SlowTests.Issues
                     Assert.Equal((ulong)123, loaded.Ulong);
 
                     session.Advanced.Patch<User, ulong>(loaded, u => u.Ulong, 234);
-                    SaveChangesWithTryCatch(session, loaded);
+
+                    session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())

@@ -58,7 +58,7 @@ namespace SlowTests.RecoveryTests
             var recoveredPath = Path.Combine(rootPath, "recovery");
 
             using (var serverStore = GetDocumentStore(new Options { CreateDatabase = false }))
-            using (EnsureDatabaseDeletion(badName, serverStore))
+            using (Databases.EnsureDatabaseDeletion(badName, serverStore))
             {
                 using (var store = GetDocumentStore(
                     new Options

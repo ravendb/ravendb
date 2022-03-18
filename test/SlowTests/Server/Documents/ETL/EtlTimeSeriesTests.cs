@@ -1661,7 +1661,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(src);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(src);
                 long lastEtag;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())

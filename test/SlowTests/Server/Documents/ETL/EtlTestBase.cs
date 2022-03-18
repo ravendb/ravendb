@@ -144,7 +144,7 @@ namespace SlowTests.Server.Documents.ETL
 
         private async Task<string[]> GetEtlErrorNotifications(DocumentStore src)
         {
-            var databaseInstanceFor = await GetDocumentDatabaseInstanceFor(src);
+            var databaseInstanceFor = await Databases.GetDocumentDatabaseInstanceFor(src);
             using (databaseInstanceFor.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
             {
                 var notifications = storedNotifications

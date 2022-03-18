@@ -455,7 +455,7 @@ namespace SlowTests.Client.Subscriptions
                     Assert.Equal(newQuery, newState.Query);
                     Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
-                    var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                    var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                     using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -539,7 +539,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -630,7 +630,7 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
-                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store, store.Database);
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -1117,7 +1117,7 @@ namespace SlowTests.Client.Subscriptions
 
                 var t2 = worker2.Run(x => { });
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var testingStuff = db.ForTestingPurposesOnly();
 
                 var subscriptionInterrupt = new AsyncManualResetEvent();

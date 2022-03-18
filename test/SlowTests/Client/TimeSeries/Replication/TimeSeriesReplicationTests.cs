@@ -192,7 +192,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                     Assert.Equal("HeArtRate", session.Advanced.GetTimeSeriesFor(user).Single());
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(storeA);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(storeA);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -744,10 +744,10 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 EnsureReplicating(storeA, storeB);
                 
-                var a = await GetDocumentDatabaseInstanceFor(storeA);
+                var a = await Databases.GetDocumentDatabaseInstanceFor(storeA);
                 await AssertNoLeftOvers(a);
 
-                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
                 await AssertNoLeftOvers(b);
             }
         }
@@ -817,10 +817,10 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 EnsureReplicating(storeA, storeB);
                 
-                var a = await GetDocumentDatabaseInstanceFor(storeA);
+                var a = await Databases.GetDocumentDatabaseInstanceFor(storeA);
                 await AssertNoLeftOvers(a);
 
-                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                var b = await Databases.GetDocumentDatabaseInstanceFor(storeB);
                 await AssertNoLeftOvers(b);
             }
         }

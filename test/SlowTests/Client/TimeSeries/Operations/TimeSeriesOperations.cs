@@ -1063,7 +1063,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = new DateTime(2020, 4, 2).AddMinutes(minutesOffset);
                 database.Time.UtcDateTime = () => now.AddMilliseconds(1);

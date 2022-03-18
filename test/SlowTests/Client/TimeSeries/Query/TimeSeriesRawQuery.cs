@@ -159,7 +159,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     if (agg.Count != 3)
                     {
-                        var db = GetDocumentDatabaseInstanceFor(store).Result;
+                        var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
                         var tss = db.DocumentsStorage.TimeSeriesStorage;
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())

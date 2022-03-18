@@ -24,7 +24,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var result = ExecuteScript(database, @"
                                 return { 
@@ -58,7 +58,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var startTime = database.StartTime;
 
                 var result = ExecuteScript(database, @"
@@ -74,7 +74,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var maxConcurrentFlushes = (long)database.Configuration.Storage.MaxConcurrentFlushes;
 
                 var result = ExecuteScript(database, @"
@@ -106,7 +106,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var requestsMeter = database.Metrics.Requests.RequestsPerSec;
 
                 using (var session = store.OpenSession())
@@ -140,7 +140,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 // Load the database and use it
                 using (var session = store.OpenSession())
@@ -169,7 +169,7 @@ namespace SlowTests.Core.AdminConsole
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var configuration = database.Configuration;
 
                 Assert.True(configuration.Core.ThrowIfAnyIndexCannotBeOpened);

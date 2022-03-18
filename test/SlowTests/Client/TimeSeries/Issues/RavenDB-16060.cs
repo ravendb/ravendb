@@ -493,7 +493,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await store.TimeSeries.RegisterAsync<User, StockPrice>();
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;
@@ -569,7 +569,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 await store.TimeSeries.RegisterAsync<User, StockPrice>();
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
                 var nowMinutes = now.Minute;

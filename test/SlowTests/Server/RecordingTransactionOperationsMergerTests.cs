@@ -456,7 +456,7 @@ namespace SlowTests.Server
                 store.Commands().Delete(id, null);
 
                 //Wait for all tombstones to exhaust their purpose
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     await WaitFor(() =>
                     {
@@ -479,7 +479,7 @@ namespace SlowTests.Server
                 store.Commands().Execute(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -515,7 +515,7 @@ namespace SlowTests.Server
                     session.SaveChanges();
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
@@ -617,7 +617,7 @@ namespace SlowTests.Server
                 var command = new OutgoingReplicationHandler.UpdateSiblingCurrentEtag(message, new AsyncManualResetEvent());
                 command.Init();
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
@@ -631,7 +631,7 @@ namespace SlowTests.Server
                 store.Commands().Execute(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -658,7 +658,7 @@ namespace SlowTests.Server
                 var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(
                     expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent(), isHub: false);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 await database.TxMerger.Enqueue(command);
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
@@ -672,7 +672,7 @@ namespace SlowTests.Server
                 store.Commands().Execute(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -1387,7 +1387,7 @@ namespace SlowTests.Server
                     session.SaveChanges();
                 }
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     var result = await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,

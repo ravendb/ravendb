@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.Indexing
 
                 Indexes.WaitForIndexing(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var index = database.IndexStore.GetIndex("Users/ByName");
 
                 var collector = new LiveIndexingPerformanceCollector(database, new[] { index.Name });
@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.Indexing
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 new UsersByName().Execute(store);
                 
