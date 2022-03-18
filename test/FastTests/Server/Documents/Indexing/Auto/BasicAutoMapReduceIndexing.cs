@@ -264,7 +264,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.NotNull(index);
 
                 var task1 = database.IndexStore.LockMode.SetLockAsync(index.Name, IndexLockMode.LockedError, Guid.NewGuid().ToString());
-                var task2 = database.IndexStore.SetPriority(index.Name, IndexPriority.High, Guid.NewGuid().ToString());
+                var task2 = database.IndexStore.Priority.SetPriorityAsync(index.Name, IndexPriority.High, Guid.NewGuid().ToString());
                 index.SetState(IndexState.Disabled);
                 var task = Task.WhenAll(task1, task2);
                 

@@ -1,9 +1,14 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,10 +20,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public void set_index_priority()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void set_index_priority(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index = new SampleIndex
                 {
@@ -28,27 +34,23 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.Normal));
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
-
-                Assert.Equal(IndexPriority.Normal, stats.Priority);
+                AssertIndex(store, options, "SampleIndex", stats => Assert.Equal(IndexPriority.Normal, stats.Priority));
 
                 store.Maintenance.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.Low));
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
-
-                Assert.Equal(IndexPriority.Low, stats.Priority);
+                AssertIndex(store, options, "SampleIndex", stats => Assert.Equal(IndexPriority.Low, stats.Priority));
 
                 store.Maintenance.Send(new SetIndexesPriorityOperation("SampleIndex", IndexPriority.High));
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex");
-
-                Assert.Equal(IndexPriority.High, stats.Priority);
+                AssertIndex(store, options, "SampleIndex", stats => Assert.Equal(IndexPriority.High, stats.Priority));
             }
         }
-        [Fact]
-        public void set_index_priority_through_index_definition()
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+        public void set_index_priority_through_index_definition(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var index1 = new SampleIndex1
                 {
@@ -56,8 +58,7 @@ namespace SlowTests.Issues
                 };
                 index1.Execute(store);
 
-                var stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex1");
-                Assert.Equal(IndexPriority.High, stats.Priority);
+                AssertIndex(store, options, "SampleIndex1", stats => Assert.Equal(IndexPriority.High, stats.Priority));
 
                 var index2 = new SampleIndex2
                 {
@@ -65,8 +66,7 @@ namespace SlowTests.Issues
                 };
                 index2.Execute(store);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex2");
-                Assert.Equal(IndexPriority.Low, stats.Priority);
+                AssertIndex(store, options, "SampleIndex2", stats => Assert.Equal(IndexPriority.Low, stats.Priority));
 
                 var index3 = new SampleIndex3
                 {
@@ -74,8 +74,7 @@ namespace SlowTests.Issues
                 };
                 index3.Execute(store);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex3");
-                Assert.Equal(IndexPriority.Low, stats.Priority);
+                AssertIndex(store, options, "SampleIndex3", stats => Assert.Equal(IndexPriority.Low, stats.Priority));
 
                 var index4 = new SampleIndex4
                 {
@@ -83,9 +82,25 @@ namespace SlowTests.Issues
                 };
                 index4.Execute(store);
 
-                stats = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "SampleIndex4");
-                Assert.Equal(IndexPriority.Normal, stats.Priority);
+                AssertIndex(store, options, "SampleIndex4", stats => Assert.Equal(IndexPriority.Normal, stats.Priority));
             }
+        }
+
+        private static void AssertIndex(IDocumentStore store, Options options, string indexName, Action<IndexInformation> assert)
+        {
+            if (options.DatabaseMode == RavenDatabaseMode.Sharded)
+            {
+                var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+
+                for (var i = 0; i < databaseRecord.Shards.Length; i++)
+                {
+                    assert(store.Maintenance.ForShard(i).Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == indexName));
+                }
+
+                return;
+            }
+
+            assert(store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == indexName));
         }
 
         private class SampleIndex : AbstractIndexCreationTask<Employee>

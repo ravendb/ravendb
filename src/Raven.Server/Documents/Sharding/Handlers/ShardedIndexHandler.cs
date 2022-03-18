@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Processors;
+using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -64,6 +65,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task SetLockMode()
         {
             using (var processor = new ShardedIndexHandlerProcessorForSetLockMode(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/indexes/set-priority", "POST")]
+        public async Task SetPriority()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForSetPriority(this))
                 await processor.ExecuteAsync();
         }
 

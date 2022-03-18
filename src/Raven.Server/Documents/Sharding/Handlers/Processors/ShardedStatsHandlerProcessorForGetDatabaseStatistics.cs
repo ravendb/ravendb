@@ -4,10 +4,9 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Sharding.Processors
+namespace Raven.Server.Documents.Sharding.Handlers.Processors
 {
     internal class ShardedStatsHandlerProcessorForGetDatabaseStatistics : AbstractStatsHandlerProcessorForGetDatabaseStatistics<ShardedRequestHandler, TransactionOperationContext>
     {

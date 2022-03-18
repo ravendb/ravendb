@@ -537,20 +537,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
         public async Task SetPriority()
         {
-            var raftRequestId = GetRaftRequestIdFromQuery();
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/set-priority");
-                var parameters = JsonDeserializationServer.Parameters.SetIndexPriorityParameters(json);
-
-                for (var index = 0; index < parameters.IndexNames.Length; index++)
-                {
-                    var name = parameters.IndexNames[index];
-                    await Database.IndexStore.Priority.SetPriorityAsync(name, parameters.Priority, $"{raftRequestId}/{index}");
-                }
-
-                NoContentStatus();
-            }
+            using (var processor = new IndexHandlerProcessorForSetPriority(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/errors", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
