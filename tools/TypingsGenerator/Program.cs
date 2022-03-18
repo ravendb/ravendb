@@ -97,6 +97,7 @@ using Raven.Server.Utils.IoMetrics;
 using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Raven.Server.Web.System.Processors;
+using Raven.Server.Web.System.Processors.CompareExchange;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;

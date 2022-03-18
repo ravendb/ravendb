@@ -9,7 +9,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.Studio.Processors;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Studio;
 
 internal class StudioIndexHandlerProcessorForGetIndexErrorsCount : AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<DatabaseRequestHandler, DocumentsOperationContext>
 {

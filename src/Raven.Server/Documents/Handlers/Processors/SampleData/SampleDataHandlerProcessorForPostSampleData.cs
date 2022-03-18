@@ -7,7 +7,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
     internal class SampleDataHandlerProcessorForPostSampleData : AbstractSampleDataHandlerProcessorForPostSampleData<DatabaseRequestHandler, DocumentsOperationContext>
     {
