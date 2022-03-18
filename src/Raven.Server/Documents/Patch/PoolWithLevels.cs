@@ -7,7 +7,7 @@ using V8.Net;
 namespace Raven.Server.Documents.Patch
 {
     public class PoolWithLevels<TValue>
-        where TValue : IDisposable, new()
+        where TValue : class, IDisposable, new()
     {
         public struct PooledValue : IDisposable
         {
@@ -18,12 +18,13 @@ namespace Raven.Server.Documents.Patch
             {
                 Value = value;
                 _pool = pool;
-                _pool.IncrementLevel(value);
+                _pool?.IncrementLevel(value);
             }
 
             public void Dispose()
             {
-                _pool.DecrementLevel(Value);
+                _pool?.DecrementLevel(Value);
+                Value = null;
             }
         }
 
