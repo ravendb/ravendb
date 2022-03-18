@@ -28,9 +28,15 @@ namespace Raven.Client.Documents.Operations.Indexes
             private readonly int _pageSize;
 
             public GetIndexNamesCommand(int start, int pageSize)
+                : this(start, pageSize, nodeTag: null)
+            {
+            }
+
+            internal GetIndexNamesCommand(int start, int pageSize, string nodeTag)
             {
                 _start = start;
                 _pageSize = pageSize;
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

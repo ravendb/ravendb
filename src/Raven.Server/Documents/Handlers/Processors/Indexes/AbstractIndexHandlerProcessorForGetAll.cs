@@ -24,7 +24,7 @@ internal abstract class AbstractIndexHandlerProcessorForGetAll<TRequestHandler, 
         return RequestHandler.GetStringQueryString("name", required: false);
     }
 
-    protected override RavenCommand<IndexDefinition[]> CreateCommandForNode(string nodeTag) => new GetIndexesOperation.GetIndexesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize());
+    protected override RavenCommand<IndexDefinition[]> CreateCommandForNode(string nodeTag) => new GetIndexesOperation.GetIndexesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize(), nodeTag);
 
     protected override async ValueTask WriteResultAsync(IndexDefinition[] result)
     {

@@ -22,7 +22,7 @@ internal abstract class AbstractIndexHandlerProcessorForGetAllNames<TRequestHand
         return RequestHandler.GetStringQueryString("name", required: false);
     }
 
-    protected override RavenCommand<string[]> CreateCommandForNode(string nodeTag) => new GetIndexNamesOperation.GetIndexNamesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize());
+    protected override RavenCommand<string[]> CreateCommandForNode(string nodeTag) => new GetIndexNamesOperation.GetIndexNamesCommand(RequestHandler.GetStart(), RequestHandler.GetPageSize(), nodeTag);
 
     protected override async ValueTask WriteResultAsync(string[] result)
     {
