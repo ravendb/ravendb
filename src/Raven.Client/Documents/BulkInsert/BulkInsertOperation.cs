@@ -321,8 +321,24 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_stream == null)
                 {
+                    if (DebugConsoleWritelines)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Before wait for ID");
+                    }
                     await WaitForId().ConfigureAwait(false);
+                    if (DebugConsoleWritelines)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} After wait for ID");
+                    }
+                    if (DebugConsoleWritelines)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Before ensure stream");
+                    }
                     await EnsureStream().ConfigureAwait(false);
+                    if (DebugConsoleWritelines)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} After ensure stream");
+                    }
                 }
 
                 if (_bulkInsertExecuteTask.IsFaulted)
@@ -492,7 +508,15 @@ namespace Raven.Client.Documents.BulkInsert
 
             _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 
+            if (DebugConsoleWritelines)
+            {
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} Before _streamExposerContent.OutputStream");
+            }
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
+            if (DebugConsoleWritelines)
+            {
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} After _streamExposerContent.OutputStream");
+            }
 
             _requestBodyStream = _stream;
             if (CompressionLevel != CompressionLevel.NoCompression)
