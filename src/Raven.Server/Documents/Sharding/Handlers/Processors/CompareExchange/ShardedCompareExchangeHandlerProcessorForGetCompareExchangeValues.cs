@@ -1,9 +1,9 @@
 ﻿using JetBrains.Annotations;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Web.System.Processors;
+using Raven.Server.Web.System.Processors.CompareExchange;
 using Sparrow.Utils;
 
-namespace Raven.Server.Documents.Sharding.Handlers.Processors;
+namespace Raven.Server.Documents.Sharding.Handlers.Processors.CompareExchange;
 
 internal class ShardedCompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<ShardedRequestHandler>
 {

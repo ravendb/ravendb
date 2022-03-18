@@ -15,7 +15,7 @@ using Raven.Server.Web;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.SampleData
 {
     internal abstract class AbstractSampleDataHandlerProcessorForPostSampleData<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler

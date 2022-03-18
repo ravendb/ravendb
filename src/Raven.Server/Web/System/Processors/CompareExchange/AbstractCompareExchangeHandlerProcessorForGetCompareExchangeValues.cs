@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Web.System.Processors;
+namespace Raven.Server.Web.System.Processors.CompareExchange;
 
 internal abstract class AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<TRequestHandler> : AbstractHandlerProcessor<TRequestHandler, TransactionOperationContext>
     where TRequestHandler : RequestHandler

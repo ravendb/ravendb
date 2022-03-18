@@ -4,7 +4,7 @@ using Raven.Server.Documents.Studio;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
     internal abstract class AbstractStudioStatsHandlerProcessorForGetFooterStats<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler

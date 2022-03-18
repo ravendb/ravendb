@@ -6,7 +6,7 @@ using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Stats
 {
     internal abstract class AbstractStatsHandlerProcessorForGetDatabaseStatistics<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<DatabaseStatistics, TRequestHandler, TOperationContext>
         where TRequestHandler : RequestHandler

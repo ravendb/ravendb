@@ -4,9 +4,8 @@ using JetBrains.Annotations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
     internal class StudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<DatabaseRequestHandler, DocumentsOperationContext>
     {

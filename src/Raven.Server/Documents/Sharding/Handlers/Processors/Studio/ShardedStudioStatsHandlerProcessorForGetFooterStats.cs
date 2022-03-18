@@ -2,13 +2,13 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Http;
-using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.Handlers.Processors.Studio;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Sharding.Operations;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Sharding.Handlers.Processors
+namespace Raven.Server.Documents.Sharding.Handlers.Processors.Studio
 {
     internal class ShardedStudioStatsHandlerProcessorForGetFooterStats : AbstractStudioStatsHandlerProcessorForGetFooterStats<ShardedRequestHandler, TransactionOperationContext>
     {

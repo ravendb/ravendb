@@ -2,7 +2,7 @@
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications.Details;
 
-namespace Raven.Server.Web.System.Processors;
+namespace Raven.Server.Web.System.Processors.CompareExchange;
 
 internal class CompareExchangeHandlerProcessorForGetCompareExchangeValues : AbstractCompareExchangeHandlerProcessorForGetCompareExchangeValues<DatabaseRequestHandler>
 {
