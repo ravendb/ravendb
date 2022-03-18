@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         internal class PutIndexParameters
         {
-            public PutIndexParameters(RequestHandler requestHandler, bool validatedAsAdmin, TransactionContextPool contextPool, 
+            public PutIndexParameters(RequestHandler requestHandler, bool validatedAsAdmin, TransactionContextPool contextPool,
                 string databaseName, Func<(IndexDefinition IndexDefinition, string RaftRequestId, string Source), Task<long>> putIndexTask,
                 Func<(JsonOperationContext Context, List<long> RaftIndexIds), Task> waitForIndexNotification = null)
             {
@@ -205,45 +205,15 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/indexes/enable", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Enable()
         {
-            var raftRequestId = GetRaftRequestIdFromQuery();
-            var name = GetStringQueryString("name");
-            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            if (clusterWide)
-            {
-                await Database.IndexStore.SetState(name, IndexState.Normal, $"{raftRequestId}/{index}");
-            }
-            else
-            {
-                index.Enable();
-            }
-
-            NoContentStatus();
+            using (var processor = new AdminIndexHandlerProcessorForState(IndexState.Normal, this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task Disable()
         {
-            var raftRequestId = GetRaftRequestIdFromQuery();
-            var name = GetStringQueryString("name");
-            var clusterWide = GetBoolValueQueryString("clusterWide", false) ?? false;
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            if (clusterWide)
-            {
-                await Database.IndexStore.SetState(name, IndexState.Disabled, $"{raftRequestId}/{index}");
-            }
-            else
-            {
-                index.Disable();
-            }
-
-            NoContentStatus();
+            using (var processor = new AdminIndexHandlerProcessorForState(IndexState.Disabled, this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]

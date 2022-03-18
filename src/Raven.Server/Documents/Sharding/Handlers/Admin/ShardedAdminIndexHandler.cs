@@ -56,6 +56,20 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/admin/indexes/enable", "POST")]
+        public async Task Enable()
+        {
+            using (var processor = new ShardedAdminIndexHandlerProcessorForState(IndexState.Normal, this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/indexes/disable", "POST")]
+        public async Task Disable()
+        {
+            using (var processor = new ShardedAdminIndexHandlerProcessorForState(IndexState.Disabled, this))
+                await processor.ExecuteAsync();
+        }
+
         private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
         {
             if (args.IndexDefinition == null)

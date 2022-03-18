@@ -6,7 +6,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 
-internal class AdminIndexHandlerProcessorForStop : AbstractAdminIndexHandlerProcessorForStart<DatabaseRequestHandler, DocumentsOperationContext>
+internal class AdminIndexHandlerProcessorForStop : AbstractAdminIndexHandlerProcessorForStop<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AdminIndexHandlerProcessorForStop([NotNull] DatabaseRequestHandler requestHandler)
         : base(requestHandler, requestHandler.ContextPool)

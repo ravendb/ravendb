@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly DatabaseIndexPriorityProcessor Priority;
 
+        public readonly DatabaseIndexStateProcessor State;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
@@ -89,6 +91,7 @@ namespace Raven.Server.Documents.Indexes
 
             LockMode = new DatabaseIndexLockModeProcessor(documentDatabase);
             Priority = new DatabaseIndexPriorityProcessor(documentDatabase);
+            State = new DatabaseIndexStateProcessor(documentDatabase);
 
             Logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
 
@@ -2341,26 +2344,6 @@ namespace Raven.Server.Documents.Indexes
                     throw;
                 }
             }
-        }
-
-        public async Task SetState(string name, IndexState state, string raftRequestId)
-        {
-            var index = GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            var faultyInMemoryIndex = index as FaultyInMemoryIndex;
-            if (faultyInMemoryIndex != null)
-            {
-                faultyInMemoryIndex.SetState(state); // this will throw proper exception
-                return;
-            }
-
-            var command = new SetIndexStateCommand(name, state, _documentDatabase.Name, raftRequestId);
-
-            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public IndexMergeResults ProposeIndexMergeSuggestions()
