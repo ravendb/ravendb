@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new GetIndexNamesCommand(_start, _pageSize);
         }
 
-        private class GetIndexNamesCommand : RavenCommand<string[]>
+        internal class GetIndexNamesCommand : RavenCommand<string[]>
         {
             private readonly int _start;
             private readonly int _pageSize;
