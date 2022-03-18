@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Patch.V8
             _implicitNull.SetKind(false);
 
             _explicitNull = Engine.CreateObjectTemplate().CreateObject<DynamicJsNullV8>();
-            _implicitNull.SetKind(true);*/
+            _explicitNull.SetKind(true);*/
 
 
             
