@@ -52,14 +52,37 @@ namespace FastTests.Client
                 ModifyDatabaseName = s => dbName
             }))
             {
+
+                if (useSsl)
+                {
+                    store.GetRequestExecutor(dbName).DebugConsoleWriteLines = true;
+
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} starting bulk insert");
+                }
+
+
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)
                     {
+                        string id = "foobar/" + i;
+
+                        if (useSsl)
+                        {
+                            bulkInsert.DebugConsoleWritelines = true;
+
+                            Console.WriteLine($"DEBUG: {DateTime.UtcNow} storing {id}");
+                        }
+
                         await bulkInsert.StoreAsync(new FooBar()
                         {
-                            Name = "foobar/" + i
+                            Name = id
                         }, "FooBars/" + i);
+
+                        if (useSsl)
+                        {
+                            Console.WriteLine($"DEBUG: {DateTime.UtcNow} Document with ID {id} stored");
+                        }
                     }
                 }
 

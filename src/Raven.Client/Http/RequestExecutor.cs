@@ -1389,6 +1389,11 @@ namespace Raven.Client.Http
         private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, string url, SessionInfo sessionInfo, bool shouldRetry, CancellationToken token = default)
         {
+            if (DebugConsoleWriteLines)
+            {
+                Console.WriteLine($"DEBUG: {DateTime.UtcNow} HandleUnsuccessfulResponse: url - {url}, status code - {response.StatusCode}");
+            }
+
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
@@ -1487,6 +1492,8 @@ namespace Raven.Client.Http
 
             return serverStream;
         }
+
+        public bool DebugConsoleWriteLines = false;
 
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command,
             HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo, bool shouldRetry, RequestContext requestContext = null, CancellationToken token = default)
@@ -1790,7 +1797,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private static async Task<Exception> ReadExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)
+        private async Task<Exception> ReadExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
             {
@@ -1818,6 +1825,10 @@ namespace Raven.Client.Http
                     }, response.StatusCode, e);
                 }
             }
+
+            if (DebugConsoleWriteLines)
+                Console.WriteLine($"DEBUG: Request failed without any response: {request.RequestUri} {Environment.NewLine} Exception: {e}");
+
             //this would be connections that didn't have response, such as "couldn't connect to remote server"
             return ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {

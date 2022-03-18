@@ -98,8 +98,15 @@ namespace Raven.Client.Documents.BulkInsert
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
+            public bool DebugConsoleWritelines = false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
+                if (DebugConsoleWritelines)
+                {
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Creating bulk request");
+                }
+
                 url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
                 var message = new HttpRequestMessage
                 {
@@ -118,6 +125,11 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 try
                 {
+                    if (DebugConsoleWritelines)
+                    {
+                        Console.WriteLine($"DEBUG: {DateTime.UtcNow} Sending bulk request");
+                    }
+
                     return await base.SendAsync(client, request, token).ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -445,6 +457,7 @@ namespace Raven.Client.Documents.BulkInsert
         private Task _asyncWrite = Task.CompletedTask;
         private int _maxSizeInBuffer = 1024 * 1024;
 
+        public bool DebugConsoleWritelines = false;
 
         private async Task EnsureStream()
         {
@@ -455,6 +468,8 @@ namespace Raven.Client.Documents.BulkInsert
                 _operationId,
                 _streamExposerContent,
                 _nodeTag);
+
+            bulkCommand.DebugConsoleWritelines = DebugConsoleWritelines;
 
             _bulkInsertExecuteTask = ExecuteAsync(bulkCommand);
 

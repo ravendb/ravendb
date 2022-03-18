@@ -74,7 +74,7 @@ namespace Raven.Client.Http
                     if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
                         return (i, serverNodes[i]);
 
-                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later.");
+                    throw new RequestedNodeUnavailableException($"Requested node {nodeTag} currently unavailable, please try again later. State failures: {stateFailures[i]} (i: {i}, url: {serverNodes[i].Url}),");
                 }
             }
 
