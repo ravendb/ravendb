@@ -24,35 +24,11 @@ class index {
     lastIndexingTime = ko.observable<string>();
     lastQueryingTime = ko.observable<string>();
     lockMode = ko.observable<Raven.Client.Documents.Indexes.IndexLockMode>();
-    mapAttempts = ko.observable<number>();
-    mapErrors = ko.observable<number>();
-    mapSuccesses = ko.observable<number>();
-    mapReferenceAttempts = ko.observable<number>();
-    mapReferenceSuccesses = ko.observable<number>();
-    mapReferenceErrors = ko.observable<number>();
-    memory = ko.observable<Raven.Client.Documents.Indexes.IndexStats.MemoryStats>();
-    name: string;
-    priority = ko.observable<Raven.Client.Documents.Indexes.IndexPriority>();
-    state = ko.observable<Raven.Client.Documents.Indexes.IndexState>();
-    status = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
     
-    reduceAttempts = ko.observable<number>();
-    reduceErrors = ko.observable<number>();
-    reduceSuccesses = ko.observable<number>();
-    reduceOutputCollectionName = ko.observable<string>();
-    patternForReferencesToReduceOutputCollection = ko.observable<string>();
-    collectionNameForReferenceDocuments = ko.observable<string>();
     mapReduceIndexInfoTooltip: KnockoutComputed<string>;
     
-    type = ko.observable<Raven.Client.Documents.Indexes.IndexType>();
-    typeForUI: KnockoutComputed<string>;
-    
-    sourceType = ko.observable<Raven.Client.Documents.Indexes.IndexSourceType>();
 
     filteredOut = ko.observable<boolean>(false); //UI only property
-    editUrl: KnockoutComputed<string>;
-    queryUrl: KnockoutComputed<string>;
-    termsUrl: KnockoutComputed<string>;
 
     isPending: KnockoutComputed<boolean>;
     rollingDeploymentInProgress: KnockoutComputed<boolean>;
@@ -69,44 +45,11 @@ class index {
     progress = ko.observable<indexProgress>();
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>, parentIndex?: index) {
-        this.parent = parentIndex;
-        this.collections(dto.Collections);
-        this.createdTimestamp(dto.CreatedTimestamp);
-        this.entriesCount(dto.EntriesCount);
-        this.errorsCount(dto.ErrorsCount);
-        this.isStale(dto.IsStale);
-        this.isInvalidIndex(dto.IsInvalidIndex);
-        this.lastIndexingTime(dto.LastIndexingTime);
-        this.lastQueryingTime(dto.LastQueryingTime);
-        this.lockMode(dto.LockMode);
-        this.mapAttempts(dto.MapAttempts);
-        this.mapErrors(dto.MapErrors);
-        this.mapSuccesses(dto.MapSuccesses);
-        this.mapReferenceAttempts(dto.MapReferenceAttempts);
-        this.mapReferenceErrors(dto.MapReferenceErrors);
-        this.mapReferenceSuccesses(dto.MapReferenceSuccesses);
-        this.memory(dto.Memory);
-        this.name = dto.Name;
-        this.priority(dto.Priority);
-        this.reduceAttempts(dto.ReduceAttempts);
-        this.reduceErrors(dto.ReduceErrors);
-        this.reduceSuccesses(dto.ReduceSuccesses);
-        this.reduceOutputCollectionName(dto.ReduceOutputCollection);
-        this.patternForReferencesToReduceOutputCollection(dto.ReduceOutputReferencePattern);
-        this.collectionNameForReferenceDocuments(dto.PatternReferencesCollectionName);
-        this.type(dto.Type);
-        this.sourceType(dto.SourceType);
-        this.state(dto.State);
-        this.globalIndexingStatus = globalIndexingStatus;
-        this.status(dto.Status); 
-        this.initializeObservables();
+   
     }
 
     private initializeObservables() {
         const urls = appUrl.forCurrentDatabase();
-        this.queryUrl = urls.query(this.name);
-        this.termsUrl = urls.terms(this.name);
-        this.editUrl = urls.editIndex(this.name);
 
         /*
      
@@ -132,9 +75,10 @@ class index {
         });*/
         
        
+        /*
         this.isPending = ko.pureComputed(() => this.status() === "Pending");
         this.isFaulty = ko.pureComputed(() => this.type() === "Faulty");
-        
+*/        
         this.rollingDeploymentInProgress = ko.pureComputed(() => {
             const progress = this.progress();
             if (progress && progress.rollingProgress()) {
@@ -145,6 +89,7 @@ class index {
             return false;
         })
         
+        /*
         this.isSideBySide = ko.pureComputed(() => {            
             return this.name.startsWith(index.SideBySideIndexPrefix);
         });
@@ -163,7 +108,7 @@ class index {
             }
 
             return infoTextHtml;
-        });
+        });*/
     }
 
     /*
