@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client.Documents.Changes;
@@ -138,6 +139,9 @@ namespace Raven.Server
             return _tcpListenerStatus;
         }
 
+        [ThreadStatic]
+        public static bool EnableKestrelLoggingToConsoleForDebug = false;
+
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
@@ -230,6 +234,15 @@ namespace Raven.Server
                         services.AddSingleton(this);
                         services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
                     });
+
+                if (EnableKestrelLoggingToConsoleForDebug)
+                {
+                    webHostBuilder = webHostBuilder.ConfigureLogging(x =>
+                    {
+                        x.AddConsole();
+                        x.SetMinimumLevel(LogLevel.Trace);
+                    });
+                }
 
                 if (Configuration.Http.UseLibuv)
                     webHostBuilder = webHostBuilder.UseLibuv();
