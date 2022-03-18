@@ -1,11 +1,11 @@
 ﻿using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Handlers.Processors
+namespace Raven.Server.Documents.Handlers.Admin.Processors.Configuration
 {
-    internal class ConfigurationHandlerProcessorForPutAdminConfiguration : AbstractConfigurationHandlerProcessorForPutAdminConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
+    internal class AdminConfigurationHandlerProcessorForPutStudioConfiguration : AbstractAdminConfigurationHandlerProcessorForPutStudioConfiguration<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public ConfigurationHandlerProcessorForPutAdminConfiguration(DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool) { }
+        public AdminConfigurationHandlerProcessorForPutStudioConfiguration(DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.ContextPool) { }
 
         protected override async ValueTask WaitForIndexNotificationAsync(long index)
         {

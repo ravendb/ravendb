@@ -4,10 +4,9 @@ using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.Web;
-using Raven.Server.Web.Studio.Sharding.Processors;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors;
+namespace Raven.Server.Documents.Handlers.Processors.Configuration;
 
 internal abstract class AbstractConfigurationHandlerProcessorForGetStudioConfiguration<TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
