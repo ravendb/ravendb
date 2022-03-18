@@ -31,19 +31,19 @@ namespace SlowTests.Issues
                 index.Execute(store);
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.Unlock));
-                AssertIndexDefinition(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode));
+                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedError));
-                AssertIndexDefinition(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode));
+                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                AssertIndexDefinition(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
+                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
 
                 store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                AssertIndexDefinition(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
+                AssertIndex(store, options, "IndexEmployee", indexDefinition => Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode));
             }
 
-            static void AssertIndexDefinition(IDocumentStore store, Options options, string indexName, Action<IndexDefinition> assert)
+            static void AssertIndex(IDocumentStore store, Options options, string indexName, Action<IndexDefinition> assert)
             {
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {

@@ -21,14 +21,24 @@ namespace Raven.Server.Documents.Sharding.Handlers
             }
 
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: true, 
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds)));
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, async args =>
+                {
+                    await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }));
         }
 
         [RavenShardedAction("/databases/*/indexes", "PUT")]
         public async Task PutJavaScript()
         {
             await AdminIndexHandler.PutInternal(new AdminIndexHandler.PutIndexParameters(this, validatedAsAdmin: false,
-                ContextPool, ShardedContext.DatabaseName, PutIndexTask, args => Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds)));
+                ContextPool, ShardedContext.DatabaseName, PutIndexTask, async args =>
+                {
+                    await Cluster.WaitForExecutionOfRaftCommandsAsync(args.Context, args.RaftIndexIds);
+                    DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Critical, "After this method completes not all shards have the index");
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }));
         }
 
         private async Task<long> PutIndexTask((IndexDefinition IndexDefinition, string RaftRequestId, string Source) args)
