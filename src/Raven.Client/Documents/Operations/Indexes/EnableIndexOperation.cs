@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new EnableIndexCommand(_indexName, _clusterWide);
         }
 
-        private class EnableIndexCommand : RavenCommand, IRaftCommand
+        internal class EnableIndexCommand : RavenCommand, IRaftCommand
         {
             private readonly string _indexName;
             private readonly bool _clusterWide;
