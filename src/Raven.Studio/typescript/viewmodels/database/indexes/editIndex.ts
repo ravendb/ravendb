@@ -25,7 +25,6 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
 import additionalAssembly = require("models/database/index/additionalAssemblyModel");
-import index = require("models/database/index/index");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
 import fileDownloader = require("common/fileDownloader");
@@ -42,6 +41,7 @@ import getServerWideCustomAnalyzersCommand = require("commands/serverWide/analyz
 import getIndexDefaultsCommand = require("commands/database/index/getIndexDefaultsCommand");
 import moment = require("moment");
 import { highlight, languages } from "prismjs";
+import { IndexListItem } from "../../../components/models/indexes";
 
 class editIndex extends viewModelBase {
     
@@ -756,9 +756,9 @@ class editIndex extends viewModelBase {
     private saveIndex(indexDto: Raven.Client.Documents.Indexes.IndexDefinition): JQueryPromise<string> {
         eventsCollector.default.reportEvent("index", "save");
 
-        if (indexDto.Name.startsWith(index.SideBySideIndexPrefix)) {
+        if (indexDto.Name.startsWith(IndexListItem.SideBySideIndexPrefix)) {
             // trim side by side prefix
-            indexDto.Name = indexDto.Name.substr(index.SideBySideIndexPrefix.length);
+            indexDto.Name = indexDto.Name.substr(IndexListItem.SideBySideIndexPrefix.length);
         }
 
         const db = this.activeDatabase();

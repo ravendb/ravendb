@@ -29,6 +29,8 @@ abstract class database {
     
     abstract get root(): database;
 
+    abstract getLocations(): databaseLocationSpecifier[];
+    
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
 

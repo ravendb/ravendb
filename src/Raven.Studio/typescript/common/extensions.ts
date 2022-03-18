@@ -4,6 +4,8 @@ import listView = require("widgets/listView/listView");
 import genUtils = require("common/generalUtils");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import accessManager = require("common/shell/accessManager");
+import React from "react";
+import ReactDOM from "react-dom";
 
 class extensions {
     static install() {
@@ -11,6 +13,7 @@ class extensions {
         extensions.installStorageExtension();
         extensions.installBindingHandlers();
         extensions.configureValidation();
+        extensions.installReactHandler();
 
         virtualGrid.install();
         listView.install();
@@ -203,6 +206,35 @@ class extensions {
     }
     
     private static readonly accessLevels: accessLevel[] = ["DatabaseRead", "DatabaseReadWrite", "DatabaseAdmin", "Operator", "ClusterNode", "ClusterAdmin"];
+    
+    private static installReactHandler() {
+        ko.bindingHandlers.react = {
+            init: function (element) {
+                ko.utils.domNodeDisposal.addDisposeCallback(element, function () {
+                    ReactDOM.unmountComponentAtNode(element);
+                });
+
+                return {
+                    controlsDescendantBindings: true
+                };
+            },
+
+            update: function (element, valueAccessor, allBindings) {
+                var options = ko.unwrap(valueAccessor());
+
+                if (options && options.component) {
+                    var componentInstance = ReactDOM.render(
+                        React.createElement(options.component, options.props),
+                        element
+                    );
+
+                    if (options.ref) {
+                        options.ref(componentInstance);
+                    }
+                }
+            }
+        }
+    }
     
     private static installBindingHandlers() {
         ko.bindingHandlers["requiredAccess"] = {

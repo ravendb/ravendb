@@ -3,8 +3,6 @@ import dialog = require("plugins/dialog");
 import database = require("models/resources/database");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import messagePublisher = require("common/messagePublisher");
-import index = require("models/database/index/index");
-import indexDefinition = require("models/database/index/indexDefinition");
 
 class indexInfoForDelete {
     indexName: string;
@@ -20,6 +18,14 @@ class indexInfoForDelete {
     }
 }
 
+interface IndexToDelete {
+    //TODO: remove observable
+    name: KnockoutObservable<string> | string;
+    reduceOutputCollectionName: KnockoutObservable<string> | string;
+    patternForReferencesToReduceOutputCollection: KnockoutObservable<string> | string;
+    
+}
+
 class deleteIndexesConfirm extends dialogViewModelBase {
 
     view = require("views/database/indexes/deleteIndexesConfirm.html");
@@ -31,14 +37,14 @@ class deleteIndexesConfirm extends dialogViewModelBase {
 
     indexesInfoForDelete = Array<indexInfoForDelete>();
 
-    constructor(private indexes: Array<index | indexDefinition>, private db: database) {
+    constructor(private indexes: IndexToDelete[], private db: database) {
         super();
 
         if (!indexes || indexes.length === 0) {
             throw new Error("Indexes must not be null or empty.");
         }
         
-        this.indexesInfoForDelete = indexes.map(x => new indexInfoForDelete(ko.unwrap(x.name), x.reduceOutputCollectionName(), !!x.patternForReferencesToReduceOutputCollection()));
+        this.indexesInfoForDelete = indexes.map(x => new indexInfoForDelete(ko.unwrap(x.name), ko.unwrap(x.reduceOutputCollectionName), !!ko.unwrap(x.patternForReferencesToReduceOutputCollection)));
 
         if (this.indexesInfoForDelete.length === 1) {
             this.title = "Delete index?";

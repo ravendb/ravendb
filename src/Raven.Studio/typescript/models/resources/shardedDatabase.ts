@@ -12,6 +12,21 @@ class shardedDatabase extends database {
     get root(): database {
         return this;
     }
+
+    getLocations(): databaseLocationSpecifier[] {
+        const locationSpecifiers: databaseLocationSpecifier[] = [];
+        
+        this.shards().forEach(shard => {
+            shard.nodes().forEach(node => {
+                locationSpecifiers.push({
+                    nodeTag: node,
+                    shardNumber: shard.shardNumber
+                })
+            })
+        })
+        
+        return locationSpecifiers;
+    }
 }
 
 export = shardedDatabase;

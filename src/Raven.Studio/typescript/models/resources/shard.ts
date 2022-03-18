@@ -8,8 +8,19 @@ class shard extends database {
         return this.parent;
     }
     
+    get shardNumber() {
+        return parseInt(this.name.split("$")[1], 10);
+    }
+    
     get shardName() {
-        return "Shard #" + this.name.split("$")[1];
+        return "Shard #" + this.shardNumber;
+    }
+
+    getLocations(): databaseLocationSpecifier[] {
+        return this.nodes().map(x => ({
+            nodeTag: x,
+            shardNumber: this.shardNumber
+        }));
     }
 }
 
