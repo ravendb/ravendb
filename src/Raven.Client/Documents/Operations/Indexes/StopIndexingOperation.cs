@@ -24,9 +24,18 @@ namespace Raven.Client.Documents.Operations.Indexes
             /// <summary>
             /// For Studio use only
             /// </summary>
-            internal StopIndexingCommand(string type)
+            internal StopIndexingCommand(string nodeTag)
+            {
+                SelectedNodeTag = nodeTag;
+            }
+
+            /// <summary>
+            /// For Studio use only
+            /// </summary>
+            internal StopIndexingCommand(string type, string nodeTag)
             {
                 _type = type ?? throw new ArgumentNullException(nameof(type));
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

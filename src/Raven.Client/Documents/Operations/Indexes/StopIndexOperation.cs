@@ -25,8 +25,14 @@ namespace Raven.Client.Documents.Operations.Indexes
             private readonly string _indexName;
 
             public StopIndexCommand(string indexName)
+                : this(indexName, nodeTag: null)
+            {
+            }
+
+            internal StopIndexCommand(string indexName, string nodeTag)
             {
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

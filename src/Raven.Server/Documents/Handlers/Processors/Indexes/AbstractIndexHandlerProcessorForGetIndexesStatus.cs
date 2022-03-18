@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Indexes
         {
         }
 
-        protected override RavenCommand<IndexingStatus> CreateCommandForNode(string nodeTag) =>
-            new GetIndexingStatusOperation.GetIndexingStatusCommand(nodeTag);
+        protected override RavenCommand<IndexingStatus> CreateCommandForNode(string nodeTag) => new GetIndexingStatusOperation.GetIndexingStatusCommand(nodeTag);
 
         protected override async ValueTask WriteResultAsync(IndexingStatus result)
         {

@@ -23,12 +23,12 @@ internal abstract class AbstractAdminIndexHandlerProcessorForStart<TRequestHandl
         (string type, string name) = GetParameters();
 
         if (type == null && name == null)
-            return new StartIndexingOperation.StartIndexingCommand();
+            return new StartIndexingOperation.StartIndexingCommand(nodeTag);
 
         if (type != null)
-            return new StartIndexingOperation.StartIndexingCommand(type);
+            return new StartIndexingOperation.StartIndexingCommand(type, nodeTag);
 
-        return new StartIndexOperation.StartIndexCommand(name);
+        return new StartIndexOperation.StartIndexCommand(name, nodeTag);
     }
 
     protected (string Type, string Name) GetParameters()
