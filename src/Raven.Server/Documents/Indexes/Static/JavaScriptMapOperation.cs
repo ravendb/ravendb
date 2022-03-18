@@ -163,11 +163,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                             }
                                             else
                                             {
-                                                _engineHandle.ForceGarbageCollection();
-                                                if (_engineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
-                                                {
-                                                    _engineHandle.CheckForMemoryLeaks("map");
-                                                }
+                                                ProcessRunException(jsRes, isMemorySnapshotMade);
                                                 
                                                 // this check should be to catch map errors
                                                 throw new JavaScriptIndexFuncException($"Failed to execute {MapString}",
