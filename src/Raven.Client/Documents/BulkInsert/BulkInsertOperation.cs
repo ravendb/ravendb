@@ -281,10 +281,29 @@ namespace Raven.Client.Documents.BulkInsert
             return AsyncHelpers.RunSync(() => StoreAsync(entity, metadata));
         }
 
+        private int _getIdCall = 0;
+
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
             if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
+            {
+                int getIdCall;
+
+                if (DebugConsoleWritelines)
+                {
+                    getIdCall = Interlocked.Increment(ref _getIdCall);
+
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Getting ID ({getIdCall})");
+                }
                 id = GetId(entity);
+
+                if (DebugConsoleWritelines)
+                {
+                    getIdCall = Interlocked.Increment(ref _getIdCall);
+
+                    Console.WriteLine($"DEBUG: {DateTime.UtcNow} Got ID ({getIdCall})");
+                }
+            }
 
             await StoreAsync(entity, id, metadata).ConfigureAwait(false);
 
