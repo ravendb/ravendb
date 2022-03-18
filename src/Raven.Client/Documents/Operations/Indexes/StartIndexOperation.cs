@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new StartIndexCommand(_indexName);
         }
 
-        private class StartIndexCommand : RavenCommand
+        internal class StartIndexCommand : RavenCommand
         {
             private readonly string _indexName;
 

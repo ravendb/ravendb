@@ -1,23 +1,20 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors;
 
-internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, TOperationContext> : AbstractHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class AbstractHandlerProxyReadProcessor<TResult, TRequestHandler, TOperationContext> : AbstractHandlerProxyProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
-    protected AbstractHandlerReadProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
+    protected AbstractHandlerProxyReadProcessor([NotNull] TRequestHandler requestHandler, [NotNull] JsonContextPoolBase<TOperationContext> contextPool)
         : base(requestHandler, contextPool)
     {
     }
-
-    protected abstract bool SupportsCurrentNode { get; }
 
     protected abstract ValueTask<TResult> GetResultForCurrentNodeAsync();
 
@@ -41,28 +38,5 @@ internal abstract class AbstractHandlerReadProcessor<TResult, TRequestHandler, T
         }
 
         await WriteResultAsync(result);
-    }
-
-    protected int GetShardNumber()
-    {
-        return RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: true).Value;
-    }
-
-    private bool IsCurrentNode(out string nodeTag)
-    {
-        nodeTag = GetNodeTag(required: SupportsCurrentNode == false);
-
-        if (SupportsCurrentNode == false)
-            return false;
-
-        if (nodeTag == null)
-            return true;
-
-        return string.Equals(nodeTag, RequestHandler.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string GetNodeTag(bool required)
-    {
-        return RequestHandler.GetStringQueryString(Constants.QueryString.NodeTag, required);
     }
 }

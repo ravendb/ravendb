@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal abstract class AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<TRequestHandler, TOperationContext> : AbstractHandlerReadProcessor<GetIndexErrorsCountCommand.IndexErrorsCount[], TRequestHandler, TOperationContext>
+internal abstract class AbstractStudioIndexHandlerProcessorForGetIndexErrorsCount<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<GetIndexErrorsCountCommand.IndexErrorsCount[], TRequestHandler, TOperationContext>
     where TRequestHandler : RequestHandler
     where TOperationContext : JsonOperationContext
 {
