@@ -24,13 +24,19 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new DeleteIndexErrorsCommand(_indexNames);
         }
 
-        private class DeleteIndexErrorsCommand : RavenCommand
+        internal class DeleteIndexErrorsCommand : RavenCommand
         {
             private readonly string[] _indexNames;
 
             public DeleteIndexErrorsCommand(string[] indexNames)
+                : this(indexNames, nodeTag: null)
+            {
+            }
+
+            internal DeleteIndexErrorsCommand(string[] indexNames, string nodeTag)
             {
                 _indexNames = indexNames;
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

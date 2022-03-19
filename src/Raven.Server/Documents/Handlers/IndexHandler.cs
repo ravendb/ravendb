@@ -539,30 +539,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/indexes/errors", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task ClearErrors()
+        public async Task ClearErrors()
         {
-            var names = GetStringValuesQueryString("name", required: false);
-
-            var indexes = new List<Index>();
-
-            if (names.Count == 0)
-                indexes.AddRange(Database.IndexStore.GetIndexes());
-            else
-            {
-                foreach (var name in names)
-                {
-                    var index = Database.IndexStore.GetIndex(name);
-                    if (index == null)
-                        IndexDoesNotExistException.ThrowFor(name);
-
-                    indexes.Add(index);
-                }
-            }
-
-            foreach (var index in indexes)
-                index.DeleteErrors();
-
-            return NoContent();
+            using (var processor = new IndexHandlerProcessorForClearErrors(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
