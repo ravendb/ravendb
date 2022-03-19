@@ -1470,7 +1470,7 @@ namespace SlowTests.Client.Indexing.Counters
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
             var indexesProgress = JsonConvert.DeserializeObject<IndexesProgress>(content);
-            if (indexesProgress.Results.Count > 0 && indexesProgress.Results[0].Collections.ContainsKey("Users"))
+            if (indexesProgress.Results.Length > 0 && indexesProgress.Results[0].Collections.ContainsKey("Users"))
             {
                 return indexesProgress.Results[0].Collections["Users"];
             }

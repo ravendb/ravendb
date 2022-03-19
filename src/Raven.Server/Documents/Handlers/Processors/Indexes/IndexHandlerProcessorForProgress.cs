@@ -1,0 +1,67 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using JetBrains.Annotations;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Http;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.ServerWide.Context;
+
+namespace Raven.Server.Documents.Handlers.Processors.Indexes;
+
+internal class IndexHandlerProcessorForProgress : AbstractIndexHandlerProcessorForProgress<DatabaseRequestHandler, DocumentsOperationContext>
+{
+    public IndexHandlerProcessorForProgress([NotNull] DatabaseRequestHandler requestHandler)
+        : base(requestHandler, requestHandler.ContextPool)
+    {
+    }
+
+    protected override bool SupportsCurrentNode => true;
+
+    protected override ValueTask<IndexProgress[]> GetResultForCurrentNodeAsync()
+    {
+        var indexesProgress = GetIndexesProgress().ToArray();
+
+        return ValueTask.FromResult(indexesProgress);
+    }
+
+    protected override Task<IndexProgress[]> GetResultForRemoteNodeAsync(RavenCommand<IndexProgress[]> command) => RequestHandler.ExecuteRemoteAsync(command);
+
+    private IEnumerable<IndexProgress> GetIndexesProgress()
+    {
+        using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
+        using (context.OpenReadTransaction())
+        {
+            foreach (var index in RequestHandler.Database.IndexStore.GetIndexes())
+            {
+                IndexProgress indexProgress = null;
+                try
+                {
+                    if (index.DeployedOnAllNodes && index.IsStale(context) == false)
+                        continue;
+
+                    indexProgress = index.GetProgress(context);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // index was deleted
+                }
+                catch (OperationCanceledException)
+                {
+                    // index was deleted
+                }
+                catch (Exception e)
+                {
+                    if (RequestHandler.Logger.IsOperationsEnabled)
+                        RequestHandler.Logger.Operations($"Failed to get index progress for index name: {index.Name}", e);
+                }
+
+                if (indexProgress == null)
+                    continue;
+
+                yield return indexProgress;
+            }
+        }
+    }
+}

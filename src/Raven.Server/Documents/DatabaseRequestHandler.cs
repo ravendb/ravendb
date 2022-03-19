@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
     {
         public DocumentsContextPool ContextPool;
         public DocumentDatabase Database;
-        protected Logger Logger;
+        public Logger Logger;
 
         public override void Init(RequestHandlerContext context)
         {

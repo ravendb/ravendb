@@ -219,6 +219,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, GetIndexErrorsCountCommand.IndexErrorsCount> IndexErrorsCount = GenerateJsonDeserializationRoutine<GetIndexErrorsCountCommand.IndexErrorsCount>();
 
+        internal static readonly Func<BlittableJsonReaderObject, IndexesProgress> IndexesProgress = GenerateJsonDeserializationRoutine<IndexesProgress>();
+
         public class Parameters
         {
             private Parameters()
