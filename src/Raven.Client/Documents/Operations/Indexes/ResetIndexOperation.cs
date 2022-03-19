@@ -21,13 +21,19 @@ namespace Raven.Client.Documents.Operations.Indexes
             return new ResetIndexCommand(_indexName);
         }
 
-        private class ResetIndexCommand : RavenCommand
+        internal class ResetIndexCommand : RavenCommand
         {
             private readonly string _indexName;
 
             public ResetIndexCommand(string indexName)
+                : this(indexName, nodeTag: null)
+            {
+            }
+
+            internal ResetIndexCommand(string indexName, string nodeTag)
             {
                 _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
