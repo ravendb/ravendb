@@ -76,6 +76,8 @@ namespace FastTests.Client
                     _testOutputHelper.WriteLine($"max values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
                     ThreadPool.GetMinThreads(out workersThreads, out completionPortThreads);
                     _testOutputHelper.WriteLine($"min values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    
+                    _testOutputHelper.WriteLine($"ThreadCount: {ThreadPool.ThreadCount}, CompletedWorkItemCount: {ThreadPool.CompletedWorkItemCount}, PendingWorkItemCount: {ThreadPool.PendingWorkItemCount}");
                     throw;
                 }
                 using (var session = store.OpenSession())
