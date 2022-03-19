@@ -56,9 +56,17 @@ internal class GetIndexErrorsCountCommand : RavenCommand<GetIndexErrorsCountComm
     {
         public IndexErrorsCount()
         {
+            Errors = Array.Empty<IndexingErrorCount>();
         }
 
         public string Name { get; set; }
+
+        public IndexingErrorCount[] Errors { get; set; }
+    }
+
+    public class IndexingErrorCount
+    {
+        public string Action { get; set; }
 
         public long NumberOfErrors { get; set; }
     }
