@@ -8,8 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Indexes
 {
-    internal abstract class
-        AbstractIndexHandlerProcessorForGetIndexesStatus<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<IndexingStatus, TRequestHandler,
+    internal abstract class AbstractIndexHandlerProcessorForGetIndexesStatus<TRequestHandler, TOperationContext> : AbstractHandlerProxyReadProcessor<IndexingStatus, TRequestHandler,
             TOperationContext>
         where TRequestHandler : RequestHandler
         where TOperationContext : JsonOperationContext

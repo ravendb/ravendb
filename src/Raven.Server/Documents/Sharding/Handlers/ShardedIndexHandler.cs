@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -93,6 +92,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public async Task Status()
         {
             using (var processor = new ShardedIndexHandlerProcessorForGetIndexesStatus(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/index/open-faulty-index", "POST")]
+        public async Task OpenFaultyIndex()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForOpenFaultyIndex(this))
                 await processor.ExecuteAsync();
         }
     }
