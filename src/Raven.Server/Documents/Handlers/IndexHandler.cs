@@ -390,23 +390,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes", "RESET", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task Reset()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            IndexDefinition indexDefinition;
-            lock (Database)
-            {
-                var index = Database.IndexStore.ResetIndex(name);
-                indexDefinition = index.GetIndexDefinition();
-            }
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Index");
-                writer.WriteIndexDefinition(context, indexDefinition);
-                writer.WriteEndObject();
-            }
+            using (var processor = new IndexHandlerProcessorForReset(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/index/open-faulty-index", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]

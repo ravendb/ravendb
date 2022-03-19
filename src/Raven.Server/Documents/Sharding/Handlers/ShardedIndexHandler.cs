@@ -42,6 +42,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/indexes", "RESET")]
+        public async Task Reset()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForReset(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/performance", "GET")]
         public async Task Performance()
         {
