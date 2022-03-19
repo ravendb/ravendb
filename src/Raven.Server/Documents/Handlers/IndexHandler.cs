@@ -451,29 +451,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/index/open-faulty-index", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-        public Task OpenFaultyIndex()
+        public async Task OpenFaultyIndex()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var index = Database.IndexStore.GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
-
-            if (index is FaultyInMemoryIndex == false)
-                throw new InvalidOperationException($"Cannot open non faulty index named: {name}");
-
-            lock (index)
-            {
-                var localIndex = Database.IndexStore.GetIndex(name);
-                if (localIndex == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                if (localIndex is FaultyInMemoryIndex == false)
-                    throw new InvalidOperationException($"Cannot open non faulty index named: {name}");
-
-                Database.IndexStore.OpenFaultyIndex(localIndex);
-            }
-
-            return NoContent();
+            using (var processor = new IndexHandlerProcessorForOpenFaultyIndex(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
