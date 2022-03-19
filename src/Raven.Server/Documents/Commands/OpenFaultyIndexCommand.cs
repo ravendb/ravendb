@@ -25,4 +25,6 @@ public class OpenFaultyIndexCommand : RavenCommand
             Method = HttpMethod.Post
         };
     }
+
+    public override bool IsReadRequest => false;
 }

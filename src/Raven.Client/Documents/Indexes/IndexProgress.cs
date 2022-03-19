@@ -49,6 +49,6 @@ namespace Raven.Client.Documents.Indexes
 
     internal class IndexesProgress
     {
-        public List<IndexProgress> Results { get; set; }
+        public IndexProgress[] Results { get; set; }
     }
 }

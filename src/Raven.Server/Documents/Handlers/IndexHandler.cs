@@ -383,49 +383,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Progress()
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
-            using (context.OpenReadTransaction())
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Results");
-                writer.WriteStartArray();
-
-                var first = true;
-                foreach (var index in Database.IndexStore.GetIndexes())
-                {
-                    try
-                    {
-                        if (index.DeployedOnAllNodes && index.IsStale(context) == false)
-                            continue;
-
-                        var progress = index.GetProgress(context);
-
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-
-                        writer.WriteIndexProgress(context.Documents, progress);
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        // index was deleted
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // index was deleted
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Failed to get index progress for index name: {index.Name}", e);
-                    }
-                }
-
-                writer.WriteEndArray();
-                writer.WriteEndObject();
-            }
+            using (var processor = new IndexHandlerProcessorForProgress(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/indexes", "RESET", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

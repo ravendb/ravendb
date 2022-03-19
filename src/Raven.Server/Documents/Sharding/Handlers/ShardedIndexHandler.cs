@@ -35,6 +35,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/indexes/progress", "GET")]
+        public async Task Progress()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForProgress(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/performance", "GET")]
         public async Task Performance()
         {
