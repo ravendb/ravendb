@@ -20,11 +20,8 @@ namespace FastTests.Client
 {
     public class BulkInserts : RavenTestBase
     {
-        private readonly ITestOutputHelper _testOutputHelper;
-
-        public BulkInserts(ITestOutputHelper output, ITestOutputHelper testOutputHelper) : base(output)
+        public BulkInserts(ITestOutputHelper output) : base(output)
         {
-            _testOutputHelper = testOutputHelper;
         }
 
         [Theory]
@@ -54,7 +51,7 @@ namespace FastTests.Client
             }))
             {
                 ThreadPool.GetAvailableThreads(out int workersThreads, out int completionPortThreads);
-                _testOutputHelper.WriteLine($"before - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                Console.WriteLine($"before - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
                 try
                 {
                     using (var bulkInsert = store.BulkInsert())
@@ -71,13 +68,12 @@ namespace FastTests.Client
                 catch (Exception e)
                 {
                     ThreadPool.GetAvailableThreads(out  workersThreads, out  completionPortThreads);
-                    _testOutputHelper.WriteLine($"after - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    Console.WriteLine($"after - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
                     ThreadPool.GetMaxThreads(out workersThreads, out completionPortThreads);
-                    _testOutputHelper.WriteLine($"max values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    Console.WriteLine($"max values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
                     ThreadPool.GetMinThreads(out workersThreads, out completionPortThreads);
-                    _testOutputHelper.WriteLine($"min values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
-                    
-                    _testOutputHelper.WriteLine($"ThreadCount: {ThreadPool.ThreadCount}, CompletedWorkItemCount: {ThreadPool.CompletedWorkItemCount}, PendingWorkItemCount: {ThreadPool.PendingWorkItemCount}");
+                    Console.WriteLine($"min values - workerThreads: {workersThreads}, completionPortThreads: {completionPortThreads}");
+                    Console.WriteLine($"ThreadCount: {ThreadPool.ThreadCount}, CompletedWorkItemCount: {ThreadPool.CompletedWorkItemCount}, PendingWorkItemCount: {ThreadPool.PendingWorkItemCount}");
                     throw;
                 }
                 using (var session = store.OpenSession())
