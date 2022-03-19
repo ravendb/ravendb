@@ -75,6 +75,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 await processor.ExecuteAsync();
         }
 
+        [RavenShardedAction("/databases/*/indexes/errors", "DELETE")]
+        public async Task ClearErrors()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForClearErrors(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenShardedAction("/databases/*/indexes/errors", "GET")]
         public async Task GetErrors()
         {
