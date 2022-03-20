@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                 await SetupReplicationAsync(storeA, storeB);
                 await EnsureReplicatingAsync(storeA, storeB);
 
-                var dbA = await GetDocumentDatabaseInstanceFor(storeA);
+                var dbA = await Databases.GetDocumentDatabaseInstanceFor(storeA);
                 dbA.Configuration.Replication.MaxItemsCount = 1;
                 dbA.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
 

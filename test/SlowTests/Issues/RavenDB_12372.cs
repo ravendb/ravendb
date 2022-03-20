@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                     session.Store(d);
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var result = session.Advanced.DocumentQuery<Test, TestIndex>()
                         .Search("Name", "test").ToList().Count;

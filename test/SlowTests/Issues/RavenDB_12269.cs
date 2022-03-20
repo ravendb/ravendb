@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                     Name = "Users_ByName"
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var db = await GetDatabase(store.Database);
 
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 db.IndexStore.StartIndexing();
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
                 replacementIndex.LowMemory(LowMemorySeverity.ExtremelyLow);

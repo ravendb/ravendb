@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(new TestIndex().IndexName, "IndexFirst", null));

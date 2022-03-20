@@ -80,7 +80,7 @@ select new {
                     }
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -105,7 +105,7 @@ select new {
 
                 store.Maintenance.Send(new StartIndexOperation("PartialResourceStateTimelinesIndex"));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

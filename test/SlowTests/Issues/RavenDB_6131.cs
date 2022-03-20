@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                 var index = new SimpleIndex();
                 index.Execute(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);
                 Assert.Equal(path3, database.Configuration.Indexing.TempPath.FullPath);
 
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
                     var index = new SimpleIndex();
                     index.Execute(store);
 
-                    var database = await GetDocumentDatabaseInstanceFor(store);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     Assert.Equal(path1, database.Configuration.Core.DataDirectory.FullPath);
                     Assert.Equal(Path.Combine(path3, "Databases", store.Database), database.Configuration.Indexing.TempPath.FullPath);
 

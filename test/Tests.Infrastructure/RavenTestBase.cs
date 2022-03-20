@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,17 +7,14 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -28,7 +24,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -40,7 +35,6 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
-using Sparrow.Platform;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron;
@@ -51,15 +45,20 @@ namespace FastTests
 {
     public abstract partial class RavenTestBase : TestBase
     {
-        public static BackupTestBase Backup => BackupTestBase.Instance.Value;
-
-        public static TimeSeriesTestBase TimeSeries => TimeSeriesTestBase.Instance.Value;
-
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected RavenTestBase(ITestOutputHelper output) : base(output)
         {
             Sharding = new ShardingTestBase(this);
+            Samples = new SamplesTestBase(this);
+            TimeSeries = new TimeSeriesTestBase(this);
+            Cluster = new ClusterTestBase2(this);
+            Backup = new BackupTestBase(this);
+            Encryption = new EncryptionTestBase(this);
+            Certificates = new CertificatesTestBase(this);
+            Indexes = new IndexesTestBase(this);
+            Replication = new ReplicationTestBase2(this);
+            Databases = new DatabasesTestBase(this);
         }
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store, string database = null)
@@ -144,211 +143,6 @@ namespace FastTests
 
         private readonly object _getDocumentStoreSync = new object();
 
-        protected string EncryptedServer(out TestCertificatesHolder certificates, out string databaseName)
-        {
-            certificates = SetupServerAuthentication();
-            databaseName = GetDatabaseName();
-            RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-
-            var base64Key = Convert.ToBase64String(buffer);
-
-            var canUseProtect = PlatformDetails.RunningOnPosix == false;
-
-            if (canUseProtect)
-            {
-                // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-                try
-                {
-#pragma warning disable CA1416 // Validate platform compatibility
-                    ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-#pragma warning restore CA1416 // Validate platform compatibility
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    canUseProtect = false;
-                }
-            }
-
-            if (canUseProtect == false) // fall back to a file
-                Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-
-            Assert.True(Server.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-            Assert.True(Server.ServerStore.LicenseManager.TryActivateLicenseAsync(Server.ThrowOnLicenseActivationFailure).Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-            Server.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
-
-            return Convert.ToBase64String(buffer);
-        }
-
-        protected void EncryptedCluster(List<RavenServer> nodes, TestCertificatesHolder certificates, out string databaseName)
-        {
-            databaseName = GetDatabaseName();
-
-            foreach (var node in nodes)
-            {
-                RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, node);
-
-                var base64Key = CreateMasterKey(out _);
-
-                EnsureServerMasterKeyIsSetup(node);
-
-                Assert.True(node.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-                Assert.True(node.ServerStore.LicenseManager.TryActivateLicenseAsync(Server.ThrowOnLicenseActivationFailure).Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-
-                node.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
-            }
-        }
-
-        protected async Task WaitForRaftCommandToBeAppliedInCluster(RavenServer leader, string commandType)
-        {
-            var updateIndex = LastRaftIndexForCommand(leader, commandType);
-            await WaitForRaftIndexToBeAppliedInCluster(updateIndex, TimeSpan.FromSeconds(10));
-        }
-
-        protected async Task WaitForRaftCommandToBeAppliedInLocalServer(string commandType)
-        {
-            var updateIndex = LastRaftIndexForCommand(Server, commandType);
-            await Server.ServerStore.Cluster.WaitForIndexNotification(updateIndex, TimeSpan.FromSeconds(10));
-        }
-
-        protected static long LastRaftIndexForCommand(RavenServer server, string commandType)
-        {
-            var updateIndex = 0L;
-            var commandFound = false;
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                    if (type == commandType)
-                    {
-                        commandFound = true;
-                        Assert.True(long.TryParse(entry[nameof(RachisLogHistory.LogHistoryColumn.Index)].ToString(), out updateIndex));
-                    }
-                }
-            }
-
-            Assert.True(commandFound, $"{commandType} wasn't found in the log.");
-            return updateIndex;
-        }
-
-        protected static IEnumerable<DynamicJsonValue> GetRaftCommands(RavenServer server, string commandType = null)
-        {
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    var type = entry[nameof(RachisLogHistory.LogHistoryColumn.Type)].ToString();
-                    if (commandType == null || commandType == type)
-                        yield return entry;
-                }
-            }
-        }
-
-        protected string GetRaftHistory(RavenServer server)
-        {
-            var sb = new StringBuilder();
-
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                foreach (var entry in server.ServerStore.Engine.LogHistory.GetHistoryLogs(context))
-                {
-                    sb.AppendLine(context.ReadObject(entry, "raft-command-history").ToString());
-                }
-            }
-
-            return sb.ToString();
-        }
-
-        protected async Task WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(long index, TimeSpan? timeout = null)
-        {
-            var notDisposed = Servers.Count(s => s.ServerStore.Disposed == false);
-            var notPassive = Servers.Count(s => s.ServerStore.Engine.CurrentState != RachisState.Passive);
-
-            Assert.True(Servers.Count == notDisposed, $"Unequal not disposed nodes {Servers.Count} != {notDisposed}");
-            Assert.True(Servers.Count == notPassive, $"Unequal not passive nodes {Servers.Count} != {notPassive}");
-
-            await WaitForRaftIndexToBeAppliedInCluster(index, timeout);
-        }
-
-        protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan? timeout = null)
-        {
-            await WaitForRaftIndexToBeAppliedOnClusterNodes(index, Servers, timeout);
-        }
-
-        protected static async Task WaitForRaftIndexToBeAppliedOnClusterNodes(long index, List<RavenServer> nodes, TimeSpan? timeout = null)
-        {
-            if (nodes.Count == 0)
-                throw new InvalidOperationException("Cannot wait for raft index to be applied when the cluster is empty. Make sure you are using the right server.");
-
-            if (timeout.HasValue == false)
-                timeout = Debugger.IsAttached ? TimeSpan.FromSeconds(300) : TimeSpan.FromSeconds(60);
-
-            var tasks = nodes.Where(s => s.ServerStore.Disposed == false &&
-                                          s.ServerStore.Engine.CurrentState != RachisState.Passive)
-                .Select(server => server.ServerStore.Cluster.WaitForIndexNotification(index))
-                .ToList();
-
-            if (await Task.WhenAll(tasks).WaitWithoutExceptionAsync(timeout.Value))
-                return;
-
-            ThrowTimeoutException(nodes, tasks, index, timeout.Value);
-        }
-
-        private static void ThrowTimeoutException(List<RavenServer> nodes, List<Task> tasks, long index, TimeSpan timeout)
-        {
-            var message = $"Timed out after {timeout} waiting for index {index} because out of {nodes.Count} servers" +
-                          " we got confirmations that it was applied only on the following servers: ";
-
-            for (var i = 0; i < tasks.Count; i++)
-            {
-                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
-                if (tasks[i].IsCompleted == false)
-                {
-                    using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    {
-                        context.OpenReadTransaction();
-                        message += $"{Environment.NewLine}Log state for non responsing server:{Environment.NewLine}{nodes[i].ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
-                    }
-                }
-            }
-
-            throw new TimeoutException(message);
-        }
-
-        public static string CollectLogsFromNodes(List<RavenServer> nodes)
-        {
-            var message = "";
-            for (var i = 0; i < nodes.Count; i++)
-            {
-                message += $"{Environment.NewLine}Url: {nodes[i].WebUrl}.";
-                using (nodes[i].ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    message += CollectLogs(context, nodes[i]);
-                }
-            }
-
-            return message;
-        }
-
-        protected static string CollectLogs(ClusterOperationContext context, RavenServer server)
-        {
-            return
-                $"{Environment.NewLine}Log for server '{server.ServerStore.NodeTag}':" +
-                $"{Environment.NewLine}Last notified Index '{server.ServerStore.Cluster.LastNotifiedIndex}':" +
-                $"{Environment.NewLine}{context.ReadObject(server.ServerStore.GetLogDetails(context, max: int.MaxValue), "LogSummary/" + server.ServerStore.NodeTag)}" +
-                $"{Environment.NewLine}{server.ServerStore.Engine.LogHistory.GetHistoryLogsAsString(context)}";
-        }
-
         protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
@@ -431,7 +225,7 @@ namespace FastTests
                     //This gives too much error details in most cases, we don't need this now
                     store.RequestExecutorCreated += (sender, executor) =>
                     {
-                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(GetLastStatesFromAllServersOrderedByTime());
+                        executor.AdditionalErrorInformation += sb => sb.AppendLine().Append(Cluster.GetLastStatesFromAllServersOrderedByTime());
                     };
 
                     store.Initialize();
@@ -479,7 +273,7 @@ namespace FastTests
                         if (Servers.Contains(serverToUse))
                         {
                             var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
-                            AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInClusterWithNodesValidation(raftCommand, timeout));
+                            AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterWithNodesValidationAsync(raftCommand, timeout));
 
                             // skip 'wait for requests' on DocumentDatabase dispose
                             Servers.ForEach(server => ApplySkipDrainAllRequestsToDatabase(server, name));
@@ -507,7 +301,7 @@ namespace FastTests
                             if (Servers.Contains(serverToUse) && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
-                                AsyncHelpers.RunSync(async () => await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout));
+                                AsyncHelpers.RunSync(async () => await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, timeout));
                             }
                         }
                         catch (Exception e)
@@ -525,7 +319,7 @@ namespace FastTests
             }
             catch (TimeoutException te)
             {
-                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
+                throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
             }
         }
 
@@ -544,7 +338,7 @@ namespace FastTests
             try
             {
                 var documentDatabase = AsyncHelpers.RunSync(async () => await serverToUse.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name));
-                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{CollectLogsFromNodes(Servers)}");
+                Assert.True(documentDatabase != null, $"(RavenDB-16924) documentDatabase is null on '{serverToUse.ServerStore.NodeTag}' {Environment.NewLine}{Cluster.CollectLogsFromNodes(Servers)}");
                 documentDatabase.ForTestingPurposesOnly().SkipDrainAllRequests = true;
             }
             catch (InvalidOperationException)
@@ -970,7 +764,7 @@ namespace FastTests
             Assert.Equal(expectedVal, val);
         }
 
-        private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
+        protected static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -1141,69 +935,6 @@ namespace FastTests
             }
         }
 
-        protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
-        {
-            var database = GetDatabase(store.Database).Result;
-
-            var mre = new ManualResetEventSlim();
-
-            database.IndexStore.IndexBatchCompleted += x =>
-            {
-                if (predicate(x))
-                    mre.Set();
-            };
-
-            return mre;
-        }
-
-        protected static async Task WaitForConflict(IDocumentStore slave, string id, int timeout = 15_000)
-        {
-            var timeoutAsTimeSpan = TimeSpan.FromMilliseconds(timeout);
-            var sw = Stopwatch.StartNew();
-
-            while (sw.Elapsed < timeoutAsTimeSpan)
-            {
-                using (var session = slave.OpenAsyncSession())
-                {
-                    try
-                    {
-                        await session.LoadAsync<dynamic>(id);
-                        await Task.Delay(100);
-                    }
-                    catch (ConflictException)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict on '{id}' but it did not happen.");
-        }
-
-        protected static bool WaitForCounterReplication(IEnumerable<IDocumentStore> stores, string docId, string counterName, long expected, TimeSpan timeout)
-        {
-            long? val = null;
-            var sw = Stopwatch.StartNew();
-
-            foreach (var store in stores)
-            {
-                val = null;
-                while (sw.Elapsed < timeout)
-                {
-                    val = store.Operations
-                        .Send(new GetCountersOperation(docId, new[] { counterName }))
-                        .Counters[0]?.TotalValue;
-
-                    if (val == expected)
-                        break;
-
-                    Thread.Sleep(100);
-                }
-            }
-
-            return val == expected;
-        }
-
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
             foreach (var store in CreatedStores)
@@ -1214,145 +945,6 @@ namespace FastTests
                 exceptionAggregator.Execute(store.Dispose);
             }
             CreatedStores.Clear();
-        }
-
-        protected X509Certificate2 RegisterClientCertificate(TestCertificatesHolder certificates, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
-        {
-            return RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, permissions, clearance, server);
-        }
-
-        protected X509Certificate2 RegisterClientCertificate(
-            X509Certificate2 serverCertificate,
-            X509Certificate2 clientCertificate,
-            Dictionary<string, DatabaseAccess> permissions,
-            SecurityClearance clearance = SecurityClearance.ValidUser,
-            RavenServer server = null,
-            string certificateName = "client certificate")
-        {
-            using var store = GetDocumentStore(new Options
-            {
-                CreateDatabase = false,
-                Server = server,
-                ClientCertificate = serverCertificate,
-                AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true }
-            });
-            store.Maintenance.Server.Send(new PutClientCertificateOperation(certificateName, clientCertificate, permissions, clearance));
-            return clientCertificate;
-        }
-
-        protected static IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
-        {
-            return new DisposableAction(() =>
-            {
-                try
-                {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseToDelete, hardDelete: true));
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to delete '{databaseToDelete}' database. Exception: " + e);
-
-                    // do not throw to not hide an exception that could be thrown in a test
-                }
-            });
-        }
-
-        protected TestCertificatesHolder SetupServerAuthentication(IDictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null, [CallerMemberName] string caller = null)
-        {
-            if (customSettings == null)
-                customSettings = new ConcurrentDictionary<string, string>();
-
-            if (certificates == null)
-                certificates = GenerateAndSaveSelfSignedCertificate(caller: caller);
-
-            if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
-                customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
-
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
-
-            DoNotReuseServer(customSettings);
-
-            return certificates;
-        }
-
-        private readonly Dictionary<(RavenServer Server, string Database), string> _serverDatabaseToMasterKey = new Dictionary<(RavenServer Server, string Database), string>();
-
-        protected void PutSecretKeyForDatabaseInServerStore(string databaseName, RavenServer server)
-        {
-            var base64key = CreateMasterKey(out _);
-            var base64KeyClone = new string(base64key.ToCharArray());
-
-            EnsureServerMasterKeyIsSetup(server);
-
-            Assert.True(server.ServerStore.EnsureNotPassiveAsync().Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-            Assert.True(server.ServerStore.LicenseManager.TryActivateLicenseAsync(Server.ThrowOnLicenseActivationFailure).Wait(TimeSpan.FromSeconds(30))); // activate license so we can insert the secret key
-
-            server.ServerStore.PutSecretKey(base64key, databaseName, overwrite: true);
-
-            _serverDatabaseToMasterKey.Add((server, databaseName), base64KeyClone);
-        }
-
-        protected void DeleteSecretKeyForDatabaseFromServerStore(string databaseName, RavenServer server)
-        {
-            server.ServerStore.DeleteSecretKey(databaseName);
-        }
-
-        protected string SetupEncryptedDatabase(out TestCertificatesHolder certificates, out byte[] masterKey, [CallerMemberName] string caller = null)
-        {
-            certificates = SetupServerAuthentication();
-            var dbName = GetDatabaseName(caller);
-            RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-
-            string base64Key = CreateMasterKey(out masterKey);
-
-            EnsureServerMasterKeyIsSetup(Server);
-
-            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-            return dbName;
-        }
-
-        private void EnsureServerMasterKeyIsSetup(RavenServer server)
-        {
-            var canUseProtect = PlatformDetails.RunningOnPosix == false;
-
-            if (canUseProtect)
-            {
-                // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-                try
-                {
-#pragma warning disable CA1416 // Validate platform compatibility
-                    ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
-#pragma warning restore CA1416 // Validate platform compatibility
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    canUseProtect = false;
-                }
-            }
-
-            if (canUseProtect == false)
-            {
-                // so we fall back to a file
-                if (File.Exists(server.ServerStore.Configuration.Security.MasterKeyPath) == false)
-                {
-                    server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-                }
-            }
-        }
-
-        public static string CreateMasterKey(out byte[] masterKey)
-        {
-            var buffer = new byte[32];
-            using (var rand = RandomNumberGenerator.Create())
-            {
-                rand.GetBytes(buffer);
-            }
-
-            masterKey = buffer;
-
-            var base64Key = Convert.ToBase64String(buffer);
-            return base64Key;
         }
 
         public class Options

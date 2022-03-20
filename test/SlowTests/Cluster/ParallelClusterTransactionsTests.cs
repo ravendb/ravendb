@@ -112,7 +112,7 @@ namespace SlowTests.Cluster
                                 var lastCommitIndex = n.ServerStore.Engine.GetLastCommitIndex(context);
                                 if (lastNodeNotifiedIndex > lastCommitIndex)
                                 {
-                                    var logs = CollectLogs(context, n);
+                                    var logs = Cluster.CollectLogs(context, n);
                                     throw new InvalidOperationException(
                                         $"node {n.ServerStore.NodeTag} notified {lastNodeNotifiedIndex}, committed: {lastCommitIndex}{Environment.NewLine}{logs}");
                                 }

@@ -40,8 +40,8 @@ namespace SlowTests.Issues
                 await new Products_ByName().ExecuteAsync(store1);
                 await new Products_ByName().ExecuteAsync(store2);
 
-                var database1 = await GetDocumentDatabaseInstanceFor(store1);
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                var database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
                 var indexPath1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
                 var indexPath2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store2.Database);
 
-                database1 = await GetDocumentDatabaseInstanceFor(store1);
+                database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 var index1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(MapIndex), index1);
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                 IOExtensions.DeleteDirectory(indexPath2);
                 IOExtensions.MoveDirectory(indexPath1, indexPath2);
 
-                database2 = await GetDocumentDatabaseInstanceFor(store2);
+                database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
                 var index2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(FaultyInMemoryIndex), index2);
@@ -85,8 +85,8 @@ namespace SlowTests.Issues
                 await new Products_ByName().ExecuteAsync(store1);
                 await new Products_ByName().ExecuteAsync(store2);
 
-                var database1 = await GetDocumentDatabaseInstanceFor(store1);
-                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                var database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
                 var indexPath1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
                 var indexPath2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName).Configuration.StoragePath.FullPath;
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store1.Database);
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store2.Database);
 
-                database1 = await GetDocumentDatabaseInstanceFor(store1);
+                database1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
 
                 var index1 = database1.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(MapIndex), index1);
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                 IOExtensions.DeleteDirectory(indexPath2);
                 IOExtensions.MoveDirectory(indexPath1, indexPath2);
 
-                database2 = await GetDocumentDatabaseInstanceFor(store2);
+                database2 = await Databases.GetDocumentDatabaseInstanceFor(store2);
 
                 var index2 = database2.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(MapIndex), index2);
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
                     }
                 }));
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);
                 Assert.IsType(typeof(MapIndex), index);
@@ -179,7 +179,7 @@ namespace SlowTests.Issues
                 var databaseName = $"{store.Database}_restore";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { DataDirectory = path2, BackupLocation = backupDirectory, DatabaseName = databaseName }))
                 {
-                    var database = await GetDocumentDatabaseInstanceFor(store, databaseName);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store, databaseName);
                     Assert.Equal(databaseName, database.Name);
 
                     var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);

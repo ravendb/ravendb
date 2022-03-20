@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                 new Companies_Count().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

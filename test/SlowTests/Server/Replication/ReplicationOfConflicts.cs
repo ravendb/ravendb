@@ -331,7 +331,7 @@ namespace SlowTests.Server.Replication
            
                 Assert.Equal(2,WaitUntilHasConflict(store2, "users/1-A").Length);
 
-                var db = await GetDocumentDatabaseInstanceFor(store1);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     long etag;
@@ -456,7 +456,7 @@ namespace SlowTests.Server.Replication
 
                 WaitForUserToContinueTheTest(store1);
 
-                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var db1 = await Databases.GetDocumentDatabaseInstanceFor(store1);
                 var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
                 await db1.DocumentsStorage.RevisionsStorage.EnforceConfiguration(onProgress: null, token);
 

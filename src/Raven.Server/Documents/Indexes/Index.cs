@@ -993,7 +993,7 @@ namespace Raven.Server.Documents.Indexes
             if (_rollingCompletionTask != null)
                 return;
 
-            if (DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(Definition.Name) == false)
+            if (DocumentDatabase.IndexStore.MaybeFinishRollingDeployment(Definition.Name, Definition.ClusterState?.LastRollingDeploymentIndex) == false)
                 return;
 
             if (IsStaleInternal())

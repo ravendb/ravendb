@@ -59,7 +59,7 @@ namespace SlowTests.Tests.Faceted
                     s.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

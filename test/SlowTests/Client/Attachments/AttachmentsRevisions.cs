@@ -29,7 +29,7 @@ namespace SlowTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
-                await SetDatabaseId(store, dbId);
+                await Databases.SetDatabaseId(store, dbId);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration =>
                 {
                     configuration.Collections["Users"].PurgeOnDelete = false;

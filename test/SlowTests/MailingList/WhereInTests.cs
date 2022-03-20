@@ -169,7 +169,7 @@ namespace SlowTests.MailingList
                 }
                 session.SaveChanges();
             }
-            WaitForIndexing(documentStore);
+            Indexes.WaitForIndexing(documentStore);
         }
 
         private class Person

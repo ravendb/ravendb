@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -48,7 +49,7 @@ namespace SlowTests.Bugs.MapRedue
         }
 
         [Fact]
-        public void Can_perform_index_with_let_in_reduce_function()
+        public async Task Can_perform_index_with_let_in_reduce_function()
         {
             using (var store = GetDocumentStore())
             {
@@ -61,9 +62,9 @@ namespace SlowTests.Bugs.MapRedue
 
                 new IndexWithLetInReduceFunction().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.Equal(errorsCount, 0);

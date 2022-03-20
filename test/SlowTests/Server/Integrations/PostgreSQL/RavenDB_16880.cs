@@ -38,7 +38,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -64,7 +64,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var collections = await store.Maintenance
                     .SendAsync(new GetCollectionStatisticsOperation());
@@ -120,7 +120,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var result = await Act(store, query, Server);
 
@@ -145,7 +145,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var result = await Act(store, query, Server);
 
@@ -166,7 +166,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var indexDefinition = new IndexDefinition
                 {
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 };
 
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -211,7 +211,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var indexDefinition = new IndexDefinition
                 {
@@ -229,7 +229,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 };
 
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -303,9 +303,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         [Fact]
         public async Task CanTalkToSecuredServer()
         {
-            var certificates = SetupServerAuthentication(EnablePostgresSqlSettings);
+            var certificates = Certificates.SetupServerAuthentication(EnablePostgresSqlSettings);
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             const string query = "from Employees";
 
@@ -318,7 +318,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
                 ModifyDatabaseName = s => dbName,
             }))
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 store.Maintenance.Send(new ConfigurePostgreSqlOperation(new PostgreSqlConfiguration
                 {
@@ -353,9 +353,9 @@ namespace SlowTests.Server.Integrations.PostgreSQL
         [Fact]
         public async Task MustNotConnectToToSecuredServerWithoutProvidingValidCredentials()
         {
-            var certificates = SetupServerAuthentication(EnablePostgresSqlSettings);
+            var certificates = Certificates.SetupServerAuthentication(EnablePostgresSqlSettings);
             var dbName = GetDatabaseName();
-            var adminCert = RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             const string query = "from Employees";
 
@@ -407,7 +407,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -436,7 +436,7 @@ namespace SlowTests.Server.Integrations.PostgreSQL
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var indexDefinition = new IndexDefinition
                 {
@@ -463,7 +463,7 @@ select new
                 };
 
                 store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {

@@ -89,7 +89,7 @@ select new {
                         }
                     }
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var q = commands.Query(new IndexQuery
                     {

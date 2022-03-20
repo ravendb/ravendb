@@ -259,7 +259,7 @@ namespace SlowTests.MailingList
                 Store(store, organizations);
                 Store(store, new[] { orgAdmin1, orgAdmin2 });
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 IEnumerable<ICommandData> patches = orgAdmins.SelectMany(orgAdmin =>
                     Establish(orgAdmin.User, new ManagerOf(orgAdmin.Org),

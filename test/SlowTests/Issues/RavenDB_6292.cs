@@ -82,7 +82,7 @@ namespace SlowTests.Issues
 
                 await SetupReplicationAsync(store1, store2);
 
-                await WaitForConflict(store2, "addresses/1");
+                await Replication.WaitForConflict(store2, "addresses/1");
 
                 using (var session = store2.OpenSession())
                 {
@@ -216,10 +216,10 @@ namespace SlowTests.Issues
 
                 await SetupReplicationAsync(store1, store2);
 
-                await WaitForConflict(store2, "companies/1");
-                await WaitForConflict(store2, "companies/2");
+                await Replication.WaitForConflict(store2, "companies/1");
+                await Replication.WaitForConflict(store2, "companies/2");
 
-                var database = await GetDocumentDatabaseInstanceFor(store2);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store2);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
 

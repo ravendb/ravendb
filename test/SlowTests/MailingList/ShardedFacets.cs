@@ -52,8 +52,8 @@ namespace SlowTests.MailingList
                 //new Tags_ByName().Execute(sharded);
 
 
-                //WaitForIndexing(ds1);
-                //WaitForIndexing(ds2);
+                //Indexes.WaitForIndexing(ds1);
+                //Indexes.WaitForIndexing(ds2);
 
                 //using (var session = sharded.OpenSession())
                 //    Assert.NotEmpty(session

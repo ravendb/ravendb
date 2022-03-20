@@ -28,7 +28,7 @@ public class RavenDB_17626 : RavenTestBase
                 session.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
             using (var session = store.OpenSession())
             {
                 var result = session.Query<Index.Result, Index>()

@@ -40,12 +40,12 @@ namespace SlowTests.Issues
                     Maps = { "from doc in docs from name in doc.Names select new { Name = name.Length / (name.Length - 1) }" }
                 }));
 
-                var errors = WaitForIndexingErrors(store, new[]{"test"});
+                var errors = Indexes.WaitForIndexingErrors(store, new[]{"test"});
                 Assert.NotEmpty(errors);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-                var recoveredErrors = WaitForIndexingErrors(store, new []{"test"}, TimeSpan.FromSeconds(20));
+                var recoveredErrors = Indexes.WaitForIndexingErrors(store, new []{"test"}, TimeSpan.FromSeconds(20));
                 Assert.True(recoveredErrors[0].Errors.Length > 0, "Waited for 20s for the index errors to be reloaded after start");
                 Assert.NotEmpty(recoveredErrors[0].Errors);
 

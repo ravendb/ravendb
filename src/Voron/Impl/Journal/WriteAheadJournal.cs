@@ -596,7 +596,12 @@ namespace Voron.Impl.Journal
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;
-                _flushLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token);
+                _flushLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token)
+                {
+#if DEBUG
+                    OnBeforeLockEnter = () => ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
+#endif
+                };
             }
 
 
@@ -612,6 +617,8 @@ namespace Voron.Impl.Journal
                 bool lockTaken = false;
                 try
                 {
+                    ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
+
                     Monitor.TryEnter(_flushingLock, timeToWait, ref lockTaken);
 
                     if (lockTaken == false)
@@ -627,6 +634,8 @@ namespace Voron.Impl.Journal
 
                     if (_waj._env.Disposed)
                         return;
+
+                    _forTestingPurposes?.OnApplyLogsToDataFileUnderFlushingLock?.Invoke();
 
                     var jrnls = GetJournalSnapshots();
 
@@ -996,6 +1005,8 @@ namespace Voron.Impl.Journal
                 }
                 finally
                 {
+                    ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
+
                     Monitor.Enter(_flushingLock);// reacquire the lock
                 }
             }
@@ -1013,6 +1024,9 @@ namespace Voron.Impl.Journal
             internal class TestingStuff
             {
                 internal Action OnUpdateJournalStateUnderWriteTransactionLock;
+
+                internal Action OnApplyLogsToDataFileUnderFlushingLock;
+
             }
 
             // This can take a LONG time, and it needs to run concurrently with the
@@ -1220,6 +1234,10 @@ namespace Voron.Impl.Journal
                     _token = token;
                 }
 
+#if DEBUG
+                public Action OnBeforeLockEnter { get; set; }
+#endif
+
                 public bool WaitForTaskToBeDone(Func<bool> task)
                 {
                     var current = new AssignedTask(task);
@@ -1240,6 +1258,9 @@ namespace Voron.Impl.Journal
                         while (true)
                         {
                             var isLockTaken = false;
+#if DEBUG
+                            OnBeforeLockEnter?.Invoke();
+#endif
                             Monitor.TryEnter(_lock, 0, ref isLockTaken);
                             if (isLockTaken)
                             {
@@ -1459,6 +1480,8 @@ namespace Voron.Impl.Journal
 
             public IDisposable TryTakeFlushingLock(ref bool lockTaken, TimeSpan? timeout = null)
             {
+                ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
+
                 if (timeout == null)
                 {
                     Monitor.TryEnter(_flushingLock, ref lockTaken);
@@ -1483,6 +1506,9 @@ namespace Voron.Impl.Journal
             public IDisposable TakeFlushingLock()
             {
                 bool lockTaken = false;
+
+                ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken();
+
                 Monitor.Enter(_flushingLock, ref lockTaken);
                 _ignoreLockAlreadyTaken = true;
 
@@ -1492,6 +1518,18 @@ namespace Voron.Impl.Journal
                     if (lockTaken)
                         Monitor.Exit(_flushingLock);
                 });
+            }
+
+            [Conditional("DEBUG")]
+            private void ThrowOnFlushLockEnterWhileWriteTransactionLockIsTaken()
+            {
+                var currentWriteTransactionHolder = _waj._env._currentWriteTransactionHolder;
+                if (currentWriteTransactionHolder != null &&
+                    currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
+                {
+                    throw new InvalidOperationException("The flushing lock must be taken before acquiring the write transaction lock. " +
+                                                        "This check is supposed to prevent potential deadlock and guarantee the same order of taking those two locks.");
+                }
             }
 
             internal void DeleteCurrentAlreadyFlushedJournal()

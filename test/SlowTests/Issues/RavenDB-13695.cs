@@ -114,7 +114,7 @@ namespace ETIS
                 // should not throw
                 new NewsDocumentIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<NewsDocumentIndex.Info, NewsDocumentIndex>()
@@ -179,7 +179,7 @@ namespace ETIS
 
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -245,7 +245,7 @@ namespace ETIS
 
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -311,7 +311,7 @@ namespace ETIS
 
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -377,7 +377,7 @@ namespace ETIS
 
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -443,7 +443,7 @@ namespace ETIS
 
                 index.Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

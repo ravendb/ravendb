@@ -63,7 +63,7 @@ namespace SlowTests
                     db.ServerStore.ForTestingPurposesOnly().StopIndex = true;
 
                     var addRes = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-                    await WaitForRaftIndexToBeAppliedInCluster(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
+                    await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(addRes.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
                     var val = await WaitForValueAsync(async () => await GetPromotableCount(store, store.Database), 0);
                     Assert.Equal(0, val);

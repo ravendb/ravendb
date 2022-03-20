@@ -42,7 +42,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var result = await Act(store, queryWithSingleReplace, Server);
 
@@ -108,7 +108,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 var result2 = await Act(store, queryWithMultipleNestedReplaces, Server);
 
@@ -162,7 +162,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -204,7 +204,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -234,7 +234,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -273,7 +273,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -312,7 +312,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -349,7 +349,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -444,7 +444,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 
@@ -508,7 +508,7 @@ limit 1000";
 
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
 
                 // queryWithSingleReplace
 

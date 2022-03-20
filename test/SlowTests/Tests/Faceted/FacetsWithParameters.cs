@@ -76,7 +76,7 @@ namespace SlowTests.Tests.Faceted
 
                 var now = DateTime.Now;
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -119,7 +119,7 @@ namespace SlowTests.Tests.Faceted
 
                 var now = DateTime.Now;
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -161,7 +161,7 @@ namespace SlowTests.Tests.Faceted
 
                 var now = DateTime.Now;
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -195,7 +195,7 @@ namespace SlowTests.Tests.Faceted
                 var now = DateTime.Now;
 
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -241,7 +241,7 @@ namespace SlowTests.Tests.Faceted
                 var sixMonthsAgo = DateTime.SpecifyKind(now - TimeSpan.FromDays(180), DateTimeKind.Unspecified);
 
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {
@@ -312,7 +312,7 @@ namespace SlowTests.Tests.Faceted
 
                 var now = DateTime.Now;
                 StoreSampleData(store, now);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -373,7 +373,7 @@ namespace SlowTests.Tests.Faceted
 
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -450,7 +450,7 @@ namespace SlowTests.Tests.Faceted
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

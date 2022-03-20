@@ -1,0 +1,25 @@
+name: Labels
+
+on:
+  pull_request_target
+
+jobs:
+
+  labels:
+    name: Label
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Parse Label
+        run: |
+          $label="${{ github.event.pull_request.base.ref }}".split("/")[-1]
+          echo "newLabel=$label" >> $env:GITHUB_ENV
+      - name: Set Label
+        env:
+          githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
+          repoName: ${{ github.event.repository.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
+          Raven_Enable_Per_Test_Logging: 'true'
+        if: contains(github.event.pull_request.labels.*.name, env.newLabel) == false && (startsWith( github.event.pull_request.base.ref, 'v' ) || startsWith( github.event.pull_request.base.ref, 'feature' ))
+        run: ./scripts/githubActions/set_github_label.ps1 -owner ${{env.githubOwner}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.newLabel}}

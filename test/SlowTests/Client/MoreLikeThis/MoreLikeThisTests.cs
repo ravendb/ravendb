@@ -69,7 +69,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
@@ -92,7 +92,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -125,7 +125,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 await AssetMoreLikeThisHasMatchesForAsync<Data, DataIndex>(store, id);
@@ -148,7 +148,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
@@ -171,7 +171,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
 
                     id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, id);
@@ -205,7 +205,7 @@ namespace SlowTests.Client.MoreLikeThis
 
                     id = session.Advanced.GetDocumentId(dataQueriedFor);
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<DataWithIntegerId, OtherDataIndex>(store, id);
@@ -229,7 +229,7 @@ namespace SlowTests.Client.MoreLikeThis
                     var list = GetDataList();
                     list.ForEach(session.Store);
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, key);
@@ -250,7 +250,7 @@ namespace SlowTests.Client.MoreLikeThis
                     var list = GetDataList();
                     list.ForEach(session.Store);
                     session.SaveChanges();
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -266,7 +266,7 @@ namespace SlowTests.Client.MoreLikeThis
                         }))
                         .ToList();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     Assert.Empty(list);
                 }
@@ -290,7 +290,7 @@ namespace SlowTests.Client.MoreLikeThis
                     }
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 AssetMoreLikeThisHasMatchesFor<Data, DataIndex>(store, key);
@@ -314,7 +314,7 @@ namespace SlowTests.Client.MoreLikeThis
                     }
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -345,7 +345,7 @@ namespace SlowTests.Client.MoreLikeThis
                     }
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -373,7 +373,7 @@ namespace SlowTests.Client.MoreLikeThis
                     }
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -409,7 +409,7 @@ namespace SlowTests.Client.MoreLikeThis
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -448,7 +448,7 @@ namespace SlowTests.Client.MoreLikeThis
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -498,7 +498,7 @@ namespace SlowTests.Client.MoreLikeThis
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -534,7 +534,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -571,7 +571,7 @@ namespace SlowTests.Client.MoreLikeThis
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

@@ -983,7 +983,7 @@ namespace SlowTests.Cluster
                     Name = "Indych"
                 };
                 var index = await RevisionsHelper.SetupRevisions(leader.ServerStore, leaderStore.Database, configuration => configuration.Collections["Users"].PurgeOnDelete = false);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(index, TimeSpan.FromSeconds(15));
 
                 // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
                 var server = Servers[1];
@@ -1357,7 +1357,7 @@ namespace SlowTests.Cluster
                     FromNodes = new[] { dbCreation.Servers[0].ServerStore.NodeTag },
                 });
 
-                await WaitForRaftIndexToBeAppliedInCluster(result.Index, TimeSpan.FromSeconds(10));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.Index, TimeSpan.FromSeconds(10));
 
                 await WaitAndAssertForValueAsync(async () =>
                 {

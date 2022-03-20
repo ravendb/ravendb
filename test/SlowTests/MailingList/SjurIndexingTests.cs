@@ -70,7 +70,7 @@ namespace SlowTests.MailingList {
             }
 
             new Buyers_Search().Execute(documentStore);
-            WaitForIndexing(documentStore);
+            Indexes.WaitForIndexing(documentStore);
 
             using (var session = documentStore.OpenSession()) {
                 var query = session.Query<Buyers_Search.Result, Buyers_Search>()
@@ -136,7 +136,7 @@ namespace SlowTests.MailingList {
             }
 
             new Buyers_Search().Execute(documentStore);
-            WaitForIndexing(documentStore);
+            Indexes.WaitForIndexing(documentStore);
 
             using (var session = documentStore.OpenSession()) {
                 var query = session.Query<Buyers_Search.Result, Buyers_Search>()

@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(0, results.Count);
 
-                    IndexErrors[] errors = WaitForIndexingErrors(store, new[] { index.IndexName });
+                    IndexErrors[] errors = Indexes.WaitForIndexingErrors(store, new[] { index.IndexName });
                     Assert.Equal(1, errors[0].Errors.Length);
                 }
             }

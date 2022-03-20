@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);

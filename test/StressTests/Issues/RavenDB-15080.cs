@@ -81,7 +81,7 @@ namespace StressTests.Issues
                 var hashSetAll = new HashSet<string>();
                 var hashSetWithValues = new HashSet<string>();
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -221,7 +221,7 @@ namespace StressTests.Issues
                     session.SaveChanges();
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -338,7 +338,7 @@ namespace StressTests.Issues
                     Assert.Equal(0, counters.Count);
                 }
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var countersStorage = database.DocumentsStorage.CountersStorage;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -418,7 +418,7 @@ namespace StressTests.Issues
                     session.SaveChanges();
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
@@ -657,7 +657,7 @@ namespace StressTests.Issues
             var sb = new StringBuilder()
                 .AppendLine($"Failed to replicate from '{src.Database}' to '{dst.Database}'");
 
-            var database = GetDocumentDatabaseInstanceFor(src).Result;
+            var database = Databases.GetDocumentDatabaseInstanceFor(src).Result;
             var etag = ChangeVectorUtils.GetEtagById(cv, database.DbBase64Id);
             Console.WriteLine($"document etag : {etag}");
 

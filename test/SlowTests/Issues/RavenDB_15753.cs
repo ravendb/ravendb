@@ -157,7 +157,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
@@ -177,7 +177,7 @@ namespace SlowTests.Issues
                     }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex", "Name", null));
@@ -197,7 +197,7 @@ namespace SlowTests.Issues
                     }
                 }));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 terms = store.Maintenance.Send(new GetTermsOperation("HtmlIndex_2", "Name", null));
@@ -550,7 +550,7 @@ namespace ObjectDetection
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

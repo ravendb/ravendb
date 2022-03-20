@@ -20,7 +20,7 @@ namespace SlowTests.Issues
                 new Companies_ByName_Linux().Execute(store);
                 new Companies_Count_Linux().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Maintenance.Send(new StopIndexingOperation());
 

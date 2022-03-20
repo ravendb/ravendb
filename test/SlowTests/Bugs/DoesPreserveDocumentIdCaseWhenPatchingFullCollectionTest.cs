@@ -56,7 +56,7 @@ namespace SlowTests.Bugs
                 }
                 
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'test' UPDATE { var theid = id(this); this.Name = theid ; }" })).WaitForCompletion(TimeSpan.FromSeconds(15));
 

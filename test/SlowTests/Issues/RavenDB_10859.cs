@@ -68,7 +68,7 @@ TagName = LoadDocument(p.ProductId,""Products"").Tags.Where(x=>x.Confidence > 90
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation("test"));
                 Assert.Equal(0, indexStats.ErrorsCount);

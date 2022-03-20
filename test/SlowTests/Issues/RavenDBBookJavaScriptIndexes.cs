@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                Samples.CreateNorthwindDatabase(store);
                 new T().Execute(store);
                 WaitForUserToContinueTheTest(store);
             }

@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             var file = GetTempFileName();
             var fileAfterDeletions = GetTempFileName();
 
-            EncryptedServer(out var certificates, out string dbName);
+            Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var storeToExport = GetDocumentStore(new Options
             {
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 2)]
         public void CanStreamDocumentsWithPulsatingReadTransaction(int numberOfUsers, int numberOfOrders, int deleteUserFactor)
         {
-            EncryptedServer(out var certificates, out string dbName);
+            Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
         [InlineData(10 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out var certificates, out string dbName);
+            Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {
@@ -105,7 +105,7 @@ namespace SlowTests.Issues
         [InlineData(4 * PulsedEnumerationState<object>.NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public void CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)
         {
-            EncryptedServer(out var certificates, out string dbName);
+            Encryption.EncryptedServer(out var certificates, out string dbName);
 
             using (var store = GetDocumentStore(new Options
             {

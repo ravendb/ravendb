@@ -32,7 +32,7 @@ namespace SlowTests.Issues
                 }
 
                 new SampleIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 }
 
                 new SampleIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

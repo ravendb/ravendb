@@ -159,7 +159,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     if (agg.Count != 3)
                     {
-                        var db = GetDocumentDatabaseInstanceFor(store).Result;
+                        var db = Databases.GetDocumentDatabaseInstanceFor(store).Result;
                         var tss = db.DocumentsStorage.TimeSeriesStorage;
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
@@ -335,7 +335,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 new UsersIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -405,7 +405,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -487,7 +487,7 @@ select out(p) as HeartRate, p.Name
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -791,7 +791,7 @@ select timeseries(
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -859,7 +859,7 @@ select timeseries(
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -930,7 +930,7 @@ as HeartRate
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1010,7 +1010,7 @@ as HeartRate, Name
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1106,7 +1106,7 @@ as BloodPressure
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -1183,7 +1183,7 @@ as HeartRate
 
                 new PeopleIndex().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

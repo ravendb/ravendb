@@ -238,7 +238,7 @@ namespace SlowTests.Issues
             }
         }
 
-        protected static void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
+        protected void CanStreamQueryWithPulsatingReadTransaction_ActualTest(int numberOfUsers, DocumentStore store)
         {
             using (var bulk = store.BulkInsert())
             {
@@ -250,7 +250,7 @@ namespace SlowTests.Issues
 
             new Users_ByName().Execute(store);
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
 
             using (var session = store.OpenSession())
             {

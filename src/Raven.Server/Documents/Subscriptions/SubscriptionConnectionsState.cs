@@ -25,19 +25,17 @@ namespace Raven.Server.Documents.Subscriptions
 {
     public class SubscriptionConnectionsState : IDisposable
     {
-        private readonly string _subscriptionName;
         private readonly long _subscriptionId;
         private readonly SubscriptionStorage _subscriptionStorage;
-        private readonly DocumentsStorage _documentsStorage;
-        private readonly SubscriptionState _subscriptionState;
+        private readonly AsyncManualResetEvent _waitForMoreDocuments;
+        private DocumentsStorage _documentsStorage;
+        private SubscriptionState _subscriptionState;
         private ConcurrentSet<SubscriptionConnection> _connections;
-        public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
-
+        private string _subscriptionName;
         private int _maxConcurrentConnections;
 
-        private AsyncManualResetEvent _waitForMoreDocuments;
-
-        public readonly string Query;
+        public string Query;
+        public Task GetSubscriptionInUseAwaiter => Task.WhenAll(_connections.Select(c => c.SubscriptionConnectionTask));
         public string SubscriptionName => _subscriptionName;
         public long SubscriptionId => _subscriptionId;
         public SubscriptionState SubscriptionState => _subscriptionState;
@@ -60,48 +58,36 @@ namespace Raven.Server.Documents.Subscriptions
         public string LastChangeVectorSent;
 
         public string PreviouslyRecordedChangeVector;
-        private readonly IDisposable _disposableNotificationsRegistration;
+        private IDisposable _disposableNotificationsRegistration;
 
-        // dummy state
-        private SubscriptionConnectionsState(DocumentsStorage storage, SubscriptionState state)
+        public SubscriptionConnectionsState(long subscriptionId, SubscriptionStorage storage)
         {
-            //the first connection to join creates this object and decides all details of the subscription
-            _subscriptionName = "dummy";
-            _subscriptionId = -0x42;
-            _documentsStorage = storage;
-            Query = state.Query;
-            
-            _subscriptionStorage = storage.DocumentDatabase.SubscriptionStorage;
-
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
-            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-
+            _subscriptionId = subscriptionId;
+            _connections = new ConcurrentSet<SubscriptionConnection>();
+            _subscriptionStorage = storage;
+            _documentsStorage = storage._db.DocumentsStorage;
             _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
-            LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
-            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(storage._db.DatabaseShutdown);
+            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
         }
 
-        public static SubscriptionConnectionsState CreateDummyState(DocumentsStorage storage, SubscriptionState state) => new (storage, state);
-
-        public SubscriptionConnectionsState(string subscriptionName, long subscriptionId, SubscriptionStorage storage, SubscriptionConnection connection)
+        public void Initialize(SubscriptionConnection connection, bool afterSubscribe = false)
         {
-            //the first connection to join creates this object and decides all details of the subscription
-            _subscriptionName = subscriptionName ?? subscriptionId.ToString();
-            _subscriptionId = subscriptionId;
+            _subscriptionName = connection.Options.SubscriptionName ?? _subscriptionId.ToString();
             _subscriptionState = connection.SubscriptionState;
-            _documentsStorage = connection.TcpConnection.DocumentDatabase.DocumentsStorage;
             Query = connection.SubscriptionState.Query;
-            _connections = new ConcurrentSet<SubscriptionConnection>();
-            
-            _subscriptionStorage = storage;
 
-            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
-            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
-            _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
+            // update the subscription data only on new concurrent connection or regular connection
+            if (afterSubscribe && _connections.Count == 1)
+            {
+                using (var old = _disposableNotificationsRegistration)
+                {
+                    _disposableNotificationsRegistration = RegisterForNotificationOnNewDocuments(connection);
+                }
 
-            _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
-            LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
-            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+                LastChangeVectorSent = connection.SubscriptionState.ChangeVectorForNextBatchStartingPoint;
+                PreviouslyRecordedChangeVector = LastChangeVectorSent;
+            }
         }
 
         public IEnumerable<DocumentRecord> GetDocumentsFromResend(ClusterOperationContext context, HashSet<long> activeBatches)
@@ -455,15 +441,6 @@ namespace Raven.Server.Documents.Subscriptions
                 });
         }
 
-        public void DropCancelledConnections()
-        {
-            foreach (var connection in _connections)
-            {
-                if(connection.CancellationTokenSource.IsCancellationRequested)
-                    DropSingleConnection(connection);
-            }
-        }
-
         public SubscriptionConnection MostRecentEndedConnection()
         {
             if (_recentConnections.TryPeek(out var recentConnection))
@@ -636,5 +613,26 @@ namespace Raven.Server.Documents.Subscriptions
             *(prefix.Ptr + position) = SpecialChars.RecordSeparator;
             position++;
         }
+
+        // dummy state
+        private SubscriptionConnectionsState(DocumentsStorage storage, SubscriptionState state)
+        {
+            //the first connection to join creates this object and decides all details of the subscription
+            _subscriptionName = "dummy";
+            _subscriptionId = -0x42;
+            _documentsStorage = storage;
+            Query = state.Query;
+
+            _subscriptionStorage = storage.DocumentDatabase.SubscriptionStorage;
+
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_documentsStorage.DocumentDatabase.DatabaseShutdown);
+            _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
+
+            _subscriptionActivelyWorkingLock = new SemaphoreSlim(1);
+            LastChangeVectorSent = state.ChangeVectorForNextBatchStartingPoint;
+            PreviouslyRecordedChangeVector = LastChangeVectorSent;
+        }
+
+        public static SubscriptionConnectionsState CreateDummyState(DocumentsStorage storage, SubscriptionState state) => new(storage, state);
     }
 }

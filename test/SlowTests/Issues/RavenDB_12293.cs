@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     var count = session.Query<SearchIndex.Result, SearchIndex>().Count();
                 }
 
-                Assert.Null(WaitForIndexingErrors(store, errorsShouldExists: false));
+                Assert.Null(Indexes.WaitForIndexingErrors(store, errorsShouldExists: false));
             }
         }
 

@@ -163,7 +163,7 @@ namespace SlowTests.Tests.Queries
                 s.SaveChanges();
             }
 
-            WaitForIndexing(store);
+            Indexes.WaitForIndexing(store);
         }
 
         private IEnumerable<TShirt> GetSampleData()

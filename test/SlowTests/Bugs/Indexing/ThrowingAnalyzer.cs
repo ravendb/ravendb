@@ -10,6 +10,7 @@ using FastTests;
 using Xunit;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -37,7 +38,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void Should_give_clear_error()
+        public async Task Should_give_clear_error()
         {
             var fieldOptions = new IndexFieldOptions { Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
 
@@ -68,7 +69,7 @@ namespace SlowTests.Bugs.Indexing
                     );
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 for (int i = 0; i < 10; i++)
                 {
                     if (db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) > 0)
@@ -82,7 +83,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
         [Fact]
-        public void Should_disable_index()
+        public async Task Should_disable_index()
         {
             var fieldOptions = new IndexFieldOptions { Analyzer = typeof(ThrowingAnalyzerImpl).AssemblyQualifiedName };
 
@@ -106,7 +107,7 @@ namespace SlowTests.Bugs.Indexing
 
                     try
                     {
-                        WaitForIndexing(store);
+                        Indexes.WaitForIndexing(store);
                     }
                     catch
                     {
@@ -117,7 +118,7 @@ namespace SlowTests.Bugs.Indexing
 
                 Assert.True(fooIndex.State == IndexState.Error);
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 for (int i = 0; i < 10; i++)
                 {
                     if (db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) > 0)

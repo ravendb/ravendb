@@ -30,7 +30,7 @@ public class RavenDB_17250 : RavenTestBase
         var data = CreateDatabaseData(store);
         var index = new DateAndTimeOnlyIndex();
         index.Execute(store);
-        WaitForIndexing(store);
+        Indexes.WaitForIndexing(store);
         {
             var @do = DateOnly.MaxValue;
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
@@ -51,7 +51,7 @@ public class RavenDB_17250 : RavenTestBase
         var data = CreateDatabaseData(store);
         var index = new IndexWithLet();
         index.Execute(store);
-        WaitForIndexing(store);
+        Indexes.WaitForIndexing(store);
         {
             var @do = DateOnly.MaxValue;
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
@@ -73,7 +73,7 @@ public class RavenDB_17250 : RavenTestBase
         var data = CreateDatabaseData(store);
         var index = new IndexWithDateTimeAndDateOnly();
         index.Execute(store);
-        WaitForIndexing(store);
+        Indexes.WaitForIndexing(store);
         {
             var @do = DateOnly.MaxValue;
             var ts = @do.ToString("O", CultureInfo.InvariantCulture);
@@ -166,7 +166,7 @@ from DateAndTimeOnlies update { this.DateOnly = modifyDateInJs(this.DateOnly, 1)
         using var store = GetDocumentStore();
 
         var data = CreateDatabaseData(store);
-        WaitForIndexing(store);
+        Indexes.WaitForIndexing(store);
         {
             using var session = store.OpenSession();
             var date = default(DateOnly).AddDays(500);

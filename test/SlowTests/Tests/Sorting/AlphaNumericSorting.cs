@@ -45,7 +45,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -90,7 +90,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -138,7 +138,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -186,7 +186,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -237,7 +237,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -288,7 +288,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -341,7 +341,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -396,7 +396,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -452,7 +452,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -637,7 +637,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -688,7 +688,7 @@ namespace SlowTests.Tests.Sorting
                 }
 
                 new TracksIndex().Execute(store);
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {

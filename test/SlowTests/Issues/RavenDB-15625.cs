@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -39,7 +41,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 foreach (var server in Servers)
                 {
                     documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
@@ -86,7 +88,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Disabled);
@@ -120,7 +122,7 @@ namespace SlowTests.Issues
                     Name = "MyIndex"
                 }}));
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 await RollingIndexesClusterTests.WaitForRollingIndex(database, "MyIndex", Servers[2]);
                 var index = documentDatabase.IndexStore.GetIndex("MyIndex");
                 index.SetState(IndexState.Error);
@@ -146,8 +148,34 @@ namespace SlowTests.Issues
                 await store.Maintenance.Server.SendAsync(new UpdateDatabaseOperation(record, record.Etag));
 
                 await WaitAndAssertForValueAsync(async () => await RavenDB_15588.GetMembersAndRehabsCount(store), expectedVal: (MembersCount: 2, RehabsCount: 1));
-                await WaitAndAssertForValueAsync(async () => await RavenDB_15588.GetMembersAndRehabsCount(store), expectedVal: (MembersCount: 3, RehabsCount: 0));
+
+                // assert that Servers[2] is promoted back to Member
+                var expectedVal = (MembersCount: 3, RehabsCount: 0);
+                var val = await WaitForPredicateAsync(async () => await RavenDB_15588.GetMembersAndRehabsCount(store), expectedVal: expectedVal);
+                Assert.True(val.Equals(expectedVal), await GetDecisionsForDatabase(
+                    new StringBuilder("Failed on asserting Members and Rehabs count.")
+                        .AppendLine($"Expected {expectedVal}, got : {val}")));
             }
+        }
+
+
+        private async Task<string> GetDecisionsForDatabase(StringBuilder sb)
+        {
+            await ActionWithLeader(l =>
+            {
+                var dbDecisions = l.ServerStore.Observer.ReadDecisionsForDatabase();
+
+                sb.AppendLine("Decisions for database:");
+                sb.AppendLine(string.Join(',', dbDecisions.List.Select(d => d.ToString())));
+            });
+
+            return sb.ToString();
+        }
+
+        private static async Task<T> WaitForPredicateAsync<T>(Func<Task<T>> act, T expectedVal)
+        {
+            var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout: 15000, interval: 100);
+            return val;
         }
 
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)

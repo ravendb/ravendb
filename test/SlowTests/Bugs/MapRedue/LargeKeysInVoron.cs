@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
@@ -81,7 +82,7 @@ namespace SlowTests.Bugs.MapRedue
 
 
         [Fact]
-        public void CanHandleLargeReduceKeys()
+        public async Task CanHandleLargeReduceKeys()
         {
             using (var store = GetDocumentStore())
             {
@@ -94,7 +95,7 @@ namespace SlowTests.Bugs.MapRedue
 
                 new LargeKeysInVoronFunction().Execute(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -107,7 +108,7 @@ namespace SlowTests.Bugs.MapRedue
                     Assert.Equal(2, result.Count);
                 }
 
-                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 var indexes = db.IndexStore.GetIndexes();
                 var errorsCount = indexes.Sum(index => index.GetErrorCount());
 

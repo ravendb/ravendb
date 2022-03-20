@@ -92,7 +92,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
@@ -159,7 +159,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 await store.Maintenance.SendAsync(new StopIndexingOperation());
 
@@ -189,7 +189,7 @@ namespace SlowTests.Issues
 
                 await store.Maintenance.SendAsync(new StartIndexingOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
@@ -222,7 +222,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 new TestIndex().Execute(store);

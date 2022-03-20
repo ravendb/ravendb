@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var mapReduceResults = session
                         .Query<TagByDayIndex, Toss_TagPerDay>()
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
                     store.Maintenance.Send(new EnableIndexOperation(mapReduceIndex.IndexName));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     mapReduceResults = session
                         .Query<TagByDayIndex, Toss_TagPerDay>()
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var mapResults = session.Query<TossEntity, Toss_ByCreatedOn>().ToList();
 
@@ -105,7 +105,7 @@ namespace SlowTests.Issues
 
                     store.Maintenance.Send(new EnableIndexOperation(mapIndex.IndexName));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     mapResults = session.Query<TossEntity, Toss_ByCreatedOn>().Statistics(out var stats).ToList();
                     Assert.Equal(0, mapResults.Count);
@@ -137,7 +137,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     var mapResults = session.Query<TossEntity, Toss_ByCreatedOn>().ToList();
 
@@ -153,7 +153,7 @@ namespace SlowTests.Issues
 
                     store.Maintenance.Send(new EnableIndexOperation(mapIndex.IndexName));
 
-                    WaitForIndexing(store);
+                    Indexes.WaitForIndexing(store);
 
                     mapResults = session.Query<TossEntity, Toss_ByCreatedOn>().Statistics(out var stats).ToList();
                     Assert.Equal(1, mapResults.Count);

@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                 new Company_ByName().Execute(store);
                 put_1500_companies(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }, new QueryOperationOptions()
                 {
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                 new Company_ByName().Execute(store);
                 put_1500_companies(store);
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}' UPDATE {{this.Sample = 'Value'}}" }));
 

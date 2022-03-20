@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                     .Server
                     .Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
-                using (EnsureDatabaseDeletion(dbName, store))
+                using (Databases.EnsureDatabaseDeletion(dbName, store))
                 using (var session = store.OpenSession(dbName))
                 {
                     session.Store(new Car { Brand = "Toyota", Color = "Silver", Year = 2005 });

@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                var database = await GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 Assert.Equal(Path.Combine(tempPath, "Databases", store.Database), database.Configuration.Storage.TempPath.FullPath);
             }

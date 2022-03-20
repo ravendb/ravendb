@@ -57,7 +57,7 @@ namespace SlowTests.SlowTests.MailingList
                         session.SaveChanges();
                     }
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
                 int count;
                 // Warm-up
                 using (var session = store.OpenSession())
@@ -74,7 +74,7 @@ namespace SlowTests.SlowTests.MailingList
                     count = query.Count();
                 }
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 var orderedList = list.OrderBy(x => x.CreatedDate).ToList();
                 using (var session = store.OpenSession())

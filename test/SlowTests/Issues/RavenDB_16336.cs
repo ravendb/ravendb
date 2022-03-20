@@ -74,7 +74,7 @@ namespace SlowTests.Issues
 
                                            + id.Length + counter1.Length + counter2.Length; // CountersToGetByDocId property 
 
-                var db = await GetDocumentDatabaseInstanceFor(store);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
                 SubscriptionBatchPerformanceStats stats = null;
                 var mre = new AsyncManualResetEvent();

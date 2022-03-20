@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 Assert.True(etlDone.Wait(TimeSpan.FromSeconds(10)));
 
-                var database = await GetDocumentDatabaseInstanceFor(src);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(src);
                 var etlProcess = database.EtlLoader.Processes.First();
                 var performance = etlProcess.GetPerformanceStats();
 

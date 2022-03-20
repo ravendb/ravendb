@@ -90,7 +90,7 @@ namespace SlowTests.Issues
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new Test_Orders_ByCompany().Execute(store);
 
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 new Test_Orders_Count().Execute(store);
 

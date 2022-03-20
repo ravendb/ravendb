@@ -44,7 +44,7 @@ namespace SlowTests.Issues
                         }
                     }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
                 //{
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "oren" });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
                 //{
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
                     }
                 }}));
 
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
                 //{
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                     session.Store(new { Name = "oren" });
                     session.SaveChanges();
                 }
-                WaitForIndexing(store);
+                Indexes.WaitForIndexing(store);
 
                 //var suggestionQueryResult = store.DatabaseCommands.Suggest("test", new SuggestionQuery
                 //{

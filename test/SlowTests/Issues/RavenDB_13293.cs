@@ -116,7 +116,7 @@ namespace SlowTests.Issues
                     var myGuid = Guid.NewGuid();
                     var backupConfig = Backup.CreateBackupConfiguration(Path.Combine(backupPath, myGuid.ToString()), name: $"Task_{node}_{myGuid}", mentorNode: node);
                     var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
-                    await WaitForRaftIndexToBeAppliedOnClusterNodes(result.RaftCommandIndex, cluster.Nodes);
+                    await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.RaftCommandIndex, cluster.Nodes);
                     OngoingTask res = null;
                     await WaitForValueAsync(async () =>
                     {
@@ -202,7 +202,7 @@ namespace SlowTests.Issues
                 }}));
 
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedOnClusterNodes(indexResult.RaftCommandIndex, cluster.Nodes);
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(indexResult.RaftCommandIndex, cluster.Nodes);
 
                 using (var commands = store.Commands())
                 {
