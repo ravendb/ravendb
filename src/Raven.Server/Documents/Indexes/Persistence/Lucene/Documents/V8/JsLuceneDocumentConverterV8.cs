@@ -131,46 +131,50 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.V8
                                     }
                                 }
 
-                                if (jsPropertyValue.HasOwnProperty(SpatialPropertyName) && jsPropertyValue.TryGetValue(SpatialPropertyName, out var inner))
+                                if (jsPropertyValue.TryGetValue(SpatialPropertyName, out var inner))
                                 {
-                                    SpatialField spatialField;
-                                    IEnumerable<AbstractField> spatial;
-                                    if (inner.IsStringEx)
+                                    using (inner)
                                     {
-                                        spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                        spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
-                                    }
-                                    else if (inner.IsObject)
-                                    {
-                                        if (inner.HasOwnProperty("Lat") && inner.HasOwnProperty("Lng") && inner.TryGetValue("Lat", out var lat))
+                                        SpatialField spatialField;
+                                        IEnumerable<AbstractField> spatial;
+                                        if (inner.IsStringEx)
                                         {
-                                            using (lat)
+                                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, inner.AsString);
+                                        }
+                                        else if (inner.IsObject)
+                                        {
+                                            if (inner.HasOwnProperty("Lat") && inner.HasOwnProperty("Lng") && inner.TryGetValue("Lat", out var lat))
                                             {
-                                                if (lat.IsNumberOrIntEx && inner.TryGetValue("Lng", out var lng) && lng.IsNumberOrIntEx)
+                                                using (lat)
                                                 {
-                                                    using (lng)
+                                                    if (lat.IsNumberOrIntEx && inner.TryGetValue("Lng", out var lng) && lng.IsNumberOrIntEx)
                                                     {
-                                                        spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                                        spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
+                                                        using (lng)
+                                                        {
+                                                            spatialField = AbstractStaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                                            spatial = AbstractStaticIndexBase.CreateSpatialField(spatialField, lat.AsDouble, lng.AsDouble);
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        continue; //Ignoring bad spatial field
                                                     }
                                                 }
-                                                else
-                                                {
-                                                    continue; //Ignoring bad spatial field
-                                                }
+                                            }
+                                            else
+                                            {
+                                                continue; //Ignoring bad spatial field
                                             }
                                         }
                                         else
                                         {
                                             continue; //Ignoring bad spatial field
                                         }
-                                    }
-                                    else
-                                    {
-                                        continue; //Ignoring bad spatial field
-                                    }
 
-                                    numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
+
+                                        numberOfCreatedFields = GetRegularFields(instance, field, CreateValueForIndexing(spatial, propertyBoost), indexContext, out _);
+                                    }
 
                                     newFields += numberOfCreatedFields;
 
