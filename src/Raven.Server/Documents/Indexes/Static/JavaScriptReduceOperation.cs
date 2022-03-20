@@ -186,6 +186,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         list = new List<BlittableJsonReaderObject>();
                         _groupedItems[item.BlittableJson] = list;
                     }
+
                     list.Add(item.BlittableJson);
                 }
 
@@ -203,6 +204,14 @@ namespace Raven.Server.Documents.Indexes.Static
                             throw new NotSupportedException($"Not supported JS engine kind '{_jsEngineType}'.");
                     }
 
+                    var memorySnapshotName = "reduce";
+                    bool isMemorySnapshotMade = false;
+                    if (EngineHandle.IsMemoryChecksOn)
+                    {
+                        EngineHandle.MakeSnapshot(memorySnapshotName);
+                        isMemorySnapshotMade = true;
+                    }
+
                     foreach (var item in _groupedItems.Values)
                     {
                         _index._lastException = null;
@@ -210,19 +219,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         EngineHandle.ResetCallStack();
                         EngineHandle.ResetConstraints();
 
-                        bool isMemorySnapshotMade = false;
-                        
                         JsHandle jsRes = JsHandle.Empty;
                         try
                         {
                             using (var jsGrouping = ConstructGrouping(item))
                             {
-                                if (EngineHandle.IsMemoryChecksOn)
-                                {
-                                    EngineHandle.MakeSnapshot("reduce");
-                                    isMemorySnapshotMade = true;
-                                }
-
                                 jsRes = Reduce.StaticCall(jsGrouping);
                                 if (_index._lastException != null)
                                 {
@@ -232,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.Static
                                 {
                                     jsRes.ThrowOnError();
                                 }
-                                
+
                                 if (jsRes.IsObject == false)
                                     throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}",
                                         new Exception($"Reduce result is not object: {jsRes.ToString()}"));
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (V8Exception jse)
                         {
-                            ProcessRunException(jsRes, isMemorySnapshotMade);
+                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
                             var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(ReduceString, jse);
                             if (success == false)
                                 throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", jse);
@@ -248,7 +249,7 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                         catch (Exception e)
                         {
-                            ProcessRunException(jsRes, isMemorySnapshotMade);
+                            ProcessRunException(jsRes, memorySnapshotName, isMemorySnapshotMade);
                             throw new JavaScriptIndexFuncException($"Failed to execute {ReduceString}", e);
                         }
                         finally
@@ -256,14 +257,21 @@ namespace Raven.Server.Documents.Indexes.Static
                             _index._lastException = null;
                         }
 
-                        yield return jsRes;
-                        
-                        EngineHandle.ForceGarbageCollection();
-                        if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
+                        if (isMemorySnapshotMade)
                         {
-                            EngineHandle.CheckForMemoryLeaks("reduce");
+                            EngineHandle.AddToLastMemorySnapshotBefore(jsRes);
+                        }
+
+                        yield return jsRes;
+
+                        EngineHandle.ForceGarbageCollection();
+                        if (isMemorySnapshotMade)
+                        {
+                            EngineHandle.CheckForMemoryLeaks(memorySnapshotName, shouldRemove: false);
+                            EngineHandle.RemoveFromLastMemorySnapshotBefore(jsRes);
                         }
                     }
+                    // memory snapshot is removed after removing all reduce results and the final check in AggregatedAnonymousObjects.Dispose() 
                 }
             }
             finally
@@ -273,14 +281,14 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
 
-        private void ProcessRunException(JsHandle jsRes, bool isMemorySnapshotMade)
+        private void ProcessRunException(JsHandle jsRes, string memorySnapshotName, bool isMemorySnapshotMade)
         {
             jsRes.Dispose();
 
             EngineHandle.ForceGarbageCollection();
             if (EngineHandle.IsMemoryChecksOn && isMemorySnapshotMade)
             {
-                EngineHandle.CheckForMemoryLeaks("reduce");
+                EngineHandle.CheckForMemoryLeaks(memorySnapshotName);
             }
         }
         
