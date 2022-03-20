@@ -3,16 +3,28 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class clearIndexErrorsCommand extends commandBase {
-    constructor(private indexesNames: string[], private db: database) {
+    constructor(private indexesNames: string[], private db: database, private location: databaseLocationSpecifier) {
         super();
     }
 
     execute(): JQueryPromise<void> {
-        const args =  this.indexesNames ? { name: this.indexesNames } : {};
+        const args = this.getArgsToUse();
         const url = endpoints.databases.index.indexesErrors + this.urlEncodeArgs(args);
 
-        return this.del<void>(url, null, this.db)
-            .done(() => this.reportSuccess("Indexing errors cleared successfully."));
+        return this.del<void>(url, null, this.db);
+    }
+
+    private getArgsToUse() {
+        if (this.indexesNames) {
+            return {
+                name: this.indexesNames,
+                ...this.location,
+            }
+        }
+        
+        return {
+            ...this.location
+        }
     }
 }
 

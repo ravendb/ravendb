@@ -246,7 +246,7 @@ class appUrl {
         return "#databases/cmpXchg/edit?" + databaseUrlPart + keyUrlPart;
     }
     
-    static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
+    static forEditDoc(id: string, db: database | databaseInfo | string, collection?: string): string {
         const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
@@ -481,7 +481,7 @@ class appUrl {
         return "#databases/indexes/edit?" + databasePart;
     }
 
-    static forEditIndex(indexName: string, db: database | databaseInfo): string {
+    static forEditIndex(indexName: string, db: database | databaseInfo | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }

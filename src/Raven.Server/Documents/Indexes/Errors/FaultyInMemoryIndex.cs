@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Errors
                 new IndexingError
                 {
                     Error = _e?.ToString(),
-                    Action = $"Index {Name} is in-memory implementation of a faulty index",
+                    Action = "Faulty",
                     Timestamp = _createdAt
                 }
             };

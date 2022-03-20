@@ -4,38 +4,84 @@
             <div class="input-group">
                 <input type="text" accesskey="/" class="form-control" placeholder="Filter (Error column)" title="Filter index errors (Alt+/)" data-bind="textInput: searchText" />
             </div>
-            <div class="btn-group">
+            <div class="btn-group" data-bind="visible: hasErrors">
                 <select id="visibleIndexesSelector" size="5" multiple="multiple"
-                        data-bind="options: allErroredIndexNames, selectedOptions: selectedIndexNames, optionsText: 'indexName', optionsValue: 'indexName'"></select>
+                        data-bind="options: erroredIndexNames, selectedOptions: selectedIndexNames, optionsText: 'name', optionsValue: 'name'">
+                </select>
             </div>
-            <div class="btn-group">
+            <div class="btn-group" data-bind="visible: hasErrors">
                 <select id="visibleActionsSelector" size="5" multiple="multiple"
-                        data-bind="options: allErroredActionNames, selectedOptions: selectedActionNames, optionsText: 'actionName', optionsValue: 'actionName'"></select>
+                        data-bind="options: erroredActionNames, selectedOptions: selectedActionNames, optionsText: 'name', optionsValue: 'name'">
+                </select>
             </div>
             <div>
-                <button class="btn btn-danger"
-                        data-bind="click: clearIndexErrors, enable: selectedIndexNames().length, text: clearErrorsBtnText(), 
-                                   attr: { title: clearErrorsBtnTooltip() }, requiredAccess: 'DatabaseReadWrite'">
+                <button class="btn btn-danger" title="Click to clear errors from ALL nodes"
+                        data-bind="visible: errorInfoItems().length > 1 && hasErrors, click: clearIndexErrorsForAllItems, enable: selectedIndexNames().length,
+                                   text: clearErrorsBtnText, requiredAccess: 'DatabaseReadWrite'">
+                </button>
+            </div>
+            <div>
+                <button class="btn btn-default" data-bind="click: refresh" title="Click to refresh">
+                    <i class="icon-refresh"></i><span>Refresh</span>
                 </button>
             </div>
         </div>
     </div>
     <div class="flex-grow">
-        <div class="has-error results-error" data-bind="visible: isDirty">
-            <div class="help-block">
-                <i class="icon-danger"></i><span>The data has changed. Your results may contain outdated entries.
-                <a href="#" data-bind="click: refresh">Refresh</a></span>
-            </div>
-        </div>
         <div class="scroll-stretch">
-            <div class="panel-body">
-                <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-index-errors-template'"></virtual-grid>
+            <div data-bind="foreach: errorInfoItems">
+                <div class="panel error-info-item">
+                    <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
+                    <div class="padding error-info-item flex-vertical">
+                        <div class="flex-horizontal">
+                            <div class="data margin-right-lg">
+                                <span>Node Tag:</span>
+                                <span class="data-content margin-left-xs" data-bind="text: location().nodeTag"></span>
+                            </div>
+                            <div class="data margin-right-lg" data-bind="if: location().shardNumber !== undefined">
+                                <span>Shard:</span>
+                                <span class="data-content margin-left-xs" data-bind="text: '$' + location().shardNumber.toLocaleString()"></span>
+                            </div>
+                            <div class="data flex-grow" data-bind="visible: !errMsg()">
+                                <span>Error count:</span>
+                                <span class="data-content margin-left-xs" data-bind="text: totalErrorCount().toLocaleString()"></span>
+                            </div>
+                            <div class="data flex-grow" data-bind="visible: errMsg">
+                                <span>Error:</span>
+                                <span class="data-content margin-left-xs" data-bind="text: errMsg"></span>
+                            </div>
+                            <div class="btn-group" data-bind="visible: !errMsg()">
+                                <button class="btn btn-default" title="Click for errors details"
+                                        data-bind="visible: totalErrorCount, click: _.partial($root.toggleDetails, $data)">
+                                    <i class="icon-info"></i><span data-bind="text: showDetails() ? 'Close details' : 'Open details'"></span>
+                                </button>
+                                <button class="btn btn-danger"
+                                        data-bind="visible: totalErrorCount(), click: _.partial($root.clearIndexErrorsForItem, $data), enable: $root.selectedIndexNames().length,
+                                                   attr: { title: clearErrorsBtnTooltip() }, requiredAccess: 'DatabaseReadWrite'">
+                                    <i class="icon-trash"></i><span data-bind="text: $root.clearErrorsBtnText"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                        <div class="padding flex-horizontal">
+                            <div class="flex-grow">
+                                <div class="panel-body grid">
+                                    <virtual-grid data-bind="attr: { class: 'resizable virtual-grid-class' + gridId() }"
+                                                  params="controller: gridController, emptyTemplate: 'empty-index-errors-template'">
+                                    </virtual-grid>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="attr: { class: 'tooltip json-preview lg ' + 'js-index-errors-tooltip' + gridId() }" style="opacity: 0">
+                </div>
             </div>
         </div>
     </div>
 </div>
+
 <script type="text/html" id="empty-index-errors-template">
     No errors found.
 </script>
-<div class="tooltip json-preview lg js-index-errors-tooltip" style="opacity: 0">
-</div>

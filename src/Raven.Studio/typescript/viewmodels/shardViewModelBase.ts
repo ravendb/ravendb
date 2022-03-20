@@ -23,11 +23,11 @@ abstract class shardViewModelBase extends viewModelBase {
      * @protected
      */
     protected get activeDatabase(): KnockoutObservable<database> {
-        throw new Error("Can't access activate database in single shard view!");
+        throw new Error("Can't access active database in single shard view!");
     }
 
     /**
-     * Allows to sot
+     * Allows to sort
      */
     getViewState(): any {
         shardingTodo("Marcin");

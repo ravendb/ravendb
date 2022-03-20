@@ -1,99 +1,135 @@
 import app = require("durandal/app");
-import moment = require("moment");
-import getIndexesErrorCommand = require("commands/database/index/getIndexesErrorCommand");
-import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import textColumn = require("widgets/virtualGrid/columns/textColumn");
-import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
-import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
-import appUrl = require("common/appUrl");
-import timeHelpers = require("common/timeHelpers");
 import awesomeMultiselect = require("common/awesomeMultiselect");
-import indexErrorDetails = require("viewmodels/database/indexes/indexErrorDetails");
 import generalUtils = require("common/generalUtils");
 import clearIndexErrorsConfirm = require("viewmodels/database/indexes/clearIndexErrorsConfirm");
 import shardViewModelBase from "viewmodels/shardViewModelBase";
 import database from "models/resources/database";
+import getIndexesErrorCountCommand from "commands/database/index/getIndexesErrorCountCommand";
+import indexErrorInfoModel from "models/database/index/indexErrorInfoModel";
+import getIndexesErrorCommand from "commands/database/index/getIndexesErrorCommand";
 
-type indexNameAndCount = {
-    indexName: string;
-    count: number;
-}
-
-type indexActionAndCount = {
-    actionName: string;
+type nameAndCount = {
+    name: string;
     count: number;
 }
 
 class indexErrors extends shardViewModelBase {
-    
+
     view = require("views/database/indexes/indexErrors.html");
 
-    private allIndexErrors: IndexErrorPerDocument[] = null;
-    private filteredIndexErrors: IndexErrorPerDocument[] = null;
-    private gridController = ko.observable<virtualGridController<IndexErrorPerDocument>>();
-    private columnPreview = new columnPreviewPlugin<IndexErrorPerDocument>();
+    private errorInfoItems = ko.observableArray<indexErrorInfoModel>([]);
 
-    private allErroredIndexNames = ko.observableArray<indexNameAndCount>([]);
-    private allErroredActionNames = ko.observableArray<indexActionAndCount>([]);
+    private erroredIndexNames = ko.observableArray<nameAndCount>([]);
     private selectedIndexNames = ko.observableArray<string>([]);
+
+    private erroredActionNames = ko.observableArray<nameAndCount>([]);
     private selectedActionNames = ko.observableArray<string>([]);
-    private ignoreSearchCriteriaUpdatesMode = false;
+
     searchText = ko.observable<string>();
-
-    private localLatestIndexErrorTime = ko.observable<string>(null);
-    private remoteLatestIndexErrorTime = ko.observable<string>(null);
-
-    private isDirty: KnockoutComputed<boolean>;
-    
     allIndexesSelected: KnockoutComputed<boolean>;
+
     clearErrorsBtnText: KnockoutComputed<string>;
-    clearErrorsBtnTooltip: KnockoutComputed<string>;
+    hasErrors: KnockoutComputed<boolean>;
 
     constructor(db: database) {
         super(db);
+        this.bindToCurrentInstance("toggleDetails", "clearIndexErrorsForItem", "clearIndexErrorsForAllItems");
+
         this.initObservables();
-        this.bindToCurrentInstance("clearIndexErrors");
     }
 
     private initObservables() {
-        this.searchText.throttle(200).subscribe(() => this.onSearchCriteriaChanged());
-        this.selectedIndexNames.subscribe(() => this.onSearchCriteriaChanged());
-        this.selectedActionNames.subscribe(() => this.onSearchCriteriaChanged());
+        this.searchText.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
+        this.selectedIndexNames.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
+        this.selectedActionNames.throttle(500).subscribe(() => this.onSearchCriteriaChanged());
 
-        this.isDirty = ko.pureComputed(() => {
-            const local = this.localLatestIndexErrorTime();
-            const remote = this.remoteLatestIndexErrorTime();
+        this.clearErrorsBtnText = ko.pureComputed(() => this.getButtonText());
 
-            return local !== remote;
-        });        
-      
-        this.allIndexesSelected = ko.pureComputed(() => { 
-            return this.allErroredIndexNames().length === this.selectedIndexNames().length;
-        });
+        this.hasErrors = ko.pureComputed(() => this.errorInfoItems().some(x => x.totalErrorCount() > 0));
 
-        this.clearErrorsBtnText = ko.pureComputed(() => {
-            if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
-                return "Clear errors (All indexes)";
-            } else if (this.selectedIndexNames().length) {
-                return "Clear errors (Selected indexes)";
-            } else {
-                return "Clear errors";
-            }
-        });
-
-        this.clearErrorsBtnTooltip = ko.pureComputed(() => {
-            if (this.allIndexesSelected() && this.allErroredIndexNames().length) {
-                return "Clear errors for all indexes";
-            } else if (this.selectedIndexNames().length) {
-                return "Clear errors for selected indexes";
-            }
-        });
+        this.allIndexesSelected = ko.pureComputed(() => this.erroredIndexNames().length === this.selectedIndexNames().length);
+    }
+    
+    private getButtonText() {
+        if (this.allIndexesSelected() && this.erroredIndexNames().length) {
+            return "Clear errors (All indexes)";
+        } else if (this.selectedIndexNames().length) {
+            return "Clear errors (Selected indexes)";
+        } else {
+            return "Clear errors";
+        }
     }
 
     activate(args: any) {
         super.activate(args);
         this.updateHelpLink('ABUXGF');
+
+        this.fetchAllErrorCount();
+    }
+
+    fetchAllErrorCount() {
+        this.erroredIndexNames([]);
+        this.erroredActionNames([]);
+        this.errorInfoItems([]);
+
+        this.db.getLocations().map(location => this.fetchErrorCountForLocation(location));
+    }
+
+    private fetchErrorCountForLocation(location: databaseLocationSpecifier): JQueryPromise<any> {
+        return new getIndexesErrorCountCommand(this.db, location)
+            .execute()
+            .done(results => {
+                const errorsCountDto = results.Results;
+
+                // calc model item
+                const item = new indexErrorInfoModel(this.db.name, location, errorsCountDto);
+                this.errorInfoItems.push(item);
+
+                // calc index names for top dropdown
+                errorsCountDto.forEach(resultItem => {
+                    const index = this.erroredIndexNames().find(x => x.name === resultItem.Name);
+                    const countToAdd = resultItem.Errors.reduce((count, val) => val.NumberOfErrors + count, 0);
+                    
+                    if (index) {
+                        index.count += countToAdd;
+                    } else {
+                        const item: nameAndCount = {
+                            name: resultItem.Name,
+                            count: countToAdd
+                        };
+                        this.erroredIndexNames.push(item);
+                    }
+                });
+
+                // calc actions for top dropdown
+                errorsCountDto.forEach(resultItem => {
+                    resultItem.Errors.forEach(errItem => {
+                        const action = this.erroredActionNames().find(x => x.name === errItem.Action);
+                        if (action) {
+                            action.count += errItem.NumberOfErrors;
+                        } else {
+                            const item: nameAndCount = {
+                                name: errItem.Action,
+                                count: errItem.NumberOfErrors
+                            }
+                            this.erroredActionNames.push(item);
+                        }
+                    });
+                });
+
+                this.erroredIndexNames(_.sortBy(this.erroredIndexNames(), x => x.name.toLocaleLowerCase()));
+                this.erroredActionNames(_.sortBy(this.erroredActionNames(), x => x.name.toLocaleLowerCase()));
+                this.errorInfoItems(_.sortBy(this.errorInfoItems(), x => x.location().nodeTag))
+
+                this.selectedIndexNames(this.erroredIndexNames().map(x => x.name));
+                this.selectedActionNames(this.erroredActionNames().map(x => x.name));
+
+                indexErrors.syncMultiSelect();
+            })
+            .fail((result) => {
+                const item = new indexErrorInfoModel(this.db.name, location, null, result.responseJSON.Message);
+                this.errorInfoItems.push(item);
+            });
     }
 
     attached() {
@@ -107,8 +143,10 @@ class indexErrors extends shardViewModelBase {
             opts.maxHeight = 500;
             opts.optionLabel = (element: HTMLOptionElement) => {
                 const indexName = $(element).text();
-                const indexItem = this.allErroredIndexNames().find(x => x.indexName === indexName);
-                return `<span class="name">${generalUtils.escape(indexName)}</span><span class="badge">${indexItem.count}</span>`;
+                const indexNameEscaped = generalUtils.escape(indexName);
+                const indexItem = this.erroredIndexNames().find(x => x.name === indexName);
+                const indexItemCount = indexItem.count.toLocaleString();
+                return `<span class="name" title="${indexNameEscaped}">${indexNameEscaped}</span><span class="badge" title="${indexItemCount}">${indexItemCount}</span>`;
             };
         });
 
@@ -120,8 +158,10 @@ class indexErrors extends shardViewModelBase {
             opts.maxHeight = 500;
             opts.optionLabel = (element: HTMLOptionElement) => {
                 const actionName = $(element).text();
-                const actionItem = this.allErroredActionNames().find(x => x.actionName === actionName);
-                return `<span class="name">${generalUtils.escape(actionName)}</span><span class="badge">${actionItem.count}</span>`;
+                const actionNameEscaped = generalUtils.escape(actionName);
+                const actionItem = this.erroredActionNames().find(x => x.name === actionName);
+                const actionItemCount = actionItem.count.toLocaleString();
+                return `<span class="name" title="${actionNameEscaped}">${actionNameEscaped}</span><span class="badge" title="${actionItemCount}">${actionItemCount}</span>`;
             };
         });
     }
@@ -131,206 +171,93 @@ class indexErrors extends shardViewModelBase {
         awesomeMultiselect.rebuild($("#visibleActionsSelector"));
     }
 
-    protected afterClientApiConnected() {
-        this.addNotification(this.changesContext.databaseNotifications().watchAllDatabaseStatsChanged(stats => this.onStatsChanged(stats)));
-    }
-
     compositionComplete() {
         super.compositionComplete();
-        const grid = this.gridController();
-        grid.headerVisible(true);
-        grid.init(() => this.fetchIndexErrors(), () =>
-            [
-                new actionColumn<IndexErrorPerDocument>(grid, (error, index) => this.showErrorDetails(index), "Show", `<i class="icon-preview"></i>`, "72px",
-                    {
-                        title: () => 'Show indexing error details'
-                    }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.db), "Index name", "25%", {
-                    sortable: "string",
-                    customComparator: generalUtils.sortAlphaNumeric
-                }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.db), "Document Id", "20%", {
-                    sortable: "string",
-                    customComparator: generalUtils.sortAlphaNumeric
-                }),
-                new textColumn<IndexErrorPerDocument>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Date", "20%", {
-                    sortable: "string"
-                }),
-                new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%", {
-                    sortable: "string"
-                }),
-                new textColumn<IndexErrorPerDocument>(grid, x => x.Error, "Error", "15%", {
-                    sortable: "string"
-                })
-            ]
-        );
-
-        this.columnPreview.install("virtual-grid", ".js-index-errors-tooltip", 
-            (indexError: IndexErrorPerDocument, column: textColumn<IndexErrorPerDocument>, e: JQueryEventObject, 
-             onValue: (context: any, valueToCopy?: string) => void) => {
-            if (column.header === "Action" || column.header === "Show") {
-                // do nothing
-            } else if (column.header === "Date") {
-                onValue(moment.utc(indexError.Timestamp), indexError.Timestamp);
-            } else {
-                const value = column.getCellValue(indexError);
-                if (!_.isUndefined(value)) {
-                    onValue(generalUtils.escapeHtml(value), value);
-                }
-            }
-        });
-        this.registerDisposable(timeHelpers.utcNowWithMinutePrecision.subscribe(() => this.onTick()));
         indexErrors.syncMultiSelect();
     }
 
-    private showErrorDetails(errorIdx: number) {
-        const view = new indexErrorDetails(this.filteredIndexErrors, errorIdx);
-        app.showBootstrapDialog(view);
-    }
-
     refresh() {
-        this.allIndexErrors = null;
-        this.gridController().reset(true);
+        this.fetchAllErrorCount();
     }
 
-    private onTick() {
-        // reset grid on tick - it neighter move scroll position not download data from remote, but it will render contents again, updating time 
-        this.gridController().reset(false);
+    private onSearchCriteriaChanged() {
+        this.errorInfoItems().forEach(item => {
+            if (item.showDetails()) {
+                this.fetchErrorsDetails(item);
+            }
+        });
     }
 
-    private fetchIndexErrors(): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
-        if (this.allIndexErrors === null) {
-            return this.fetchRemoteIndexesError().then(list => {
-                this.allIndexErrors = list;
-                return this.filterItems(this.allIndexErrors);
-            });
+    toggleDetails(item: indexErrorInfoModel) {
+        item.showDetails.toggle();
+        
+        if (item.showDetails()) {
+            this.fetchErrorsDetails(item);
         }
-
-        return this.filterItems(this.allIndexErrors);
     }
 
-    private fetchRemoteIndexesError(): JQueryPromise<IndexErrorPerDocument[]> {
-        return new getIndexesErrorCommand(this.db)
+    private fetchErrorsDetails(item: indexErrorInfoModel) {
+        new getIndexesErrorCommand(this.db, item.location())
             .execute()
-            .then((result: Raven.Client.Documents.Indexes.IndexErrors[]) => {
-                this.ignoreSearchCriteriaUpdatesMode = true;
-
-                const indexNamesAndCount = indexErrors.extractIndexNamesAndCount(result);
-                const actionNamesAndCount = this.extractActionNamesAndCount(result);
-
-                this.allErroredIndexNames(indexNamesAndCount);
-                this.allErroredActionNames(actionNamesAndCount);
-                this.selectedIndexNames(this.allErroredIndexNames().map(x => x.indexName));
-                this.selectedActionNames(this.allErroredActionNames().map(x => x.actionName));
-
-                indexErrors.syncMultiSelect();
-
-                this.ignoreSearchCriteriaUpdatesMode = false;
-
-                const mappedItems = this.mapItems(result);
-                const itemWithMax = _.maxBy<IndexErrorPerDocument>(mappedItems, x => x.Timestamp);
-                this.localLatestIndexErrorTime(itemWithMax ? itemWithMax.Timestamp : null);
-                this.remoteLatestIndexErrorTime(this.localLatestIndexErrorTime());
-                return mappedItems;
-            });
+            .then((resultDto: Raven.Client.Documents.Indexes.IndexErrors[]) => {
+                const results: IndexErrorPerDocument[] = this.mapItems(resultDto);
+                const filteredResults: IndexErrorPerDocument[] = this.filterItems(results);
+                item.filteredIndexErrors(filteredResults);
+                item.errMsg("");
+            })
+            .fail(result => item.errMsg(result));
     }
 
-    private filterItems(list: IndexErrorPerDocument[]): JQueryPromise<pagedResult<IndexErrorPerDocument>> {
-        const deferred = $.Deferred<pagedResult<IndexErrorPerDocument>>();
-        let filteredItems = list;
-        if (this.selectedIndexNames().length !== this.allErroredIndexNames().length) {
-            filteredItems = filteredItems.filter(error => _.includes(this.selectedIndexNames(), error.IndexName));
-        }
-        if (this.selectedActionNames().length !== this.allErroredActionNames().length) {
-            filteredItems = filteredItems.filter(error => _.includes(this.selectedActionNames(), error.Action));
-        }
+    private mapItems(indexErrorsDto: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
+        const mappedItems = _.flatMap(indexErrorsDto, value => {
+            return value.Errors.map((errorDto: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
+                ({
+                    Timestamp: errorDto.Timestamp,
+                    Document: errorDto.Document,
+                    Action: errorDto.Action,
+                    Error: errorDto.Error,
+                    IndexName: value.Name
+                }));
+        });
+
+        return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);
+    }
+
+    private filterItems(list: IndexErrorPerDocument[]): IndexErrorPerDocument[] {
+
+        let filteredItems = list.filter(error => this.selectedIndexNames().includes(error.IndexName) &&
+            this.selectedActionNames().includes(error.Action));
 
         if (this.searchText()) {
             const searchText = this.searchText().toLowerCase();
             
-            filteredItems = filteredItems.filter((error) => {
-                return (error.Document && error.Document.toLowerCase().includes(searchText)) ||
-                       error.Error.toLowerCase().includes(searchText)
-           })
+            filteredItems = filteredItems.filter((error) =>
+                (error.Document && error.Document.toLowerCase().includes(searchText)) ||
+                error.Error.toLowerCase().includes(searchText))
         }
-        
-        // save copy used for details viewer
-        this.filteredIndexErrors = filteredItems;
-        
-        return deferred.resolve({
-            items: filteredItems,
-            totalResultCount: filteredItems.length
-        });
+
+        return filteredItems;
     }
 
-    private static extractIndexNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): Array<indexNameAndCount> {
-        const array = indexErrors.filter(error => error.Errors.length > 0).map(errors => {
-            return {
-                indexName: errors.Name,
-                count: errors.Errors.length
-            }
-        });
-
-        return _.sortBy(array, x => x.indexName.toLocaleLowerCase());
+    clearIndexErrorsForAllItems() {
+        const listOfLocations = this.errorInfoItems().map(x => x.location());
+        this.handleClearRequest(listOfLocations);
     }
 
-    private extractActionNamesAndCount(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): indexActionAndCount[] {
-        const mappedItems: indexActionAndCount[] = _.flatMap(indexErrors,
-            value => {
-                return value.Errors.map(x => ({
-                    actionName: x.Action,
-                    count: 1
-                }));
-            });
-
-        const mappedReducedItems: indexActionAndCount[] = mappedItems.reduce((result: indexActionAndCount[], next: indexActionAndCount) => {
-            var existing = result.find(x => x.actionName === next.actionName);
-            if (existing) {
-                existing.count += next.count;
-            } else {
-                result.push(next);
-            }
-            return result;
-        }, []);
-
-        return _.sortBy(mappedReducedItems, x => x.actionName.toLocaleLowerCase());
+    clearIndexErrorsForItem(item: indexErrorInfoModel) {
+        this.handleClearRequest([item.location()]);
     }
 
-    private mapItems(indexErrors: Raven.Client.Documents.Indexes.IndexErrors[]): IndexErrorPerDocument[] {
-        const mappedItems = _.flatMap(indexErrors, value => {
-            return value.Errors.map((error: Raven.Client.Documents.Indexes.IndexingError): IndexErrorPerDocument =>
-                ({
-                    Timestamp: error.Timestamp,
-                    Document: error.Document,
-                    Action: error.Action,
-                    Error: error.Error,
-                    IndexName: value.Name
-                }));
-        });
-        
-        return _.orderBy(mappedItems, [x => x.Timestamp], ["desc"]);
-    }
-
-    private onStatsChanged(stats: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) {
-        this.remoteLatestIndexErrorTime(stats.LastIndexingErrorTime);
-    }
-
-    private onSearchCriteriaChanged() {
-        if (!this.ignoreSearchCriteriaUpdatesMode) {
-            this.gridController().reset();
-        }
-    }
-
-    clearIndexErrors() {
-        const clearErrorsDialog = new clearIndexErrorsConfirm(this.allIndexesSelected() ? null : this.selectedIndexNames(), this.db);
+    private handleClearRequest(locations: databaseLocationSpecifier[]) {
+        const clearErrorsDialog = new clearIndexErrorsConfirm(this.allIndexesSelected() ? null : this.selectedIndexNames(), this.db, locations);
         app.showBootstrapDialog(clearErrorsDialog);
-            
+
         clearErrorsDialog.clearErrorsTask
-            .done((errorsCleared: boolean) => { 
-                if (errorsCleared) { 
-                    this.refresh(); 
-                } 
-        });
+            .done((errorsCleared: boolean) => {
+                if (errorsCleared) {
+                    this.refresh();
+                }
+            });
     }
 }
 
