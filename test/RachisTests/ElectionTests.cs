@@ -269,9 +269,9 @@ namespace RachisTests
 
 
             Assert.True(await firstLeader.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(timeToWait),
-                $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)}{Environment.NewLine}, " +
-                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)}");
-            Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm,$"{currentTerm} + 2 <= {firstLeader.CurrentTerm}");
+                $"leader: {firstLeader.CurrentState} in term {firstLeader.CurrentTerm} with last index {GetLastCommittedIndex(firstLeader)} - {string.Join("|", firstLeader.PrevStates.Select(s => s.ToString()))}{Environment.NewLine}, " +
+                $"follower: state {follower.CurrentState} in term {follower.CurrentTerm} with last index {GetLastCommittedIndex(follower)} - {string.Join("|", follower.PrevStates.Select(s => s.ToString()))}");
+            Assert.True(currentTerm + 2 <= firstLeader.CurrentTerm,$"{currentTerm} + 2 <= {firstLeader.CurrentTerm} ");
 
 
             var count = 100;
