@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Sharding;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -26,7 +26,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Subscriptions
 {
-    public class ShardedSubscriptionSlowTests : ShardedTestBase
+    public class ShardedSubscriptionSlowTests : RavenTestBase
     {
         public ShardedSubscriptionSlowTests(ITestOutputHelper output) : base(output)
         {
@@ -37,7 +37,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact]
         public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
         {
-            using var store = GetShardedDocumentStore();
+            using var store = Sharding.GetDocumentStore();
             var id = await store.Subscriptions.CreateAsync<User>();
             var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
             Assert.Equal(1, subscriptions.Count);
@@ -82,7 +82,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact]
         public async Task CanUpdateSubscriptionToStartFromBeginningOfTime()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -174,7 +174,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private async Task CheckSubscriptionNewQuery(IDocumentStore store, SubscriptionState state, string newQuery)
         {
-            var shards = await GetShardsDocumentDatabaseInstancesFor(store);
+            var shards = await Sharding.GetShardsDocumentDatabaseInstancesFor(store);
             foreach (var db in shards)
             {
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -194,7 +194,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact]
         public async Task CanUpdateSubscriptionToStartFromLastDocument()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -281,7 +281,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact]
         public async Task CanUpdateSubscriptionToStartFromDoNotChange()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var count = 10;
                 store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
@@ -357,7 +357,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact(Skip = "Cannot set CV by admin in sharded subscription")]
         public async Task RunningSubscriptionShouldJumpToNextChangeVectorIfItWasChangedByAdmin()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
@@ -411,7 +411,7 @@ namespace SlowTests.Sharding.Subscriptions
 
                     var firstItemchangeVector = cvFirst.ToChangeVector();
                     var cvNew = new List<ChangeVectorEntry>();
-                    var shards = (await GetShardsDocumentDatabaseInstancesFor(store)).ToList();
+                    var shards = (await Sharding.GetShardsDocumentDatabaseInstancesFor(store)).ToList();
                     foreach (var db in shards)
                     {
                         cvNew.Add(new ChangeVectorEntry()
@@ -495,7 +495,7 @@ namespace SlowTests.Sharding.Subscriptions
         {
             var now = DateTime.UtcNow.EnsureMilliseconds();
 
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 string name;
                 if (byTime)
@@ -572,7 +572,7 @@ namespace SlowTests.Sharding.Subscriptions
         [Fact]
         public async Task ConcurrentSubscriptions()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
@@ -626,7 +626,7 @@ namespace SlowTests.Sharding.Subscriptions
 
         private async Task AssertNoLeftovers(IDocumentStore store, string id)
         {
-            var shards = await GetShardsDocumentDatabaseInstancesFor(store);
+            var shards = await Sharding.GetShardsDocumentDatabaseInstancesFor(store);
             foreach (var db in shards)
             {
                 await AssertWaitForValueAsync(() =>

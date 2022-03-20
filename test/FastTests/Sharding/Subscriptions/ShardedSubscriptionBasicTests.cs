@@ -18,7 +18,7 @@ using Xunit.Abstractions;
 
 namespace FastTests.Sharding.Subscriptions
 {
-    public class ShardedSubscriptionBasicTests : ShardedTestBase
+    public class ShardedSubscriptionBasicTests : RavenTestBase
     {
         public ShardedSubscriptionBasicTests(ITestOutputHelper output) : base(output)
         {
@@ -29,7 +29,7 @@ namespace FastTests.Sharding.Subscriptions
         [Fact]
         public async Task CanCreateSubscription()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var id1 = store.Subscriptions.Create<User>();
                 var id2 = store.Subscriptions.Create<User>();
@@ -48,7 +48,7 @@ namespace FastTests.Sharding.Subscriptions
         [Fact]
         public async Task CanRunSubscription()
         {
-            using (var store = GetShardedDocumentStore(/*shards: new[] { new DatabaseTopology(), new DatabaseTopology() }*/))
+            using (var store = Sharding.GetDocumentStore(/*shards: new[] { new DatabaseTopology(), new DatabaseTopology() }*/))
             {
                 var id = store.Subscriptions.Create<User>();
                 var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
@@ -92,7 +92,7 @@ namespace FastTests.Sharding.Subscriptions
         [Fact]
         public async Task CanUpdateSubscriptionById()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 store.Subscriptions.Create(new SubscriptionCreationOptions
                 {
@@ -126,7 +126,7 @@ namespace FastTests.Sharding.Subscriptions
         [Fact]
         public async Task CanTrySubscription()
         {
-            using (var store = GetShardedDocumentStore())
+            using (var store = Sharding.GetDocumentStore())
             {
                 var names = new List<string>
                 {
@@ -174,7 +174,7 @@ namespace FastTests.Sharding.Subscriptions
         //[Fact]
         //public async Task Subscription_WhenProjectLoad_ShouldTranslateToJavascriptLoad()
         //{
-        //    using var store = GetShardedDocumentStore();
+        //    using var store = Sharding.GetShardedDocumentStore);
 
         //    const string someProp = "SomeValue";
         //    using (var session = store.OpenAsyncSession())
