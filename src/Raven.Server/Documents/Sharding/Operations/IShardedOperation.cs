@@ -39,8 +39,6 @@ namespace Raven.Server.Documents.Sharding.Operations
 
     public interface IShardedOperation : IShardedOperation<object>
     {
-        new RavenCommand CreateCommandForShard(int shard);
-
         object IShardedOperation<object, object>.Combine(Memory<object> results) => null;
 
         object IShardedOperation<object, object>.CombineCommands(Memory<RavenCommand<object>> commands, Memory<object> results) => null;
